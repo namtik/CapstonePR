@@ -3,10 +3,12 @@ using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
+    [Header("´É·ÂÄ¡")]
     public float maxHp = 100f;
     public float currentHp;
     public float attackDamage = 10f;
 
+    [Header("UI")]
     public Slider hpBar;
 
     void Awake()

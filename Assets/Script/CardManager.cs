@@ -59,13 +59,13 @@ public class CardSystem : MonoBehaviour
         ReshuffleGraveyard();
     }
 
-    void ReshuffleGraveyard()
+    void ReshuffleGraveyard() // 묘지의 카드를 덱으로 다시 섞음
     {
         if (graveyard.Count == 0) return;
         deck.AddRange(graveyard);
         graveyard.Clear();
         ShuffleDeck(deck);
-        Debug.Log("묘지의 카드를 덱으로 다시 섞었습니다.");
+        Debug.Log("묘지의 카드를 덱으로 다시 섞음");
     }
 
     void ShuffleDeck(List<string> list)
@@ -79,7 +79,7 @@ public class CardSystem : MonoBehaviour
         }
     }
 
-    void HandleInput()
+    void HandleInput() // 카드 키 입력 처리
     {
         if (hand.Count == 0) return;
 
@@ -123,7 +123,7 @@ public class CardSystem : MonoBehaviour
         UpdateCountUI();
     }
 
-    void UpdateDrawTimer()
+    void UpdateDrawTimer() 
     {
         if (hand.Count < 5)
         {
