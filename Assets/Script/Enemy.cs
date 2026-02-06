@@ -3,17 +3,19 @@ using UnityEngine.UI;
 
 public class Enemy : MonoBehaviour
 {
-    public float maxHp = 50f;
+    [Header("능력치")]
+    public float maxHp = 100f;
     public float currentHp;
-    public float attackDamage = 12f;
+    public float attackDamage = 10f;
+    private float actionGauge = 0f; // 초기 행동 게이지
+    private float gaugeSpeed = 10f; // 초당 10%
 
-    [Header("UI 연결")]
+    [Header("UI")]
     public Slider hpBar;
     public Slider actionSlider;
 
-    private float actionGauge = 0f;
-    private float gaugeSpeed = 10f; // 초당 10%
     private Player player;
+    private BattleManger bM;
 
     void Start()
     {
@@ -50,7 +52,7 @@ public class Enemy : MonoBehaviour
         if (actionSlider != null) actionSlider.value = actionGauge / 100f;
     }
 
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damage) // 데미지 계산
     {
         currentHp -= damage;
         if (hpBar != null) hpBar.value = currentHp / maxHp;
