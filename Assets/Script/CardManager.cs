@@ -17,6 +17,7 @@ public class CardSystem : MonoBehaviour
     private Player player;
     private Enemy enemy;
     private float drawTimer = 0f;
+    private ComboSystem comboSystem; // 콤보 시스템 참조
 
     public TMP_Text deckText;    
     public TMP_Text graveyardText;
@@ -25,6 +26,7 @@ public class CardSystem : MonoBehaviour
     {
         player = Object.FindFirstObjectByType<Player>();
         enemy = Object.FindFirstObjectByType<Enemy>();
+        comboSystem = Object.FindFirstObjectByType<ComboSystem>(); // 콤보 시스템 찾기
 
         SetDeck();
         ShuffleDeck(deck);
@@ -109,11 +111,17 @@ public class CardSystem : MonoBehaviour
         GameObject cardObj = hand[index];
         string type = cardObj.GetComponent<Card>().cardType;
 
-        // 데미지 계산 (플레이어 공격력의 100%) 추후 수정
+        // 데미지 계산 (플레이어 공격력의 100%)
         if (enemy != null && player != null)
         {
             enemy.TakeDamage(player.attackDamage);
             Debug.Log($"{type} 카드 사용! 적에게 {player.attackDamage} 데미지.");
+        }
+
+        // 콤보 시스템에 카드 입력 전달
+        if (comboSystem != null)
+        {
+            comboSystem.OnCardUsed(type);
         }
 
         // 묘지로 보내기 및 파괴  

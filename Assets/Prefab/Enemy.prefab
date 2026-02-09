@@ -318,6 +318,8 @@ MonoBehaviour:
   attackDamage: 12
   hpBar: {fileID: 6808821941714245306}
   actionSlider: {fileID: 5764922124663271752}
+  projectilePrefab: {fileID: 270285958856403586, guid: df357802317322947b23eb2fef87708b, type: 3}
+  projectileSpawnPoint: {fileID: 0}
 --- !u!222 &4814535425222780743
 CanvasRenderer:
   m_ObjectHideFlags: 0

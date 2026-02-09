@@ -7,15 +7,19 @@ public class Enemy : MonoBehaviour
     public float maxHp = 100f;
     public float currentHp;
     public float attackDamage = 10f;
-    private float actionGauge = 0f; // 초기 행동 게이지
-    private float gaugeSpeed = 10f; // 초당 10%
+    private float actionGauge = 0f;
+    private float gaugeSpeed = 10f;
 
     [Header("UI")]
     public Slider hpBar;
     public Slider actionSlider;
 
+    [Header("투사체 설정")]
+    public GameObject projectilePrefab;
+    public Transform projectileSpawnPoint;
+    public Sprite projectileSprite; // 투사체 스프라이트
+
     private Player player;
-    private BattleManger bM;
 
     void Start()
     {
@@ -40,9 +44,36 @@ public class Enemy : MonoBehaviour
     {
         if (player != null)
         {
-            player.TakeDamage(attackDamage);
+            Vector3 spawnPosition = projectileSpawnPoint != null 
+                ? projectileSpawnPoint.position 
+                : transform.position;
+
+            GameObject projectile;
+            
+            if (projectilePrefab != null)
+            {
+                projectile = Instantiate(projectilePrefab, spawnPosition, Quaternion.identity);
+            }
+            else
+            {
+                projectile = new GameObject("Projectile");
+                projectile.transform.position = spawnPosition;
+            }
+            
+            Projectile projectileScript = projectile.GetComponent<Projectile>();
+            if (projectileScript == null)
+            {
+                projectileScript = projectile.AddComponent<Projectile>();
+            }
+            
+            // 스프라이트 할당
+            if (projectileSprite != null)
+            {
+                projectileScript.projectileSprite = projectileSprite;
+            }
+            
+            projectileScript.Initialize(player.transform, attackDamage);
             actionGauge = 0f;
-            Debug.Log("적이 공격했습니다");
         }
     }
 
@@ -52,14 +83,13 @@ public class Enemy : MonoBehaviour
         if (actionSlider != null) actionSlider.value = actionGauge / 100f;
     }
 
-    public void TakeDamage(float damage) // 데미지 계산
+    public void TakeDamage(float damage)
     {
         currentHp -= damage;
         if (hpBar != null) hpBar.value = currentHp / maxHp;
 
         if (currentHp <= 0)
         {
-            Debug.Log("적이 죽었습니다");
             Destroy(gameObject);
         }
     }
