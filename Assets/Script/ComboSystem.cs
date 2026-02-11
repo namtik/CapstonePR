@@ -106,6 +106,16 @@ public class ComboSystem : MonoBehaviour
                 }
             }
         }
+        if (enemy == null)
+        {
+            enemy = Object.FindFirstObjectByType<Enemy>();
+            Debug.LogError("Enemy가 할당되지 않았습니다!");
+        }
+        if (player == null)
+        {
+            player = Object.FindFirstObjectByType<Player>();
+            Debug.LogError("player가 할당되지 않았습니다!");
+        }
     }
     
     // 스킬 초기화
@@ -524,18 +534,6 @@ public class ComboSystem : MonoBehaviour
         }
         
         // 데미지 계산 및 적용
-        if (enemy == null)
-        {
-            enemy = Object.FindFirstObjectByType<Enemy>();
-            Debug.LogError("Enemy가 할당되지 않았습니다!");
-            return false;
-        }
-        if (player == null)
-        {
-            player = Object.FindFirstObjectByType<Player>();
-            Debug.LogError("player가 할당되지 않았습니다!");
-            return false;
-        }
 
         if (enemy != null && player != null)
         {
