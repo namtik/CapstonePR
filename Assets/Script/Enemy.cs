@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using System.Collections;
 
 public class Enemy : MonoBehaviour
 {
@@ -13,6 +15,11 @@ public class Enemy : MonoBehaviour
     [Header("UI")]
     public Slider hpBar;
     public Slider actionSlider;
+    private float fadeTime = 1f; // 데미지 텍스트가 사라지는데 걸리는 시간
+    public TMP_Text Takedamtext; // 받은 데미지 텍스트
+    
+    private Vector3 originalPos; // 텍스트의 원래 위치 저장
+    private Color originalColor; // 텍스트의 원래 색상 저장
 
     [Header("투사체 설정")]
     public GameObject projectilePrefab;
@@ -20,11 +27,18 @@ public class Enemy : MonoBehaviour
     public Sprite projectileSprite; // 투사체 스프라이트
 
     private Player player;
+    private Coroutine damageCoroutine; // 데미지 표시용
 
     void Start()
     {
         currentHp = maxHp;
         player = Object.FindFirstObjectByType<Player>();
+        if (Takedamtext != null)
+        {
+            originalPos = Takedamtext.transform.position;
+            originalColor = Takedamtext.color;
+            Takedamtext.text = ""; // 처음엔 안 보이게
+        }
     }
 
     void Update()
@@ -87,10 +101,50 @@ public class Enemy : MonoBehaviour
     {
         currentHp -= damage;
         if (hpBar != null) hpBar.value = currentHp / maxHp;
+        
+        if (Takedamtext != null)
+        {
+            if (damageCoroutine != null) StopCoroutine(damageCoroutine);
+
+            // 데미지 텍스트 내용 설정
+            Takedamtext.text = damage.ToString();
+
+            // 코루틴 시작
+            damageCoroutine = StartCoroutine(FloatingDamageEffect());
+        }
 
         if (currentHp <= 0)
         {
             Destroy(gameObject);
         }
     }
+
+    IEnumerator FloatingDamageEffect()
+    {
+        float timer = 0f;
+
+        // 연출 시작 전 초기화(위치, 색 초기화)
+        Takedamtext.transform.position = originalPos;
+        Takedamtext.color = originalColor;
+
+        while (timer < fadeTime)
+        {
+            timer += Time.deltaTime;
+
+            // 위로 이동 (현재 위치에서 Y축으로 조금씩 이동)
+            Takedamtext.transform.position += Vector3.up * 0.5f * Time.deltaTime;
+
+            // 서서히 투명해지기
+            float alpha = Mathf.Lerp(1f, 0f, timer / fadeTime);
+            Takedamtext.color = new Color(originalColor.r, originalColor.g, originalColor.b, alpha);
+
+            yield return null; // 한 프레임 대기
+        }
+
+        // 연출 종료 후 처리
+        Takedamtext.text = ""; // 텍스트 초기화
+        Takedamtext.transform.position = originalPos; // 위치 복구
+        Takedamtext.color = originalColor; // 색상 복구
+    }
 }
+

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
+
 // 콤보 스킬 시스템 관리 클래스
 public class ComboSystem : MonoBehaviour
 {
@@ -39,9 +40,10 @@ public class ComboSystem : MonoBehaviour
     
     private Player player;
     private Enemy enemy;
-    
-    // 스킬 데이터 구조체
-    [System.Serializable]
+    private CardSystem CM;
+
+// 스킬 데이터 구조체
+[System.Serializable]
     public class SkillData
     {
         public string name;
@@ -522,13 +524,32 @@ public class ComboSystem : MonoBehaviour
         }
         
         // 데미지 계산 및 적용
+        if (enemy == null)
+        {
+            enemy = Object.FindFirstObjectByType<Enemy>();
+            Debug.LogError("Enemy가 할당되지 않았습니다!");
+            return false;
+        }
+        if (player == null)
+        {
+            player = Object.FindFirstObjectByType<Player>();
+            Debug.LogError("player가 할당되지 않았습니다!");
+            return false;
+        }
+
         if (enemy != null && player != null)
         {
             float damage = player.attackDamage * skill.damageMultiplier;
             enemy.TakeDamage(damage);
             Debug.Log($"{skill.name} ({skill.combo}) 발동! 적에게 {damage} 데미지 ({skill.damageMultiplier * 100}%)");
         }
-        
+        else
+        {
+            // 연결 끊김 확인
+            if (player == null) Debug.LogError("Player가 null입니다!");
+            if (enemy == null) Debug.LogError("Enemy가 null입니다!");
+        }
+
         // 쿨타임 시작
         skill.remainingCooldown = skill.cooldown;
         
