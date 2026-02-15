@@ -349,16 +349,16 @@ public class ComboSystem : MonoBehaviour
         // 슬라이딩 큐 방식: 3개가 꽉 차있으면 가장 왼쪽(오래된) 것을 제거
         if (comboInput.Count >= 3)
         {
-            comboInput.RemoveAt(0);
+            comboInput.RemoveAt(0); // 가장 오래된 카드(맨 왼쪽) 제거
         }
         
-        // 콤보 입력에 추가
+        // 콤보 입력에 새 카드 추가
         comboInput.Add(cardType);
         
-        // 콤보 슬롯 UI 업데이트
+        // 콤보 슬롯 UI 업데이트 (화면에 현재 콤보 상태 표시)
         UpdateComboSlotUI();
         
-        // 스킬 매칭 확인
+        // 스킬 패턴 매칭 및 발동 확인
         CheckAndActivateSkills();
     }
     
@@ -404,19 +404,21 @@ public class ComboSystem : MonoBehaviour
     // 스킬 매칭 및 발동 확인
     void CheckAndActivateSkills()
     {
+        // 현재 콤보 슬롯의 카드들을 하나의 문자열로 결합
         string currentCombo = string.Join("", comboInput);
         
         // 현재 콤보에 포함된 스킬 패턴 찾기 (긴 스킬부터 우선 확인)
-        // 스킬을 길이 내림차순으로 정렬하여 긴 스킬을 우선 매칭
         var sortedSkills = new List<KeyValuePair<string, SkillData>>(skills);
-        sortedSkills.Sort((a, b) => b.Value.combo.Length.CompareTo(a.Value.combo.Length));
+        sortedSkills.Sort((a, b) => b.Value.combo.Length.CompareTo(a.Value.combo.Length)); // 3글자 → 2글자 순
         
         foreach (var skill in sortedSkills)
         {
+            // 현재 콤보 문자열에 스킬 패턴이 포함되어 있는지 확인
+
             if (currentCombo.Contains(skill.Value.combo))
             {
                 ActivateSkill(skill.Key, skill.Value);
-                break; // 첫 번째 매칭된 스킬만 발동
+                break; // 첫 번째 매칭된 스킬만 발동 (우선순위가 가장 높은 스킬)
             }
         }
     }
@@ -438,19 +440,19 @@ public class ComboSystem : MonoBehaviour
             if (enemy == null) Debug.LogError("Enemy가 null입니다!");
         }
         
-        // 스킬 발동 알림 표시
+        // 스킬 발동 알림 표시 (화면 상단에 "{스킬명} 발동!" 텍스트)
         if (skillActivationText != null)
         {
             skillActivationText.text = $"{skill.name} 발동!";
-            skillTextTimer = SKILL_TEXT_DISPLAY_TIME;
+            skillTextTimer = SKILL_TEXT_DISPLAY_TIME; // 0.5초간 표시
             isShowingSkillText = true;
         }
         
         // 슬라이딩 처리: 슬롯이 3개 꽉 찼을 때만 왼쪽 1개 제거
         if (comboInput.Count >= 3)
         {
-            comboInput.RemoveAt(0);
-            UpdateComboSlotUI();
+            comboInput.RemoveAt(0); // 가장 왼쪽 카드 제거
+            UpdateComboSlotUI(); // UI 갱신
         }
     }
 }
