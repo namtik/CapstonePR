@@ -21,18 +21,11 @@ public class ComboSystem : MonoBehaviour
     private List<GameObject> comboSlotCards = new List<GameObject>(); // 콤보 슬롯에 표시된 카드 오브젝트
     private List<GameObject> emptySlots = new List<GameObject>(); // 빈 슬롯 오브젝트 (항상 표시)
     
-    // 자동 리셋 타이머
-    private float autoResetTimer = 0f;
-    private bool isWaitingForReset = false;
-    private const float AUTO_RESET_DELAY = 2f; // 2초 후 자동 리셋
-    
-    // 스킬 발동 후 지연 리셋
-    private float delayedResetTimer = 0f;
-    private bool isWaitingForDelayedReset = false;
-    private const float SKILL_DISPLAY_DELAY = 0.5f; // 스킬 발동 후 0.5초 유지
-    
     // 스킬 발동 알림 UI
     private Text skillActivationText;
+    private float skillTextTimer = 0f;
+    private bool isShowingSkillText = false;
+    private const float SKILL_TEXT_DISPLAY_TIME = 0.5f;
     
     // 스킬 정의
     private Dictionary<string, SkillData> skills = new Dictionary<string, SkillData>();
@@ -49,8 +42,6 @@ public class ComboSystem : MonoBehaviour
         public string name;
         public string combo; // 콤보 문자열 (예: "QQ", "QEW")
         public float damageMultiplier; // 데미지 배율 (200% = 2.0f)
-        public float cooldown; // 쿨타임 (초)
-        public float remainingCooldown; // 남은 쿨타임
     }
     
     // 스킬 아이콘 UI 구조체
@@ -58,8 +49,6 @@ public class ComboSystem : MonoBehaviour
     {
         public GameObject iconObject;
         public Image iconImage;
-        public Image cooldownOverlay;
-        public Text cooldownText;
         public GameObject tooltip; // 툴팁 팝업
     }
     
@@ -78,34 +67,20 @@ public class ComboSystem : MonoBehaviour
     
     void Update()
     {
-        // 스킬 쿨타임 업데이트
-        UpdateSkillCooldowns();
-        
-        // 자동 리셋 타이머 업데이트
-        if (isWaitingForReset)
+        // 스킬 텍스트 표시 타이머
+        if (isShowingSkillText)
         {
-            autoResetTimer -= Time.deltaTime;
-            if (autoResetTimer <= 0f)
+            skillTextTimer -= Time.deltaTime;
+            if (skillTextTimer <= 0f)
             {
-                ResetCombo();
-                isWaitingForReset = false;
-            }
-        }
-        
-        // 스킬 발동 후 지연 리셋 타이머
-        if (isWaitingForDelayedReset)
-        {
-            delayedResetTimer -= Time.deltaTime;
-            if (delayedResetTimer <= 0f)
-            {
-                ResetCombo();
-                isWaitingForDelayedReset = false;
+                isShowingSkillText = false;
                 if (skillActivationText != null)
                 {
                     skillActivationText.text = "";
                 }
             }
         }
+        
         if (enemy == null)
         {
             enemy = Object.FindFirstObjectByType<Enemy>();
@@ -121,10 +96,10 @@ public class ComboSystem : MonoBehaviour
     // 스킬 초기화
     void InitializeSkills()
     {
-        skills.Add("QQ", new SkillData { name = "스킬1", combo = "QQ", damageMultiplier = 2.0f, cooldown = 5f, remainingCooldown = 0f });
-        skills.Add("QEW", new SkillData { name = "스킬2", combo = "QEW", damageMultiplier = 2.5f, cooldown = 5f, remainingCooldown = 0f });
-        skills.Add("WEW", new SkillData { name = "스킬3", combo = "WEW", damageMultiplier = 2.5f, cooldown = 5f, remainingCooldown = 0f });
-        skills.Add("QQW", new SkillData { name = "스킬4", combo = "QQW", damageMultiplier = 2.5f, cooldown = 5f, remainingCooldown = 0f });
+        skills.Add("QQ", new SkillData { name = "스킬1", combo = "QQ", damageMultiplier = 2.0f });
+        skills.Add("QEW", new SkillData { name = "스킬2", combo = "QEW", damageMultiplier = 2.5f });
+        skills.Add("WEW", new SkillData { name = "스킬3", combo = "WEW", damageMultiplier = 2.5f });
+        skills.Add("QQW", new SkillData { name = "스킬4", combo = "QQW", damageMultiplier = 2.5f });
     }
     
     // 콤보 슬롯 UI 생성 (화면 상단 중앙)
@@ -272,40 +247,6 @@ public class ComboSystem : MonoBehaviour
             iconImage.color = colors[index % colors.Length];
         }
         
-        // 쿨타임 오버레이 (반투명 검은색)
-        GameObject overlayObj = new GameObject("CooldownOverlay");
-        overlayObj.transform.SetParent(iconObj.transform, false);
-        RectTransform overlayRect = overlayObj.AddComponent<RectTransform>();
-        overlayRect.anchorMin = Vector2.zero;
-        overlayRect.anchorMax = Vector2.one;
-        overlayRect.sizeDelta = Vector2.zero;
-        Image overlayImage = overlayObj.AddComponent<Image>();
-        overlayImage.color = new Color(0f, 0f, 0f, 0.7f);
-        overlayImage.fillMethod = Image.FillMethod.Vertical;
-        overlayImage.fillOrigin = (int)Image.OriginVertical.Top;
-        overlayImage.type = Image.Type.Filled;
-        overlayImage.fillAmount = 0f;
-        
-        // 쿨타임 텍스트
-        GameObject textObj = new GameObject("CooldownText");
-        textObj.transform.SetParent(iconObj.transform, false);
-        RectTransform textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.sizeDelta = Vector2.zero;
-        Text cooldownText = textObj.AddComponent<Text>();
-        cooldownText.font = Font.CreateDynamicFontFromOSFont("Arial", 20);
-        cooldownText.fontSize = 20;
-        cooldownText.alignment = TextAnchor.MiddleCenter;
-        cooldownText.color = Color.white;
-        cooldownText.fontStyle = FontStyle.Bold;
-        cooldownText.text = "";
-        
-        // Outline 추가
-        Outline outline = textObj.AddComponent<Outline>();
-        outline.effectColor = Color.black;
-        outline.effectDistance = new Vector2(2, -2);
-        
         // 툴팁 생성
         GameObject tooltip = CreateTooltip(iconObj.transform, skillData);
         
@@ -317,8 +258,6 @@ public class ComboSystem : MonoBehaviour
         {
             iconObject = iconObj,
             iconImage = iconImage,
-            cooldownOverlay = overlayImage,
-            cooldownText = cooldownText,
             tooltip = tooltip
         };
         
@@ -407,45 +346,20 @@ public class ComboSystem : MonoBehaviour
     // 카드 입력 처리 (CardSystem에서 호출)
     public void OnCardUsed(string cardType)
     {
-        // 기존 자동 리셋 대기 취소
-        isWaitingForReset = false;
-        autoResetTimer = 0f;
-        
-        // 지연 리셋 대기 중이었다면 취소하고 즉시 리셋
-        if (isWaitingForDelayedReset)
+        // 슬라이딩 큐 방식: 3개가 꽉 차있으면 가장 왼쪽(오래된) 것을 제거
+        if (comboInput.Count >= 3)
         {
-            isWaitingForDelayedReset = false;
-            delayedResetTimer = 0f;
-            comboInput.Clear();
-            if (skillActivationText != null)
-            {
-                skillActivationText.text = "";
-            }
+            comboInput.RemoveAt(0); // 가장 오래된 카드(맨 왼쪽) 제거
         }
         
-        // 콤보 입력에 추가
+        // 콤보 입력에 새 카드 추가
         comboInput.Add(cardType);
         
-        // 콤보 슬롯 UI 업데이트
+        // 콤보 슬롯 UI 업데이트 (화면에 현재 콤보 상태 표시)
         UpdateComboSlotUI();
         
-        // 3개 초과 시 즉시 리셋
-        if (comboInput.Count > 3)
-        {
-            ResetCombo();
-            return;
-        }
-        
-        // 스킬 매칭 확인 (순차적으로 짧은 것부터)
-        bool skillActivated = CheckAndActivateSkills();
-        
-        // 3개가 꽉 찼는데 스킬이 발동되지 않았으면 2초 후 자동 리셋
-        if (comboInput.Count == 3 && !skillActivated)
-        {
-            autoResetTimer = AUTO_RESET_DELAY;
-            isWaitingForReset = true;
-            Debug.Log("스킬 미발동: 2초 후 자동 리셋");
-        }
+        // 스킬 패턴 매칭 및 발동 확인
+        CheckAndActivateSkills();
     }
     
     // 콤보 슬롯 UI 업데이트
@@ -488,53 +402,31 @@ public class ComboSystem : MonoBehaviour
     }
     
     // 스킬 매칭 및 발동 확인
-    bool CheckAndActivateSkills()
+    void CheckAndActivateSkills()
     {
+        // 현재 콤보 슬롯의 카드들을 하나의 문자열로 결합
         string currentCombo = string.Join("", comboInput);
-        List<string> matchedSkills = new List<string>();
         
-        // 현재 콤보와 정확히 일치하는 스킬만 찾기
-        foreach (var skill in skills)
+        // 현재 콤보에 포함된 스킬 패턴 찾기 (긴 스킬부터 우선 확인)
+        var sortedSkills = new List<KeyValuePair<string, SkillData>>(skills);
+        sortedSkills.Sort((a, b) => b.Value.combo.Length.CompareTo(a.Value.combo.Length)); // 3글자 → 2글자 순
+        
+        foreach (var skill in sortedSkills)
         {
-            if (currentCombo == skill.Value.combo)
+            // 현재 콤보 문자열에 스킬 패턴이 포함되어 있는지 확인
+
+            if (currentCombo.Contains(skill.Value.combo))
             {
-                matchedSkills.Add(skill.Key);
+                ActivateSkill(skill.Key, skill.Value);
+                break; // 첫 번째 매칭된 스킬만 발동 (우선순위가 가장 높은 스킬)
             }
         }
-        
-        // 짧은 순서대로 정렬 (같은 길이면 먼저 등록된 순서)
-        matchedSkills.Sort((a, b) => skills[a].combo.Length.CompareTo(skills[b].combo.Length));
-        
-        bool anySkillActivated = false;
-        
-        // 순차적으로 스킬 발동
-        foreach (string skillKey in matchedSkills)
-        {
-            if (ActivateSkill(skillKey))
-            {
-                anySkillActivated = true;
-            }
-        }
-        
-        return anySkillActivated;
     }
     
     // 스킬 발동
-    bool ActivateSkill(string skillKey)
+    void ActivateSkill(string skillKey, SkillData skill)
     {
-        if (!skills.ContainsKey(skillKey)) return false;
-        
-        SkillData skill = skills[skillKey];
-        
-        // 쿨타임 확인 (이미 쿨타임 중이면 재발동 방지)
-        if (skill.remainingCooldown > 0f)
-        {
-            Debug.Log($"{skill.name} 쿨타임 중: {skill.remainingCooldown:F1}초 남음 (재발동 방지)");
-            return false;
-        }
-        
         // 데미지 계산 및 적용
-
         if (enemy != null && player != null)
         {
             float damage = player.attackDamage * skill.damageMultiplier;
@@ -547,99 +439,20 @@ public class ComboSystem : MonoBehaviour
             if (player == null) Debug.LogError("Player가 null입니다!");
             if (enemy == null) Debug.LogError("Enemy가 null입니다!");
         }
-
-        // 쿨타임 시작
-        skill.remainingCooldown = skill.cooldown;
         
-        // 스킬 발동 알림 표시
+        // 스킬 발동 알림 표시 (화면 상단에 "{스킬명} 발동!" 텍스트)
         if (skillActivationText != null)
         {
             skillActivationText.text = $"{skill.name} 발동!";
+            skillTextTimer = SKILL_TEXT_DISPLAY_TIME; // 0.5초간 표시
+            isShowingSkillText = true;
         }
         
-        // 스킬이 3글자(최대)면 0.5초 후 리셋, 2글자 이하는 콤보 유지
-        if (skill.combo.Length >= 3)
+        // 슬라이딩 처리: 슬롯이 3개 꽉 찼을 때만 왼쪽 1개 제거
+        if (comboInput.Count >= 3)
         {
-            delayedResetTimer = SKILL_DISPLAY_DELAY;
-            isWaitingForDelayedReset = true;
-        }
-        else
-        {
-            // 2글자 스킬도 텍스트는 0.5초 후 제거 (콤보는 유지)
-            StartCoroutine(ClearSkillTextAfterDelay(SKILL_DISPLAY_DELAY));
-        }
-        
-        return true;
-    }
-    
-    // 콤보 리셋
-    void ResetCombo()
-    {
-        comboInput.Clear();
-        UpdateComboSlotUI();
-        isWaitingForReset = false;
-        autoResetTimer = 0f;
-        isWaitingForDelayedReset = false;
-        delayedResetTimer = 0f;
-        
-        // 스킬 발동 텍스트 초기화 (지연 리셋이 아닐 때만)
-        if (skillActivationText != null && !isWaitingForDelayedReset)
-        {
-            skillActivationText.text = "";
-        }
-        
-        Debug.Log("콤보 슬롯 리셋");
-    }
-    
-    // 2글자 스킬 발동 후 텍스트만 제거 (콤보는 유지)
-    System.Collections.IEnumerator ClearSkillTextAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        if (skillActivationText != null)
-        {
-            skillActivationText.text = "";
-        }
-    }
-    
-    // 스킬 쿨타임 업데이트
-    void UpdateSkillCooldowns()
-    {
-        foreach (var skill in skills)
-        {
-            if (skill.Value.remainingCooldown > 0f)
-            {
-                skill.Value.remainingCooldown -= Time.deltaTime;
-                
-                if (skill.Value.remainingCooldown < 0f)
-                {
-                    skill.Value.remainingCooldown = 0f;
-                }
-            }
-            
-            // UI 업데이트
-            UpdateSkillIconUI(skill.Key, skill.Value);
-        }
-    }
-    
-    // 스킬 아이콘 UI 업데이트
-    void UpdateSkillIconUI(string skillKey, SkillData skill)
-    {
-        if (!skillIcons.ContainsKey(skillKey)) return;
-        
-        SkillIcon icon = skillIcons[skillKey];
-        
-        if (skill.remainingCooldown > 0f)
-        {
-            // 쿨타임 중
-            float fillAmount = skill.remainingCooldown / skill.cooldown;
-            icon.cooldownOverlay.fillAmount = fillAmount;
-            icon.cooldownText.text = skill.remainingCooldown.ToString("F1");
-        }
-        else
-        {
-            // 사용 가능
-            icon.cooldownOverlay.fillAmount = 0f;
-            icon.cooldownText.text = "";
+            comboInput.RemoveAt(0); // 가장 왼쪽 카드 제거
+            UpdateComboSlotUI(); // UI 갱신
         }
     }
 }
