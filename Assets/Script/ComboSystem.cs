@@ -355,11 +355,18 @@ public class ComboSystem : MonoBehaviour
         // 콤보 입력에 새 카드 추가
         comboInput.Add(cardType);
         
-        // 콤보 슬롯 UI 업데이트 (화면에 현재 콤보 상태 표시)
-        UpdateComboSlotUI();
-        
         // 스킬 패턴 매칭 및 발동 확인
         CheckAndActivateSkills();
+        
+        // 3개가 꽉 찼으면 자동으로 왼쪽 1개 제거하여 슬라이딩
+        // 예: [E][W][R] → [W][R][빈칸] (스킬 발동 여부와 무관)
+        if (comboInput.Count >= 3)
+        {
+            comboInput.RemoveAt(0); // 가장 왼쪽 카드 제거
+        }
+        
+        // 콤보 슬롯 UI 업데이트 (화면에 현재 콤보 상태 표시)
+        UpdateComboSlotUI();
     }
     
     // 콤보 슬롯 UI 업데이트
@@ -446,13 +453,6 @@ public class ComboSystem : MonoBehaviour
             skillActivationText.text = $"{skill.name} 발동!";
             skillTextTimer = SKILL_TEXT_DISPLAY_TIME; // 0.5초간 표시
             isShowingSkillText = true;
-        }
-        
-        // 슬라이딩 처리: 슬롯이 3개 꽉 찼을 때만 왼쪽 1개 제거
-        if (comboInput.Count >= 3)
-        {
-            comboInput.RemoveAt(0); // 가장 왼쪽 카드 제거
-            UpdateComboSlotUI(); // UI 갱신
         }
     }
 }
