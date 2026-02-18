@@ -30,7 +30,7 @@ public class CardSystem : MonoBehaviour
 
         SetDeck();
         ShuffleDeck(deck);
-        DrawCards(5);
+        DrawCards(10);
 
     }
 
@@ -133,12 +133,12 @@ public class CardSystem : MonoBehaviour
 
     void UpdateDrawTimer() 
     {
-        if (hand.Count < 5)
+        if (hand.Count < 10)
         {
             drawTimer += Time.deltaTime;
-            if (drawTimer >= 5f)
+            if (drawTimer >= 1f)
             {
-                DrawCards(5 - hand.Count);
+                DrawCards(1);
                 drawTimer = 0f;
             }
         }
