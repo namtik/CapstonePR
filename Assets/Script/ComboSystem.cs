@@ -84,12 +84,14 @@ public class ComboSystem : MonoBehaviour
         if (enemy == null)
         {
             enemy = Object.FindFirstObjectByType<Enemy>();
-            Debug.LogError("Enemy가 할당되지 않았습니다!");
+            if (enemy == null)
+                Debug.LogError("Enemy가 할당되지 않았습니다!");
         }
         if (player == null)
         {
             player = Object.FindFirstObjectByType<Player>();
-            Debug.LogError("player가 할당되지 않았습니다!");
+            if (player == null)
+                Debug.LogError("player가 할당되지 않았습니다!");
         }
     }
     

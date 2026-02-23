@@ -115,6 +115,33 @@ public class Enemy : MonoBehaviour
 
         if (currentHp <= 0)
         {
+            // Ensure UI shows zero before destruction
+            if (hpBar != null) hpBar.value = 0f;
+
+            // If this is the last enemy in the scene, notify battle clear
+            var enemies = Object.FindObjectsOfType<Enemy>();
+            if (enemies == null || enemies.Length <= 1)
+            {
+                // Prefer GameManager singleton, fallback to BattleManger
+                GameManager gm = Object.FindFirstObjectByType<GameManager>();
+                if (gm != null)
+                {
+                    gm.LoadMapScene();
+                }
+                else
+                {
+                    BattleManger bm = Object.FindFirstObjectByType<BattleManger>();
+                    if (bm != null)
+                    {
+                        bm.OnBattleClear();
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Enemy: No GameManager or BattleManger found to handle stage clear.");
+                    }
+                }
+            }
+
             Destroy(gameObject);
         }
     }
