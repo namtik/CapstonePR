@@ -1,10 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// Attach this to the Clear button (same GameObject). The component will ensure
-// the Button's onClick is wired at runtime to a handler that finds the active
-// BattleManger or GameManager and triggers a map return. This avoids broken
-// inspector references when scenes are reloaded.
+
 [RequireComponent(typeof(Button))]
 public class ClearButtonProxy : MonoBehaviour
 {
@@ -15,15 +12,13 @@ public class ClearButtonProxy : MonoBehaviour
         button = GetComponent<Button>();
         if (button == null) return;
 
-        // Ensure the runtime instance has a working listener (clears stale references)
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(OnClearClicked);
     }
 
-    // Called by the button at runtime
+    // 버튼이 런타임에 호출하는 핸들러
     public void OnClearClicked()
     {
-        // Try find the current BattleManger in the scene
         var bm = Object.FindFirstObjectByType<BattleManger>();
         if (bm != null)
         {
@@ -31,7 +26,7 @@ public class ClearButtonProxy : MonoBehaviour
             return;
         }
 
-        // Fallback to GameManager if no BattleManger found
+        //BattleManger가 없으면 GameManager를 대체로 사용
         var gm = Object.FindFirstObjectByType<GameManager>();
         if (gm != null)
         {
@@ -39,6 +34,6 @@ public class ClearButtonProxy : MonoBehaviour
             return;
         }
 
-        Debug.LogWarning("ClearButtonProxy: No BattleManger or GameManager found to handle clear click.");
+        Debug.LogWarning("ClearButtonProxy: BattleManger 또는 GameManager를 찾을 수 없습니다.");
     }
 }

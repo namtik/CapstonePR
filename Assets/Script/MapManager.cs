@@ -338,8 +338,9 @@ public class MapManager : MonoBehaviour
 
         // 우선 GameManager 싱글턴 사용
         var gm = GameManager.Instance ?? Object.FindFirstObjectByType<GameManager>();
-        // If there's no GameManager in the scene, create one so we can record
-        // the lastVisitedNodeIndex and have a persistent manager for scene loads.
+        // 각주: 씬에 GameManager가 없으면 런타임에서 생성합니다.
+        // 각주: 이렇게 하면 마지막 방문 노드(lastVisitedNodeIndex)를 기록하고
+        // 각주: 씬 전환 시 상태를 유지할 수 있는 지속성 있는 매니저가 확보됩니다.
         if (gm == null)
         {
             GameObject gmObj = new GameObject("GameManager");

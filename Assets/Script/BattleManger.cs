@@ -30,7 +30,7 @@ public class BattleManger : MonoBehaviour
     // 전투 클리어 시 호출: 맵 씬으로 돌아감
     public void OnBattleClear()
     {
-        // Mark last visited node as cleared (if set) and return to map
+        // 각주: 마지막 방문한 노드를 클리어로 표시하고 맵으로 돌아감
         GameManager gm = Object.FindFirstObjectByType<GameManager>();
         if (gm != null)
         {
