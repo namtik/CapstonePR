@@ -1,0 +1,15 @@
+INT,STRING,FLOAT,STRING,INT,STRING,STRING,STRING,STRING,STRING
+ID,Name,Damage,Combo,Draw,EffectName,SkillImg,생성 1장,생성 2장,Description
+1001,강타Q,200,QQ,0,QSmite_Eff,QSmite_Img,0,0,공격력의 200% 데미지를 입힌다.
+1002,강타W,200,WW,0,WSmite_Eff,WSmite_Img,0,0,공격력의 200% 데미지를 입힌다.
+1003,강타E,200,EE,0,ESmite_Eff,ESmite_Img,0,0,공격력의 200% 데미지를 입힌다.
+1004,강타R,200,RR,0,RSmite_Eff,RSmite_Img,0,0,공격력의 200% 데미지를 입힌다.
+1005,필살기 Q,300,qqq,0,QSignatureMv_Eff,QSignatureMv_Img,0,0,공격력의 300% 데미지를 입힌다.
+1006,필살기 W,300,www,0,WSignatureMv_Eff,QSignatureMv_Img,0,0,공격력의 300% 데미지를 입힌다.
+1007,필살기 E,300,eee,0,ESignatureMv_Eff,QSignatureMv_Img,0,0,공격력의 300% 데미지를 입힌다.
+1008,필살기 R,300,rrr,0,RSignatureMv_Eff,QSignatureMv_Img,0,0,공격력의 300% 데미지를 입힌다.
+1009,조합1,150,we,0,WEMix_Eff,WEMix_Img,0,0,공격력의 150% 데미지를 입힌다.
+1010,조합2,150,qw,0,QWMix_Eff,QWMix_Img,0,0,공격력의 150% 데미지를 입힌다.
+1011,합공,250,QWE,0,QWEMix_Eff,QWEMix_Img,0,0,공격력의 250% 데미지를 입힌다.
+1012,카드 뽑기,50,WEW,2,DrawCardSkill_Eff,DrawCardSkill_Img,0,0,공격력의 200% 데미지를 입히고 카드를 2장 뽑는다.
+1013,카드 생성,100,WQQ,0,CreateCardSkill_Eff,CreateCardSkill_Img,Q,0,공격력의 100% 데미지를 입히고 Q 카드를 생성한다. 

@@ -148,7 +148,7 @@ public class CardSystem : MonoBehaviour
         }
     }
 
-    private void DrawCards(int count)
+    public void DrawCards(int count)
     {
         for (int i = 0; i < count; i++)
         {
