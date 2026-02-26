@@ -53,5 +53,25 @@ MonoBehaviour:
     nodeType: 0
     sceneName: 
     connections: 06000000
+  - anchoredPosition: {x: 200, y: -140}
+    nodeType: 0
+    sceneName: 
+    connections: 06000000
+  - anchoredPosition: {x: 200, y: -140}
+    nodeType: 0
+    sceneName: 
+    connections: 06000000
+  - anchoredPosition: {x: 200, y: -140}
+    nodeType: 0
+    sceneName: 
+    connections: 06000000
+  - anchoredPosition: {x: 200, y: -140}
+    nodeType: 0
+    sceneName: 
+    connections: 06000000
+  - anchoredPosition: {x: 200, y: -140}
+    nodeType: 0
+    sceneName: 
+    connections: 06000000
   startIndex: 3
   bossIndex: 6
