@@ -201,21 +201,7 @@ public class Player : MonoBehaviour
 
     void HandleDefenseInput()
     {
-        // 디버깅: 키 입력 체크
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-        {
-            Debug.Log($"왼쪽 화살표 입력 감지! isOnCooldown: {isOnCooldown}");
-        }
-        if (Input.GetKeyDown(KeyCode.RightArrow))
-        {
-            Debug.Log($"오른쪽 화살표 입력 감지! isOnCooldown: {isOnCooldown}");
-        }
-
-        if (isOnCooldown)
-        {
-            Debug.Log("쿨타임 중이라 입력 무시됨");
-            return;
-        }
+        if (isOnCooldown) return;
 
         // 왼쪽 방향키 (<): 회피
         if (Input.GetKeyDown(KeyCode.LeftArrow))
@@ -223,8 +209,7 @@ public class Player : MonoBehaviour
             isDodging = true;
             isDefending = false;
             inputTimer = defenseWindow;
-            StartCooldown(); // 시도 즉시 쿨타임 시작
-            Debug.Log($"회피 준비! inputTimer: {inputTimer}");
+            StartCooldown();
         }
         // 오른쪽 방향키 (>): 방어
         else if (Input.GetKeyDown(KeyCode.RightArrow))
@@ -232,18 +217,14 @@ public class Player : MonoBehaviour
             isDefending = true;
             isDodging = false;
             inputTimer = defenseWindow;
-            StartCooldown(); // 시도 즉시 쿨타임 시작
-            Debug.Log($"방어 준비! inputTimer: {inputTimer}");
+            StartCooldown();
         }
     }
 
     public void OnProjectileHit(float damage)
     {
-        Debug.Log($"투사체 충돌! isDodging: {isDodging}, isDefending: {isDefending}, inputTimer: {inputTimer}");
-        
         if (isDodging)
         {
-            Debug.Log("회피 성공! 데미지 0");
             ShowResult("회피 성공!", Color.green);
             isDodging = false;
             inputTimer = 0f;
@@ -253,7 +234,6 @@ public class Player : MonoBehaviour
         if (isDefending)
         {
             float reducedDamage = damage * 0.5f;
-            Debug.Log($"방어 성공! 데미지 50% 감소: {damage} -> {reducedDamage}");
             ShowResult("방어 성공!", Color.cyan);
             TakeDamage(reducedDamage);
             isDefending = false;
@@ -261,7 +241,6 @@ public class Player : MonoBehaviour
             return;
         }
 
-        Debug.Log($"피격! 데미지: {damage}");
         ShowResult("피격!", Color.red);
         TakeDamage(damage);
     }
