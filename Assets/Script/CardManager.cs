@@ -21,6 +21,10 @@ public class CardSystem : MonoBehaviour
 
     public TMP_Text deckText;    
     public TMP_Text graveyardText;
+  
+
+    public int baseDraw=10;
+    public float drawTime=1f;
 
     void Start()
     {
@@ -30,7 +34,7 @@ public class CardSystem : MonoBehaviour
 
         SetDeck();
         ShuffleDeck(deck);
-        DrawCards(10);
+        DrawCards(baseDraw);
 
     }
 
@@ -133,10 +137,10 @@ public class CardSystem : MonoBehaviour
 
     void UpdateDrawTimer() 
     {
-        if (hand.Count < 10)
+        if (hand.Count < baseDraw)
         {
             drawTimer += Time.deltaTime;
-            if (drawTimer >= 1f)
+            if (drawTimer >= drawTime)
             {
                 DrawCards(1);
                 drawTimer = 0f;
