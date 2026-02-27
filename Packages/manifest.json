@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.unity.2d.animation": "13.0.4",
     "com.unity.2d.enhancers": "1.0.0",
     "com.unity.2d.sprite": "1.0.0",
     "com.unity.ai.assistant": "1.6.0-pre.2",
