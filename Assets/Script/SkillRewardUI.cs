@@ -6,7 +6,7 @@ using static SkillDataParser;
 public class SkillRewardUI : MonoBehaviour
 {
     public GameObject rewardPanel;     // 전체 패널
-    public Transform cardContainer;    // 카드가 생성될 부모 (Horizontal Layout)
+    public Transform cardContainer;    // 카드가 생성될 부모
     public GameObject cardPrefab;      // 선택지 카드 프리팹 (버튼 포함)
 
 
