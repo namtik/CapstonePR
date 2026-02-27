@@ -47,10 +47,10 @@ public class CardSystem : MonoBehaviour
     void UpdateCountUI()
     {
         if (deckText != null)
-            deckText.text = $"Deck: {deck.Count}";
+            deckText.text = $"{deck.Count}";
 
         if (graveyardText != null)
-            graveyardText.text = $"Grave: {graveyard.Count}";
+            graveyardText.text = $"{graveyard.Count}";
     }
 
     void SetDeck()

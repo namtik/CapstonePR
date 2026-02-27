@@ -504,7 +504,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: -10
+  m_Spacing: -20
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0
@@ -1710,7 +1710,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: d252295a260726949ba25aa3f5f1d4fb, type: 3}
   deckText: {fileID: 1950186694}
   graveyardText: {fileID: 73202609}
-  baseDraw: 10
+  baseDraw: 7
   drawTime: 1
 --- !u!1 &1678094573
 GameObject:
