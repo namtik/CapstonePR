@@ -517,25 +517,10 @@ MonoBehaviour:
   nodesParent: {fileID: 0}
   lineThickness: 8
   lineColor: {r: 0.8, g: 0.8, b: 0.8, a: 1}
-  startNodeIndex: 3
-  bossNodeIndex: 6
-  edges:
-  - from: 3
-    to: 0
-  - from: 0
-    to: 1
-  - from: 1
-    to: 2
-  - from: 2
-    to: 6
-  - from: 3
-    to: 4
-  - from: 4
-    to: 8
-  - from: 8
-    to: 6
+  currentPositionColor: {r: 0.3, g: 0.6, b: 1, a: 1}
+  currentPositionScale: 1.3
   mapData: {fileID: 11400000, guid: c3e6e0d92a9a02e4ba02b3f5391f7fb6, type: 2}
-  fallbackBattleSceneName: SampleScene
+  useMapGenerator: 1
 --- !u!4 &1277102611
 Transform:
   m_ObjectHideFlags: 0

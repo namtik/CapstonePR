@@ -14,7 +14,7 @@ public class MapGenerator : MonoBehaviour
     public int minNodesPerColumn = 3;
     
     [Tooltip("각 컬럼당 최대 노드 개수")]
-    public int maxNodesPerColumn = 5;
+    public int maxNodesPerColumn = 4;
     
     [Header("배치 설정")]
     [Tooltip("컬럼 간 가로 간격")]
@@ -229,7 +229,7 @@ public class MapGenerator : MonoBehaviour
             .ToList();
 
         // 최소 1개, 최대 3개 연결
-        int connectCount = Mathf.Min(Random.Range(1, 4), sortedTargets.Count);
+        int connectCount = Mathf.Min(Random.Range(1, 3), sortedTargets.Count);
         
         for (int i = 0; i < connectCount; i++)
         {
