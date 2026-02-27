@@ -5,6 +5,7 @@
     "com.unity.ai.assistant": "1.6.0-pre.2",
     "com.unity.ai.generators": "1.6.0-pre.2",
     "com.unity.ai.inference": "2.5.0",
+    "com.unity.animation.rigging": "1.4.1",
     "com.unity.cloud.gltfast": "6.16.0",
     "com.unity.collab-proxy": "2.10.2",
     "com.unity.ide.rider": "3.0.38",

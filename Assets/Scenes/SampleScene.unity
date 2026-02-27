@@ -358,6 +358,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 73202607}
   m_CullTransparentMesh: 1
+--- !u!1 &95956052
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 95956053}
+  - component: {fileID: 95956055}
+  - component: {fileID: 95956054}
+  m_Layer: 5
+  m_Name: menubar
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &95956053
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 95956052}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 307618035}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
+  m_AnchoredPosition: {x: 0, y: -43}
+  m_SizeDelta: {x: 1920, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &95956054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 95956052}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 803cf8aabac94884b87ba7815d71ca97, type: 3}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1000
+--- !u!222 &95956055
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 95956052}
+  m_CullTransparentMesh: 1
 --- !u!1 &219346475
 GameObject:
   m_ObjectHideFlags: 0
@@ -429,7 +504,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 0
+  m_Spacing: -20
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0
@@ -450,15 +525,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 1, g: 1, b: 1, a: 0}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Sprite: {fileID: 0}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -615,6 +690,7 @@ RectTransform:
   - {fileID: 1766305213}
   - {fileID: 1528637484}
   - {fileID: 327698327}
+  - {fileID: 95956053}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -946,7 +1022,7 @@ GameObject:
   - component: {fileID: 814307234}
   - component: {fileID: 814307233}
   m_Layer: 5
-  m_Name: Image
+  m_Name: background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -991,7 +1067,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: befda71a8f773324ab4a9ae8cd784d0d, type: 3}
+  m_Sprite: {fileID: 21300000, guid: e3872c9620a7f4c498e4a79ec9a138ae, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1090,10 +1166,10 @@ MonoBehaviour:
   comboSlotParent: {fileID: 1211821936}
   cardPrefab: {fileID: 4591304844329940127, guid: 950031a739a749944bd5a164190c0a56, type: 3}
   cardSprites:
-  - {fileID: 21300000, guid: a8b6871cfff503844a48dac24fa00f1a, type: 3}
-  - {fileID: 21300000, guid: ad2764fa6ff7ed84d8056eafb387bdee, type: 3}
-  - {fileID: 21300000, guid: 76087526e9e4c68468c76e30cbbcc685, type: 3}
-  - {fileID: 21300000, guid: 4e9a4cc2a5a3ee745a06f151598c267c, type: 3}
+  - {fileID: 21300000, guid: 8ddec850c6f63844ba5c3ed088c1562a, type: 3}
+  - {fileID: 21300000, guid: 61b6a5b059cfc924782b56acdd6a29e4, type: 3}
+  - {fileID: 21300000, guid: 2e6bfe16f25a9b849af5c0397b7af0d8, type: 3}
+  - {fileID: 21300000, guid: d252295a260726949ba25aa3f5f1d4fb, type: 3}
   skillIconParent: {fileID: 1528637484}
 --- !u!4 &921928112
 Transform:
@@ -1628,13 +1704,13 @@ MonoBehaviour:
   cardPrefab: {fileID: 4591304844329940127, guid: 950031a739a749944bd5a164190c0a56, type: 3}
   cardParent: {fileID: 219346476}
   cardSprites:
-  - {fileID: 21300000, guid: a8b6871cfff503844a48dac24fa00f1a, type: 3}
-  - {fileID: 21300000, guid: ad2764fa6ff7ed84d8056eafb387bdee, type: 3}
-  - {fileID: 21300000, guid: 76087526e9e4c68468c76e30cbbcc685, type: 3}
-  - {fileID: 21300000, guid: 4e9a4cc2a5a3ee745a06f151598c267c, type: 3}
+  - {fileID: 21300000, guid: 8ddec850c6f63844ba5c3ed088c1562a, type: 3}
+  - {fileID: 21300000, guid: 61b6a5b059cfc924782b56acdd6a29e4, type: 3}
+  - {fileID: 21300000, guid: 2e6bfe16f25a9b849af5c0397b7af0d8, type: 3}
+  - {fileID: 21300000, guid: d252295a260726949ba25aa3f5f1d4fb, type: 3}
   deckText: {fileID: 1950186694}
   graveyardText: {fileID: 73202609}
-  baseDraw: 10
+  baseDraw: 7
   drawTime: 1
 --- !u!1 &1678094573
 GameObject:

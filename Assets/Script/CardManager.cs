@@ -47,10 +47,10 @@ public class CardSystem : MonoBehaviour
     void UpdateCountUI()
     {
         if (deckText != null)
-            deckText.text = $"Deck: {deck.Count}";
+            deckText.text = $"{deck.Count}";
 
         if (graveyardText != null)
-            graveyardText.text = $"Grave: {graveyard.Count}";
+            graveyardText.text = $"{graveyard.Count}";
     }
 
     void SetDeck()
@@ -119,6 +119,7 @@ public class CardSystem : MonoBehaviour
         if (enemy != null && player != null)
         {
             enemy.TakeDamage(player.attackDamage);
+            enemy.PlayHitEffect(type);
             Debug.Log($"{type} 카드 사용! 적에게 {player.attackDamage} 데미지.");
         }
 

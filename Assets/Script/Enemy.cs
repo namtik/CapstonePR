@@ -29,6 +29,12 @@ public class Enemy : MonoBehaviour
     private Player player;
     private Coroutine damageCoroutine; // 데미지 표시용
 
+    [Header("피격 이펙트 (파티클)")]
+    public ParticleSystem qEffect;
+    public ParticleSystem wEffect;
+    public ParticleSystem eEffect;
+    public ParticleSystem rEffect;
+
     void Start()
     {
         currentHp = maxHp;
@@ -172,6 +178,25 @@ public class Enemy : MonoBehaviour
         Takedamtext.text = ""; // 텍스트 초기화
         Takedamtext.transform.position = originalPos; // 위치 복구
         Takedamtext.color = originalColor; // 색상 복구
+    }
+
+    public void PlayHitEffect(string cardType)
+    {
+        switch (cardType)
+        {
+            case "Q":
+                if (qEffect != null) qEffect.Play();
+                break;
+            case "W":
+                if (wEffect != null) wEffect.Play();
+                break;
+            case "E":
+                if (eEffect != null) eEffect.Play();
+                break;
+            case "R":
+                if (rEffect != null) rEffect.Play();
+                break;
+        }
     }
 }
 
