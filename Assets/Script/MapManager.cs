@@ -322,6 +322,6 @@ public class MapManager : MonoBehaviour
 
         // 각주: 현재 노드 기록 후 전투 씬 로드
         cachedGameManager.lastVisitedNodeIndex = node.nodeIndex;
-        cachedGameManager.LoadBattleScene();
+        cachedGameManager.LoadStage();
     }
 }

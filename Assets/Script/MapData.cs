@@ -21,6 +21,8 @@ public class MapData : ScriptableObject
         // 이 노드가 들어갈 씬 이름
         public string sceneName = "";
 
+        public RoundData roundData; // 노드에서 시작할 라운드 정보 (전투, 상점 등)
+
         // 연결된 노드들의 인덱스 목록
         // 인덱스는 MapData.nodes 리스트의 인덱스를 참조
         public List<int> connections = new List<int>();
