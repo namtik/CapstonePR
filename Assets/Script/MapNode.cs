@@ -1,14 +1,17 @@
 using UnityEngine;
 
-public enum NodeType { Combat, Shop, Rest, Elite }
+public enum NodeType { Combat, Shop, Rest, Elite, Boss, Event }
 
 // 개별 노드의 상태와 동작을 관리하는 컴포넌트
 public class MapNode : MonoBehaviour
 {
     public int nodeIndex = -1;
-    public NodeType nodeType = NodeType.Combat;
     public MapManager mapManager;
     public bool isCleared = false;
+    public RoundData roundData;
+    public NodeType nodeType => roundData != null
+       ? roundData.roundType
+       : NodeType.Combat;
 
     private UnityEngine.UI.Image img;
     private bool isHighlighted = false;

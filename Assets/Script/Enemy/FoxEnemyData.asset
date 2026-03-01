@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
   m_Name: FoxEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: "\uAD6C\uBBF8\uD638"
+  enemyName: fox
+  enemySprite: {fileID: 21300000, guid: 3c1aad2b7abe53744b6d6b3eeaa85002, type: 3}
   maxHp: 1000
   attackDamage: 10
-  gaugeSpeed: 1
-  enemySprite: {fileID: 21300000, guid: 3c1aad2b7abe53744b6d6b3eeaa85002, type: 3}
+  gaugeSpeed: 10

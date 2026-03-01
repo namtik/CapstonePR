@@ -49,14 +49,9 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(mapSceneName);
     }
 
-    public void LoadBattleScene()
+    public void LoadStage()
     {
-        if (string.IsNullOrEmpty(battleSceneName))
-        {
-            Debug.LogWarning("GameManager: battleSceneName is empty. Cannot load battle scene.");
-            return;
-        }
-        SceneManager.LoadScene(battleSceneName);
+        
     }
 
     public void LoadBattleScene(string sceneName)

@@ -31,14 +31,16 @@ public class MapGenerator : MonoBehaviour
     
     [Header("특수방 위치 (랜덤 범위)")]
     [Tooltip("상점방이 나올 최소 컬럼 인덱스")]
-    public int shopColumnMin = 2;
+    public int shopColumnMin = 5;
     [Tooltip("상점방이 나올 최대 컬럼 인덱스")]
     public int shopColumnMax = 4;
     
     [Tooltip("휴식방이 나올 최소 컬럼 인덱스")]
-    public int restColumnMin = 5;
+    public int restColumnMin = 9;
     [Tooltip("휴식방이 나올 최대 컬럼 인덱스")]
-    public int restColumnMax = 7;
+    public int restColumnMax = 8;
+
+    [SerializeField] private RoundDataConfig roundDataConfig;
 
     // 생성된 맵 데이터
     private MapData generatedMapData;
@@ -93,6 +95,9 @@ public class MapGenerator : MonoBehaviour
                 {
                     anchoredPosition = new Vector2(col * columnSpacing, yPositions[i]),
                     nodeType = DetermineNodeType(col, i, nodeCount),
+                    roundData = roundDataConfig != null
+                        ? roundDataConfig.GetRoundData(DetermineNodeType(col, i, nodeCount))
+                        : null,
                     connections = new List<int>()
                 };
                 
