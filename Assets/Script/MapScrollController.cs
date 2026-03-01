@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 // UI Canvas 내 맵 노드 스크롤 컨트롤러
 // RectTransform을 이동시켜 현재 노드를 화면 중앙에 표시
@@ -12,15 +13,20 @@ public class MapScrollController : MonoBehaviour
     [Range(1f, 20f)]
     public float smoothSpeed = 8f;
 
+    [Header("스크롤바 설정")]
+    [Tooltip("하단 스크롤바 (Inspector에서 할당)")]
+    public Scrollbar horizontalScrollbar;
+
     [Header("스크롤 제한")]
     [Tooltip("X축 최소 위치 (왼쪽 끝)")]
-    public float minX = -1400f;
+    public float minX = -3000f;
 
     [Tooltip("X축 최대 위치 (오른쪽 끝)")]
-    public float maxX = 1400f;
+    public float maxX = 500f;
 
     private Vector2 targetPosition;
     private bool isMoving = false;
+    private bool isScrollbarDragging = false;
 
     void Start()
     {
@@ -31,6 +37,12 @@ public class MapScrollController : MonoBehaviour
         else
         {
             targetPosition = scrollTarget.anchoredPosition;
+        }
+
+        if (horizontalScrollbar != null)
+        {
+            horizontalScrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
+            UpdateScrollbarValue();
         }
     }
 
@@ -50,6 +62,39 @@ public class MapScrollController : MonoBehaviour
             scrollTarget.anchoredPosition = targetPosition;
             isMoving = false;
         }
+
+        if (!isScrollbarDragging && horizontalScrollbar != null)
+        {
+            UpdateScrollbarValue();
+        }
+    }
+
+    void OnScrollbarValueChanged(float value)
+    {
+        if (scrollTarget == null) return;
+
+        isScrollbarDragging = true;
+
+        // 스크롤바 값(0~1)을 맵 X축 위치로 변환
+        // value 0 = minX (왼쪽 끝), value 1 = maxX (오른쪽 끝)
+        float targetX = Mathf.Lerp(maxX, minX, value);
+        
+        targetPosition = new Vector2(targetX, scrollTarget.anchoredPosition.y);
+        scrollTarget.anchoredPosition = targetPosition;
+        
+        isMoving = false;
+        isScrollbarDragging = false;
+    }
+
+    void UpdateScrollbarValue()
+    {
+        if (horizontalScrollbar == null || scrollTarget == null) return;
+
+        // 현재 X 위치를 스크롤바 값(0~1)으로 변환
+        float currentX = scrollTarget.anchoredPosition.x;
+        float normalizedValue = Mathf.InverseLerp(maxX, minX, currentX);
+        
+        horizontalScrollbar.SetValueWithoutNotify(normalizedValue);
     }
 
     // 특정 노드 위치로 스크롤 (부드럽게)
@@ -62,7 +107,7 @@ public class MapScrollController : MonoBehaviour
         // (노드가 오른쪽에 있으면 scrollTarget을 왼쪽으로 이동)
         float targetX = -nodeTransform.anchoredPosition.x;
 
-        // 각주: 경계 제한
+        //경계 제한
         targetX = Mathf.Clamp(targetX, minX, maxX);
 
         targetPosition = new Vector2(targetX, scrollTarget.anchoredPosition.y);

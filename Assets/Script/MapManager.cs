@@ -220,13 +220,12 @@ public class MapManager : MonoBehaviour
 
     // 스크롤을 현재 위치 노드로 이동
     //맵 복귀 시 현재 위치 추적
-    // 
     void UpdateScrollPosition(bool snapImmediately = false)
     {
         if (scrollController == null)
         {
             //  MapScrollController 자동 찾기
-            scrollController = Object.FindFirstObjectByType<MapScrollController>();
+            scrollController = Object.FindAnyObjectByType<MapScrollController>();
             if (scrollController == null)
             {
                 Debug.LogWarning("MapManager: MapScrollController를 찾을 수 없습니다.");
@@ -408,7 +407,7 @@ public class MapManager : MonoBehaviour
     // 노드 타입에 맞는 RoundData로 라운드 시작
     void StartRoundForNode(MapNode node, bool isBossNode)
     {
-        var roundManager = Object.FindFirstObjectByType<Roundmanager>();
+        var roundManager = Object.FindAnyObjectByType<Roundmanager>();
         if (roundManager == null)
         {
             Debug.LogWarning("MapManager: Roundmanager를 찾을 수 없습니다.");

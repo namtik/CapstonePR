@@ -9,10 +9,10 @@ public class BattleManger : MonoBehaviour
     public Transform enemyParent;
 
     private bool battleInitialized = false;
-    private Enemy cachedEnemy;
 
     void OnEnable()
     {
+        // 각주: 캔버스가 활성화될 때마다 전투 초기화
         if (!battleInitialized)
         {
             InitializeBattle();
@@ -21,8 +21,10 @@ public class BattleManger : MonoBehaviour
 
     void InitializeBattle()
     {
+        // 각주: 기존 플레이어/적 제거
         ClearBattleObjects();
 
+        // 각주: 새로 생성
         if (playerPrefab != null && playerParent != null)
         {
             Instantiate(playerPrefab, playerParent);
@@ -30,8 +32,7 @@ public class BattleManger : MonoBehaviour
 
         if (enemyPrefab != null && enemyParent != null)
         {
-            GameObject enemyObj = Instantiate(enemyPrefab, enemyParent);
-            cachedEnemy = enemyObj.GetComponent<Enemy>();
+            Instantiate(enemyPrefab, enemyParent);
         }
 
         battleInitialized = true;
@@ -40,6 +41,7 @@ public class BattleManger : MonoBehaviour
 
     void ClearBattleObjects()
     {
+        // 각주: 기존 Player/Enemy 제거
         var existingPlayers = Object.FindObjectsOfType<Player>();
         foreach (var p in existingPlayers)
         {
@@ -51,33 +53,38 @@ public class BattleManger : MonoBehaviour
         {
             Destroy(e.gameObject);
         }
-        
-        cachedEnemy = null;
     }
 
     void Update()
     {
-        Spawn();
+        if (battleInitialized)
+        {
+            CheckEnemyRespawn();
+        }
     }
 
-    public void Spawn()
+    private Enemy currentEnemy;
+
+    public void CheckEnemyRespawn()
     {
-        if (cachedEnemy == null || cachedEnemy.gameObject == null)
+        if (currentEnemy == null || !currentEnemy.gameObject.activeInHierarchy)
         {
             if (enemyPrefab != null && enemyParent != null)
             {
                 GameObject enemyObj = Instantiate(enemyPrefab, enemyParent);
-                cachedEnemy = enemyObj.GetComponent<Enemy>();
+                currentEnemy = enemyObj.GetComponent<Enemy>();
             }
         }
     }
 
+    // 전투 클리어 후 호출: 맵 화면으로 복귀
     public void OnBattleClear()
     {
-        GameStateController stateController = GameStateController.Instance;
+        //GameStateController를 통해 맵으로 복귀
+        GameStateController stateController = Object.FindAnyObjectByType<GameStateController>();
         if (stateController != null)
         {
-            battleInitialized = false;
+            battleInitialized = false; //다음 전투를 위해 리셋
             stateController.OnBattleClear();
             return;
         }
