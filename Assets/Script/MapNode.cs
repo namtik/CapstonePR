@@ -6,9 +6,12 @@ public enum NodeType { Combat, Shop, Rest, Elite, Boss, Event }
 public class MapNode : MonoBehaviour
 {
     public int nodeIndex = -1;
-    public NodeType nodeType = NodeType.Combat;
     public MapManager mapManager;
     public bool isCleared = false;
+    public RoundData roundData;
+    public NodeType nodeType => roundData != null
+       ? roundData.roundType
+       : NodeType.Combat;
 
     private UnityEngine.UI.Image img;
     private bool isHighlighted = false;

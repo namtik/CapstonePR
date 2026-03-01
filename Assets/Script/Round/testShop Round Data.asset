@@ -9,8 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 1831f2e8c6b3b3a41ab5b5eb93cadded, type: 3}
   m_Name: testShop Round Data
   m_EditorClassIdentifier: Assembly-CSharp::ShopRoundData
-  roundName: 
-  roundType: 0
+  roundName: "\uD14C\uC2A4\uD2B8\uC0C1\uC810"
+  roundType: 1

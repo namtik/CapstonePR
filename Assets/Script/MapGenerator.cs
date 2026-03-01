@@ -40,6 +40,8 @@ public class MapGenerator : MonoBehaviour
     [Tooltip("휴식방이 나올 최대 컬럼 인덱스")]
     public int restColumnMax = 8;
 
+    [SerializeField] private RoundDataConfig roundDataConfig;
+
     // 생성된 맵 데이터
     private MapData generatedMapData;
     
@@ -93,6 +95,9 @@ public class MapGenerator : MonoBehaviour
                 {
                     anchoredPosition = new Vector2(col * columnSpacing, yPositions[i]),
                     nodeType = DetermineNodeType(col, i, nodeCount),
+                    roundData = roundDataConfig != null
+                        ? roundDataConfig.GetRoundData(DetermineNodeType(col, i, nodeCount))
+                        : null,
                     connections = new List<int>()
                 };
                 

@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
   m_Name: TreeEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: 
-  enemySprite: {fileID: 0}
+  enemyName: tree
+  enemySprite: {fileID: 21300000, guid: 3c278f0a4d9dde044ac8b885d5789e36, type: 3}
   maxHp: 1000
   attackDamage: 10
   gaugeSpeed: 10

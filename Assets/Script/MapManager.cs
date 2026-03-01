@@ -2,8 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 횡스크롤 로그라이크 맵 시스템 매니저
-// 각주: MapGenerator와 연동하여 맵 생성 및 렌더링
+// MapGenerator를 사용하여 맵 생성 및 렌더링
 public class MapManager : MonoBehaviour
 {
     public GameObject nodePrefab;
@@ -14,106 +13,132 @@ public class MapManager : MonoBehaviour
     public Color lineColor = new Color(0.8f, 0.8f, 0.8f, 1f);
 
     [Header("Player Position Highlight")]
-    public Color currentPositionColor = new Color(0.3f, 0.6f, 1f, 1f); // 각주: 청색 - 현재 위치
-    public float currentPositionScale = 1.3f; // 각주: 현재 위치 노드 크기 (1.3배)
+    public Color currentPositionColor = new Color(0.3f, 0.6f, 1f, 1f);
+    public float currentPositionScale = 1.3f;
 
-    [Header("Map graph")]
-    public MapData mapData;
+    [Header("Map Scroll")]
+    public MapScrollController scrollController;  // : 맵 스크롤 컨트롤러
 
-    [Header("맵 생성기")]
-    public bool useMapGenerator = true; // 각주: true면 자동 생성, false면 mapData 사용
+    // : MapGenerator로 자동 생성된 맵 데이터 (런타임 전용)
+    private MapData mapData;
     private MapGenerator mapGenerator;
-    private GameManager cachedGameManager; // 각주: 성능 최적화용 캐시
 
     private List<MapNode> nodes = new List<MapNode>();
     private List<GameObject> pathLines = new List<GameObject>();
     private Sprite lineSprite;
 
-    void Start()
-    {
-        // 각주: GameManager 캐싱
-        cachedGameManager = GameManager.Instance ?? Object.FindFirstObjectByType<GameManager>();
+    public Roundmanager roundManager;  // : 라운드 매니저 참조
 
-        // 각주: MapGenerator 컴포넌트 확보
-        if (useMapGenerator)
+    void Awake()
+    {
+        //  MapGenerator 컴포넌트 확보
+        mapGenerator = GetComponent<MapGenerator>();
+        if (mapGenerator == null)
         {
-            mapGenerator = GetComponent<MapGenerator>();
-            if (mapGenerator == null)
-            {
-                mapGenerator = gameObject.AddComponent<MapGenerator>();
-            }
+            mapGenerator = gameObject.AddComponent<MapGenerator>();
         }
 
-        // 각주: 경로선용 스프라이트 준비
+        //  경로선용 스프라이트 준비
         if (lineSprite == null)
         {
             lineSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
         }
+    }
 
-        // 각주: nodesParent 자동 생성
-        if (nodesParent == null)
+    void Start()
+    {
+        //  게임 시작 시 맵 생성
+        GenerateMap();
+    }
+
+    // 맵 새로고침 (GameStateController에서 호출)
+    //  맵 화면으로 돌아올 때마다 실행
+    public void RefreshMap()
+    {
+        // 기존 맵이 없으면 생성
+        if (nodes.Count == 0)
         {
-            Canvas canvas = Object.FindFirstObjectByType<Canvas>();
-            if (canvas != null)
-            {
-                GameObject parentObj = new GameObject("MapNodes");
-                parentObj.transform.SetParent(canvas.transform, false);
-                RectTransform rt = parentObj.AddComponent<RectTransform>();
-                rt.anchorMin = new Vector2(0.5f, 0.5f);
-                rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.anchoredPosition = Vector2.zero;
-                rt.sizeDelta = new Vector2(2800f, 1000f); // 각주: 횡스크롤용 넓은 크기
-                nodesParent = parentObj.transform;
-            }
-            else
-            {
-                Debug.LogWarning("MapManager: Canvas not found. Please add a Canvas to the scene.");
-                return;
-            }
+            GenerateMap();
+        }
+        else
+        {
+            //  기존 맵이 있으면 상태만 업데이트
+            UpdateNodeStates();
+            UpdateNodeAvailability();
+            HighlightCurrentPosition();
         }
 
-        // 각주: 맵 생성 (1회만 호출)
-        GenerateSimpleMap();
+        //  카메라를 현재 위치로 이동
+        UpdateScrollPosition();
+    }
+
+    void UpdateNodeStates()
+    {
+        //  GameStateController에서 클리어 상태 복원
+        var stateController = GameStateController.Instance;
+        if (stateController == null) return;
+
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            nodes[i].SetCleared(stateController.IsNodeCleared(i));
+        }
     }
 
     void UpdateNodeAvailability()
     {
-        // default: all not interactable
+        Debug.Log("=== UpdateNodeAvailability 시작 ===");
+
+        //  모든 노드 비활성화
         for (int i = 0; i < nodes.Count; i++)
         {
-            var btn = nodes[i].GetComponent<UnityEngine.UI.Button>();
+            var btn = nodes[i].GetComponent<Button>();
             if (btn != null) btn.interactable = false;
         }
 
-        // 각주: 캐시된 GameManager 사용
-        if (cachedGameManager == null)
+        //  GameStateController에서 현재 위치 확인
+        var stateController = GameStateController.Instance;
+        if (stateController == null)
         {
-            cachedGameManager = GameManager.Instance ?? Object.FindFirstObjectByType<GameManager>();
-        }
-        int current = cachedGameManager != null ? cachedGameManager.lastVisitedNodeIndex : -1;
-
-        // 각주: MapData 기반 연결만 사용 (구 시스템 fallback 제거)
-        if (mapData == null || mapData.nodes == null || mapData.nodes.Count == 0)
-        {
-            Debug.LogWarning("MapManager: No mapData available. Cannot update node availability.");
+            Debug.LogError("UpdateNodeAvailability: GameStateController.Instance가 null입니다!");
             return;
         }
 
-        // 각주: 게임 시작 시 - 시작 노드만 활성화
+        int current = stateController.lastVisitedNodeIndex;
+        Debug.Log($"현재 위치: {current}");
+
+        //  MapData 없음 예외 처리
+        if (mapData == null || mapData.nodes == null || mapData.nodes.Count == 0)
+        {
+            Debug.LogWarning("MapManager: No mapData available.");
+            return;
+        }
+
+        //  게임 시작 전 - 시작 노드만 활성화
         if (current < 0)
         {
+            Debug.Log($"게임 시작 전: 시작 노드 {mapData.startIndex} 활성화 시도");
+
             if (mapData.startIndex >= 0 && mapData.startIndex < nodes.Count)
             {
                 var btn = nodes[mapData.startIndex].GetComponent<Button>();
                 if (btn != null && !nodes[mapData.startIndex].isCleared)
                 {
                     btn.interactable = true;
+                    Debug.Log($"시작 노드 {mapData.startIndex} 활성화 완료!");
                 }
+                else
+                {
+                    Debug.LogWarning($"시작 노드 버튼이 null이거나 클리어됨: btn={btn != null}, cleared={nodes[mapData.startIndex].isCleared}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"시작 인덱스가 범위를 벗어남: {mapData.startIndex}, 노드 개수: {nodes.Count}");
             }
             return;
         }
 
-        // 각주: 현재 노드의 연결된 다음 노드들 활성화
+        //  현재 노드의 연결된 다음 노드 활성화
         if (current >= 0 && current < mapData.nodes.Count)
         {
             var conns = mapData.nodes[current].connections;
@@ -127,6 +152,7 @@ public class MapManager : MonoBehaviour
                         if (btn != null)
                         {
                             btn.interactable = true;
+                            Debug.Log($"노드 {targetIndex} 활성화");
                         }
                     }
                 }
@@ -134,33 +160,33 @@ public class MapManager : MonoBehaviour
         }
     }
 
-    void GenerateSimpleMap()
+    void GenerateMap()
     {
         ClearNodes();
 
-        // 각주: 새 맵 생성 시스템 사용
-        if (useMapGenerator && mapGenerator != null)
+        //  MapGenerator로 랜덤 맵 생성
+        if (mapGenerator != null)
         {
-            Debug.Log("MapGenerator로 새 맵 생성 중...");
+            Debug.Log("MapGenerator로 맵 자동 생성 중...");
             mapData = mapGenerator.GenerateMap();
             mapGenerator.PrintMapInfo();
         }
 
-        // 각주: MapData 확인
+        //  MapData 확인
         if (mapData == null || mapData.nodes == null || mapData.nodes.Count == 0)
         {
             Debug.LogError("MapManager: No valid MapData. Cannot generate map.");
             return;
         }
 
-        // 각주: 노드 생성
+        //  노드 생성
         for (int i = 0; i < mapData.nodes.Count; i++)
         {
             var entry = mapData.nodes[i];
-            CreateNode(entry.anchoredPosition, i, entry.nodeType);
+            CreateNode(entry.anchoredPosition, i, entry.roundData);
         }
 
-        // 각주: 경로선 그리기
+        // 경로선 그리기
         for (int i = 0; i < mapData.nodes.Count; i++)
         {
             var entry = mapData.nodes[i];
@@ -174,7 +200,7 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        // 각주: 시작/보스 노드 강조
+        //  시작/보스 노드 강조
         if (mapData.startIndex >= 0 && mapData.startIndex < nodes.Count)
         {
             nodes[mapData.startIndex].Highlight(Color.green);
@@ -184,27 +210,80 @@ public class MapManager : MonoBehaviour
             nodes[mapData.bossIndex].Highlight(Color.yellow);
         }
 
-        // 각주: 현재 플레이어 위치 하이라이트
+        //  현재 플레이어 위치 하이라이트
         HighlightCurrentPosition();
 
-        // 각주: 노드 활성화 상태 업데이트
+        //  노드 활성화 상태 업데이트
         UpdateNodeAvailability();
+
+        //  스크롤을 시작 노드로 즉시 이동
+        UpdateScrollPosition(true);
     }
 
-    /// <summary>
-    /// 플레이어의 현재 위치를 하이라이트
-    /// 각주: 시작 전(-1)이면 하이라이트 없음, 진행 중이면 현재 노드 강조
-    /// </summary>
-    void HighlightCurrentPosition()
+    // 스크롤을 현재 위치 노드로 이동
+    //맵 복귀 시 현재 위치 추적
+    void UpdateScrollPosition(bool snapImmediately = false)
     {
-        if (cachedGameManager == null)
+        if (scrollController == null)
         {
-            cachedGameManager = GameManager.Instance ?? Object.FindFirstObjectByType<GameManager>();
+            //  MapScrollController 자동 찾기
+            scrollController = Object.FindAnyObjectByType<MapScrollController>();
+            if (scrollController == null)
+            {
+                Debug.LogWarning("MapManager: MapScrollController를 찾을 수 없습니다.");
+                return;
+            }
         }
 
-        int currentPos = cachedGameManager != null ? cachedGameManager.lastVisitedNodeIndex : -1;
+        var stateController = GameStateController.Instance;
+        if (stateController == null) return;
 
-        // 각주: 게임 시작 전이거나 유효하지 않은 인덱스면 스킵
+        int currentPos = stateController.lastVisitedNodeIndex;
+
+        // 게임 시작 전이면 시작 노드로 이동
+        if (currentPos < 0)
+        {
+            if (mapData != null && mapData.startIndex >= 0 && mapData.startIndex < nodes.Count)
+            {
+                RectTransform startNodeRect = nodes[mapData.startIndex].GetComponent<RectTransform>();
+
+                if (snapImmediately)
+                {
+                    //  맵 생성 직후는 즉시 이동
+                    scrollController.SnapToNode(startNodeRect);
+                }
+                else
+                {
+                    scrollController.ScrollToNode(startNodeRect);
+                }
+            }
+            return;
+        }
+
+        //  현재 위치 노드로 이동
+        if (currentPos >= 0 && currentPos < nodes.Count)
+        {
+            RectTransform currentNodeRect = nodes[currentPos].GetComponent<RectTransform>();
+
+            if (snapImmediately)
+            {
+                scrollController.SnapToNode(currentNodeRect);
+            }
+            else
+            {
+                scrollController.ScrollToNode(currentNodeRect);
+            }
+        }
+    }
+
+    void HighlightCurrentPosition()
+    {
+        var stateController = GameStateController.Instance;
+        if (stateController == null) return;
+
+        int currentPos = stateController.lastVisitedNodeIndex;
+
+        //  게임 시작 전이거나 유효하지 않은 인덱스면 스킵
         if (currentPos < 0 || currentPos >= nodes.Count)
         {
             return;
@@ -212,7 +291,7 @@ public class MapManager : MonoBehaviour
 
         MapNode currentNode = nodes[currentPos];
 
-        // 각주: 현재 위치 노드를 특별하게 표시
+        // 현재 위치 노드를 특별하게 표시
         currentNode.HighlightAsCurrentPosition(currentPositionColor, currentPositionScale);
 
         Debug.Log($"플레이어 현재 위치: 노드 {currentPos} ({currentNode.nodeType})");
@@ -237,7 +316,6 @@ public class MapManager : MonoBehaviour
         float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
         rt.localRotation = Quaternion.Euler(0, 0, angle);
 
-        // put lines behind nodes
         lineObj.transform.SetSiblingIndex(0);
 
         pathLines.Add(lineObj);
@@ -258,7 +336,7 @@ public class MapManager : MonoBehaviour
         pathLines.Clear();
     }
 
-    void CreateNode(Vector2 anchoredPos, int idx, NodeType type)
+    void CreateNode(Vector2 anchoredPos, int idx, RoundData roundData)
     {
         if (nodePrefab == null)
         {
@@ -273,18 +351,19 @@ public class MapManager : MonoBehaviour
             rt.anchoredPosition = anchoredPos;
         }
 
-        MapNode node = go.AddComponent<MapNode>();
+        MapNode node = go.GetComponent<MapNode>() ?? go.AddComponent<MapNode>();
         node.nodeIndex = idx;
-        node.nodeType = type;
+        node.roundData = roundData;
         node.mapManager = this;
 
-        // 각주: 캐시된 GameManager로 클리어 상태 복원
-        if (cachedGameManager != null)
+        //  GameStateController의 클리어 상태 복원
+        var stateController = GameStateController.Instance;
+        if (stateController != null)
         {
-            node.SetCleared(cachedGameManager.IsNodeCleared(idx));
+            node.SetCleared(stateController.IsNodeCleared(idx));
         }
 
-        // 각주: 버튼 이벤트 연결
+        //  버튼 이벤트 연결
         var btn = go.GetComponent<Button>();
         if (btn != null)
         {
@@ -299,7 +378,7 @@ public class MapManager : MonoBehaviour
     {
         Debug.Log($"Node selected: {node.nodeIndex} type:{node.nodeType}");
 
-        // 각주: 상호작용 가능 여부 체크
+        //  상호작용 가능 여부 체크
         var btn = node.GetComponent<Button>();
         if (btn == null || !btn.interactable)
         {
@@ -307,21 +386,29 @@ public class MapManager : MonoBehaviour
             return;
         }
 
-        // 각주: 캐시된 GameManager 사용
-        if (cachedGameManager == null)
+        //  GameStateController에 현재 노드 기록
+        var stateController = GameStateController.Instance;
+        if (stateController == null)
         {
-            cachedGameManager = GameManager.Instance ?? Object.FindFirstObjectByType<GameManager>();
+            Debug.LogError("MapManager: GameStateController not found!");
+            return;
         }
 
-        // 각주: GameManager가 없으면 런타임 생성
-        if (cachedGameManager == null)
-        {
-            GameObject gmObj = new GameObject("GameManager");
-            cachedGameManager = gmObj.AddComponent<GameManager>();
-        }
+        stateController.lastVisitedNodeIndex = node.nodeIndex;
 
-        // 각주: 현재 노드 기록 후 전투 씬 로드
-        cachedGameManager.lastVisitedNodeIndex = node.nodeIndex;
-        cachedGameManager.LoadStage();
+        // 노드가 보스 노드인지 확인
+        bool isBossNode = (mapData != null && node.nodeIndex == mapData.bossIndex);
+
+        //  노드 타입에 따라 적절한 캔버스 표시
+        stateController.ShowCanvasForNodeType(node.nodeType, isBossNode);
+
+        //  RoundData 생성 및 라운드 시작
+        RoundData roundData = mapData.nodes[node.nodeIndex].roundData;
+        if (roundData != null)
+            roundManager.StartRound(roundData);
     }
+
+    // 노드 타입에 맞는 RoundData로 라운드 시작
+    
+
 }

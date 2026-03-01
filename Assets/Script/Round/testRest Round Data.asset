@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
-  m_Name: Rest Round Data
+  m_Script: {fileID: 11500000, guid: 6f8117d50acb0fe4781f2824e873b90e, type: 3}
+  m_Name: testRest Round Data
   m_EditorClassIdentifier: Assembly-CSharp::RestRoundData
-  roundName: rest
+  roundName: "\uD14C\uC2A4\uD2B8 rest"
   roundType: 2
   healPercent: 0.3

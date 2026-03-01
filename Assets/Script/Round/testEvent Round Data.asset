@@ -9,9 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
+  m_Script: {fileID: 11500000, guid: 78e930d76ff47874d8bb03b1a5605d89, type: 3}
   m_Name: testEvent Round Data
   m_EditorClassIdentifier: Assembly-CSharp::EventRoundData
   roundName: "\uD14C\uC2A4\uD2B8 \uC774\uBCA4\uD2B8"
   roundType: 5
-  eventDescription: "\uD14C\uC2A4\uD2B8"
+  eventDescription: "\uD14C\uC2A4\uD2B8 \uC774\uBCA4\uD2B8"
