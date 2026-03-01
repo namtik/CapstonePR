@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f51abe9571c5b54bb1ae3fd9e0e8662, type: 3}
+  m_Name: RoundDataConfig
+  m_EditorClassIdentifier: Assembly-CSharp::RoundDataConfig
+  combatPool:
+  - {fileID: 11400000, guid: 7d1fc14d86e013f46a8caf447264dd4d, type: 2}
+  elitePool:
+  - {fileID: 0}
+  bossPool:
+  - {fileID: 0}
+  shopData: {fileID: 0}
+  restData: {fileID: 0}
+  eventData: {fileID: 11400000, guid: 43c570b1d355d2d4484e8d946212dc4f, type: 2}

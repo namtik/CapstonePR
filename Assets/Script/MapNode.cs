@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public enum NodeType { Combat, Shop, Rest, Elite }
+public enum NodeType { Combat, Shop, Rest, Elite, Boss, Event }
 
 // 개별 노드의 상태와 동작을 관리하는 컴포넌트
 public class MapNode : MonoBehaviour

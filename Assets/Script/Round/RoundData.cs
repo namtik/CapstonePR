@@ -15,6 +15,7 @@ public abstract class RoundData : ScriptableObject
 public class CombatRoundData : RoundData
 {
     public List<EnemyData> enemies;
+    public int columIndex;// 컴럼별 배율
 
     public override IRoundHandler CreateHandler()
     {
@@ -27,6 +28,7 @@ public class CombatRoundData : RoundData
 public class EliteRoundData : RoundData
 {
     public List<EnemyData> enemies;
+    public int columIndex;// 컴럼별 배율
 
     public override IRoundHandler CreateHandler()
     {
@@ -40,6 +42,7 @@ public class BossRoundData : RoundData
 {
     public EnemyData bossEnemy;
     public List<EnemyData> minionEnemies; // 보스는 부하도 있을 수 있음
+    public int columIndex;// 컴럼별 배율
 
     public override IRoundHandler CreateHandler()
     {
