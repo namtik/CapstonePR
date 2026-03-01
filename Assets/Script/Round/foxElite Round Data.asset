@@ -9,11 +9,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2ecabe9552fdb9144bff4b9221db6e7b, type: 3}
-  m_Name: foxCombat Round Data
-  m_EditorClassIdentifier: Assembly-CSharp::CombatRoundData
-  roundName: FoxRound
-  roundType: 0
+  m_Script: {fileID: 11500000, guid: ae79f9cda3162f14383b8714499f892a, type: 3}
+  m_Name: foxElite Round Data
+  m_EditorClassIdentifier: Assembly-CSharp::EliteRoundData
+  roundName: Elitefox
+  roundType: 3
   enemies:
+  - {fileID: 11400000, guid: ec5830b3574ea514985faa9c1c45b986, type: 2}
   - {fileID: 11400000, guid: ec5830b3574ea514985faa9c1c45b986, type: 2}
   columnIndex: 0
