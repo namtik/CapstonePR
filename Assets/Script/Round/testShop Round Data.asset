@@ -10,8 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 0}
-  m_Name: Rest Round Data
-  m_EditorClassIdentifier: Assembly-CSharp::RestRoundData
-  roundName: rest
-  roundType: 2
-  healPercent: 0.3
+  m_Name: testShop Round Data
+  m_EditorClassIdentifier: Assembly-CSharp::ShopRoundData
+  roundName: 
+  roundType: 0

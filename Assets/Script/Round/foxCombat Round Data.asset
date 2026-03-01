@@ -15,5 +15,5 @@ MonoBehaviour:
   roundName: Fox
   roundType: 0
   enemies:
-  - {fileID: 0}
+  - {fileID: 11400000, guid: ec5830b3574ea514985faa9c1c45b986, type: 2}
   columIndex: 0

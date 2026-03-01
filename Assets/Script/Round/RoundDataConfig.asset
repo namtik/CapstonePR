@@ -19,5 +19,5 @@ MonoBehaviour:
   bossPool:
   - {fileID: 0}
   shopData: {fileID: 0}
-  restData: {fileID: 0}
+  restData: {fileID: 11400000, guid: a67c8ac4a190e324186e167a98fb026d, type: 2}
   eventData: {fileID: 11400000, guid: 43c570b1d355d2d4484e8d946212dc4f, type: 2}
