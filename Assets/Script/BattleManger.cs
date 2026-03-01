@@ -5,13 +5,54 @@ public class BattleManger : MonoBehaviour
     public GameObject playerPrefab;
     public GameObject enemyPrefab;
 
-    public Transform playerParent; // Player 위치
-    public Transform enemyParent;  // Enemy 위치
+    public Transform playerParent;
+    public Transform enemyParent;
 
-    void Start()
+    private bool battleInitialized = false;
+    private Enemy cachedEnemy;
+
+    void OnEnable()
     {
-        Instantiate(playerPrefab, playerParent);
-        Instantiate(enemyPrefab, enemyParent);
+        if (!battleInitialized)
+        {
+            InitializeBattle();
+        }
+    }
+
+    void InitializeBattle()
+    {
+        ClearBattleObjects();
+
+        if (playerPrefab != null && playerParent != null)
+        {
+            Instantiate(playerPrefab, playerParent);
+        }
+
+        if (enemyPrefab != null && enemyParent != null)
+        {
+            GameObject enemyObj = Instantiate(enemyPrefab, enemyParent);
+            cachedEnemy = enemyObj.GetComponent<Enemy>();
+        }
+
+        battleInitialized = true;
+        Debug.Log("전투 초기화 완료");
+    }
+
+    void ClearBattleObjects()
+    {
+        var existingPlayers = Object.FindObjectsOfType<Player>();
+        foreach (var p in existingPlayers)
+        {
+            Destroy(p.gameObject);
+        }
+
+        var existingEnemies = Object.FindObjectsOfType<Enemy>();
+        foreach (var e in existingEnemies)
+        {
+            Destroy(e.gameObject);
+        }
+        
+        cachedEnemy = null;
     }
 
     void Update()
@@ -21,27 +62,27 @@ public class BattleManger : MonoBehaviour
 
     public void Spawn()
     {
-        if (Object.FindAnyObjectByType<Enemy>() == null)
+        if (cachedEnemy == null || cachedEnemy.gameObject == null)
         {
-            Instantiate(enemyPrefab, enemyParent);
+            if (enemyPrefab != null && enemyParent != null)
+            {
+                GameObject enemyObj = Instantiate(enemyPrefab, enemyParent);
+                cachedEnemy = enemyObj.GetComponent<Enemy>();
+            }
         }
     }
 
-    // 전투 클리어 시 호출: 맵 씬으로 돌아감
     public void OnBattleClear()
     {
-        // 각주: 마지막 방문한 노드를 클리어로 표시하고 맵으로 돌아감
-        GameManager gm = Object.FindFirstObjectByType<GameManager>();
-        if (gm != null)
+        GameStateController stateController = GameStateController.Instance;
+        if (stateController != null)
         {
-            if (gm.lastVisitedNodeIndex >= 0)
-            {
-                gm.MarkNodeCleared(gm.lastVisitedNodeIndex);
-            }
-            gm.LoadMapScene();
+            battleInitialized = false;
+            stateController.OnBattleClear();
             return;
         }
 
-        Debug.LogWarning("BattleManger: GameManager not found. Cannot return to map.");
+        Debug.LogWarning("BattleManger: GameStateController not found. Cannot return to map.");
     }
 }
+

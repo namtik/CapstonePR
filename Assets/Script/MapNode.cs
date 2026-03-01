@@ -13,7 +13,7 @@ public class MapNode : MonoBehaviour
     private UnityEngine.UI.Image img;
     private bool isHighlighted = false;
     private Color highlightColor = Color.white;
-    private bool isCurrentPosition = false; // 각주: 현재 플레이어 위치 표시
+    private bool isCurrentPosition = false; //  현재 플레이어 위치 표시
 
     void Awake()
     {
@@ -25,12 +25,12 @@ public class MapNode : MonoBehaviour
         UpdateVisual();
     }
 
-    // 각주: 화면 표시 업데이트 (우선순위: 클리어 > 현재위치 > 하이라이트 > 타입)
+    //  화면 표시 업데이트 (우선순위: 클리어 > 현재위치 > 하이라이트 > 타입)
     void UpdateVisual()
     {
         if (img == null) return;
         
-        // 각주: 클리어된 노드는 회색
+        //  클리어된 노드는 회색
         if (isCleared)
         {
             img.color = Color.gray;
@@ -38,14 +38,14 @@ public class MapNode : MonoBehaviour
             return;
         }
         
-        // 각주: 현재 위치는 특별 표시 (최우선)
+        //  현재 위치는 특별 표시 (최우선)
         if (isCurrentPosition)
         {
             img.color = highlightColor;
             return;
         }
         
-        // 각주: 강조 상태
+        //  강조 상태
         if (isHighlighted)
         {
             img.color = highlightColor;
@@ -53,7 +53,7 @@ public class MapNode : MonoBehaviour
             return;
         }
 
-        // 각주: 기본 타입별 색상
+        //  기본 타입별 색상
         transform.localScale = Vector3.one;
         switch (nodeType)
         {
@@ -81,10 +81,8 @@ public class MapNode : MonoBehaviour
         UpdateVisual();
     }
 
-    /// <summary>
-    /// 현재 플레이어 위치로 특별 하이라이트
-    /// 각주: 색상 + 크기 + 테두리 효과
-    /// </summary>
+    // 현재 플레이어 위치로 특별 하이라이트
+    //  색상 + 크기 + 테두리 효과
     public void HighlightAsCurrentPosition(Color color, float scale)
     {
         if (img == null) img = GetComponent<UnityEngine.UI.Image>();
@@ -92,10 +90,10 @@ public class MapNode : MonoBehaviour
         isCurrentPosition = true;
         highlightColor = color;
         
-        // 각주: 크기 확대
+        //  크기 확대
         transform.localScale = Vector3.one * scale;
         
-        // 각주: Outline 테두리 추가
+        //  Outline 테두리 추가
         var outline = GetComponent<UnityEngine.UI.Outline>();
         if (outline == null)
         {

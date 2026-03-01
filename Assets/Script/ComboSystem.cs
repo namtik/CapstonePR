@@ -65,7 +65,6 @@ public class ComboSystem : MonoBehaviour
 
     void Update()
     {
-        // 스킬 텍스트 표시 타이머
         if (isShowingSkillText)
         {
             skillTextTimer -= Time.deltaTime;
@@ -77,16 +76,6 @@ public class ComboSystem : MonoBehaviour
                     skillActivationText.text = "";
                 }
             }
-        }
-
-        if (enemy == null)
-        {
-            enemy = Object.FindFirstObjectByType<Enemy>();
-        }
-
-        if (player == null)
-        {
-            player = Object.FindFirstObjectByType<Player>();
         }
     }
 
@@ -169,7 +158,7 @@ public class ComboSystem : MonoBehaviour
         rect.sizeDelta = new Vector2(500f, 60f);
 
         skillActivationText = textObj.AddComponent<Text>();
-        skillActivationText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        skillActivationText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         skillActivationText.fontSize = 32;
         skillActivationText.alignment = TextAnchor.MiddleCenter;
         skillActivationText.color = new Color(1f, 0.8f, 0f, 1f);
@@ -389,7 +378,11 @@ public class ComboSystem : MonoBehaviour
 
     void ActivateSkill(SkillData skill)
     {
-        if(skill.draw > 0) 
+        if (player == null) player = Object.FindFirstObjectByType<Player>();
+        if (enemy == null) enemy = Object.FindFirstObjectByType<Enemy>();
+        if (CM == null) CM = Object.FindFirstObjectByType<CardSystem>();
+        
+        if(skill.draw > 0 && CM != null) 
         {
             CM.DrawCards(skill.draw);
             Debug.Log($"{skill.draw}장 드로우!");

@@ -128,23 +128,15 @@ public class Enemy : MonoBehaviour
             var enemies = Object.FindObjectsOfType<Enemy>();
             if (enemies == null || enemies.Length <= 1)
             {
-                // Prefer GameManager singleton, fallback to BattleManger
-                GameManager gm = Object.FindFirstObjectByType<GameManager>();
-                if (gm != null)
+                // 각주: BattleManger를 통해 전투 클리어 처리
+                BattleManger bm = Object.FindFirstObjectByType<BattleManger>();
+                if (bm != null)
                 {
-                    gm.LoadMapScene();
+                    bm.OnBattleClear();
                 }
                 else
                 {
-                    BattleManger bm = Object.FindFirstObjectByType<BattleManger>();
-                    if (bm != null)
-                    {
-                        bm.OnBattleClear();
-                    }
-                    else
-                    {
-                        Debug.LogWarning("Enemy: No GameManager or BattleManger found to handle stage clear.");
-                    }
+                    Debug.LogWarning("Enemy: BattleManger를 찾을 수 없습니다.");
                 }
             }
 

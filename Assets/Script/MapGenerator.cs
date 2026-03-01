@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-// 횡스크롤 로그라이크 맵 생성기
-// 각주: 왼쪽에서 오른쪽으로 진행하는 10개 컬럼 + 보스방 구조
+
+// 왼쪽에서 오른쪽으로 진행하는 10개 컬럼 + 보스방 구조
 public class MapGenerator : MonoBehaviour
 {
     [Header("맵 구조 설정")]
@@ -46,14 +46,11 @@ public class MapGenerator : MonoBehaviour
     // 각 컬럼별 노드 리스트 (연결 계산용)
     private List<List<int>> columnNodes = new List<List<int>>();
     
-    // 각주: 현재 맵에서 실제로 사용되는 특수방 컬럼 (매번 랜덤)
+    // 현재 맵에서 실제로 사용되는 특수방 컬럼 (매번 랜덤)
     private int actualShopColumn;
     private int actualRestColumn;
 
-    /// <summary>
-    /// 맵 생성 메인 함수
-    /// 각주: 이 함수를 호출하면 새로운 맵이 생성됨
-    /// </summary>
+    // 맵 생성 메인 함수
     public MapData GenerateMap()
     {
         // 1. MapData 초기화
@@ -61,7 +58,7 @@ public class MapGenerator : MonoBehaviour
         generatedMapData.nodes = new List<MapData.NodeEntry>();
         columnNodes.Clear();
 
-        // 각주: 특수방 위치를 매번 랜덤하게 결정
+        // 특수방 위치를 매번 랜덤하게 결정
         actualShopColumn = Random.Range(shopColumnMin, shopColumnMax + 1);
         actualRestColumn = Random.Range(restColumnMin, restColumnMax + 1);
         Debug.Log($"이번 맵: 상점={actualShopColumn}번 컬럼, 휴식={actualRestColumn}번 컬럼");
@@ -73,7 +70,7 @@ public class MapGenerator : MonoBehaviour
         {
             List<int> currentColumnIndices = new List<int>();
             
-            // 각주: 0번 컬럼(시작)은 항상 1개만, 나머지는 랜덤 3~5개
+            // 0번 컬럼(시작)은 항상 1개만, 나머지는 랜덤 3~5개
             int nodeCount;
             if (col == 0)
             {
@@ -104,7 +101,7 @@ public class MapGenerator : MonoBehaviour
             columnNodes.Add(currentColumnIndices);
         }
 
-        // 3. 보스 방 생성 (11번째 컬럼)
+        // 3. 보스 방 생성
         MapData.NodeEntry bossNode = new MapData.NodeEntry
         {
             anchoredPosition = new Vector2(totalColumns * columnSpacing, 0f),
@@ -128,10 +125,9 @@ public class MapGenerator : MonoBehaviour
         return generatedMapData;
     }
 
-    /// <summary>
+
     /// Y축 위치 생성 (균등 분포 + 랜덤 오프셋)
-    /// 각주: 노드들이 겹치지 않고 골고루 배치되도록 함
-    /// </summary>
+
     float[] GenerateYPositions(int count)
     {
         float[] positions = new float[count];
@@ -153,10 +149,8 @@ public class MapGenerator : MonoBehaviour
         return positions;
     }
 
-    /// <summary>
-    /// 노드 타입 결정
-    /// 각주: 첫 번째 컬럼은 전투방, 랜덤 컬럼에 상점/휴식방 배치
-    /// </summary>
+    // 노드 타입 결정
+    // 첫 번째 컬럼은 전투방, 랜덤 컬럼에 상점/휴식방 배치
     NodeType DetermineNodeType(int columnIndex, int nodeIndexInColumn, int totalNodesInColumn)
     {
         // 첫 번째 컬럼은 무조건 전투방
@@ -175,10 +169,9 @@ public class MapGenerator : MonoBehaviour
         return NodeType.Combat;
     }
 
-    /// <summary>
-    /// 노드 간 연결 생성
-    /// 각주: 각 노드는 다음 컬럼의 가까운 노드들과 연결됨
-    /// </summary>
+    // 노드 간 연결 생성
+    // 각 노드는 다음 컬럼의 가까운 노드들과 연결됨
+
     void ConnectNodes()
     {
         // 1. 일반 컬럼 간 연결 (0→1, 1→2, ..., 9→보스)
@@ -210,10 +203,8 @@ public class MapGenerator : MonoBehaviour
         EnsureAllNodesConnected();
     }
 
-    /// <summary>
-    /// 한 노드를 다음 컬럼 노드들과 연결
-    /// 각주: Y축 거리가 가까운 노드들만 연결 (1~3개)
-    /// </summary>
+    // 한 노드를 다음 컬럼 노드들과 연결
+    // Y축 거리가 가까운 노드들만 연결 (1~3개)
     void ConnectToNextColumn(int fromIndex, List<int> nextColumnIndices)
     {
         Vector2 fromPos = generatedMapData.nodes[fromIndex].anchoredPosition;
@@ -242,11 +233,8 @@ public class MapGenerator : MonoBehaviour
             }
         }
     }
-
-    /// <summary>
-    /// 모든 노드가 최소 1개 이상의 연결을 가지도록 보장
-    /// 각주: 입구가 없는 노드에 역방향 연결 추가
-    /// </summary>
+    // 모든 노드가 최소 1개 이상의 연결을 가지도록 보장
+    //  입구가 없는 노드에 역방향 연결 추가
     void EnsureAllNodesConnected()
     {
         // 각 노드가 입구를 가지는지 체크
@@ -301,9 +289,7 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 디버그용: 생성된 맵 정보 출력
-    /// </summary>
+    // 디버그용: 생성된 맵 정보 출력
     public void PrintMapInfo()
     {
         Debug.Log("=== 맵 생성 정보 ===");
