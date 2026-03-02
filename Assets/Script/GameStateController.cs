@@ -16,6 +16,7 @@ public class GameStateController : MonoBehaviour
     public GameObject bossStage;         // BossStage GameObject (있다면)
     public GameObject shopStage;         // ShopStage GameObject (있다면)
     public GameObject restStage;         // RestStage GameObject (있다면)
+    public GameObject eventStage;        // EventStage GameObject (이벤트 노드)
 
     [Header("Managers")]
     public MapManager mapManager;
@@ -162,6 +163,9 @@ public class GameStateController : MonoBehaviour
                 case NodeType.Rest:
                     targetStage = restStage;
                     break;
+                case NodeType.Event:
+                    targetStage = eventStage;
+                    break;
             }
         }
 
@@ -190,6 +194,7 @@ public class GameStateController : MonoBehaviour
         if (bossStage != null) bossStage.SetActive(false);
         if (shopStage != null) shopStage.SetActive(false);
         if (restStage != null) restStage.SetActive(false);
+        if (eventStage != null) eventStage.SetActive(false);
     }
 
     // 전투 화면으로 전환
