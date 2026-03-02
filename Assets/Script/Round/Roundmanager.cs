@@ -14,6 +14,7 @@ public class Roundmanager : MonoBehaviour
     private EnemyStat currentEnemy;
     public event System.Action OnRoundClear;
     private IRoundHandler currentRoundHandler;
+    private int clearedCombatCount = 0;
 
     public void StartRound(RoundData roundData)
     {
@@ -92,7 +93,6 @@ public class Roundmanager : MonoBehaviour
     {
         Debug.Log("스킬 보상 선택 UI 표시");
         SkillDataParser.Instance.SkillRewardUI.ShowRewardOptions();
-        ReturnToMap();
     }
 
 

@@ -222,17 +222,13 @@ public class GameStateController : MonoBehaviour
     }
 
     // 전투 클리어 후 맵으로 복귀
-    // BattleManger.OnBattleClear()에서 호출됨
-    public void OnBattleClear()
+    public void OnRoundClear()
     {
         // 현재 노드 클리어 처리
         if (lastVisitedNodeIndex >= 0)
         {
             MarkNodeCleared(lastVisitedNodeIndex);
         }
-
-        // 맵으로 복귀
-        ShowMap();
     }
 
 }

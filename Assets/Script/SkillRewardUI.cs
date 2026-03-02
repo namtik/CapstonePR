@@ -8,7 +8,10 @@ public class SkillRewardUI : MonoBehaviour
     public GameObject rewardPanel;     // 전체 패널
     public Transform cardContainer;    // 카드가 생성될 부모
     public GameObject cardPrefab;      // 선택지 카드 프리팹 (버튼 포함)
+    public Roundmanager roundManager;          // 라운드 매니저 참조
+    public MapNode currentNode;                      // 현재 노드 참조
 
+    public int currentStage;
 
     public void ShowRewardOptions()
     {
@@ -36,10 +39,23 @@ public class SkillRewardUI : MonoBehaviour
 
     void OnSelectSkill(SkillData skill)
     {
-        // 콤보 시스템에 스킬 등록
+        if (ComboSystem.Instance == null)
+        {
+            Debug.LogError("[SkillRewardUI] ComboSystem.Instance가 null입니다. 씬에 ComboSystem이 있는지 확인하세요.");
+            rewardPanel.SetActive(false);
+            Time.timeScale = 1f;
+            return;
+        }
+        rewardPanel.SetActive(false);
+        Time.timeScale = 1f;
         ComboSystem.Instance.LearnSkill(skill);
-
-        rewardPanel.SetActive(false); // 창 닫기
-        Time.timeScale = 1f; // 게임 재개
+        if (ComboSystem.Instance.learnedSkillCount == 1)
+        {
+            return;
+        }
+        else
+        {
+            roundManager.ReturnToMap();
+        }
     }
 }

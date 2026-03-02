@@ -25,7 +25,7 @@ public class ClearButtonProxy : MonoBehaviour
         if (stateController != null)
         {
             Debug.Log("GameStateController.OnBattleClear »£√‚");
-            stateController.OnBattleClear();
+            stateController.OnRoundClear();
             return;
         }
         

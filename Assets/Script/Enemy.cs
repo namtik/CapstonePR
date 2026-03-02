@@ -132,7 +132,7 @@ public class Enemy : MonoBehaviour
                 GameStateController stateController = GameStateController.Instance;
                 if (stateController != null)
                 {
-                    stateController.OnBattleClear();
+                    stateController.OnRoundClear();
                 }
                 else
                 {
