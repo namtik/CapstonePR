@@ -125,7 +125,7 @@ public class Enemy : MonoBehaviour
             if (hpBar != null) hpBar.value = 0f;
 
             // If this is the last enemy in the scene, notify battle clear
-            var enemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+            var enemies = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
             if (enemies == null || enemies.Length <= 1)
             {
                 // Use GameStateController for canvas switching (no more scene loading)

@@ -92,11 +92,8 @@ public class Roundmanager : MonoBehaviour
     {
         Debug.Log("스킬 보상 선택 UI 표시");
         SkillDataParser.Instance.SkillRewardUI.ShowRewardOptions();
+        ReturnToMap();
     }
-
-    /// <summary>
-    /// 보장 보상 표시 (EliteRoundHandler)
-    /// </summary>
 
 
     /// <summary>
@@ -143,13 +140,20 @@ public class Roundmanager : MonoBehaviour
         GameObject go = Instantiate(enemyPrefab, enemySpawnPoint);
 
         EnemyStat stat = go.GetComponent<EnemyStat>();
+        EnemyView view = go.GetComponent<EnemyView>();
+
         if (stat == null)
         {
             Debug.LogError("RoundManager: enemyPrefab에 EnemyStat이 없습니다.");
             return;
         }
+        Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}");
+        
+        if (view != null && data.enemySprite != null)
+            view.SetSprite(data.enemySprite);
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
+
 
         // 사망 이벤트 구독
         stat.OnDied += HandleEnemyDied;

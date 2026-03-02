@@ -6,6 +6,7 @@ public class EnemyView : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private Slider hpBar;
+    [SerializeField] private Slider actionGaugeBar;
     [SerializeField] private TMP_Text damageText;
     [SerializeField] private Image enemyImage;
 
@@ -27,6 +28,7 @@ public class EnemyView : MonoBehaviour
     void Awake()
     {
         stat = GetComponent<EnemyStat>();
+        stat.OnHpChanged += UpdateHpBar;
     }
 
     void Start()
@@ -40,6 +42,9 @@ public class EnemyView : MonoBehaviour
 
         // EnemyStat 이벤트 구독
         stat.OnHpChanged += UpdateHpBar;
+
+        // 행동 게이지 초기화
+        if (actionGaugeBar != null) actionGaugeBar.value = 0f;
     }
 
     void OnDestroy()
@@ -56,6 +61,11 @@ public class EnemyView : MonoBehaviour
         hpBar.value = currentHp / maxHp;
     }
 
+    public void UpdateActionGauge(float ratio) // 0~1
+    {
+        if (actionGaugeBar != null)
+            actionGaugeBar.value = ratio;
+    }
 
     // EnemyController가 TakeDamage 직후 호출
     public void ShowDamage(float damage)
@@ -70,6 +80,7 @@ public class EnemyView : MonoBehaviour
 
     public void SetSprite(Sprite sprite)
     {
+        Debug.Log($"[EnemyView] enemyImage={enemyImage != null}, sprite={sprite?.name}");
         if (enemyImage != null) enemyImage.sprite = sprite;
     }
 

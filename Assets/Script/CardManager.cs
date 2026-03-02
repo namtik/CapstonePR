@@ -15,7 +15,7 @@ public class CardSystem : MonoBehaviour
     private List<string> graveyard = new List<string>();
 
     private Player player;
-    private Enemy enemy;
+    private EnemyController enemyController;
     private float drawTimer = 0f;
     private ComboSystem comboSystem; // 콤보 시스템 참조
 
@@ -29,8 +29,8 @@ public class CardSystem : MonoBehaviour
     void Start()
     {
         player = FindFirstObjectByType<Player>();
-        enemy = FindFirstObjectByType<Enemy>();
         comboSystem = FindFirstObjectByType<ComboSystem>(); // 콤보 시스템 찾기
+        RefreshEnemyRef();
 
         SetDeck();
         ShuffleDeck(deck);
@@ -42,6 +42,14 @@ public class CardSystem : MonoBehaviour
     {
         HandleInput();
         UpdateDrawTimer();
+        RefreshEnemyRef();
+    }
+    void RefreshEnemyRef()
+    {
+        if (enemyController == null || !enemyController.gameObject.activeInHierarchy)
+        {
+            enemyController = FindFirstObjectByType<EnemyController>();
+        }
     }
 
     void UpdateCountUI()
@@ -116,10 +124,9 @@ public class CardSystem : MonoBehaviour
         string type = cardObj.GetComponent<Card>().cardType;
 
         // 데미지 계산 (플레이어 공격력의 100%)
-        if (enemy != null && player != null)
+        if (enemyController != null && player != null)
         {
-            enemy.TakeDamage(player.attackDamage);
-            enemy.PlayHitEffect(type);
+            enemyController.TakeDamage(player.attackDamage, type);
             Debug.Log($"{type} 카드 사용! 적에게 {player.attackDamage} 데미지.");
         }
 

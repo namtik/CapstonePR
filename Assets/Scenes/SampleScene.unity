@@ -2102,7 +2102,6 @@ MonoBehaviour:
   nodesParent: {fileID: 454685445}
   lineThickness: 8
   lineColor: {r: 0.8, g: 0.8, b: 0.8, a: 1}
-  currentPositionColor: {r: 0.3, g: 0.6, b: 1, a: 1}
   currentPositionScale: 1.3
   scrollController: {fileID: 0}
   nodeVisualConfig: {fileID: 11400000, guid: 5a67e7f40b9ea014d8c56bf8b199f59e, type: 2}
@@ -2147,6 +2146,10 @@ MonoBehaviour:
   shopColumnMax: 4
   restColumnMin: 9
   restColumnMax: 8
+  minEventNodes: 1
+  maxEventNodes: 2
+  eventColumnMin: 2
+  eventColumnMax: 7
   roundDataConfig: {fileID: 11400000, guid: f8e1d10663efd214f93d25b0cf6daca8, type: 2}
 --- !u!1 &832575517
 GameObject:
@@ -4507,10 +4510,11 @@ MonoBehaviour:
   mapCanvas: {fileID: 1426373505}
   mapStage: {fileID: 183776082}
   combatStage: {fileID: 1780698868}
-  eliteStage: {fileID: 0}
-  bossStage: {fileID: 0}
-  shopStage: {fileID: 0}
-  restStage: {fileID: 0}
+  eliteStage: {fileID: 1780698868}
+  bossStage: {fileID: 1780698868}
+  shopStage: {fileID: 1148724980}
+  restStage: {fileID: 895437396}
+  eventStage: {fileID: 1879574928}
   mapManager: {fileID: 829038371}
   battleManager: {fileID: 1528849009}
   roundManager: {fileID: 610804760}

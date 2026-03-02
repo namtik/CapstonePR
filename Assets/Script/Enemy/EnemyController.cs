@@ -40,22 +40,33 @@ public class EnemyController : MonoBehaviour
         UpdateActionGauge();
     }
 
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damage, string cardtype)
     {
         if (!stat.IsAlive) return;
 
         stat.TakeDamage(damage);
         view.ShowDamage(damage);
+        view.PlayHitEffect(cardtype);
     }
+
+    public void TakeDamage(float damage)
+    {
+        TakeDamage(damage, "Default");
+        stat.TakeDamage(damage);
+        view.ShowDamage(damage);
+    }
+
 
     void UpdateActionGauge()
     {
         actionGauge += stat.GaugeSpeed * Time.deltaTime;
+        view.UpdateActionGauge(actionGauge / 100f);
 
         if (actionGauge >= 100f)
         {
             Attack();
             actionGauge = 0f;
+            view.UpdateActionGauge(0f);
         }
     }
 

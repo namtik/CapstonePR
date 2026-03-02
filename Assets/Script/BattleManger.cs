@@ -48,7 +48,7 @@ public class BattleManger : MonoBehaviour
             Destroy(p.gameObject);
         }
 
-        var existingEnemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+        var existingEnemies = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
         foreach (var e in existingEnemies)
         {
             Destroy(e.gameObject);
@@ -63,7 +63,7 @@ public class BattleManger : MonoBehaviour
         }
     }
 
-    private Enemy currentEnemy;
+    private EnemyController currentEnemy;
 
     public void CheckEnemyRespawn()
     {
@@ -72,7 +72,7 @@ public class BattleManger : MonoBehaviour
             if (enemyPrefab != null && enemyParent != null)
             {
                 GameObject enemyObj = Instantiate(enemyPrefab, enemyParent);
-                currentEnemy = enemyObj.GetComponent<Enemy>();
+                currentEnemy = enemyObj.GetComponent<EnemyController>();
             }
         }
     }
