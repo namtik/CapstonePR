@@ -40,6 +40,15 @@ public class Roundmanager : MonoBehaviour
     }
 
     /// <summary>
+    /// 정예 전투 시작 (EliteRoundHandler)
+    /// </summary>
+    public void StartCombat(EliteRoundData data)
+    {
+        currentEnemyIndex = 0;
+        SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
+    }
+
+    /// <summary>
     /// 보스 전투 시작 (BossRoundHandler)
     /// </summary>
     public void StartBoss(BossRoundData data)
@@ -65,7 +74,7 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void HealPlayer(float healPercent)
     {
-        var player = Object.FindFirstObjectByType<Player>();
+        var player = FindFirstObjectByType<Player>();
         if (player == null) return;
 
         float healAmount = player.maxHp * healPercent;
@@ -83,11 +92,8 @@ public class Roundmanager : MonoBehaviour
     {
         Debug.Log("스킬 보상 선택 UI 표시");
         SkillDataParser.Instance.SkillRewardUI.ShowRewardOptions();
+        ReturnToMap();
     }
-
-    /// <summary>
-    /// 보장 보상 표시 (EliteRoundHandler)
-    /// </summary>
 
 
     /// <summary>
@@ -95,8 +101,18 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void ReturnToMap()
     {
-        GameManager.Instance.MarkNodeCleared(GameManager.Instance.lastVisitedNodeIndex);
-        GameStateController.Instance.ShowMap();
+        var stateController = GameStateController.Instance;
+        if (stateController == null)
+        {
+            Debug.LogError("GameStateController.Instance가 null입니다!");
+            return;
+        }
+        
+        // 현재 노드 클리어 처리
+        stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
+        
+        // 맵으로 복귀
+        stateController.ShowMap();
     }
 
     // ── 내부 몬스터 스폰 ───
@@ -124,13 +140,20 @@ public class Roundmanager : MonoBehaviour
         GameObject go = Instantiate(enemyPrefab, enemySpawnPoint);
 
         EnemyStat stat = go.GetComponent<EnemyStat>();
+        EnemyView view = go.GetComponent<EnemyView>();
+
         if (stat == null)
         {
             Debug.LogError("RoundManager: enemyPrefab에 EnemyStat이 없습니다.");
             return;
         }
+        Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}");
+        
+        if (view != null && data.enemySprite != null)
+            view.SetSprite(data.enemySprite);
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
+
 
         // 사망 이벤트 구독
         stat.OnDied += HandleEnemyDied;

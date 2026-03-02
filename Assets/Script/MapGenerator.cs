@@ -39,6 +39,16 @@ public class MapGenerator : MonoBehaviour
     public int restColumnMin = 9;
     [Tooltip("휴식방이 나올 최대 컬럼 인덱스")]
     public int restColumnMax = 8;
+    
+    [Header("이벤트 노드 설정")]
+    [Tooltip("이벤트 노드 생성 최소 개수")]
+    public int minEventNodes = 1;
+    [Tooltip("이벤트 노드 생성 최대 개수")]
+    public int maxEventNodes = 2;
+    [Tooltip("이벤트 노드가 생성될 수 있는 최소 컬럼 (상점/휴식 제외)")]
+    public int eventColumnMin = 2;
+    [Tooltip("이벤트 노드가 생성될 수 있는 최대 컬럼 (보스 제외)")]
+    public int eventColumnMax = 7;
 
     [SerializeField] private RoundDataConfig roundDataConfig;
 
@@ -51,6 +61,7 @@ public class MapGenerator : MonoBehaviour
     // 각주: 현재 맵에서 실제로 사용되는 특수방 컬럼 (매번 랜덤)
     private int actualShopColumn;
     private int actualRestColumn;
+    private List<int> actualEventColumns = new List<int>();
 
     /// <summary>
     /// 맵 생성 메인 함수
@@ -66,7 +77,30 @@ public class MapGenerator : MonoBehaviour
         // 각주: 특수방 위치를 매번 랜덤하게 결정
         actualShopColumn = Random.Range(shopColumnMin, shopColumnMax + 1);
         actualRestColumn = Random.Range(restColumnMin, restColumnMax + 1);
-        Debug.Log($"이번 맵: 상점={actualShopColumn}번 컬럼, 휴식={actualRestColumn}번 컬럼");
+        
+        // 이벤트 컬럼 랜덤 선택 (1~2개)
+        actualEventColumns.Clear();
+        int eventCount = Random.Range(minEventNodes, maxEventNodes + 1);
+        
+        // 상점과 휴식 컬럼을 제외한 가능한 컬럼 목록 생성
+        List<int> availableColumns = new List<int>();
+        for (int i = eventColumnMin; i <= eventColumnMax; i++)
+        {
+            if (i != actualShopColumn && i != actualRestColumn)
+            {
+                availableColumns.Add(i);
+            }
+        }
+        
+        // 가능한 컬럼에서 랜덤하게 선택
+        for (int i = 0; i < eventCount && availableColumns.Count > 0; i++)
+        {
+            int randomIndex = Random.Range(0, availableColumns.Count);
+            actualEventColumns.Add(availableColumns[randomIndex]);
+            availableColumns.RemoveAt(randomIndex);
+        }
+        
+        Debug.Log($"이번 맵: 상점={actualShopColumn}번 컬럼, 휴식={actualRestColumn}번 컬럼, 이벤트={string.Join(",", actualEventColumns)}번 컬럼");
 
         int nodeIndex = 0;
 
@@ -113,7 +147,10 @@ public class MapGenerator : MonoBehaviour
         MapData.NodeEntry bossNode = new MapData.NodeEntry
         {
             anchoredPosition = new Vector2(totalColumns * columnSpacing, 0f),
-            nodeType = NodeType.Elite, // 보스방
+            nodeType = NodeType.Boss, // 보스방
+            roundData = roundDataConfig != null
+                ? roundDataConfig.GetRoundData(NodeType.Boss)
+                : null,
             connections = new List<int>()
         };
         generatedMapData.nodes.Add(bossNode);
@@ -160,7 +197,7 @@ public class MapGenerator : MonoBehaviour
 
     /// <summary>
     /// 노드 타입 결정
-    /// 각주: 첫 번째 컬럼은 전투방, 랜덤 컬럼에 상점/휴식방 배치
+    /// 각주: 첫 번째 컬럼은 전투방, 랜덤 컬럼에 상점/휴식/이벤트방 배치
     /// </summary>
     NodeType DetermineNodeType(int columnIndex, int nodeIndexInColumn, int totalNodesInColumn)
     {
@@ -175,6 +212,10 @@ public class MapGenerator : MonoBehaviour
         // 각주: 랜덤으로 결정된 휴식 컬럼 (중간 노드만)
         if (columnIndex == actualRestColumn && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Rest;
+        
+        // 각주: 랜덤으로 결정된 이벤트 컬럼 (중간 노드만)
+        if (actualEventColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
+            return NodeType.Event;
         
         // 나머지는 전투방
         return NodeType.Combat;
@@ -284,7 +325,6 @@ public class MapGenerator : MonoBehaviour
                     if (!generatedMapData.nodes[closestIndex].connections.Contains(nodeIndex))
                     {
                         generatedMapData.nodes[closestIndex].connections.Add(nodeIndex);
-                        Debug.Log($"고립 노드 {nodeIndex} 해결: {closestIndex} → {nodeIndex} 연결 추가");
                     }
                 }
             }

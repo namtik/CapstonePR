@@ -25,6 +25,7 @@ public class RoundDataConfig : ScriptableObject
         {
             NodeType.Combat => GetRandom(combatPool),
             NodeType.Elite => GetRandom(elitePool),
+            NodeType.Boss => GetRandom(bossPool),
             NodeType.Shop => shopData,
             NodeType.Rest => restData,
             NodeType.Event => eventData,

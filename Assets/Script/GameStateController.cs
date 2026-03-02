@@ -1,4 +1,3 @@
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
 // 게임 상태를 관리하고 캔버스 전환을 담당
@@ -9,11 +8,15 @@ public class GameStateController : MonoBehaviour
 
     [Header("Canvas References")]
     public Canvas mapCanvas;
-    public Canvas combatCanvas;  //  일반 전투 (NodeType.Combat)
-    public Canvas eliteCanvas;   //  정예 전투 (NodeType.Elite)
-    public Canvas bossCanvas;    //  보스 전투 (보스 노드)
-    public Canvas shopCanvas;    //  상점 (NodeType.Shop)
-    public Canvas restCanvas;    //  휴식 (NodeType.Rest)
+    
+    [Header("Stage GameObjects")]
+    public GameObject mapStage;          // MapStage GameObject
+    public GameObject combatStage;       // CombatStage GameObject
+    public GameObject eliteStage;        // EliteStage GameObject (있다면)
+    public GameObject bossStage;         // BossStage GameObject (있다면)
+    public GameObject shopStage;         // ShopStage GameObject (있다면)
+    public GameObject restStage;         // RestStage GameObject (있다면)
+    public GameObject eventStage;        // EventStage GameObject (이벤트 노드)
 
     [Header("Managers")]
     public MapManager mapManager;
@@ -39,86 +42,159 @@ public class GameStateController : MonoBehaviour
 
     void Start()
     {
-        // 게임 시작 시 맵 화면 표시
+        // 게임 시작 시 초기화 및 맵 화면 표시
+        InitializeGameState();
         ShowMap();
+    }
+
+    void InitializeGameState()
+    {
+        // GameManager와 동기화
+        if (GameManager.Instance != null)
+        {
+            lastVisitedNodeIndex = GameManager.Instance.lastVisitedNodeIndex;
+            clearedNodes = new System.Collections.Generic.List<int>(GameManager.Instance.clearedNodes);
+        }
+        
+        // Panel raycastTarget 비활성화
+        EnsureGraphicRaycaster();
+    }
+    
+    void EnsureGraphicRaycaster()
+    {
+        if (mapCanvas != null)
+        {
+            var raycaster = mapCanvas.GetComponent<UnityEngine.UI.GraphicRaycaster>();
+            if (raycaster == null)
+            {
+                mapCanvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+            }
+            
+            // Panel이나 background 이미지가 클릭을 막지 않도록 설정
+            DisablePanelRaycast();
+        }
+    }
+    
+    void DisablePanelRaycast()
+    {
+        if (mapCanvas == null) return;
+        
+        // Canvas 하위의 모든 Image 중 Panel, Background 등의 raycastTarget 비활성화
+        var allImages = mapCanvas.GetComponentsInChildren<UnityEngine.UI.Image>(true);
+        foreach (var img in allImages)
+        {
+            if (img.gameObject.name.ToLower().Contains("panel") || 
+                img.gameObject.name.ToLower().Contains("background"))
+            {
+                img.raycastTarget = false;
+            }
+        }
     }
 
     // 맵 화면으로 전환
     // 전투 캔버스 숨기고 맵 캔버스 표시
-
     public void ShowMap()
     {
-        Debug.Log("맵 화면으로 전환");
+        //  모든 스테이지 비활성화
+        HideAllStages();
 
-        //  모든 캔버스 비활성화
-        HideAllCanvases();
-
-        //  맵 캔버스만 활성화
-        if (mapCanvas != null) mapCanvas.gameObject.SetActive(true);
-
-        //  맵이 없으면 생성
-        if (mapManager != null)
+        //  맵 스테이지만 활성화
+        if (mapStage != null)
         {
-            mapManager.RefreshMap();
+            mapStage.SetActive(true);
         }
-    }
-
-    // 노드 타입에 따라 적절한 캔버스 표시
-    // MapManager.OnNodeSelected()에서 호출됨
-    public void ShowCanvasForNodeType(NodeType nodeType, bool isBossNode)
-    {
-        Debug.Log($"노드 타입 {nodeType}에 맞는 캔버스 표시 (보스: {isBossNode})");
-
-        //  모든 캔버스 비활성화
-        HideAllCanvases();
-
-        //  노드 타입에 따라 캔버스 활성화
-        Canvas targetCanvas = null;
-
-        if (isBossNode && bossCanvas != null)
+        else if (mapCanvas != null)
         {
-            //  보스 노드는 bossCanvas 사용
-            targetCanvas = bossCanvas;
+            // 하위 호환: mapStage가 없으면 mapCanvas 사용
+            mapCanvas.gameObject.SetActive(true);
         }
         else
         {
-            //  일반 노드는 타입별 캔버스 사용
+            Debug.LogError("mapStage와 mapCanvas 둘 다 null입니다!");
+        }
+
+        //  맵을 새로고침 (약간의 지연으로 MapManager 초기화 완료 대기)
+        if (mapManager != null)
+        {
+            StartCoroutine(RefreshMapDelayed());
+        }
+        else
+        {
+            Debug.LogError("mapManager가 null입니다!");
+        }
+    }
+
+    System.Collections.IEnumerator RefreshMapDelayed()
+    {
+        // 한 프레임 대기하여 MapManager.Start() 완료 보장
+        yield return null;
+        mapManager.RefreshMap();
+    }
+
+    // 노드 타입에 따라 적절한 스테이지 표시
+    // MapManager.OnNodeSelected()에서 호출됨
+    public void ShowCanvasForNodeType(NodeType nodeType, bool isBossNode)
+    {
+        //  모든 스테이지 비활성화
+        HideAllStages();
+
+        //  노드 타입에 따라 스테이지 활성화
+        GameObject targetStage = null;
+
+        if (isBossNode && bossStage != null)
+        {
+            //  보스 노드는 bossStage 사용
+            targetStage = bossStage;
+        }
+        else
+        {
+            //  일반 노드는 타입별 스테이지 사용
             switch (nodeType)
             {
                 case NodeType.Combat:
-                    targetCanvas = combatCanvas;
+                    targetStage = combatStage;
                     break;
                 case NodeType.Elite:
-                    targetCanvas = eliteCanvas;
+                    targetStage = eliteStage;
                     break;
                 case NodeType.Shop:
-                    targetCanvas = shopCanvas;
+                    targetStage = shopStage;
                     break;
                 case NodeType.Rest:
-                    targetCanvas = restCanvas;
+                    targetStage = restStage;
+                    break;
+                case NodeType.Event:
+                    targetStage = eventStage;
                     break;
             }
         }
 
-        if (targetCanvas != null)
+        if (targetStage != null)
         {
-            targetCanvas.gameObject.SetActive(true);
+            targetStage.SetActive(true);
         }
         else
         {
-            Debug.LogWarning($"노드 타입 {nodeType}에 해당하는 캔버스가 없습니다!");
+            Debug.LogWarning($"노드 타입 {nodeType}에 해당하는 스테이지가 없습니다!");
         }
     }
 
-    // 모든 캔버스 비활성화
-    void HideAllCanvases()
+    // 모든 스테이지 비활성화
+    void HideAllStages()
     {
-        if (mapCanvas != null) mapCanvas.gameObject.SetActive(false);
-        if (combatCanvas != null) combatCanvas.gameObject.SetActive(false);
-        if (eliteCanvas != null) eliteCanvas.gameObject.SetActive(false);
-        if (bossCanvas != null) bossCanvas.gameObject.SetActive(false);
-        if (shopCanvas != null) shopCanvas.gameObject.SetActive(false);
-        if (restCanvas != null) restCanvas.gameObject.SetActive(false);
+        if (mapStage != null)
+        {
+            mapStage.SetActive(false);
+        }
+        if (combatStage != null)
+        {
+            combatStage.SetActive(false);
+        }
+        if (eliteStage != null) eliteStage.SetActive(false);
+        if (bossStage != null) bossStage.SetActive(false);
+        if (shopStage != null) shopStage.SetActive(false);
+        if (restStage != null) restStage.SetActive(false);
+        if (eventStage != null) eventStage.SetActive(false);
     }
 
     // 전투 화면으로 전환
@@ -136,7 +212,6 @@ public class GameStateController : MonoBehaviour
         if (!clearedNodes.Contains(index))
         {
             clearedNodes.Add(index);
-            Debug.Log($"노드 {index} 클리어됨");
         }
     }
 

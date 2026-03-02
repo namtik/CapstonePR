@@ -21,7 +21,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: eaa05a51fc081ee4f91506817e725eaa, type: 2}
   - {fileID: 11400000, guid: d4a56a83fbd98c3459871b96a003f621, type: 2}
   bossPool:
-  - {fileID: 0}
+  - {fileID: 11400000, guid: 8ab40bb542bc20042a64321d3f5a1ab5, type: 2}
   shopData: {fileID: 11400000, guid: 598638186f153c247b3b87acdc2c0d08, type: 2}
   restData: {fileID: 11400000, guid: bb711fb7afa7c78408c6c1c4134617d0, type: 2}
   eventData: {fileID: 11400000, guid: 43c570b1d355d2d4484e8d946212dc4f, type: 2}

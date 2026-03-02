@@ -11,15 +11,17 @@ public class CombatRoundHandler : IRoundHandler
     private CombatRoundData Data;
     public CombatRoundHandler(CombatRoundData data)
     {
-        Data = data;
+        this.Data = data;
     }
     public void OnEnterRound(Roundmanager rm)
     {
         Debug.Log("Entering Combat Round: " + Data.roundName);
+        rm.StartCombat(Data);
     }
     public void OnExitRound(Roundmanager rm)
     {
         Debug.Log("Exiting Combat Round: " + Data.roundName);
+        rm.ShowSkillReward();
 
     }
 }
@@ -34,10 +36,12 @@ public class EliteRoundHandler : IRoundHandler
     public void OnEnterRound(Roundmanager rm)
     {
         Debug.Log("Entering Elite Round: " + Data.roundName);
+        rm.StartCombat(Data);
     }
     public void OnExitRound(Roundmanager rm)
     {
         Debug.Log("Exiting Elite Round: " + Data.roundName);
+        rm.ShowSkillReward();
     }
 }
 
@@ -51,10 +55,12 @@ public class BossRoundHandler : IRoundHandler
     public void OnEnterRound(Roundmanager rm)
     {
         Debug.Log("Entering Boss Round: " + Data.roundName);
+        rm.StartBoss(Data);
     }
     public void OnExitRound(Roundmanager rm)
     {
         Debug.Log("Exiting Boss Round: " + Data.roundName);
+        rm.ShowSkillReward();
     }
 }
 
@@ -97,11 +103,12 @@ public class RestRoundHandler : IRoundHandler
     private RestRoundData Data;
     public RestRoundHandler(RestRoundData data)
     {
-        Data = data;
+        this.Data = data;
     }
     public void OnEnterRound(Roundmanager rm)
     {
         Debug.Log("Entering Rest Round: " + Data.roundName);
+        rm.HealPlayer(Data.healPercent);
     }
     public void OnExitRound(Roundmanager rm)
     {

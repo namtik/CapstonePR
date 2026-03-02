@@ -1,14 +1,10 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-// 게임 전역 상태와 씬 전환을 담당하는 싱글턴
+// 게임 전역 상태를 담당하는 싱글턴
+// (씬 전환 기능은 GameStateController로 이관됨)
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
-
-    // 씬 이름은 인스펙터에서 설정하세요.
-    public string mapSceneName = "MapScene";
-    public string battleSceneName = "SampleScene"; // 전투 씬 이름(현재 SampleScene 등으로 변경)
 
     // 선택한/방문한 노드 인덱스 저장용
     public int lastVisitedNodeIndex = -1;
@@ -19,6 +15,14 @@ public class GameManager : MonoBehaviour
     {
         if (index < 0) return;
         if (!clearedNodes.Contains(index)) clearedNodes.Add(index);
+        
+        // GameStateController와 동기화
+        if (GameStateController.Instance != null)
+        {
+            GameStateController.Instance.MarkNodeCleared(index);
+        }
+        
+        Debug.Log($"GameManager: 노드 {index} 클리어 마킹");
     }
 
     public bool IsNodeCleared(int index)
@@ -37,31 +41,5 @@ public class GameManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
-    }
-
-    public void LoadMapScene()
-    {
-        if (string.IsNullOrEmpty(mapSceneName))
-        {
-            Debug.LogWarning("GameManager: mapSceneName is empty. Cannot load map scene.");
-            return;
-        }
-        SceneManager.LoadScene(mapSceneName);
-    }
-
-    public void LoadStage()
-    {
-        
-    }
-
-    public void LoadBattleScene(string sceneName)
-    {
-        if (string.IsNullOrEmpty(sceneName))
-        {
-            Debug.LogWarning("GameManager: provided sceneName is empty.");
-            return;
-        }
-        battleSceneName = sceneName;
-        SceneManager.LoadScene(battleSceneName);
     }
 }

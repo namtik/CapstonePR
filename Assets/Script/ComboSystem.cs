@@ -34,8 +34,8 @@ public class ComboSystem : MonoBehaviour
     private List<SkillData> learnedSkills = new List<SkillData>();
 
     private Player player;
-    private Enemy enemy;
-    private CardSystem CM; // CardSystem을 CardManager로 쓰고 계시다면 이름 맞춰주세요
+    private EnemyController enemyController;
+    private CardSystem CM;
 
     public static ComboSystem Instance;
 
@@ -54,9 +54,9 @@ public class ComboSystem : MonoBehaviour
     }
     void Start()
     {
-        player = Object.FindFirstObjectByType<Player>();
-        enemy = Object.FindFirstObjectByType<Enemy>();
-        CM = Object.FindFirstObjectByType<CardSystem>();
+        player = FindFirstObjectByType<Player>();
+        CM = FindFirstObjectByType<CardSystem>();
+        RefreshEnemyRef();
 
         // UI 생성
         CreateComboSlots();
@@ -79,15 +79,12 @@ public class ComboSystem : MonoBehaviour
             }
         }
 
-        if (enemy == null)
-        {
-            enemy = Object.FindFirstObjectByType<Enemy>();
-        }
-
-        if (player == null)
-        {
-            player = Object.FindFirstObjectByType<Player>();
-        }
+        RefreshEnemyRef();
+    }
+    void RefreshEnemyRef()
+    {
+        if (enemyController == null || !enemyController.gameObject.activeInHierarchy)
+            enemyController = Object.FindFirstObjectByType<EnemyController>();
     }
 
     public void LearnSkill(SkillData newSkill)
@@ -104,7 +101,7 @@ public class ComboSystem : MonoBehaviour
     {
         if (comboSlotParent == null)
         {
-            Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+            Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
             GameObject slotParentObj = new GameObject("ComboSlotParent");
@@ -155,7 +152,7 @@ public class ComboSystem : MonoBehaviour
     // 스킬 발동 알림 텍스트 생성
     void CreateSkillActivationText()
     {
-        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null) return;
 
         GameObject textObj = new GameObject("SkillActivationText");
@@ -187,7 +184,7 @@ public class ComboSystem : MonoBehaviour
     {
         if (skillIconParent == null)
         {
-            Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+            Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
             GameObject iconParentObj = new GameObject("SkillIconParent");
@@ -395,10 +392,10 @@ public class ComboSystem : MonoBehaviour
             Debug.Log($"{skill.draw}장 드로우!");
         }
             
-        if (enemy != null && player != null)
+        if (enemyController != null && player != null)
         {
             float damage = player.attackDamage * skill.damage;
-            enemy.TakeDamage(damage);
+            enemyController.TakeDamage(damage);
             Debug.Log($"{skill.name} 발동! 데미지: {damage}");
         }
 
