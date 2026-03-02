@@ -42,13 +42,13 @@ public class BattleManger : MonoBehaviour
     void ClearBattleObjects()
     {
         // 각주: 기존 Player/Enemy 제거
-        var existingPlayers = Object.FindObjectsOfType<Player>();
+        var existingPlayers = FindObjectsByType<Player>(FindObjectsSortMode.None);
         foreach (var p in existingPlayers)
         {
             Destroy(p.gameObject);
         }
 
-        var existingEnemies = Object.FindObjectsOfType<Enemy>();
+        var existingEnemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
         foreach (var e in existingEnemies)
         {
             Destroy(e.gameObject);
@@ -80,10 +80,13 @@ public class BattleManger : MonoBehaviour
     // 전투 클리어 후 호출: 맵 화면으로 복귀
     public void OnBattleClear()
     {
+        Debug.Log("=== BattleManger.OnBattleClear 호출됨 ===");
+        
         //GameStateController를 통해 맵으로 복귀
-        GameStateController stateController = Object.FindAnyObjectByType<GameStateController>();
+        GameStateController stateController = GameStateController.Instance;
         if (stateController != null)
         {
+            Debug.Log("GameStateController.OnBattleClear 호출 중...");
             battleInitialized = false; //다음 전투를 위해 리셋
             stateController.OnBattleClear();
             return;

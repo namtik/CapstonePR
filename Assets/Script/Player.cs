@@ -44,7 +44,7 @@ public class Player : MonoBehaviour
         // 이미 생성되었으면 스킵
         if (cooldownText != null && resultText != null && cooldownBar != null) return;
 
-        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             GameObject canvasObj = new GameObject("Canvas");

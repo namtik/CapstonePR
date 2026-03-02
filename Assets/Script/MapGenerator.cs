@@ -113,7 +113,10 @@ public class MapGenerator : MonoBehaviour
         MapData.NodeEntry bossNode = new MapData.NodeEntry
         {
             anchoredPosition = new Vector2(totalColumns * columnSpacing, 0f),
-            nodeType = NodeType.Elite, // 보스방
+            nodeType = NodeType.Boss, // 보스방
+            roundData = roundDataConfig != null
+                ? roundDataConfig.GetRoundData(NodeType.Boss)
+                : null,
             connections = new List<int>()
         };
         generatedMapData.nodes.Add(bossNode);
@@ -284,7 +287,6 @@ public class MapGenerator : MonoBehaviour
                     if (!generatedMapData.nodes[closestIndex].connections.Contains(nodeIndex))
                     {
                         generatedMapData.nodes[closestIndex].connections.Add(nodeIndex);
-                        Debug.Log($"고립 노드 {nodeIndex} 해결: {closestIndex} → {nodeIndex} 연결 추가");
                     }
                 }
             }

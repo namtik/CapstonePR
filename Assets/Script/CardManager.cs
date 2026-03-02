@@ -28,9 +28,9 @@ public class CardSystem : MonoBehaviour
 
     void Start()
     {
-        player = Object.FindFirstObjectByType<Player>();
-        enemy = Object.FindFirstObjectByType<Enemy>();
-        comboSystem = Object.FindFirstObjectByType<ComboSystem>(); // 콤보 시스템 찾기
+        player = FindFirstObjectByType<Player>();
+        enemy = FindFirstObjectByType<Enemy>();
+        comboSystem = FindFirstObjectByType<ComboSystem>(); // 콤보 시스템 찾기
 
         SetDeck();
         ShuffleDeck(deck);

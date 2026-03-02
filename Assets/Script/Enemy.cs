@@ -38,7 +38,7 @@ public class Enemy : MonoBehaviour
     void Start()
     {
         currentHp = maxHp;
-        player = Object.FindFirstObjectByType<Player>();
+        player = FindFirstObjectByType<Player>();
         if (Takedamtext != null)
         {
             originalPos = Takedamtext.transform.position;
@@ -125,25 +125,26 @@ public class Enemy : MonoBehaviour
             if (hpBar != null) hpBar.value = 0f;
 
             // If this is the last enemy in the scene, notify battle clear
-            var enemies = Object.FindObjectsOfType<Enemy>();
+            var enemies = FindObjectsByType<Enemy>(FindObjectsSortMode.None);
             if (enemies == null || enemies.Length <= 1)
             {
-                // Prefer GameManager singleton, fallback to BattleManger
-                GameManager gm = Object.FindFirstObjectByType<GameManager>();
-                if (gm != null)
+                // Use GameStateController for canvas switching (no more scene loading)
+                GameStateController stateController = GameStateController.Instance;
+                if (stateController != null)
                 {
-                    gm.LoadMapScene();
+                    stateController.OnBattleClear();
                 }
                 else
                 {
-                    BattleManger bm = Object.FindFirstObjectByType<BattleManger>();
+                    // Fallback to BattleManger
+                    BattleManger bm = FindFirstObjectByType<BattleManger>();
                     if (bm != null)
                     {
                         bm.OnBattleClear();
                     }
                     else
                     {
-                        Debug.LogWarning("Enemy: No GameManager or BattleManger found to handle stage clear.");
+                        Debug.LogWarning("Enemy: No GameStateController or BattleManger found to handle battle clear.");
                     }
                 }
             }

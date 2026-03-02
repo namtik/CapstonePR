@@ -40,6 +40,15 @@ public class Roundmanager : MonoBehaviour
     }
 
     /// <summary>
+    /// 정예 전투 시작 (EliteRoundHandler)
+    /// </summary>
+    public void StartCombat(EliteRoundData data)
+    {
+        currentEnemyIndex = 0;
+        SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
+    }
+
+    /// <summary>
     /// 보스 전투 시작 (BossRoundHandler)
     /// </summary>
     public void StartBoss(BossRoundData data)
@@ -65,7 +74,7 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void HealPlayer(float healPercent)
     {
-        var player = Object.FindFirstObjectByType<Player>();
+        var player = FindFirstObjectByType<Player>();
         if (player == null) return;
 
         float healAmount = player.maxHp * healPercent;
@@ -95,8 +104,18 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void ReturnToMap()
     {
-        GameManager.Instance.MarkNodeCleared(GameManager.Instance.lastVisitedNodeIndex);
-        GameStateController.Instance.ShowMap();
+        var stateController = GameStateController.Instance;
+        if (stateController == null)
+        {
+            Debug.LogError("GameStateController.Instance가 null입니다!");
+            return;
+        }
+        
+        // 현재 노드 클리어 처리
+        stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
+        
+        // 맵으로 복귀
+        stateController.ShowMap();
     }
 
     // ── 내부 몬스터 스폰 ───

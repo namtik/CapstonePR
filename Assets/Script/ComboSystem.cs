@@ -54,9 +54,9 @@ public class ComboSystem : MonoBehaviour
     }
     void Start()
     {
-        player = Object.FindFirstObjectByType<Player>();
-        enemy = Object.FindFirstObjectByType<Enemy>();
-        CM = Object.FindFirstObjectByType<CardSystem>();
+        player = FindFirstObjectByType<Player>();
+        enemy = FindFirstObjectByType<Enemy>();
+        CM = FindFirstObjectByType<CardSystem>();
 
         // UI 생성
         CreateComboSlots();
@@ -81,12 +81,12 @@ public class ComboSystem : MonoBehaviour
 
         if (enemy == null)
         {
-            enemy = Object.FindFirstObjectByType<Enemy>();
+            enemy = FindFirstObjectByType<Enemy>();
         }
 
         if (player == null)
         {
-            player = Object.FindFirstObjectByType<Player>();
+            player = FindFirstObjectByType<Player>();
         }
     }
 
@@ -104,7 +104,7 @@ public class ComboSystem : MonoBehaviour
     {
         if (comboSlotParent == null)
         {
-            Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+            Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
             GameObject slotParentObj = new GameObject("ComboSlotParent");
@@ -155,7 +155,7 @@ public class ComboSystem : MonoBehaviour
     // 스킬 발동 알림 텍스트 생성
     void CreateSkillActivationText()
     {
-        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        Canvas canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null) return;
 
         GameObject textObj = new GameObject("SkillActivationText");
@@ -187,7 +187,7 @@ public class ComboSystem : MonoBehaviour
     {
         if (skillIconParent == null)
         {
-            Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+            Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
             GameObject iconParentObj = new GameObject("SkillIconParent");
