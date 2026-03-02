@@ -21,7 +21,7 @@ public class EnemyView : MonoBehaviour
     public ParticleSystem rEffect;
 
     private EnemyStat stat;
-    private Vector3 damageTextOriginPos;
+    private Vector3 damageTextOriginLocalPos;
     private Color damageTextOriginColor;
     private Coroutine damageCoroutine;
 
@@ -29,14 +29,26 @@ public class EnemyView : MonoBehaviour
     {
         stat = GetComponent<EnemyStat>();
         stat.OnHpChanged += UpdateHpBar;
+        Canvas canvas = GetComponentInChildren<Canvas>();
+        if (canvas != null)
+        {
+            canvas.worldCamera = Camera.main;  // 카메라 연결
+            canvas.sortingOrder = 10;          // Enemy 이미지보다 앞
+        }
     }
 
     void Start()
     {
         if (damageText != null)
         {
-            damageTextOriginPos = damageText.transform.position;
+            damageTextOriginLocalPos = damageText.transform.localPosition;
             damageTextOriginColor = damageText.color;
+
+            if (damageTextOriginColor.a == 0f)
+            {
+                damageTextOriginColor = new Color(1f, 1f, 1f, 1f);
+                damageText.color = damageTextOriginColor;
+            }
             damageText.text = "";
         }
 
@@ -90,7 +102,7 @@ public class EnemyView : MonoBehaviour
         float timer = 0f;
 
         // 위치/색상 초기화
-        damageText.transform.position = damageTextOriginPos;
+        damageText.transform.localPosition = damageTextOriginLocalPos;
         damageText.color = damageTextOriginColor;
 
         while (timer < fadeTime)
@@ -113,7 +125,7 @@ public class EnemyView : MonoBehaviour
     {
         if (damageText == null) return;
         damageText.text = "";
-        damageText.transform.position = damageTextOriginPos;
+        damageText.transform.position = damageTextOriginLocalPos;
         damageText.color = damageTextOriginColor;
     }
 

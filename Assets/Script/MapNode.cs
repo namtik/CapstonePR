@@ -75,7 +75,7 @@ public class MapNode : MonoBehaviour
         // 각주: 강조 상태
         if (isHighlighted)
         {
-            img.color = highlightColor;
+            img.color = Color.black;
             if (!isCurrentPosition)
             {
                 transform.localScale = Vector3.one;
@@ -87,6 +87,7 @@ public class MapNode : MonoBehaviour
         // 크기는 현재 위치가 아니면 1.0으로 리셋
         if (!isCurrentPosition)
         {
+            img.color = Color.black;
             transform.localScale = Vector3.one;
         }
         
@@ -96,7 +97,7 @@ public class MapNode : MonoBehaviour
             if (typeSprite != null)
             {
                 img.sprite = typeSprite;
-                img.color = Color.white;
+                img.color = Color.black;
             }
             else
             {

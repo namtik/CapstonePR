@@ -14,6 +14,11 @@ public class CombatStageController : MonoBehaviour
     public void Initialize(RoundData roundData)
     {
         SwitchBackground(roundData);
+        if (ComboSystem.Instance != null)
+        {
+            ComboSystem.Instance.RefreshSkillUI();
+            ComboSystem.Instance.RefreshComboSlotUI();
+        }
     }
 
     void SwitchBackground(RoundData roundData)

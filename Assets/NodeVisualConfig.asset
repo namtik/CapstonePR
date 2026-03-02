@@ -14,22 +14,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NodeVisualConfig
   nodeVisuals:
   - nodeType: 0
-    sprite: {fileID: 21300000, guid: f6967443a8e6d5940a8cd04a22acd75c, type: 3}
+    sprite: {fileID: 21300000, guid: 4b994eea71f3b8a42a3d9a6bf0f36f0f, type: 3}
     fallbackColor: {r: 1, g: 0, b: 0, a: 1}
   - nodeType: 1
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: a5c1cb91b31aacc4f91a3574014864af, type: 3}
     fallbackColor: {r: 0, g: 1, b: 0, a: 1}
   - nodeType: 2
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: 37e9ce21b2700af4786f35ed2eb7c7fa, type: 3}
     fallbackColor: {r: 0, g: 1, b: 1, a: 1}
   - nodeType: 3
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: 7af84cb9d7f31834ea228786811b879e, type: 3}
     fallbackColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   - nodeType: 4
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: 1876db8324833ed4fb667ed7823272af, type: 3}
     fallbackColor: {r: 1, g: 0, b: 1, a: 1}
   - nodeType: 5
-    sprite: {fileID: 0}
+    sprite: {fileID: 21300000, guid: 68f15ebe85542a3489032058d0bdf7eb, type: 3}
     fallbackColor: {r: 0, g: 0, b: 1, a: 1}
-  clearedColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  currentPositionColor: {r: 0.3, g: 0.6, b: 1, a: 1}
+  clearedColor: {r: 0, g: 0, b: 0, a: 1}

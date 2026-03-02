@@ -88,7 +88,7 @@ public class BattleManger : MonoBehaviour
         {
             Debug.Log("GameStateController.OnBattleClear 호출 중...");
             battleInitialized = false; //다음 전투를 위해 리셋
-            stateController.OnBattleClear();
+            stateController.OnRoundClear();
             return;
         }
 

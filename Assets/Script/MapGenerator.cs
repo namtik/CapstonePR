@@ -10,6 +10,12 @@ public class MapGenerator : MonoBehaviour
     [Tooltip("일반 스테이지 컬럼 개수")]
     public int totalColumns = 10;
     
+    [Tooltip("Elite가 나올 확률 (0~1)")]
+    [Range(0f, 1f)]
+    public float eliteChance = 0.2f;
+    [Tooltip("Elite가 나올 수 있는 최소 컬럼")]
+    public int eliteColumnMin = 3;
+
     [Tooltip("각 컬럼당 최소 노드 개수")]
     public int minNodesPerColumn = 3;
     
@@ -217,6 +223,9 @@ public class MapGenerator : MonoBehaviour
         if (actualEventColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Event;
         
+        if (columnIndex >= eliteColumnMin && Random.value < eliteChance)
+            return NodeType.Elite;
+
         // 나머지는 전투방
         return NodeType.Combat;
     }
