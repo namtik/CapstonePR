@@ -205,7 +205,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   projectilePrefab: {fileID: 270285958856403586, guid: df357802317322947b23eb2fef87708b, type: 3}
   projectileSpawnPoint: {fileID: 0}
-  projectileSprite: {fileID: 0}
+  projectileSprite: {fileID: 21300000, guid: 1562e683a690b694da3e0a82978412ef, type: 3}
 --- !u!114 &1507815518542998671
 MonoBehaviour:
   m_ObjectHideFlags: 0
