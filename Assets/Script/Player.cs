@@ -24,6 +24,8 @@ public class Player : MonoBehaviour
     private float cooldownTimer = 0f;
     private bool isOnCooldown = false;
     private float resultDisplayTimer = 0f;
+    
+    public ParticleSystem attackParticle;
 
     void Awake()
     {
@@ -299,6 +301,14 @@ public class Player : MonoBehaviour
             resultText.text = message;
             resultText.color = color;
             resultDisplayTimer = 2f; // 2초 동안 표시
+        }
+    }
+
+    public void PlayAttackEffect()
+    {
+        if (attackParticle != null)
+        {
+            attackParticle.Play(); // 파티클 재생
         }
     }
 }

@@ -25,6 +25,7 @@ public class CardSystem : MonoBehaviour
 
     public int baseDraw=10;
     public float drawTime=1f;
+    
 
     void Start()
     {
@@ -126,6 +127,7 @@ public class CardSystem : MonoBehaviour
         // 데미지 계산 (플레이어 공격력의 100%)
         if (enemyController != null && player != null)
         {
+            player.PlayAttackEffect(); // 플레이어 공격 효과 재생
             enemyController.TakeDamage(player.attackDamage, type);
             Debug.Log($"{type} 카드 사용! 적에게 {player.attackDamage} 데미지.");
         }
