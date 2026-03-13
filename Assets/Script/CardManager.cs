@@ -5,8 +5,8 @@ using TMPro;
 
 public class CardSystem : MonoBehaviour
 {
-    public GameObject cardPrefab; // Ä«µå ÇÁ¸®ÆÕ  
-    public Transform cardParent; // Ä«µå°¡ »ı¼ºµÉ ¿ÀºêÁ§Æ®  
+    public GameObject cardPrefab; // Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  
+    public Transform cardParent; // Ä«ï¿½å°¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®  
     public Sprite[] cardSprites;
     private string[] cardTypes = { "Q", "W", "E", "R" };
 
@@ -17,7 +17,7 @@ public class CardSystem : MonoBehaviour
     private Player player;
     private EnemyController enemyController;
     private float drawTimer = 0f;
-    private ComboSystem comboSystem; // ÄŞº¸ ½Ã½ºÅÛ ÂüÁ¶
+    private ComboSystem comboSystem; // ï¿½Şºï¿½ ï¿½Ã½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
     public TMP_Text deckText;    
     public TMP_Text graveyardText;
@@ -25,18 +25,41 @@ public class CardSystem : MonoBehaviour
 
     public int baseDraw=10;
     public float drawTime=1f;
-    
+
 
     void Start()
     {
         player = FindFirstObjectByType<Player>();
-        comboSystem = FindFirstObjectByType<ComboSystem>(); // ÄŞº¸ ½Ã½ºÅÛ Ã£±â
+        comboSystem = FindFirstObjectByType<ComboSystem>(); // ï¿½Şºï¿½ ï¿½Ã½ï¿½ï¿½ï¿½ Ã£ï¿½ï¿½
         RefreshEnemyRef();
 
         SetDeck();
         ShuffleDeck(deck);
         DrawCards(baseDraw);
 
+    }
+
+    /// <summary>
+    /// ìƒˆ ìŠ¤í…Œì´ì§€ ì§„ì… ì‹œ ë±/ì†íŒ¨/ë¬˜ì§€ ì´ˆê¸°í™”
+    /// </summary>
+    public void ResetDeck()
+    {
+        // ì†íŒ¨ ì˜¤ë¸Œì íŠ¸ ì œê±°
+        foreach (var card in hand)
+        {
+            if (card != null) Destroy(card);
+        }
+        hand.Clear();
+
+        // ë±, ë¬˜ì§€ ì´ˆê¸°í™”
+        deck.Clear();
+        graveyard.Clear();
+        drawTimer = 0f;
+
+        // ë± ì¬êµ¬ì„±
+        SetDeck();
+        ShuffleDeck(deck);
+        DrawCards(baseDraw);
     }
 
     void Update()
@@ -66,7 +89,7 @@ public class CardSystem : MonoBehaviour
     {
         foreach (string type in cardTypes)
         {
-            for (int i = 0; i < 5; i++) // °¢ Ä«µå Å¸ÀÔ´ç 5Àå¾¿  
+            for (int i = 0; i < 5; i++) // ï¿½ï¿½ Ä«ï¿½ï¿½ Å¸ï¿½Ô´ï¿½ 5ï¿½å¾¿  
             {
                 deck.Add(type);
             }
@@ -74,13 +97,13 @@ public class CardSystem : MonoBehaviour
         ReshuffleGraveyard();
     }
 
-    void ReshuffleGraveyard() // ¹¦ÁöÀÇ Ä«µå¸¦ µ¦À¸·Î ´Ù½Ã ¼¯À½
+    void ReshuffleGraveyard() // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ä«ï¿½å¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ï¿½
     {
         if (graveyard.Count == 0) return;
         deck.AddRange(graveyard);
         graveyard.Clear();
         ShuffleDeck(deck);
-        Debug.Log("¹¦ÁöÀÇ Ä«µå¸¦ µ¦À¸·Î ´Ù½Ã ¼¯À½");
+        Debug.Log("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ä«ï¿½å¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ï¿½");
     }
 
     void ShuffleDeck(List<string> list)
@@ -94,7 +117,7 @@ public class CardSystem : MonoBehaviour
         }
     }
 
-    void HandleInput() // Ä«µå Å° ÀÔ·Â Ã³¸®
+    void HandleInput() // Ä«ï¿½ï¿½ Å° ï¿½Ô·ï¿½ Ã³ï¿½ï¿½
     {
         if (hand.Count == 0) return;
 
@@ -110,7 +133,7 @@ public class CardSystem : MonoBehaviour
         {
             Card cardScript = hand[i].GetComponent<Card>();
 
-            // ÀÔ·ÂÇÑ Å°¿Í Ä«µåÀÇ Å¸ÀÔÀÌ ÀÏÄ¡ÇÏ´Â Ã¹ ¹øÂ° Ä«µå¸¦ Ã£À½  
+            // ï¿½Ô·ï¿½ï¿½ï¿½ Å°ï¿½ï¿½ Ä«ï¿½ï¿½ï¿½ï¿½ Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½Ï´ï¿½ Ã¹ ï¿½ï¿½Â° Ä«ï¿½å¸¦ Ã£ï¿½ï¿½  
             if (cardScript.cardType == inputKey)
             {
                 UseCard(i);
@@ -124,21 +147,21 @@ public class CardSystem : MonoBehaviour
         GameObject cardObj = hand[index];
         string type = cardObj.GetComponent<Card>().cardType;
 
-        // µ¥¹ÌÁö °è»ê (ÇÃ·¹ÀÌ¾î °ø°İ·ÂÀÇ 100%)
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ (ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½İ·ï¿½ï¿½ï¿½ 100%)
         if (enemyController != null && player != null)
         {
-            player.PlayAttackEffect(); // ÇÃ·¹ÀÌ¾î °ø°İ È¿°ú Àç»ı
+            player.PlayAttackEffect(); // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½ È¿ï¿½ï¿½ ï¿½ï¿½ï¿½
             enemyController.TakeDamage(player.attackDamage, type);
-            Debug.Log($"{type} Ä«µå »ç¿ë! Àû¿¡°Ô {player.attackDamage} µ¥¹ÌÁö.");
+            Debug.Log($"{type} Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½! ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ {player.attackDamage} ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.");
         }
 
-        // ÄŞº¸ ½Ã½ºÅÛ¿¡ Ä«µå ÀÔ·Â Àü´Ş
+        // ï¿½Şºï¿½ ï¿½Ã½ï¿½ï¿½Û¿ï¿½ Ä«ï¿½ï¿½ ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (comboSystem != null)
         {
             comboSystem.OnCardUsed(type);
         }
 
-        // ¹¦Áö·Î º¸³»±â ¹× ÆÄ±«  
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ä±ï¿½  
         graveyard.Add(type);
         hand.RemoveAt(index);
         Destroy(cardObj);
@@ -158,7 +181,7 @@ public class CardSystem : MonoBehaviour
         }
         else
         {
-            drawTimer = 0f; // ÀÌ¹Ì °¡µæ Â÷ ÀÖÀ¸¸é Å¸ÀÌ¸Ó ¸®¼Â  
+            drawTimer = 0f; // ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å¸ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½  
         }
     }
 
