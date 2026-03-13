@@ -108,7 +108,7 @@ public class EnemyView : MonoBehaviour
         while (timer < fadeTime)
         {
             timer += Time.deltaTime;
-            damageText.transform.position += Vector3.up * floatSpeed * Time.deltaTime;
+            damageText.transform.localPosition += Vector3.up * floatSpeed * Time.deltaTime;
             damageText.color = new Color(
                 damageTextOriginColor.r,
                 damageTextOriginColor.g,
@@ -125,7 +125,7 @@ public class EnemyView : MonoBehaviour
     {
         if (damageText == null) return;
         damageText.text = "";
-        damageText.transform.position = damageTextOriginLocalPos;
+        damageText.transform.localPosition = damageTextOriginLocalPos;
         damageText.color = damageTextOriginColor;
     }
 
