@@ -427,7 +427,7 @@ public class ComboSystem : MonoBehaviour
             Debug.Log($"{skill.draw}장 드로우!");
         }
             
-        if (enemyController != null && player != null)
+        if (player != null)
         {
             float damage = player.attackDamage * skill.damage;
             enemyController.TakeDamage(damage);
