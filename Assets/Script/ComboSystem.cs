@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using static SkillDataParser;
@@ -6,31 +6,31 @@ using System.Linq;
 using System;
 using Object = UnityEngine.Object;
 
-// �޺� ��ų �ý��� ���� Ŭ����
+// 콤보 스킬 시스템 관리 클래스
 public class ComboSystem : MonoBehaviour
 {
-    [Header("�޺� ���� ����")]
-    public Transform comboSlotParent; // �޺� ������ ǥ�õ� �θ� ������Ʈ
-    public GameObject cardPrefab; // ī�� ������ (�޺� ���Կ� ǥ�ÿ�)
-    public Sprite[] cardSprites; // Q, W, E, R ī�� ��������Ʈ
+    [Header("콤보 슬롯 설정")]
+    public Transform comboSlotParent; // 콤보 슬롯이 표시될 부모 오브젝트
+    public GameObject cardPrefab; // 카드 프리팹 (콤보 슬롯에 표시용)
+    public Sprite[] cardSprites; // Q, W, E, R 카드 스프라이트
 
     private string[] cardTypes = { "Q", "W", "E", "R" };
 
-    [Header("��ų ������ ����")]
-    public Transform skillIconParent; // ��ų �������� ǥ�õ� �θ� ������Ʈ
+    [Header("스킬 아이콘 설정")]
+    public Transform skillIconParent; // 스킬 아이콘이 표시될 부모 오브젝트
 
-    // �޺� �Է� ����
-    private List<string> comboInput = new List<string>(); // ���� �Էµ� �޺� (�ִ� 3��)
-    private List<GameObject> comboSlotCards = new List<GameObject>(); // �޺� ���Կ� ǥ�õ� ī�� ������Ʈ
-    private List<GameObject> emptySlots = new List<GameObject>(); // �� ���� ������Ʈ (�׻� ǥ��)
+    // 콤보 입력 저장
+    private List<string> comboInput = new List<string>(); // 현재 입력된 콤보 (최대 3개)
+    private List<GameObject> comboSlotCards = new List<GameObject>(); // 콤보 슬롯에 표시된 카드 오브젝트
+    private List<GameObject> emptySlots = new List<GameObject>(); // 빈 슬롯 오브젝트 (항상 표시)
 
-    // ��ų �ߵ� �˸� UI
+    // 스킬 발동 알림 UI
     private Text skillActivationText;
     private float skillTextTimer = 0f;
     private bool isShowingSkillText = false;
     private const float SKILL_TEXT_DISPLAY_TIME = 0.5f;
 
-    // ��ų ����
+    // 스킬 정의
     private List<SkillData> learnedSkills = new List<SkillData>();
     private Dictionary<string, SkillData> comboLookup = new Dictionary<string, SkillData>();
     public int learnedSkillCount = 0;
@@ -61,14 +61,14 @@ public class ComboSystem : MonoBehaviour
         CM = FindFirstObjectByType<CardSystem>();
         RefreshEnemyRef();
 
-        // UI ����
+        // UI 생성
         CreateComboSlots();
         CreateSkillIcons();
     }
 
     void Update()
     {
-        // ��ų �ؽ�Ʈ ǥ�� Ÿ�̸�
+        // 스킬 텍스트 표시 타이머
         if (isShowingSkillText)
         {
             skillTextTimer -= Time.deltaTime;
@@ -93,18 +93,18 @@ public class ComboSystem : MonoBehaviour
     public void LearnSkill(SkillData newSkill)
     {
         learnedSkills.Add(newSkill);
-        Debug.Log($"��ų ����: {newSkill.name} ({newSkill.combo})");
+        Debug.Log($"스킬 습득: {newSkill.name} ({newSkill.combo})");
         comboLookup[newSkill.combo] = newSkill;
         learnedSkillCount += 1;
 
-        // ��ų ������ UI�� �߰�
+        // 스킬 아이콘 UI에 추가
         CreateSkillIcon(newSkill, learnedSkills.Count - 1);
 
     }
 
     public void RefreshSkillUI()
     {
-        // skillIconParent�� ���ų� �ı������� �����
+        // skillIconParent가 없거나 파괴됐으면 재생성
         if (skillIconParent == null || !skillIconParent.gameObject.activeInHierarchy)
         {
             CreateSkillIcons();
@@ -113,11 +113,11 @@ public class ComboSystem : MonoBehaviour
         foreach (Transform child in skillIconParent)
             Destroy(child.gameObject);
 
-        // learnedSkills �����ͷ� ������ �����
+        // learnedSkills 데이터로 아이콘 재생성
         for (int i = 0; i < learnedSkills.Count; i++)
             CreateSkillIcon(learnedSkills[i], i);
 
-        Debug.Log($"[ComboSystem] ��ų UI �����: {learnedSkills.Count}��");
+        Debug.Log($"[ComboSystem] 스킬 UI 재빌드: {learnedSkills.Count}개");
     }
     public void RefreshComboSlotUI()
     {
@@ -134,7 +134,16 @@ public class ComboSystem : MonoBehaviour
         return learnedSkills.Count;
     }
 
-    // �޺� ���� UI ���� (ȭ�� ��� �߾�)
+    public HashSet<int> GetLearnedSkillIds()
+    {
+        var ids = new HashSet<int>();
+        foreach (var skill in learnedSkills)
+            ids.Add(skill.id);
+        return ids;
+    }
+
+
+    // 콤보 슬롯 UI 생성 (화면 상단 중앙)
     void CreateComboSlots()
     {
         if (comboSlotParent == null)
@@ -152,7 +161,7 @@ public class ComboSystem : MonoBehaviour
             rect.anchoredPosition = new Vector2(0f, -50f);
             rect.sizeDelta = new Vector2(400f, 120f);
 
-            // HorizontalLayoutGroup �߰�
+            // HorizontalLayoutGroup 추가
             HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 30f;
             layout.childAlignment = TextAnchor.MiddleCenter;
@@ -162,13 +171,13 @@ public class ComboSystem : MonoBehaviour
             comboSlotParent = slotParentObj.transform;
         }
 
-        // �� ���� 3�� ���� (�׻� ǥ��)
+        // 빈 슬롯 3개 생성 (항상 표시)
         CreateEmptySlots();
-        // ��ų �ߵ� �˸� �ؽ�Ʈ ���� (�޺� ���� �Ʒ�)
+        // 스킬 발동 알림 텍스트 생성 (콤보 슬롯 아래)
         CreateSkillActivationText();
     }
 
-    // �� �޺� ���� 3�� ����
+    // 빈 콤보 슬롯 3개 생성
     void CreateEmptySlots()
     {
         for (int i = 0; i < 3; i++)
@@ -179,7 +188,7 @@ public class ComboSystem : MonoBehaviour
             RectTransform rect = emptySlot.AddComponent<RectTransform>();
             rect.sizeDelta = new Vector2(60f, 80f);
 
-            // �� ���� ��� �̹��� (ȸ�� �׵θ�)
+            // 빈 슬롯 배경 이미지 (회색 테두리)
             Image slotImage = emptySlot.AddComponent<Image>();
             slotImage.color = new Color(0.3f, 0.3f, 0.3f, 0.5f);
 
@@ -187,7 +196,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
-    // ��ų �ߵ� �˸� �ؽ�Ʈ ����
+    // 스킬 발동 알림 텍스트 생성
     void CreateSkillActivationText()
     {
         Canvas canvas = FindFirstObjectByType<Canvas>();
@@ -211,13 +220,13 @@ public class ComboSystem : MonoBehaviour
         skillActivationText.fontStyle = FontStyle.Bold;
         skillActivationText.text = "";
 
-        // Outline �߰�
+        // Outline 추가
         Outline outline = textObj.AddComponent<Outline>();
         outline.effectColor = Color.black;
         outline.effectDistance = new Vector2(3, -3);
     }
 
-    // ��ų ������ UI ���� (ȭ�� �ϴ� �߾�, ī�� ��)
+    // 스킬 아이콘 UI 생성 (화면 하단 중앙, 카드 위)
     void CreateSkillIcons()
     {
         if (skillIconParent == null)
@@ -238,7 +247,7 @@ public class ComboSystem : MonoBehaviour
             rect.localScale = Vector3.one;
 
             HorizontalLayoutGroup layout = iconParentObj.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 20f; // ������ ����
+            layout.spacing = 20f; // 아이콘 간격
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
@@ -248,7 +257,7 @@ public class ComboSystem : MonoBehaviour
 
     }
 
-    // ���� ��ų ������ ����
+    // 개별 스킬 아이콘 생성
     void CreateSkillIcon(SkillData skillData, int index)
     {
         GameObject iconObj = new GameObject($"SkillIcon_{skillData.name}");
@@ -256,25 +265,25 @@ public class ComboSystem : MonoBehaviour
         iconObj.transform.SetParent(skillIconParent, false);
 
         RectTransform rect = iconObj.AddComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(80f, 80f); // ������ ũ��
+        rect.sizeDelta = new Vector2(80f, 80f); // 아이콘 크기
 
         rect.localScale = Vector3.one;
         rect.localPosition = Vector3.zero;
 
         Image iconImage = iconObj.AddComponent<Image>();
 
-        // ������ �̹��� �Ҵ� (CSV���� �ε�� �̹��� �켱)
+        // 아이콘 이미지 할당 (CSV에서 로드된 이미지 우선)
         if (skillData.skillIcon != null)
             iconImage.sprite = skillData.skillIcon;
         else
-            iconImage.color = Color.green; // ������ �ʷϻ�
+            iconImage.color = Color.green; // 없으면 초록색
 
-        // ���� �� ���콺 �̺�Ʈ �߰�
+        // 툴팁 등 마우스 이벤트 추가
         GameObject tooltip = CreateTooltip(iconObj.transform, skillData);
         AddMouseEvents(iconObj, tooltip);
     }
 
-    // ���� ����
+    // 툴팁 생성
     GameObject CreateTooltip(Transform parent, SkillData skillData)
     {
         GameObject tooltipObj = new GameObject("Tooltip");
@@ -294,7 +303,7 @@ public class ComboSystem : MonoBehaviour
         bgOutline.effectColor = Color.black;
         bgOutline.effectDistance = new Vector2(2, -2);
 
-        // ����
+        // 제목
         GameObject titleObj = new GameObject("Title");
         titleObj.transform.SetParent(tooltipObj.transform, false);
         RectTransform titleRect = titleObj.AddComponent<RectTransform>();
@@ -311,7 +320,7 @@ public class ComboSystem : MonoBehaviour
         titleText.fontStyle = FontStyle.Bold;
         titleText.text = skillData.name;
 
-        // ����
+        // 설명
         GameObject descObj = new GameObject("Description");
         descObj.transform.SetParent(tooltipObj.transform, false);
         RectTransform descRect = descObj.AddComponent<RectTransform>();
@@ -325,7 +334,7 @@ public class ComboSystem : MonoBehaviour
         descText.fontSize = 16;
         descText.alignment = TextAnchor.MiddleCenter;
         descText.color = Color.black;
-        descText.text = $"�޺�: {skillData.combo}\n\n{skillData.description}";
+        descText.text = $"콤보: {skillData.combo}\n\n{skillData.description}";
 
         tooltipObj.SetActive(false);
         return tooltipObj;
@@ -360,15 +369,15 @@ public class ComboSystem : MonoBehaviour
 
     public void OnCardUsed(string cardType)
     {
-        if (comboInput.Count >= 3)// �̹� 3���� �� �� �ִٸ�, ���� ������ ��(0��)�� ����
+        if (comboInput.Count >= 3)// 이미 3개가 꽉 차 있다면, 가장 오래된 것(0번)을 제거
         {
             comboInput.RemoveAt(0);
         }
         
 
-        // �� ī�� �߰�
+        // 새 카드 추가
         comboInput.Add(cardType);
-        Debug.Log($"���� �޺�: {string.Join("-", comboInput)}"); // ������
+        Debug.Log($"현재 콤보: {string.Join("-", comboInput)}"); // 디버깅용
 
         if (comboInput.Count == 3)
             CheckAndActivateSkills();
@@ -378,14 +387,14 @@ public class ComboSystem : MonoBehaviour
 
     void UpdateComboSlotUI()
     {
-        // ������ ǥ�õ� ī�� ������Ʈ�� ��� ����
+        // 기존에 표시된 카드 오브젝트들 모두 삭제
         foreach (var card in comboSlotCards)
         {
             if (card != null) Destroy(card);
         }
         comboSlotCards.Clear();
 
-        // ���� �޺� ����Ʈ(comboInput)�� �ִ� ��ŭ ī�� ����
+        // 현재 콤보 리스트(comboInput)에 있는 만큼 카드 생성
         for (int i = 0; i < comboInput.Count; i++)
         {
             
@@ -393,10 +402,10 @@ public class ComboSystem : MonoBehaviour
 
             string type = comboInput[i];
 
-            // i��° �� ������ �ڽ����� ī�� ����
+            // i번째 빈 슬롯의 자식으로 카드 생성
             GameObject newCard = Instantiate(cardPrefab, emptySlots[i].transform);
 
-            // ī�� ��ũ��Ʈ ����
+            // 카드 스크립트 설정
             Card cardScript = newCard.GetComponent<Card>();
             int spriteIndex = System.Array.IndexOf(cardTypes, type);
             if (spriteIndex >= 0 && spriteIndex < cardSprites.Length)
@@ -404,7 +413,7 @@ public class ComboSystem : MonoBehaviour
                 cardScript.SetType(type, cardSprites[spriteIndex]);
             }
 
-            // UI ��ġ �ʱ�ȭ (�θ��� EmptySlot�� ���߾ӿ� ������)
+            // UI 위치 초기화 (부모인 EmptySlot의 정중앙에 오도록)
             RectTransform rect = newCard.GetComponent<RectTransform>();
             if (rect != null)
             {
@@ -420,16 +429,16 @@ public class ComboSystem : MonoBehaviour
     void CheckAndActivateSkills()
     {
         string currentCombo = string.Join("", comboInput);
-        Debug.Log($"���� �޺�: {currentCombo}"); // ������
-        // ��� ��ų �� �޺� ���̰� �� ������� �����Ͽ� ��Ī (QQQ�� QQ���� ���� �˻���)
+        Debug.Log($"현재 콤보: {currentCombo}"); // 디버깅용
+        // 배운 스킬 중 콤보 길이가 긴 순서대로 정렬하여 매칭 (QQQ가 QQ보다 먼저 검색됨)
         if (comboLookup.TryGetValue(currentCombo, out SkillData skill))
         {
-            Debug.Log($"[��ų�ߵ�] {skill.name}");
+            Debug.Log($"[스킬발동] {skill.name}");
             ActivateSkill(skill);
         }
         else
         {
-            Debug.Log($"[�̹ߵ�] '{currentCombo}' ��ġ�ϴ� ��ų ����");
+            Debug.Log($"[미발동] '{currentCombo}' 일치하는 스킬 없음");
         }
     }
 
@@ -438,19 +447,19 @@ public class ComboSystem : MonoBehaviour
         if(skill.draw > 0) 
         {
             CM.DrawCards(skill.draw);
-            Debug.Log($"{skill.draw}�� ��ο�!");
+            Debug.Log($"{skill.draw}장 드로우!");
         }
             
-        if (player != null)
+        if (enemyController != null && player != null)
         {
             float damage = player.attackDamage * skill.damage;
             enemyController.TakeDamage(damage);
-            Debug.Log($"{skill.name} �ߵ�! ������: {damage}");
+            Debug.Log($"{skill.name} 발동! 데미지: {damage}");
         }
 
         if (skillActivationText != null)
         {
-            skillActivationText.text = $"{skill.name} �ߵ�!";
+            skillActivationText.text = $"{skill.name} 발동!";
             skillTextTimer = SKILL_TEXT_DISPLAY_TIME;
             isShowingSkillText = true;
         }

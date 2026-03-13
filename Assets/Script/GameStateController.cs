@@ -1,7 +1,7 @@
-using UnityEngine;
+﻿using UnityEngine;
 
-// ���� ���¸� �����ϰ� ĵ���� ��ȯ�� ���
-//  �� ��ȯ ��� ĵ���� Ȱ��ȭ/��Ȱ��ȭ�� ���� ��ȯ
+// 게임 상태를 관리하고 캔버스 전환을 담당
+//  씬 전환 대신 캔버스 활성화/비활성화로 상태 전환
 public class GameStateController : MonoBehaviour
 {
     public static GameStateController Instance { get; private set; }
@@ -12,16 +12,16 @@ public class GameStateController : MonoBehaviour
     [Header("Stage GameObjects")]
     public GameObject mapStage;          // MapStage GameObject
     public GameObject combatStage;       // CombatStage GameObject
-    public GameObject eliteStage;        // EliteStage GameObject (�ִٸ�)
-    public GameObject bossStage;         // BossStage GameObject (�ִٸ�)
-    public GameObject shopStage;         // ShopStage GameObject (�ִٸ�)
-    public GameObject restStage;         // RestStage GameObject (�ִٸ�)
-    public GameObject eventStage;        // EventStage GameObject (�̺�Ʈ ���)
+    public GameObject eliteStage;        // EliteStage GameObject (있다면)
+    public GameObject bossStage;         // BossStage GameObject (있다면)
+    public GameObject shopStage;         // ShopStage GameObject (있다면)
+    public GameObject restStage;         // RestStage GameObject (있다면)
+    public GameObject eventStage;        // EventStage GameObject (이벤트 노드)
 
     [Header("Managers")]
     public MapManager mapManager;
     public BattleManger battleManager;
-    public Roundmanager roundManager;  // ���� ������ �߰�
+    public Roundmanager roundManager;  // 라운드 관리자 추가
 
     [Header("Game State")]
     public int lastVisitedNodeIndex = -1;
@@ -42,21 +42,21 @@ public class GameStateController : MonoBehaviour
 
     void Start()
     {
-        // ���� ���� �� �ʱ�ȭ �� �� ȭ�� ǥ��
+        // 게임 시작 시 초기화 및 맵 화면 표시
         InitializeGameState();
         ShowMap();
     }
 
     void InitializeGameState()
     {
-        // GameManager�� ����ȭ
+        // GameManager와 동기화
         if (GameManager.Instance != null)
         {
             lastVisitedNodeIndex = GameManager.Instance.lastVisitedNodeIndex;
             clearedNodes = new System.Collections.Generic.List<int>(GameManager.Instance.clearedNodes);
         }
         
-        // Panel raycastTarget ��Ȱ��ȭ
+        // Panel raycastTarget 비활성화
         EnsureGraphicRaycaster();
     }
     
@@ -70,7 +70,7 @@ public class GameStateController : MonoBehaviour
                 mapCanvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             }
             
-            // Panel�̳� background �̹����� Ŭ���� ���� �ʵ��� ����
+            // Panel이나 background 이미지가 클릭을 막지 않도록 설정
             DisablePanelRaycast();
         }
     }
@@ -79,7 +79,7 @@ public class GameStateController : MonoBehaviour
     {
         if (mapCanvas == null) return;
         
-        // Canvas ������ ��� Image �� Panel, Background ���� raycastTarget ��Ȱ��ȭ
+        // Canvas 하위의 모든 Image 중 Panel, Background 등의 raycastTarget 비활성화
         var allImages = mapCanvas.GetComponentsInChildren<UnityEngine.UI.Image>(true);
         foreach (var img in allImages)
         {
@@ -91,54 +91,54 @@ public class GameStateController : MonoBehaviour
         }
     }
 
-    // �� ȭ������ ��ȯ
-    // ���� ĵ���� ����� �� ĵ���� ǥ��
+    // 맵 화면으로 전환
+    // 전투 캔버스 숨기고 맵 캔버스 표시
     public void ShowMap()
     {
-        //  ��� �������� ��Ȱ��ȭ
+        //  모든 스테이지 비활성화
         HideAllStages();
 
-        //  �� ���������� Ȱ��ȭ
+        //  맵 스테이지만 활성화
         if (mapStage != null)
         {
             mapStage.SetActive(true);
         }
         else if (mapCanvas != null)
         {
-            // ���� ȣȯ: mapStage�� ������ mapCanvas ���
+            // 하위 호환: mapStage가 없으면 mapCanvas 사용
             mapCanvas.gameObject.SetActive(true);
         }
         else
         {
-            Debug.LogError("mapStage�� mapCanvas �� �� null�Դϴ�!");
+            Debug.LogError("mapStage와 mapCanvas 둘 다 null입니다!");
         }
 
-        //  ���� ���ΰ�ħ (�ణ�� �������� MapManager �ʱ�ȭ �Ϸ� ���)
+        //  맵을 새로고침 (약간의 지연으로 MapManager 초기화 완료 대기)
         if (mapManager != null)
         {
             StartCoroutine(RefreshMapDelayed());
         }
         else
         {
-            Debug.LogError("mapManager�� null�Դϴ�!");
+            Debug.LogError("mapManager가 null입니다!");
         }
     }
 
     System.Collections.IEnumerator RefreshMapDelayed()
     {
-        // �� ������ ����Ͽ� MapManager.Start() �Ϸ� ����
+        // 한 프레임 대기하여 MapManager.Start() 완료 보장
         yield return null;
         mapManager.RefreshMap();
     }
 
-    // ��� Ÿ�Կ� ���� ������ �������� ǥ��
-    // MapManager.OnNodeSelected()���� ȣ���
+    // 노드 타입에 따라 적절한 스테이지 표시
+    // MapManager.OnNodeSelected()에서 호출됨
     public void ShowCanvasForNodeType(NodeType nodeType, bool isBossNode)
     {
-        //  ��� �������� ��Ȱ��ȭ
+        //  모든 스테이지 비활성화
         HideAllStages();
 
-        //  ��� Ÿ�Կ� ���� �������� Ȱ��ȭ
+        //  노드 타입에 따라 스테이지 활성화
         GameObject targetStage = null;
 
         // 전투 계열(Combat/Elite/Boss)은 모두 combatStage 사용
@@ -169,11 +169,11 @@ public class GameStateController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"��� Ÿ�� {nodeType}�� �ش��ϴ� ���������� �����ϴ�!");
+            Debug.LogWarning($"노드 타입 {nodeType}에 해당하는 스테이지가 없습니다!");
         }
     }
 
-    // ��� �������� ��Ȱ��ȭ
+    // 모든 스테이지 비활성화
     void HideAllStages()
     {
         if (mapStage != null)
@@ -191,15 +191,15 @@ public class GameStateController : MonoBehaviour
         if (eventStage != null) eventStage.SetActive(false);
     }
 
-    // ���� ȭ������ ��ȯ
+    // 전투 화면으로 전환
     [System.Obsolete("Use ShowCanvasForNodeType instead")]
     public void ShowBattle()
     {
         ShowCanvasForNodeType(NodeType.Combat, false);
     }
 
-    // ��� Ŭ���� ó��
-    //GameManager ������ �����
+    // 노드 클리어 처리
+    //GameManager 역할을 대신함
     public void MarkNodeCleared(int index)
     {
         if (index < 0) return;
@@ -209,16 +209,16 @@ public class GameStateController : MonoBehaviour
         }
     }
 
-    // ��尡 Ŭ����Ǿ����� Ȯ��
+    // 노드가 클리어되었는지 확인
     public bool IsNodeCleared(int index)
     {
         return index >= 0 && clearedNodes.Contains(index);
     }
 
-    // ���� Ŭ���� �� ������ ����
+    // 전투 클리어 후 맵으로 복귀
     public void OnRoundClear()
     {
-        // ���� ��� Ŭ���� ó��
+        // 현재 노드 클리어 처리
         if (lastVisitedNodeIndex >= 0)
         {
             MarkNodeCleared(lastVisitedNodeIndex);

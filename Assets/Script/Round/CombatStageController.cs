@@ -1,12 +1,12 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public class CombatStageController : MonoBehaviour
 {
-    [Header("���")]
+    [Header("배경")]
     [SerializeField] private Image backgroundImage;
 
-    [Header("��� ��������Ʈ")]
+    [Header("배경 스프라이트")]
     [SerializeField] private Sprite normalSprite;
     [SerializeField] private Sprite eliteSprite;
     [SerializeField] private Sprite bossSprite;
@@ -47,9 +47,9 @@ public class CombatStageController : MonoBehaviour
 
     void OnValidate()
     {
-        if (backgroundImage == null) Debug.LogWarning("CombatStageController: backgroundImage�� �����ϴ�.");
-        if (normalSprite == null) Debug.LogWarning("CombatStageController: normalSprite�� �����ϴ�.");
-        if (eliteSprite == null) Debug.LogWarning("CombatStageController: eliteSprite�� �����ϴ�.");
-        if (bossSprite == null) Debug.LogWarning("CombatStageController: bossSprite�� �����ϴ�.");
+        if (backgroundImage == null) Debug.LogWarning("CombatStageController: backgroundImage가 없습니다.");
+        if (normalSprite == null) Debug.LogWarning("CombatStageController: normalSprite가 없습니다.");
+        if (eliteSprite == null) Debug.LogWarning("CombatStageController: eliteSprite가 없습니다.");
+        if (bossSprite == null) Debug.LogWarning("CombatStageController: bossSprite가 없습니다.");
     }
 }

@@ -1,12 +1,12 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
 public class CardSystem : MonoBehaviour
 {
-    public GameObject cardPrefab; // ī�� ������  
-    public Transform cardParent; // ī�尡 ������ ������Ʈ  
+    public GameObject cardPrefab; // 카드 프리팹  
+    public Transform cardParent; // 카드가 생성될 오브젝트  
     public Sprite[] cardSprites;
     private string[] cardTypes = { "Q", "W", "E", "R" };
 
@@ -17,7 +17,7 @@ public class CardSystem : MonoBehaviour
     private Player player;
     private EnemyController enemyController;
     private float drawTimer = 0f;
-    private ComboSystem comboSystem; // �޺� �ý��� ����
+    private ComboSystem comboSystem; // 콤보 시스템 참조
 
     public TMP_Text deckText;    
     public TMP_Text graveyardText;
@@ -26,11 +26,10 @@ public class CardSystem : MonoBehaviour
     public int baseDraw=10;
     public float drawTime=1f;
 
-
     void Start()
     {
         player = FindFirstObjectByType<Player>();
-        comboSystem = FindFirstObjectByType<ComboSystem>(); // �޺� �ý��� ã��
+        comboSystem = FindFirstObjectByType<ComboSystem>(); // 콤보 시스템 찾기
         RefreshEnemyRef();
 
         SetDeck();
@@ -38,6 +37,7 @@ public class CardSystem : MonoBehaviour
         DrawCards(baseDraw);
 
     }
+
 
     /// <summary>
     /// 새 스테이지 진입 시 덱/손패/묘지 초기화
@@ -89,7 +89,7 @@ public class CardSystem : MonoBehaviour
     {
         foreach (string type in cardTypes)
         {
-            for (int i = 0; i < 5; i++) // �� ī�� Ÿ�Դ� 5�徿  
+            for (int i = 0; i < 5; i++) // 각 카드 타입당 5장씩  
             {
                 deck.Add(type);
             }
@@ -97,13 +97,13 @@ public class CardSystem : MonoBehaviour
         ReshuffleGraveyard();
     }
 
-    void ReshuffleGraveyard() // ������ ī�带 ������ �ٽ� ����
+    void ReshuffleGraveyard() // 묘지의 카드를 덱으로 다시 섞음
     {
         if (graveyard.Count == 0) return;
         deck.AddRange(graveyard);
         graveyard.Clear();
         ShuffleDeck(deck);
-        Debug.Log("������ ī�带 ������ �ٽ� ����");
+        Debug.Log("묘지의 카드를 덱으로 다시 섞음");
     }
 
     void ShuffleDeck(List<string> list)
@@ -117,7 +117,7 @@ public class CardSystem : MonoBehaviour
         }
     }
 
-    void HandleInput() // ī�� Ű �Է� ó��
+    void HandleInput() // 카드 키 입력 처리
     {
         if (hand.Count == 0) return;
 
@@ -133,7 +133,7 @@ public class CardSystem : MonoBehaviour
         {
             Card cardScript = hand[i].GetComponent<Card>();
 
-            // �Է��� Ű�� ī���� Ÿ���� ��ġ�ϴ� ù ��° ī�带 ã��  
+            // 입력한 키와 카드의 타입이 일치하는 첫 번째 카드를 찾음  
             if (cardScript.cardType == inputKey)
             {
                 UseCard(i);
@@ -147,21 +147,20 @@ public class CardSystem : MonoBehaviour
         GameObject cardObj = hand[index];
         string type = cardObj.GetComponent<Card>().cardType;
 
-        // ������ ��� (�÷��̾� ���ݷ��� 100%)
+        // 데미지 계산 (플레이어 공격력의 100%)
         if (enemyController != null && player != null)
         {
-            player.PlayAttackEffect(); // �÷��̾� ���� ȿ�� ���
             enemyController.TakeDamage(player.attackDamage, type);
-            Debug.Log($"{type} ī�� ���! ������ {player.attackDamage} ������.");
+            Debug.Log($"{type} 카드 사용! 적에게 {player.attackDamage} 데미지.");
         }
 
-        // �޺� �ý��ۿ� ī�� �Է� ����
+        // 콤보 시스템에 카드 입력 전달
         if (comboSystem != null)
         {
             comboSystem.OnCardUsed(type);
         }
 
-        // ������ ������ �� �ı�  
+        // 묘지로 보내기 및 파괴  
         graveyard.Add(type);
         hand.RemoveAt(index);
         Destroy(cardObj);
@@ -181,7 +180,7 @@ public class CardSystem : MonoBehaviour
         }
         else
         {
-            drawTimer = 0f; // �̹� ���� �� ������ Ÿ�̸� ����  
+            drawTimer = 0f; // 이미 가득 차 있으면 타이머 리셋  
         }
     }
 
