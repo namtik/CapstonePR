@@ -2753,6 +2753,7 @@ MonoBehaviour:
   difficultyConfig: {fileID: 11400000, guid: c7d8fbba0167081478326abd48884046, type: 2}
   enemyPrefab: {fileID: 1989961882650650664, guid: 47901c62096ea4e48900cf32a08aceea, type: 3}
   enemySpawnPoint: {fileID: 1152657241}
+  combatStageController: {fileID: 1780698870}
 --- !u!1 &727719306
 GameObject:
   m_ObjectHideFlags: 0
@@ -5703,8 +5704,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CombatStageController
   backgroundImage: {fileID: 814307233}
   normalSprite: {fileID: 21300000, guid: ed98120a933db354e951e3e96bef2ca8, type: 3}
-  eliteSprite: {fileID: 21300000, guid: e3872c9620a7f4c498e4a79ec9a138ae, type: 3}
-  bossSprite: {fileID: 21300000, guid: 8835bf49b399d1140b18f15567743c84, type: 3}
+  eliteSprite: {fileID: 21300000, guid: 8835bf49b399d1140b18f15567743c84, type: 3}
+  bossSprite: {fileID: 21300000, guid: bb90d2fa48cd9024faf848e6887819f7, type: 3}
 --- !u!1 &1780902705
 GameObject:
   m_ObjectHideFlags: 0
