@@ -6,31 +6,31 @@ using System.Linq;
 using System;
 using Object = UnityEngine.Object;
 
-// ÄŞº¸ ½ºÅ³ ½Ã½ºÅÛ °ü¸® Å¬·¡½º
+// ï¿½Şºï¿½ ï¿½ï¿½Å³ ï¿½Ã½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½
 public class ComboSystem : MonoBehaviour
 {
-    [Header("ÄŞº¸ ½½·Ô ¼³Á¤")]
-    public Transform comboSlotParent; // ÄŞº¸ ½½·ÔÀÌ Ç¥½ÃµÉ ºÎ¸ğ ¿ÀºêÁ§Æ®
-    public GameObject cardPrefab; // Ä«µå ÇÁ¸®ÆÕ (ÄŞº¸ ½½·Ô¿¡ Ç¥½Ã¿ë)
-    public Sprite[] cardSprites; // Q, W, E, R Ä«µå ½ºÇÁ¶óÀÌÆ®
+    [Header("ï¿½Şºï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
+    public Transform comboSlotParent; // ï¿½Şºï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ç¥ï¿½Ãµï¿½ ï¿½Î¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
+    public GameObject cardPrefab; // Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½Şºï¿½ ï¿½ï¿½ï¿½Ô¿ï¿½ Ç¥ï¿½Ã¿ï¿½)
+    public Sprite[] cardSprites; // Q, W, E, R Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
 
     private string[] cardTypes = { "Q", "W", "E", "R" };
 
-    [Header("½ºÅ³ ¾ÆÀÌÄÜ ¼³Á¤")]
-    public Transform skillIconParent; // ½ºÅ³ ¾ÆÀÌÄÜÀÌ Ç¥½ÃµÉ ºÎ¸ğ ¿ÀºêÁ§Æ®
+    [Header("ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
+    public Transform skillIconParent; // ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ç¥ï¿½Ãµï¿½ ï¿½Î¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
 
-    // ÄŞº¸ ÀÔ·Â ÀúÀå
-    private List<string> comboInput = new List<string>(); // ÇöÀç ÀÔ·ÂµÈ ÄŞº¸ (ÃÖ´ë 3°³)
-    private List<GameObject> comboSlotCards = new List<GameObject>(); // ÄŞº¸ ½½·Ô¿¡ Ç¥½ÃµÈ Ä«µå ¿ÀºêÁ§Æ®
-    private List<GameObject> emptySlots = new List<GameObject>(); // ºó ½½·Ô ¿ÀºêÁ§Æ® (Ç×»ó Ç¥½Ã)
+    // ï¿½Şºï¿½ ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½
+    private List<string> comboInput = new List<string>(); // ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·Âµï¿½ ï¿½Şºï¿½ (ï¿½Ö´ï¿½ 3ï¿½ï¿½)
+    private List<GameObject> comboSlotCards = new List<GameObject>(); // ï¿½Şºï¿½ ï¿½ï¿½ï¿½Ô¿ï¿½ Ç¥ï¿½Ãµï¿½ Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
+    private List<GameObject> emptySlots = new List<GameObject>(); // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® (ï¿½×»ï¿½ Ç¥ï¿½ï¿½)
 
-    // ½ºÅ³ ¹ßµ¿ ¾Ë¸² UI
+    // ï¿½ï¿½Å³ ï¿½ßµï¿½ ï¿½Ë¸ï¿½ UI
     private Text skillActivationText;
     private float skillTextTimer = 0f;
     private bool isShowingSkillText = false;
     private const float SKILL_TEXT_DISPLAY_TIME = 0.5f;
 
-    // ½ºÅ³ Á¤ÀÇ
+    // ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½
     private List<SkillData> learnedSkills = new List<SkillData>();
     private Dictionary<string, SkillData> comboLookup = new Dictionary<string, SkillData>();
     public int learnedSkillCount = 0;
@@ -61,14 +61,14 @@ public class ComboSystem : MonoBehaviour
         CM = FindFirstObjectByType<CardSystem>();
         RefreshEnemyRef();
 
-        // UI »ı¼º
+        // UI ï¿½ï¿½ï¿½ï¿½
         CreateComboSlots();
         CreateSkillIcons();
     }
 
     void Update()
     {
-        // ½ºÅ³ ÅØ½ºÆ® Ç¥½Ã Å¸ÀÌ¸Ó
+        // ï¿½ï¿½Å³ ï¿½Ø½ï¿½Æ® Ç¥ï¿½ï¿½ Å¸ï¿½Ì¸ï¿½
         if (isShowingSkillText)
         {
             skillTextTimer -= Time.deltaTime;
@@ -93,18 +93,18 @@ public class ComboSystem : MonoBehaviour
     public void LearnSkill(SkillData newSkill)
     {
         learnedSkills.Add(newSkill);
-        Debug.Log($"½ºÅ³ ½Àµæ: {newSkill.name} ({newSkill.combo})");
+        Debug.Log($"ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½: {newSkill.name} ({newSkill.combo})");
         comboLookup[newSkill.combo] = newSkill;
         learnedSkillCount += 1;
 
-        // ½ºÅ³ ¾ÆÀÌÄÜ UI¿¡ Ãß°¡
+        // ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ UIï¿½ï¿½ ï¿½ß°ï¿½
         CreateSkillIcon(newSkill, learnedSkills.Count - 1);
 
     }
 
     public void RefreshSkillUI()
     {
-        // skillIconParent°¡ ¾ø°Å³ª ÆÄ±«µÆÀ¸¸é Àç»ı¼º
+        // skillIconParentï¿½ï¿½ ï¿½ï¿½ï¿½Å³ï¿½ ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
         if (skillIconParent == null || !skillIconParent.gameObject.activeInHierarchy)
         {
             CreateSkillIcons();
@@ -113,11 +113,11 @@ public class ComboSystem : MonoBehaviour
         foreach (Transform child in skillIconParent)
             Destroy(child.gameObject);
 
-        // learnedSkills µ¥ÀÌÅÍ·Î ¾ÆÀÌÄÜ Àç»ı¼º
+        // learnedSkills ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
         for (int i = 0; i < learnedSkills.Count; i++)
             CreateSkillIcon(learnedSkills[i], i);
 
-        Debug.Log($"[ComboSystem] ½ºÅ³ UI Àçºôµå: {learnedSkills.Count}°³");
+        Debug.Log($"[ComboSystem] ï¿½ï¿½Å³ UI ï¿½ï¿½ï¿½ï¿½ï¿½: {learnedSkills.Count}ï¿½ï¿½");
     }
     public void RefreshComboSlotUI()
     {
@@ -134,7 +134,7 @@ public class ComboSystem : MonoBehaviour
         return learnedSkills.Count;
     }
 
-    // ÄŞº¸ ½½·Ô UI »ı¼º (È­¸é »ó´Ü Áß¾Ó)
+    // ï¿½Şºï¿½ ï¿½ï¿½ï¿½ï¿½ UI ï¿½ï¿½ï¿½ï¿½ (È­ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ß¾ï¿½)
     void CreateComboSlots()
     {
         if (comboSlotParent == null)
@@ -152,7 +152,7 @@ public class ComboSystem : MonoBehaviour
             rect.anchoredPosition = new Vector2(0f, -50f);
             rect.sizeDelta = new Vector2(400f, 120f);
 
-            // HorizontalLayoutGroup Ãß°¡
+            // HorizontalLayoutGroup ï¿½ß°ï¿½
             HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 30f;
             layout.childAlignment = TextAnchor.MiddleCenter;
@@ -162,13 +162,13 @@ public class ComboSystem : MonoBehaviour
             comboSlotParent = slotParentObj.transform;
         }
 
-        // ºó ½½·Ô 3°³ »ı¼º (Ç×»ó Ç¥½Ã)
+        // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ 3ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½×»ï¿½ Ç¥ï¿½ï¿½)
         CreateEmptySlots();
-        // ½ºÅ³ ¹ßµ¿ ¾Ë¸² ÅØ½ºÆ® »ı¼º (ÄŞº¸ ½½·Ô ¾Æ·¡)
+        // ï¿½ï¿½Å³ ï¿½ßµï¿½ ï¿½Ë¸ï¿½ ï¿½Ø½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ (ï¿½Şºï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Æ·ï¿½)
         CreateSkillActivationText();
     }
 
-    // ºó ÄŞº¸ ½½·Ô 3°³ »ı¼º
+    // ï¿½ï¿½ ï¿½Şºï¿½ ï¿½ï¿½ï¿½ï¿½ 3ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     void CreateEmptySlots()
     {
         for (int i = 0; i < 3; i++)
@@ -179,7 +179,7 @@ public class ComboSystem : MonoBehaviour
             RectTransform rect = emptySlot.AddComponent<RectTransform>();
             rect.sizeDelta = new Vector2(60f, 80f);
 
-            // ºó ½½·Ô ¹è°æ ÀÌ¹ÌÁö (È¸»ö Å×µÎ¸®)
+            // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ (È¸ï¿½ï¿½ ï¿½×µÎ¸ï¿½)
             Image slotImage = emptySlot.AddComponent<Image>();
             slotImage.color = new Color(0.3f, 0.3f, 0.3f, 0.5f);
 
@@ -187,7 +187,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
-    // ½ºÅ³ ¹ßµ¿ ¾Ë¸² ÅØ½ºÆ® »ı¼º
+    // ï¿½ï¿½Å³ ï¿½ßµï¿½ ï¿½Ë¸ï¿½ ï¿½Ø½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
     void CreateSkillActivationText()
     {
         Canvas canvas = FindFirstObjectByType<Canvas>();
@@ -211,13 +211,13 @@ public class ComboSystem : MonoBehaviour
         skillActivationText.fontStyle = FontStyle.Bold;
         skillActivationText.text = "";
 
-        // Outline Ãß°¡
+        // Outline ï¿½ß°ï¿½
         Outline outline = textObj.AddComponent<Outline>();
         outline.effectColor = Color.black;
         outline.effectDistance = new Vector2(3, -3);
     }
 
-    // ½ºÅ³ ¾ÆÀÌÄÜ UI »ı¼º (È­¸é ÇÏ´Ü Áß¾Ó, Ä«µå À§)
+    // ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ UI ï¿½ï¿½ï¿½ï¿½ (È­ï¿½ï¿½ ï¿½Ï´ï¿½ ï¿½ß¾ï¿½, Ä«ï¿½ï¿½ ï¿½ï¿½)
     void CreateSkillIcons()
     {
         if (skillIconParent == null)
@@ -238,7 +238,7 @@ public class ComboSystem : MonoBehaviour
             rect.localScale = Vector3.one;
 
             HorizontalLayoutGroup layout = iconParentObj.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 20f; // ¾ÆÀÌÄÜ °£°İ
+            layout.spacing = 20f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
@@ -248,7 +248,7 @@ public class ComboSystem : MonoBehaviour
 
     }
 
-    // °³º° ½ºÅ³ ¾ÆÀÌÄÜ »ı¼º
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     void CreateSkillIcon(SkillData skillData, int index)
     {
         GameObject iconObj = new GameObject($"SkillIcon_{skillData.name}");
@@ -256,25 +256,25 @@ public class ComboSystem : MonoBehaviour
         iconObj.transform.SetParent(skillIconParent, false);
 
         RectTransform rect = iconObj.AddComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(80f, 80f); // ¾ÆÀÌÄÜ Å©±â
+        rect.sizeDelta = new Vector2(80f, 80f); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å©ï¿½ï¿½
 
         rect.localScale = Vector3.one;
         rect.localPosition = Vector3.zero;
 
         Image iconImage = iconObj.AddComponent<Image>();
 
-        // ¾ÆÀÌÄÜ ÀÌ¹ÌÁö ÇÒ´ç (CSV¿¡¼­ ·ÎµåµÈ ÀÌ¹ÌÁö ¿ì¼±)
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ ï¿½Ò´ï¿½ (CSVï¿½ï¿½ï¿½ï¿½ ï¿½Îµï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ ï¿½ì¼±)
         if (skillData.skillIcon != null)
             iconImage.sprite = skillData.skillIcon;
         else
-            iconImage.color = Color.green; // ¾øÀ¸¸é ÃÊ·Ï»ö
+            iconImage.color = Color.green; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê·Ï»ï¿½
 
-        // ÅøÆÁ µî ¸¶¿ì½º ÀÌº¥Æ® Ãß°¡
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ì½º ï¿½Ìºï¿½Æ® ï¿½ß°ï¿½
         GameObject tooltip = CreateTooltip(iconObj.transform, skillData);
         AddMouseEvents(iconObj, tooltip);
     }
 
-    // ÅøÆÁ »ı¼º
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     GameObject CreateTooltip(Transform parent, SkillData skillData)
     {
         GameObject tooltipObj = new GameObject("Tooltip");
@@ -294,7 +294,7 @@ public class ComboSystem : MonoBehaviour
         bgOutline.effectColor = Color.black;
         bgOutline.effectDistance = new Vector2(2, -2);
 
-        // Á¦¸ñ
+        // ï¿½ï¿½ï¿½ï¿½
         GameObject titleObj = new GameObject("Title");
         titleObj.transform.SetParent(tooltipObj.transform, false);
         RectTransform titleRect = titleObj.AddComponent<RectTransform>();
@@ -311,7 +311,7 @@ public class ComboSystem : MonoBehaviour
         titleText.fontStyle = FontStyle.Bold;
         titleText.text = skillData.name;
 
-        // ¼³¸í
+        // ï¿½ï¿½ï¿½ï¿½
         GameObject descObj = new GameObject("Description");
         descObj.transform.SetParent(tooltipObj.transform, false);
         RectTransform descRect = descObj.AddComponent<RectTransform>();
@@ -325,7 +325,7 @@ public class ComboSystem : MonoBehaviour
         descText.fontSize = 16;
         descText.alignment = TextAnchor.MiddleCenter;
         descText.color = Color.black;
-        descText.text = $"ÄŞº¸: {skillData.combo}\n\n{skillData.description}";
+        descText.text = $"ï¿½Şºï¿½: {skillData.combo}\n\n{skillData.description}";
 
         tooltipObj.SetActive(false);
         return tooltipObj;
@@ -344,17 +344,31 @@ public class ComboSystem : MonoBehaviour
         trigger.triggers.Add(exitEntry);
     }
 
+    /// <summary>
+    /// ìƒˆ ìŠ¤í…Œì´ì§€ ì§„ì… ì‹œ ì½¤ë³´ ì…ë ¥ê³¼ ìŠ¬ë¡¯ UI ì´ˆê¸°í™”
+    /// </summary>
+    public void ResetComboInput()
+    {
+        comboInput.Clear();
+
+        foreach (var card in comboSlotCards)
+        {
+            if (card != null) Destroy(card);
+        }
+        comboSlotCards.Clear();
+    }
+
     public void OnCardUsed(string cardType)
     {
-        if (comboInput.Count >= 3)// ÀÌ¹Ì 3°³°¡ ²Ë Â÷ ÀÖ´Ù¸é, °¡Àå ¿À·¡µÈ °Í(0¹ø)À» Á¦°Å
+        if (comboInput.Count >= 3)// ï¿½Ì¹ï¿½ 3ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö´Ù¸ï¿½, ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½(0ï¿½ï¿½)ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         {
             comboInput.RemoveAt(0);
         }
         
 
-        // »õ Ä«µå Ãß°¡
+        // ï¿½ï¿½ Ä«ï¿½ï¿½ ï¿½ß°ï¿½
         comboInput.Add(cardType);
-        Debug.Log($"ÇöÀç ÄŞº¸: {string.Join("-", comboInput)}"); // µğ¹ö±ë¿ë
+        Debug.Log($"ï¿½ï¿½ï¿½ï¿½ ï¿½Şºï¿½: {string.Join("-", comboInput)}"); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
         if (comboInput.Count == 3)
             CheckAndActivateSkills();
@@ -364,14 +378,14 @@ public class ComboSystem : MonoBehaviour
 
     void UpdateComboSlotUI()
     {
-        // ±âÁ¸¿¡ Ç¥½ÃµÈ Ä«µå ¿ÀºêÁ§Æ®µé ¸ğµÎ »èÁ¦
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ç¥ï¿½Ãµï¿½ Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         foreach (var card in comboSlotCards)
         {
             if (card != null) Destroy(card);
         }
         comboSlotCards.Clear();
 
-        // ÇöÀç ÄŞº¸ ¸®½ºÆ®(comboInput)¿¡ ÀÖ´Â ¸¸Å­ Ä«µå »ı¼º
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½Şºï¿½ ï¿½ï¿½ï¿½ï¿½Æ®(comboInput)ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½Å­ Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         for (int i = 0; i < comboInput.Count; i++)
         {
             
@@ -379,10 +393,10 @@ public class ComboSystem : MonoBehaviour
 
             string type = comboInput[i];
 
-            // i¹øÂ° ºó ½½·ÔÀÇ ÀÚ½ÄÀ¸·Î Ä«µå »ı¼º
+            // iï¿½ï¿½Â° ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½ Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             GameObject newCard = Instantiate(cardPrefab, emptySlots[i].transform);
 
-            // Ä«µå ½ºÅ©¸³Æ® ¼³Á¤
+            // Ä«ï¿½ï¿½ ï¿½ï¿½Å©ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
             Card cardScript = newCard.GetComponent<Card>();
             int spriteIndex = System.Array.IndexOf(cardTypes, type);
             if (spriteIndex >= 0 && spriteIndex < cardSprites.Length)
@@ -390,7 +404,7 @@ public class ComboSystem : MonoBehaviour
                 cardScript.SetType(type, cardSprites[spriteIndex]);
             }
 
-            // UI À§Ä¡ ÃÊ±âÈ­ (ºÎ¸ğÀÎ EmptySlotÀÇ Á¤Áß¾Ó¿¡ ¿Àµµ·Ï)
+            // UI ï¿½ï¿½Ä¡ ï¿½Ê±ï¿½È­ (ï¿½Î¸ï¿½ï¿½ï¿½ EmptySlotï¿½ï¿½ ï¿½ï¿½ï¿½ß¾Ó¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
             RectTransform rect = newCard.GetComponent<RectTransform>();
             if (rect != null)
             {
@@ -406,16 +420,16 @@ public class ComboSystem : MonoBehaviour
     void CheckAndActivateSkills()
     {
         string currentCombo = string.Join("", comboInput);
-        Debug.Log($"ÇöÀç ÄŞº¸: {currentCombo}"); // µğ¹ö±ë¿ë
-        // ¹è¿î ½ºÅ³ Áß ÄŞº¸ ±æÀÌ°¡ ±ä ¼ø¼­´ë·Î Á¤·ÄÇÏ¿© ¸ÅÄª (QQQ°¡ QQº¸´Ù ¸ÕÀú °Ë»öµÊ)
+        Debug.Log($"ï¿½ï¿½ï¿½ï¿½ ï¿½Şºï¿½: {currentCombo}"); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        // ï¿½ï¿½ï¿½ ï¿½ï¿½Å³ ï¿½ï¿½ ï¿½Şºï¿½ ï¿½ï¿½ï¿½Ì°ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½ ï¿½ï¿½Äª (QQQï¿½ï¿½ QQï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ë»ï¿½ï¿½ï¿½)
         if (comboLookup.TryGetValue(currentCombo, out SkillData skill))
         {
-            Debug.Log($"[½ºÅ³¹ßµ¿] {skill.name}");
+            Debug.Log($"[ï¿½ï¿½Å³ï¿½ßµï¿½] {skill.name}");
             ActivateSkill(skill);
         }
         else
         {
-            Debug.Log($"[¹Ì¹ßµ¿] '{currentCombo}' ÀÏÄ¡ÇÏ´Â ½ºÅ³ ¾øÀ½");
+            Debug.Log($"[ï¿½Ì¹ßµï¿½] '{currentCombo}' ï¿½ï¿½Ä¡ï¿½Ï´ï¿½ ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½");
         }
     }
 
@@ -424,19 +438,19 @@ public class ComboSystem : MonoBehaviour
         if(skill.draw > 0) 
         {
             CM.DrawCards(skill.draw);
-            Debug.Log($"{skill.draw}Àå µå·Î¿ì!");
+            Debug.Log($"{skill.draw}ï¿½ï¿½ ï¿½ï¿½Î¿ï¿½!");
         }
             
         if (player != null)
         {
             float damage = player.attackDamage * skill.damage;
             enemyController.TakeDamage(damage);
-            Debug.Log($"{skill.name} ¹ßµ¿! µ¥¹ÌÁö: {damage}");
+            Debug.Log($"{skill.name} ï¿½ßµï¿½! ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {damage}");
         }
 
         if (skillActivationText != null)
         {
-            skillActivationText.text = $"{skill.name} ¹ßµ¿!";
+            skillActivationText.text = $"{skill.name} ï¿½ßµï¿½!";
             skillTextTimer = SKILL_TEXT_DISPLAY_TIME;
             isShowingSkillText = true;
         }

@@ -8,6 +8,7 @@ public class Roundmanager : MonoBehaviour
     [SerializeField] private DifficultyConfig difficultyConfig;
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField] private Transform enemySpawnPoint;
+    [SerializeField] private CombatStageController combatStageController;
     
     private RoundData currentRoundData;
     private int currentEnemyIndex = 0;
@@ -20,6 +21,13 @@ public class Roundmanager : MonoBehaviour
     {
         currentRoundData = roundData;
         currentEnemyIndex = 0;
+
+        // 전투 스테이지 배경 전환 + 덱/손패/콤보 초기화
+        if (combatStageController != null)
+        {
+            combatStageController.Initialize(roundData);
+        }
+
         currentRoundHandler = roundData.CreateHandler();
         currentRoundHandler.OnEnterRound(this);
     }
