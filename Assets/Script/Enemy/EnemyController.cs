@@ -1,8 +1,8 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
-    [Header("°ø°Ý Åõ»çÃ¼ ¼³Á¤")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½")]
     [SerializeField] private GameObject projectilePrefab;
     [SerializeField] private Transform projectileSpawnPoint;
     [SerializeField] private Sprite projectileSprite;
@@ -52,8 +52,6 @@ public class EnemyController : MonoBehaviour
     public void TakeDamage(float damage)
     {
         TakeDamage(damage, "Default");
-        stat.TakeDamage(damage);
-        view.ShowDamage(damage);
     }
 
 
@@ -93,7 +91,7 @@ public class EnemyController : MonoBehaviour
 
     void HandleDeath()
     {
-        if (isDead) return; // Áßº¹ Ã³¸® ¹æÁö
+        if (isDead) return; // ï¿½ßºï¿½ Ã³ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         isDead = true;
 
         roundmanager?.HandleEnemyDied();
