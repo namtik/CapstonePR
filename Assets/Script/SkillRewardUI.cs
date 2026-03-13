@@ -1,27 +1,27 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using static SkillDataParser;
 
 public class SkillRewardUI : MonoBehaviour
 {
-    public GameObject rewardPanel;     // ÀüÃ¼ ÆĞ³Î
-    public Transform cardContainer;    // Ä«µå°¡ »ı¼ºµÉ ºÎ¸ğ
-    public GameObject cardPrefab;      // ¼±ÅÃÁö Ä«µå ÇÁ¸®ÆÕ (¹öÆ° Æ÷ÇÔ)
-    public Roundmanager roundManager;          // ¶ó¿îµå ¸Å´ÏÀú ÂüÁ¶
-    public MapNode currentNode;                      // ÇöÀç ³ëµå ÂüÁ¶
+    public GameObject rewardPanel;     // ì „ì²´ íŒ¨ë„
+    public Transform cardContainer;    // ì¹´ë“œê°€ ìƒì„±ë  ë¶€ëª¨
+    public GameObject cardPrefab;      // ì„ íƒì§€ ì¹´ë“œ í”„ë¦¬íŒ¹ (ë²„íŠ¼ í¬í•¨)
+    public Roundmanager roundManager;          // ë¼ìš´ë“œ ë§¤ë‹ˆì € ì°¸ì¡°
+    public MapNode currentNode;                      // í˜„ì¬ ë…¸ë“œ ì°¸ì¡°
 
     public int currentStage;
 
     public void ShowRewardOptions()
     {
         rewardPanel.SetActive(true);
-        Time.timeScale = 0f; // °ÔÀÓ ÀÏ½ÃÁ¤Áö
+        Time.timeScale = 0f; // ê²Œì„ ì¼ì‹œì •ì§€
 
-        // ±âÁ¸ Ä«µå Á¦°Å
+        // ê¸°ì¡´ ì¹´ë“œ ì œê±°
         foreach (Transform t in cardContainer) Destroy(t.gameObject);
 
-        // ·£´ı 3°³ °¡Á®¿À±â
+        // ëœë¤ 3ê°œ ê°€ì ¸ì˜¤ê¸°
         List<SkillData> options = SkillDataParser.Instance.GetRandomSkills(3);
 
         foreach (SkillData skill in options)
@@ -31,7 +31,7 @@ public class SkillRewardUI : MonoBehaviour
             SkillCardUI cardUI = card.GetComponent<SkillCardUI>();
             if (cardUI != null)
             {
-                // µ¥ÀÌÅÍ¿Í Å¬¸¯ÇßÀ» ¶§ ÇÒ Çàµ¿(OnSelectSkill)À» Àü´Ş
+                // ë°ì´í„°ì™€ í´ë¦­í–ˆì„ ë•Œ í•  í–‰ë™(OnSelectSkill)ì„ ì „ë‹¬
                 cardUI.Setup(skill, OnSelectSkill);
             }
         }
@@ -41,7 +41,7 @@ public class SkillRewardUI : MonoBehaviour
     {
         if (ComboSystem.Instance == null)
         {
-            Debug.LogError("[SkillRewardUI] ComboSystem.Instance°¡ nullÀÔ´Ï´Ù. ¾À¿¡ ComboSystemÀÌ ÀÖ´ÂÁö È®ÀÎÇÏ¼¼¿ä.");
+            Debug.LogError("[SkillRewardUI] ComboSystem.Instanceê°€ nullì…ë‹ˆë‹¤. ì”¬ì— ComboSystemì´ ìˆëŠ”ì§€ í™•ì¸í•˜ì„¸ìš”.");
             rewardPanel.SetActive(false);
             Time.timeScale = 1f;
             return;
