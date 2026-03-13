@@ -1079,12 +1079,20 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2338157895081469167, guid: f746d226f2da354498f3f8cf63ac5a3b, type: 3}
+      propertyPath: ShapeModule.type
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 2338157895081469167, guid: f746d226f2da354498f3f8cf63ac5a3b, type: 3}
       propertyPath: SizeModule.enabled
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2338157895081469167, guid: f746d226f2da354498f3f8cf63ac5a3b, type: 3}
       propertyPath: ShapeModule.enabled
-      value: 0
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2338157895081469167, guid: f746d226f2da354498f3f8cf63ac5a3b, type: 3}
+      propertyPath: ShapeModule.radiusThickness
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2338157895081469167, guid: f746d226f2da354498f3f8cf63ac5a3b, type: 3}
       propertyPath: InitialModule.startSpeed.scalar
@@ -1092,7 +1100,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2338157895081469167, guid: f746d226f2da354498f3f8cf63ac5a3b, type: 3}
       propertyPath: InitialModule.startLifetime.scalar
-      value: 1
+      value: 0.4
       objectReference: {fileID: 0}
     - target: {fileID: 2520267065124433294, guid: f746d226f2da354498f3f8cf63ac5a3b, type: 3}
       propertyPath: m_SortingLayer
