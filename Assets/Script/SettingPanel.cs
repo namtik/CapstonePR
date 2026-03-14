@@ -55,7 +55,35 @@ public class SettingPanel : MonoBehaviour
         if (settingCanvas != null)
         {
             settingCanvas.SetActive(true);
+            EnsureCanvasComponents();
             Time.timeScale = 0f;
+        }
+    }
+
+    void EnsureCanvasComponents()
+    {
+        // Canvas 컴포넌트 확인 및 추가
+        var canvas = settingCanvas.GetComponent<Canvas>();
+        if (canvas == null)
+        {
+            canvas = settingCanvas.AddComponent<Canvas>();
+        }
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 1000;
+
+        // CanvasScaler 확인 및 추가
+        var scaler = settingCanvas.GetComponent<CanvasScaler>();
+        if (scaler == null)
+        {
+            scaler = settingCanvas.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+        }
+
+        // GraphicRaycaster 확인 및 추가
+        if (settingCanvas.GetComponent<GraphicRaycaster>() == null)
+        {
+            settingCanvas.AddComponent<GraphicRaycaster>();
         }
     }
 
