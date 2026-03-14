@@ -2,22 +2,28 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// 이 스크립트는 항상 활성화된 오브젝트(예: GameStateController)에 붙여야 합니다.
+/// settingCanvas는 비활성 상태로 시작하고, SettingButton을 누르면 활성화됩니다.
+/// </summary>
 public class SettingPanel : MonoBehaviour
 {
-    [Header("패널")]
-    public GameObject settingPanel;
+    [Header("설정 캔버스 (비활성 상태로 시작)")]
+    public GameObject settingCanvas;
 
     [Header("패널 내부 버튼")]
-    public Button resumeButton;    // 계속하기
-    public Button restartButton;   // 게임 재시작
-    public Button reloadButton;    // 현재 시점 재로드
-    public Button quitButton;      // 게임 종료
+    public Button resumeButton;
+    public Button restartButton;
+    public Button reloadButton;
+    public Button quitButton;
 
     void Start()
     {
-        if (settingPanel != null)
-            settingPanel.SetActive(false);
+        // 설정 캔버스 비활성화
+        if (settingCanvas != null)
+            settingCanvas.SetActive(false);
 
+        // 패널 내부 버튼 연결
         if (resumeButton != null)
             resumeButton.onClick.AddListener(CloseSettings);
         if (restartButton != null)
@@ -31,10 +37,6 @@ public class SettingPanel : MonoBehaviour
         BindAllSettingButtons();
     }
 
-    /// <summary>
-    /// 씬 내 모든 "SettingButton" 이름의 버튼을 찾아 OpenSettings에 연결
-    /// 각 menubar에 있는 SettingButton이 이 패널을 열 수 있도록 함
-    /// </summary>
     void BindAllSettingButtons()
     {
         var allButtons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -50,18 +52,18 @@ public class SettingPanel : MonoBehaviour
 
     public void OpenSettings()
     {
-        if (settingPanel != null)
+        if (settingCanvas != null)
         {
-            settingPanel.SetActive(true);
+            settingCanvas.SetActive(true);
             Time.timeScale = 0f;
         }
     }
 
     public void CloseSettings()
     {
-        if (settingPanel != null)
+        if (settingCanvas != null)
         {
-            settingPanel.SetActive(false);
+            settingCanvas.SetActive(false);
             Time.timeScale = 1f;
         }
     }
