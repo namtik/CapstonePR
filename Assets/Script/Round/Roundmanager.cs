@@ -86,8 +86,8 @@ public class Roundmanager : MonoBehaviour
         var player = FindFirstObjectByType<Player>();
         if (player == null) return;
 
-        float healAmount = player.maxHp * healPercent;
-        player.currentHp = Mathf.Min(player.currentHp + healAmount, player.maxHp);
+        int healAmount = Mathf.Max(1, Mathf.RoundToInt(player.maxHp * healPercent));
+        player.Heal(healAmount);
 
         Debug.Log($"플레이어 HP 회복: +{healAmount} ({healPercent * 100}%)");
 
