@@ -284,8 +284,9 @@ GameObject:
   m_Component:
   - component: {fileID: 9036636692932262931}
   - component: {fileID: 1842326841227932896}
+  - component: {fileID: 1867922130122883411}
   m_Layer: 5
-  m_Name: GameObject
+  m_Name: PlayerHP
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -308,11 +309,11 @@ RectTransform:
   - {fileID: 7920116012036202078}
   m_Father: {fileID: 1894124512926051974}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.5}
-  m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 132.5, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 111, y: 9.999939}
   m_SizeDelta: {x: 265, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_Pivot: {x: 0, y: 1}
 --- !u!114 &1842326841227932896
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -339,6 +340,24 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &1867922130122883411
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3392082629653491762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9e452ce83a1e1d4296b475e88513f1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeartUI
+  fullHeartSprite: {fileID: 21300000, guid: 846702f0b45dc574fac3b5bc127434d6, type: 3}
+  emptyHeartSprite: {fileID: 21300000, guid: 1b6114b51a193b3448296ff46267b369, type: 3}
+  hearts:
+  - {fileID: 8840172104745551883}
+  - {fileID: 8323242855731392551}
+  - {fileID: 544225027914934406}
 --- !u!1 &8419441263441958654
 GameObject:
   m_ObjectHideFlags: 0
@@ -449,9 +468,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -50, y: -76}
+  m_AnchoredPosition: {x: -35, y: 74}
   m_SizeDelta: {x: 250, y: 300}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_Pivot: {x: 1, y: 1}
 --- !u!222 &599304404586196595
 CanvasRenderer:
   m_ObjectHideFlags: 0

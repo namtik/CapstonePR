@@ -230,6 +230,7 @@ public class Player : MonoBehaviour
             ShowResult("회피 성공!", Color.green);
             isDodging = false;
             inputTimer = 0f;
+            damage = 0f; // 회피 성공
             return;
         }
 
@@ -237,9 +238,9 @@ public class Player : MonoBehaviour
         {
             float reducedDamage = damage * 0.5f;
             ShowResult("방어 성공!", Color.cyan);
-            TakeDamage(reducedDamage);
             isDefending = false;
             inputTimer = 0f;
+            damage=0f; // 방어 성공
             return;
         }
 
@@ -307,15 +308,14 @@ public class Player : MonoBehaviour
         {
             resultText.text = message;
             resultText.color = color;
-            resultDisplayTimer = 2f; // 2초 동안 표시
+            resultDisplayTimer = 0.5f; // 2초 동안 표시
         }
     }
 
     public void PlayAttackEffect()
     {
-        if (attackParticle != null)
-        {
-            attackParticle.Play(); // 파티클 재생
-        }
+
+        attackParticle.Play(); // 파티클 재생
+    
     }
 }

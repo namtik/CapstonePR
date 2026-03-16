@@ -152,6 +152,7 @@ public class CardSystem : MonoBehaviour
         {
             enemyController.TakeDamage(player.attackDamage, type);
             Debug.Log($"{type} 카드 사용! 적에게 {player.attackDamage} 데미지.");
+            player.PlayAttackEffect(); // 공격 효과 재생
         }
 
         // 콤보 시스템에 카드 입력 전달
