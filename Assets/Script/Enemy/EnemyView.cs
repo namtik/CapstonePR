@@ -10,6 +10,9 @@ public class EnemyView : MonoBehaviour
     [SerializeField] private TMP_Text damageText;
     [SerializeField] private Image enemyImage;
 
+    [Header("공격 예정 표시")]
+    [SerializeField] private TMP_Text attackPreviewText;
+
     [Header("데미지 연출 설정")]
     [SerializeField] private float fadeTime = 1f;
     [SerializeField] private float floatSpeed = 0.5f;
@@ -29,6 +32,8 @@ public class EnemyView : MonoBehaviour
     {
         stat = GetComponent<EnemyStat>();
         stat.OnHpChanged += UpdateHpBar;
+        stat.OnAttackCountChanged += UpdateAttackPreview;
+
         Canvas canvas = GetComponentInChildren<Canvas>();
         if (canvas != null)
         {
@@ -62,6 +67,7 @@ public class EnemyView : MonoBehaviour
     void OnDestroy()
     {
         stat.OnHpChanged -= UpdateHpBar;
+        stat.OnAttackCountChanged -= UpdateAttackPreview;
         delDamageText();
     }
 
@@ -77,6 +83,15 @@ public class EnemyView : MonoBehaviour
     {
         if (actionGaugeBar != null)
             actionGaugeBar.value = ratio;
+    }
+
+    void UpdateAttackPreview(int count)
+    {
+        if (attackPreviewText == null) return;
+        if (count <= 0)
+            attackPreviewText.text = "";
+        else
+            attackPreviewText.text = $"{(int)stat.AttackDamage}x{count}";
     }
 
     // EnemyController가 TakeDamage 직후 호출

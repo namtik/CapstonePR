@@ -16,4 +16,5 @@ MonoBehaviour:
   enemySprite: {fileID: 21300000, guid: 3797943d38032a543a01db91c66084b6, type: 3}
   maxHp: 1000
   attackDamage: 10
-  gaugeSpeed: 25
+  gaugeSpeed: 10
+  baseAttackCount: 3

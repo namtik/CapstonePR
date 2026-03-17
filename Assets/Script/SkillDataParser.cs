@@ -107,10 +107,17 @@ public class SkillDataParser : MonoBehaviour
         return null;
     }
 
-    public List<SkillData> GetRandomSkills(int count)// 스킬 랜덤 추출 (중복 없이)
+    public List<SkillData> GetRandomSkills(int count, HashSet<int> excludeIds)// 스킬 랜덤 추출 (중복 없이)
     {
         List<SkillData> result = new List<SkillData>();
         List<SkillData> tempPool = new List<SkillData>(allSkills);
+        foreach (SkillData skill in allSkills)
+        {
+            if (!excludeIds.Contains(skill.id))
+            {
+                tempPool.Add(skill);
+            }
+        }
 
         for (int i = 0; i < count; i++)
         {

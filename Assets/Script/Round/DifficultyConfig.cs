@@ -8,7 +8,7 @@ public class DifficultyConfig : ScriptableObject
 
     [Header("스탯 배율 커브 (x: 컬럼 진행도 0~1, y: 배율)")]
     public AnimationCurve hpCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 3f);
-    //public AnimationCurve speedCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 1.5f); 게이지 스피드
+    public AnimationCurve attackCountCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 3f);
 
     [Header("타입별 추가 배율")]
     public float eliteMultiplier = 1.8f;  // 정예 배율
@@ -17,16 +17,18 @@ public class DifficultyConfig : ScriptableObject
     // 컬럼 인덱스 → 배율 계산
     public float GetHpMultiplier(int column, NodeType type)
     {
-        float t = (float)column / totalColumns;         // 0~1 정규화
-        float baseMultiplier = hpCurve.Evaluate(t);     // 커브에서 배율 조회
+        float t = (float)column / totalColumns;
+        float baseMultiplier = hpCurve.Evaluate(t);
         return baseMultiplier * GetTypeMultiplier(type);
     }
 
-    //public float GetSpeedMultiplier(int column, NodeType type)
-    //{
-    //    float t = (float)column / totalColumns;
-    //    return speedCurve.Evaluate(t);
-    //}
+    public int GetAttackCount(int baseCount, int column, NodeType type)
+    {
+        float t = (float)column / totalColumns;
+        float scaled = baseCount * attackCountCurve.Evaluate(t) * GetTypeMultiplier(type);
+        return Mathf.Max(1, Mathf.RoundToInt(scaled));
+    }
+
 
     float GetTypeMultiplier(NodeType type) => type switch
     {
@@ -34,4 +36,5 @@ public class DifficultyConfig : ScriptableObject
         NodeType.Boss => bossMultiplier,
         _ => 1f
     };
+
 }

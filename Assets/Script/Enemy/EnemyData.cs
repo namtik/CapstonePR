@@ -9,5 +9,5 @@ public class EnemyData : ScriptableObject
     public float maxHp = 1000f; // 최대 체력
     public float attackDamage= 10f; // 공격력
     public float gaugeSpeed=10f; // 행동 게이지 증가 속도
-    
+    public int baseAttackCount = 3;
 }

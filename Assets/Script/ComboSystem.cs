@@ -31,7 +31,7 @@ public class ComboSystem : MonoBehaviour
     private const float SKILL_TEXT_DISPLAY_TIME = 0.5f;
 
     // 스킬 정의
-    private List<SkillData> learnedSkills = new List<SkillData>();
+    public List<SkillData> learnedSkills = new List<SkillData>();
     private Dictionary<string, SkillData> comboLookup = new Dictionary<string, SkillData>();
     public int learnedSkillCount = 0;
 
@@ -353,9 +353,7 @@ public class ComboSystem : MonoBehaviour
         trigger.triggers.Add(exitEntry);
     }
 
-    /// <summary>
-    /// 새 스테이지 진입 시 콤보 입력과 슬롯 UI 초기화
-    /// </summary>
+    // 새 스테이지 진입 시 콤보 입력과 슬롯 UI 초기화
     public void ResetComboInput()
     {
         comboInput.Clear();
@@ -463,5 +461,14 @@ public class ComboSystem : MonoBehaviour
             skillTextTimer = SKILL_TEXT_DISPLAY_TIME;
             isShowingSkillText = true;
         }
+
+        if (enemyController != null)
+        {
+            EnemyStat enemyStat = enemyController.GetComponent<EnemyStat>();
+            if (enemyStat != null)
+                enemyStat.ReduceAttackCount(1);
+        }
+
+
     }
 }

@@ -21,8 +21,15 @@ public class SkillRewardUI : MonoBehaviour
         // 기존 카드 제거
         foreach (Transform t in cardContainer) Destroy(t.gameObject);
 
+        HashSet<int> learnedSkillIds = new HashSet<int>();
+        foreach (SkillData skill in ComboSystem.Instance.learnedSkills)
+        {
+            learnedSkillIds.Add(skill.id);
+        }
+
         // 랜덤 3개 가져오기
-        List<SkillData> options = SkillDataParser.Instance.GetRandomSkills(3);
+        List<SkillData> options = SkillDataParser.Instance.GetRandomSkills(3, learnedSkillIds);
+
 
         foreach (SkillData skill in options)
         {
