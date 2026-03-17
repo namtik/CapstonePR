@@ -38,7 +38,6 @@ public class SkillDataParser : MonoBehaviour
         else Destroy(gameObject);
 
         LoadSkillData();
-        SkillRewardUI.ShowRewardOptions();
     }
 
     void LoadSkillData()
@@ -110,7 +109,7 @@ public class SkillDataParser : MonoBehaviour
     public List<SkillData> GetRandomSkills(int count, HashSet<int> excludeIds)// 스킬 랜덤 추출 (중복 없이)
     {
         List<SkillData> result = new List<SkillData>();
-        List<SkillData> tempPool = new List<SkillData>(allSkills);
+        List<SkillData> tempPool = new List<SkillData>();
         foreach (SkillData skill in allSkills)
         {
             if (!excludeIds.Contains(skill.id))

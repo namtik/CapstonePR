@@ -56,13 +56,6 @@ public class SkillRewardUI : MonoBehaviour
         rewardPanel.SetActive(false);
         Time.timeScale = 1f;
         ComboSystem.Instance.LearnSkill(skill);
-        if (ComboSystem.Instance.learnedSkillCount == 1)
-        {
-            return;
-        }
-        else
-        {
-            roundManager.ReturnToMap();
-        }
+        roundManager.ReturnToMap();
     }
 }

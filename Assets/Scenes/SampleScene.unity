@@ -2775,7 +2775,7 @@ GameObject:
   - component: {fileID: 582200590}
   - component: {fileID: 582200589}
   m_Layer: 5
-  m_Name: SeetingCanvas
+  m_Name: SettingCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4151,6 +4151,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 2e6bfe16f25a9b849af5c0397b7af0d8, type: 3}
   - {fileID: 21300000, guid: d252295a260726949ba25aa3f5f1d4fb, type: 3}
   skillIconParent: {fileID: 1528637484}
+  learnedSkills: []
   learnedSkillCount: 0
 --- !u!4 &921928112
 Transform:
