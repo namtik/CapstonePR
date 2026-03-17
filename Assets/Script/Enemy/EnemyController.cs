@@ -102,11 +102,12 @@ public class EnemyController : MonoBehaviour
 
     void HandleDeath()
     {
-        if (isDead) return; // �ߺ� ó�� ����
+        if (isDead) return;
         isDead = true;
 
-        roundmanager?.HandleEnemyDied();
-
+        // OnDied 이벤트로 인해 Roundmanager.HandleEnemyDied가 호출됨
+        // 여기서 직접 호출하지 않음 (중복 호출 방지)
+        
         Destroy(gameObject);
     }
 

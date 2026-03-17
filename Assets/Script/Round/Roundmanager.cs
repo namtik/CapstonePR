@@ -162,6 +162,11 @@ public class Roundmanager : MonoBehaviour
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
 
+        // 이전 적 구독 해지 (중복 구독 방지)
+        if (currentEnemy != null)
+        {
+            currentEnemy.OnDied -= HandleEnemyDied;
+        }
 
         // 사망 이벤트 구독
         stat.OnDied += HandleEnemyDied;
@@ -170,9 +175,24 @@ public class Roundmanager : MonoBehaviour
 
     public void HandleEnemyDied()
     {
+        Debug.Log("[RoundManager.HandleEnemyDied] 호출됨");
+        
         // 구독 해지
         if (currentEnemy != null)
+        {
             currentEnemy.OnDied -= HandleEnemyDied;
+        }
+
+        // 재화 지급
+        if (MoneyManager.Instance != null)
+        {
+            Debug.Log("[RoundManager] MoneyManager.Instance 있음 - OnEnemyKilled 호출");
+            MoneyManager.Instance.OnEnemyKilled();
+        }
+        else
+        {
+            Debug.LogError("[RoundManager] MoneyManager.Instance가 NULL입니다!");
+        }
 
         currentEnemyIndex++;
 

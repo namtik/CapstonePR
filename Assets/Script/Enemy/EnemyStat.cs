@@ -11,6 +11,7 @@ public class EnemyStat : MonoBehaviour
 
     private int plannedAttackCount;
     private int currentAttackCount;
+    private bool hasDied = false; // 사망 플래그 추가
 
     private EnemyData enemyData;
     private int columnIndex;
@@ -36,6 +37,7 @@ public class EnemyStat : MonoBehaviour
         AttackDamage = data.attackDamage;
         GaugeSpeed = data.gaugeSpeed;
         currentHp = maxHp;
+        hasDied = false; // 사망 플래그 초기화
 
         OnHpChanged?.Invoke(currentHp, maxHp);
 
@@ -51,7 +53,13 @@ public class EnemyStat : MonoBehaviour
         currentHp -= damage;
         OnHpChanged?.Invoke(currentHp, maxHp);
 
-        if (!IsAlive) OnDied?.Invoke();
+        // 사망 플래그를 확인하여 OnDied 이벤트가 한 번만 발생하도록 함
+        if (!IsAlive && !hasDied)
+        {
+            hasDied = true;
+            Debug.Log($"[EnemyStat.OnDied] {enemyData.enemyName} 사망 - OnDied 이벤트 발생");
+            OnDied?.Invoke();
+        }
     }
 
     public void RollNewAttackPlan()
