@@ -1,9 +1,7 @@
 using UnityEngine;
 
-/// <summary>
-/// 재화 시스템 관리 싱글톤
-/// 몹을 처치할 때마다 50원씩 지급하고, 전투-맵 전환 시에도 재화가 유지됩니다.
-/// </summary>
+// 재화 시스템 관리 싱글톤
+// 몹을 처치할 때마다 50원씩 지급하고, 전투-맵 전환 시에도 재화가 유지됩니다.
 public class MoneyManager : MonoBehaviour
 {
     public static MoneyManager Instance { get; private set; }
@@ -34,9 +32,7 @@ public class MoneyManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 재화 추가
-    /// </summary>
+    // 재화 추가
     public void AddMoney(int amount)
     {
         if (amount <= 0) return;
@@ -45,9 +41,7 @@ public class MoneyManager : MonoBehaviour
         OnMoneyChanged?.Invoke(currentMoney);
     }
 
-    /// <summary>
-    /// 재화 사용 (상점 등에서 사용)
-    /// </summary>
+    // 재화 사용 (상점 등에서 사용)
     public bool SpendMoney(int amount)
     {
         if (amount <= 0) return false;
@@ -58,26 +52,20 @@ public class MoneyManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>
-    /// 적 처치 시 호출되는 메서드
-    /// </summary>
+    // 적 처치 시 호출되는 메서드
     public void OnEnemyKilled()
     {
         Debug.Log($"[MoneyManager.OnEnemyKilled] 호출됨 - moneyPerKill: {moneyPerKill}");
         AddMoney(moneyPerKill);
     }
 
-    /// <summary>
-    /// 현재 재화량 반환
-    /// </summary>
+    // 현재 재화량 반환
     public int GetMoney()
     {
         return currentMoney;
     }
 
-    /// <summary>
-    /// 재화 직접 설정 (치트, 테스트용)
-    /// </summary>
+    // 재화 직접 설정 (치트, 테스트용)
     public void SetMoney(int amount)
     {
         currentMoney = Mathf.Max(0, amount);

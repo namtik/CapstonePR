@@ -34,8 +34,6 @@ public class CardSystem : MonoBehaviour
 
         SetDeck();
         ShuffleDeck(deck);
-        DrawCards(baseDraw);
-
     }
 
 

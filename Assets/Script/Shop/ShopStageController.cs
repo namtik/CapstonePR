@@ -4,12 +4,10 @@ using TMPro;
 using System.Collections.Generic;
 using static SkillDataParser;
 
-/// <summary>
-/// ShopStage 전체를 관리하는 컨트롤러
-/// - 상점 초기화
-/// - 콤보스킬 상점 진입/퇴출
-/// - 맵으로 돌아가기
-/// </summary>
+// ShopStage 전체를 관리하는 컨트롤러
+// - 상점 초기화
+// - 콤보스킬 상점 진입/퇴출
+// - 맵으로 돌아가기
 public class ShopStageController : MonoBehaviour
 {
     [Header("ShopStage 버튼 참조")]
@@ -53,27 +51,21 @@ public class ShopStageController : MonoBehaviour
         Debug.Log("[ShopStageController] 초기화 완료");
     }
 
-    /// <summary>
-    /// [콤보스킬 상점 진입] 버튼 클릭 핸들러
-    /// </summary>
+    // [콤보스킬 상점 진입] 버튼 클릭 핸들러
     void OnStoreButtonClicked()
     {
         Debug.Log("[ShopStageController] 콤보스킬 상점 진입");
         OpenComboSkillShop();
     }
 
-    /// <summary>
-    /// [카드 제거] 버튼 클릭 핸들러 (아직 미구현)
-    /// </summary>
+    // [카드 제거] 버튼 클릭 핸들러 (아직 미구현)
     void OnRemoveButtonClicked()
     {
         Debug.Log("[ShopStageController] 카드 제거 기능 (아직 미구현)");
         // TODO: 카드 제거 로직 구현
     }
 
-    /// <summary>
-    /// [상점 나가기] 버튼 클릭 핸들러
-    /// </summary>
+    // [상점 나가기] 버튼 클릭 핸들러
     void OnOutButtonClicked()
     {
         Debug.Log("[ShopStageController] 상점에서 나가기 버튼 클릭");
@@ -90,9 +82,7 @@ public class ShopStageController : MonoBehaviour
         ReturnToMapFromShop();
     }
 
-    /// <summary>
-    /// 콤보스킬 상점 오픈 - 4개의 랜덤 스킬 표시
-    /// </summary>
+    // 콤보스킬 상점 오픈 - 4개의 랜덤 스킬 표시
     void OpenComboSkillShop()
     {
         if (comboSkillShopPanel == null)
@@ -136,11 +126,14 @@ public class ShopStageController : MonoBehaviour
         Debug.Log("[ShopStageController] 콤보스킬 상점 오픈 - 4개 스킬 표시");
     }
 
-    /// <summary>
-    /// 콤보스킬 상점 UI 갱신
-    /// </summary>
+    // 콤보스킬 상점 UI 갱신
     void RefreshShopUI()
     {
+        foreach (Transform child in skillItemsParent)
+        {
+            Destroy(child.gameObject);
+        }
+
         for (int i = 0; i < currentShopItems.Count; i++)
         {
             ComboSkillShopItem item = currentShopItems[i];
@@ -157,9 +150,7 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 스킬 구매 처리 (ComboSkillShopItemUI에서 호출)
-    /// </summary>
+    // 스킬 구매 처리 (ComboSkillShopItemUI에서 호출)
     public bool TryBuySkill(int itemIndex)
     {
         if (itemIndex < 0 || itemIndex >= currentShopItems.Count)
@@ -170,11 +161,15 @@ public class ShopStageController : MonoBehaviour
 
         ComboSkillShopItem item = currentShopItems[itemIndex];
 
-        // 재화 확인 및 차감
+        // 재화 확인 후 구매
         if (MoneyManager.Instance.SpendMoney(item.price))
         {
-            // 스킬 배우기
+            // 스킬 획득
             comboSystem.LearnSkill(item.skill);
+
+            // 구매한 아이템은 상점 목록에서 제거
+            currentShopItems.RemoveAt(itemIndex);
+            RefreshShopUI();
 
             Debug.Log($"[ShopStageController] {item.skill.name} 구매 완료! (-{item.price}원)");
             return true;
@@ -186,9 +181,7 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 콤보스킬 상점 닫기
-    /// </summary>
+    // 콤보스킬 상점 닫기
     void CloseComboSkillShop()
     {
         if (comboSkillShopPanel != null)
@@ -197,17 +190,13 @@ public class ShopStageController : MonoBehaviour
         Debug.Log("[ShopStageController] 콤보스킬 상점 닫음");
     }
 
-    /// <summary>
-    /// 콤보스킬 상점 닫기 (외부에서 호출 가능)
-    /// </summary>
+    // 콤보스킬 상점 닫기 (외부에서 호출 가능)
     public void CloseShop()
     {
         CloseComboSkillShop();
     }
 
-    /// <summary>
-    /// ShopStage에서 맵으로 복귀
-    /// </summary>
+    // ShopStage에서 맵으로 복귀
     void ReturnToMapFromShop()
     {
         Debug.Log("[ShopStageController] 맵으로 복귀 시작");

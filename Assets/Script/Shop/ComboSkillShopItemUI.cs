@@ -3,13 +3,11 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 
-/// <summary>
-/// 콤보스킬 상점의 각 스킬 아이템 UI를 관리
-/// - 스킬 이미지, 이름, 가격 표시
-/// - 구매 버튼 처리
-/// - 재화 부족 시 비활성화
-/// - 마우스 오버 시 스킬 설명 툴팁 표시
-/// </summary>
+// 콤보스킬 상점의 각 스킬 아이템 UI를 관리
+// - 스킬 이미지, 이름, 가격 표시
+// - 구매 버튼 처리
+// - 재화 부족 시 비활성화
+// - 마우스 오버 시 스킬 설명 툴팁 표시
 public class ComboSkillShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("UI 참조")]
@@ -29,9 +27,7 @@ public class ComboSkillShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointe
     private int itemIndex;
     private ShopStageController shopController;
 
-    /// <summary>
-    /// 아이템 UI 초기화
-    /// </summary>
+    // 아이템 UI 초기화
     public void Initialize(ComboSkillShopItem shopItem, int index, ShopStageController controller)
     {
         item = shopItem;
@@ -54,9 +50,7 @@ public class ComboSkillShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointe
             tooltipPanel.SetActive(false);
     }
 
-    /// <summary>
-    /// UI 업데이트 (스킬 정보 표시)
-    /// </summary>
+    // UI 업데이트 (스킬 정보 표시)
     void UpdateUI()
     {
         if (item == null || item.skill == null) return;
@@ -92,9 +86,7 @@ public class ComboSkillShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointe
         UpdateBuyButtonState();
     }
 
-    /// <summary>
-    /// 구매 버튼 활성화 상태 업데이트
-    /// </summary>
+    // 구매 버튼 활성화 상태 업데이트
     void UpdateBuyButtonState()
     {
         if (buyButton == null) return;
@@ -119,9 +111,7 @@ public class ComboSkillShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointe
         buyButton.colors = colors;
     }
 
-    /// <summary>
-    /// [구매] 버튼 클릭 핸들러
-    /// </summary>
+    // [구매] 버튼 클릭 핸들러
     void OnBuyButtonClicked()
     {
         if (shopController.TryBuySkill(itemIndex))
@@ -130,9 +120,7 @@ public class ComboSkillShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointe
         }
     }
 
-    /// <summary>
-    /// 재화 변경 시 호출되는 콜백
-    /// </summary>
+    // 재화 변경 시 호출되는 콜백
     void OnMoneyChanged(int newMoney)
     {
         UpdateBuyButtonState();
@@ -145,25 +133,19 @@ public class ComboSkillShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointe
             MoneyManager.Instance.OnMoneyChanged -= OnMoneyChanged;
     }
 
-    /// <summary>
-    /// 마우스 포인터가 스킬 아이콘에 진입했을 때
-    /// </summary>
+    // 마우스 포인터가 스킬 아이콘에 진입했을 때
     public void OnPointerEnter(PointerEventData eventData)
     {
         ShowTooltip();
     }
 
-    /// <summary>
-    /// 마우스 포인터가 스킬 아이콘에서 벗어났을 때
-    /// </summary>
+    // 마우스 포인터가 스킬 아이콘에서 벗어났을 때
     public void OnPointerExit(PointerEventData eventData)
     {
         HideTooltip();
     }
 
-    /// <summary>
-    /// 툴팁 표시
-    /// </summary>
+    // 툴팁 표시
     void ShowTooltip()
     {
         if (tooltipPanel == null || item == null || item.skill == null) return;
@@ -181,9 +163,7 @@ public class ComboSkillShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointe
         tooltipPanel.SetActive(true);
     }
 
-    /// <summary>
-    /// 툴팁 숨기기
-    /// </summary>
+    // 툴팁 숨기기
     void HideTooltip()
     {
         if (tooltipPanel != null)
