@@ -10,11 +10,13 @@ public class MoneyManager : MonoBehaviour
 
     [Header("재화 설정")]
     [SerializeField] private int moneyPerKill = 50;
+    [SerializeField] private Sprite moneyIconSprite;  // 재화 아이콘 스프라이트
     
     private int currentMoney = 0;
 
     public int CurrentMoney => currentMoney;
     public int MoneyPerKill => moneyPerKill;
+    public Sprite MoneyIcon => moneyIconSprite;  // 재화 아이콘 접근자
 
     // 재화 변경 이벤트 (UI 업데이트용)
     public event System.Action<int> OnMoneyChanged;
