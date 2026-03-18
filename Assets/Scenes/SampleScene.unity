@@ -3659,7 +3659,7 @@ PrefabInstance:
       objectReference: {fileID: 501308326}
     - target: {fileID: 7827611458801185071, guid: 70e6ff5984c3c2c40b9ed8de4172fad6, type: 3}
       propertyPath: attackDamage
-      value: 15
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 7827611458801185071, guid: 70e6ff5984c3c2c40b9ed8de4172fad6, type: 3}
       propertyPath: attackParticle
@@ -6420,7 +6420,7 @@ MonoBehaviour:
   deckText: {fileID: 1950186694}
   graveyardText: {fileID: 73202609}
   baseDraw: 7
-  drawTime: 1
+  drawTime: 0.5
 --- !u!1 &1633730022
 GameObject:
   m_ObjectHideFlags: 0
