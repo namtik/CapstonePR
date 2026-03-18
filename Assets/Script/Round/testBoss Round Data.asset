@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: testBoss Round Data
   m_EditorClassIdentifier: Assembly-CSharp::BossRoundData
   roundName: BossBear
-  roundType: 0
+  roundType: 4
   bossEnemy: {fileID: 11400000, guid: b238274c392b1a242967606b877103b7, type: 2}
   columnIndex: 0

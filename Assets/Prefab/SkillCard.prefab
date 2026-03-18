@@ -416,6 +416,7 @@ MonoBehaviour:
   Combotxt: {fileID: 1830506084402005607}
   Desctxt: {fileID: 706980299069578247}
   selectButton: {fileID: 9139361377853088173}
+  nonimage: {fileID: 21300000, guid: bf18659473a8f29499558a00040a0ced, type: 3}
 --- !u!1 &2056427473213626290
 GameObject:
   m_ObjectHideFlags: 0

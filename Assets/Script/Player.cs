@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class Player : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class Player : MonoBehaviour
 
     [Header("UI")]
     public HeartUI heartUI;
+    public TMP_Text hpText;
     public Slider cooldownBar; // 쿨타임 슬라이더
     public Text cooldownText; // 쿨타임 표시 텍스트
     public Text resultText; // 방어/회피 결과 텍스트
@@ -37,7 +39,7 @@ public class Player : MonoBehaviour
     {
         // UI 텍스트 자동 생성 (Start에서 실행)
         CreateUITexts();
-        UpdateCooldownUI();
+        //UpdateCooldownUI();
         if (resultText != null) resultText.text = "";
     }
 
@@ -163,86 +165,86 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        HandleDefenseInput();
+        //HandleDefenseInput();
 
-        // 방어/회피 입력 타이머 감소
-        if (inputTimer > 0)
-        {
-            inputTimer -= Time.deltaTime;
-        }
-        else
-        {
-            isDefending = false;
-            isDodging = false;
-        }
+        //// 방어/회피 입력 타이머 감소
+        //if (inputTimer > 0)
+        //{
+        //    inputTimer -= Time.deltaTime;
+        //}
+        //else
+        //{
+        //    isDefending = false;
+        //    isDodging = false;
+        //}
 
-        // 쿨타임 처리
-        if (isOnCooldown)
-        {
-            cooldownTimer -= Time.deltaTime;
-            UpdateCooldownUI();
+        //// 쿨타임 처리
+        //if (isOnCooldown)
+        //{
+        //    cooldownTimer -= Time.deltaTime;
+        //    UpdateCooldownUI();
 
-            if (cooldownTimer <= 0f)
-            {
-                isOnCooldown = false;
-                cooldownTimer = 0f;
-                UpdateCooldownUI();
-            }
-        }
+        //    if (cooldownTimer <= 0f)
+        //    {
+        //        isOnCooldown = false;
+        //        cooldownTimer = 0f;
+        //        UpdateCooldownUI();
+        //    }
+        //}
 
-        // 결과 텍스트 표시 타이머
-        if (resultDisplayTimer > 0f)
-        {
-            resultDisplayTimer -= Time.deltaTime;
-            if (resultDisplayTimer <= 0f && resultText != null)
-            {
-                resultText.text = "";
-            }
-        }
+        //// 결과 텍스트 표시 타이머
+        //if (resultDisplayTimer > 0f)
+        //{
+        //    resultDisplayTimer -= Time.deltaTime;
+        //    if (resultDisplayTimer <= 0f && resultText != null)
+        //    {
+        //        resultText.text = "";
+        //    }
+        //}
     }
 
-    void HandleDefenseInput()
-    {
-        if (isOnCooldown) return;
+    //void HandleDefenseInput()
+    //{
+    //    if (isOnCooldown) return;
 
-        // 왼쪽 방향키 (<): 회피
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-        {
-            isDodging = true;
-            isDefending = false;
-            inputTimer = defenseWindow;
-            StartCooldown();
-        }
-        // 오른쪽 방향키 (>): 방어
-        else if (Input.GetKeyDown(KeyCode.RightArrow))
-        {
-            isDefending = true;
-            isDodging = false;
-            inputTimer = defenseWindow;
-            StartCooldown();
-        }
-    }
+    //    // 왼쪽 방향키 (<): 회피
+    //    if (Input.GetKeyDown(KeyCode.LeftArrow))
+    //    {
+    //        isDodging = true;
+    //        isDefending = false;
+    //        inputTimer = defenseWindow;
+    //        StartCooldown();
+    //    }
+    //    // 오른쪽 방향키 (>): 방어
+    //    else if (Input.GetKeyDown(KeyCode.RightArrow))
+    //    {
+    //        isDefending = true;
+    //        isDodging = false;
+    //        inputTimer = defenseWindow;
+    //        StartCooldown();
+    //    }
+    //}
 
     public void OnProjectileHit(float damage)
     {
-        if (isDodging)
-        {
-            ShowResult("회피 성공!", Color.green);
-            isDodging = false;
-            inputTimer = 0f;
-            damage = 0f; // 회피 성공
-            return;
-        }
+        //if (isDodging)
+        //{
+        //    ShowResult("회피 성공!", Color.green);
+        //    isDodging = false;
+        //    inputTimer = 0f;
+        //    damage = 0f; // 회피 성공
+        //    return;
+        //}
 
-        if (isDefending)
-        {
-            float reducedDamage = damage * 0.5f;
-            ShowResult("방어 성공!", Color.cyan);
-            isDefending = false;
-            inputTimer = 0f;
-            damage=0f; // 방어 성공
-            return;
-        }
+        //if (isDefending)
+        //{
+        //    float reducedDamage = damage * 0.5f;
+        //    ShowResult("방어 성공!", Color.cyan);
+        //    isDefending = false;
+        //    inputTimer = 0f;
+        //    damage=0f; // 방어 성공
+        //    return;
+        //}
 
         ShowResult("피격!", Color.red);
         TakeDamage(damage);
@@ -264,42 +266,43 @@ public class Player : MonoBehaviour
 
     void UpdateUI()
     {
-        if (heartUI != null) heartUI.UpdateHearts(currentHp, maxHp);
+        //if (heartUI != null) heartUI.UpdateHearts(currentHp, maxHp);
+        hpText.text = $"{currentHp} / {maxHp}";
     }
 
-    void UpdateCooldownUI()
-    {
-        if (cooldownText == null) return;
+    //void UpdateCooldownUI()
+    //{
+    //    if (cooldownText == null) return;
 
-        if (isOnCooldown)
-        {
-            cooldownText.text = $"쿨타임: {cooldownTimer:F1}초";
-            cooldownText.color = Color.yellow;
+    //    if (isOnCooldown)
+    //    {
+    //        cooldownText.text = $"쿨타임: {cooldownTimer:F1}초";
+    //        cooldownText.color = Color.yellow;
 
-            // 쿨타임 슬라이더 업데이트
-            if (cooldownBar != null)
-            {
-                cooldownBar.value = 1f - (cooldownTimer / defenseActionCooldown);
-            }
-        }
-        else
-        {
-            cooldownText.text = "방어/회피 준비";
-            cooldownText.color = Color.white;
+    //        // 쿨타임 슬라이더 업데이트
+    //        if (cooldownBar != null)
+    //        {
+    //            cooldownBar.value = 1f - (cooldownTimer / defenseActionCooldown);
+    //        }
+    //    }
+    //    else
+    //    {
+    //        cooldownText.text = "방어/회피 준비";
+    //        cooldownText.color = Color.white;
 
-            // 쿨타임 슬라이더 완전 채우기
-            if (cooldownBar != null)
-            {
-                cooldownBar.value = 1f;
-            }
-        }
-    }
+    //        // 쿨타임 슬라이더 완전 채우기
+    //        if (cooldownBar != null)
+    //        {
+    //            cooldownBar.value = 1f;
+    //        }
+    //    }
+    //}
 
     void StartCooldown()
     {
         isOnCooldown = true;
         cooldownTimer = defenseActionCooldown;
-        UpdateCooldownUI();
+        //UpdateCooldownUI();
     }
 
     void ShowResult(string message, Color color)
