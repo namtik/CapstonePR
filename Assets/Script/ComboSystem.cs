@@ -121,11 +121,22 @@ public class ComboSystem : MonoBehaviour
     }
     public void RefreshComboSlotUI()
     {
-        if (comboSlotParent == null || !comboSlotParent.gameObject.activeInHierarchy)
+        if (comboSlotParent == null)
         {
             emptySlots.Clear();
             comboSlotCards.Clear();
             CreateComboSlots();
+            return;
+        }
+
+        if (!comboSlotParent.gameObject.activeInHierarchy)
+        {
+            comboSlotParent.gameObject.SetActive(true);
+
+            emptySlots.Clear();
+            comboSlotCards.Clear();
+            CreateEmptySlots();
+            UpdateComboSlotUI();
         }
     }
 
@@ -151,24 +162,32 @@ public class ComboSystem : MonoBehaviour
             Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
-            GameObject slotParentObj = new GameObject("ComboSlotParent");
-            slotParentObj.transform.SetParent(canvas.transform, false);
+            Transform existingSlotParent = canvas.transform.Find("ComboSlotParent");
+            if (existingSlotParent != null)
+            {
+                comboSlotParent = existingSlotParent;
+            }
+            else
+            {
+                GameObject slotParentObj = new GameObject("ComboSlotParent");
+                slotParentObj.transform.SetParent(canvas.transform, false);
 
-            RectTransform rect = slotParentObj.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 1f);
-            rect.anchorMax = new Vector2(0.5f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = new Vector2(0f, -50f);
-            rect.sizeDelta = new Vector2(400f, 120f);
+                RectTransform rect = slotParentObj.AddComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0.5f, 1f);
+                rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.anchoredPosition = new Vector2(0f, -50f);
+                rect.sizeDelta = new Vector2(400f, 120f);
 
-            // HorizontalLayoutGroup 추가
-            HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 30f;
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
+                // HorizontalLayoutGroup 추가
+                HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
+                layout.spacing = 30f;
+                layout.childAlignment = TextAnchor.MiddleCenter;
+                layout.childControlWidth = false;
+                layout.childControlHeight = false;
 
-            comboSlotParent = slotParentObj.transform;
+                comboSlotParent = slotParentObj.transform;
+            }
         }
 
         // 빈 슬롯 3개 생성 (항상 표시)
@@ -180,6 +199,15 @@ public class ComboSystem : MonoBehaviour
     // 빈 콤보 슬롯 3개 생성
     void CreateEmptySlots()
     {
+        if (comboSlotParent == null) return;
+
+        foreach (Transform child in comboSlotParent)
+        {
+            if (child != null && child.name.StartsWith("EmptySlot_"))
+                Destroy(child.gameObject);
+        }
+        emptySlots.Clear();
+
         for (int i = 0; i < 3; i++)
         {
             GameObject emptySlot = new GameObject($"EmptySlot_{i}");
@@ -395,7 +423,6 @@ public class ComboSystem : MonoBehaviour
         // 현재 콤보 리스트(comboInput)에 있는 만큼 카드 생성
         for (int i = 0; i < comboInput.Count; i++)
         {
-            
             if (i >= emptySlots.Count) break;
 
             string type = comboInput[i];
