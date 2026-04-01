@@ -147,6 +147,14 @@ public class Roundmanager : MonoBehaviour
 
         GameObject go = Instantiate(enemyPrefab, enemySpawnPoint);
 
+        // 적을 중앙에 배치
+        RectTransform rectTransform = go.GetComponent<RectTransform>();
+        if (rectTransform != null)
+        {
+            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.localScale = Vector3.one;
+        }
+
         EnemyStat stat = go.GetComponent<EnemyStat>();
         EnemyView view = go.GetComponent<EnemyView>();
 
