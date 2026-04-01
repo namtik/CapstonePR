@@ -11,16 +11,25 @@ public class EnemyStat : MonoBehaviour
 
     private int plannedAttackCount;
     private int currentAttackCount;
-    private bool hasDied = false; // »ç¸Á ÇÃ·¡±× Ãß°¡
+    private bool hasDied = false; // ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
+
+    // Player-action-driven 10-step gauge
+    public const int GAUGE_MAX_STEPS = 10;
+    private int gaugeStep = 0;
+    private bool midPatternTriggered = false;
+    public int GaugeStep => gaugeStep;
 
     private EnemyData enemyData;
     private int columnIndex;
     private NodeType nodeType;
     private DifficultyConfig config;
 
-    public event Action<float,float> OnHpChanged;// HP º¯°æ ÀÌº¥Æ® (ÇöÀç HP, ÃÖ´ë HP)
-    public event Action OnDied; // »ç¸Á ÀÌº¥Æ®
+    public event Action<float,float> OnHpChanged;// HP ï¿½ï¿½ï¿½ï¿½ ï¿½Ìºï¿½Æ® (ï¿½ï¿½ï¿½ï¿½ HP, ï¿½Ö´ï¿½ HP)
+    public event Action OnDied; // ï¿½ï¿½ï¿½ ï¿½Ìºï¿½Æ®
     public event Action<int> OnAttackCountChanged;
+    public event Action OnMidPattern;              // 50% step reached
+    public event Action OnGaugeFull;               // 100% - enemy attacks
+    public event Action<float> OnGaugeStepChanged; // gauge ratio 0~1
 
     public int CurrentAttackCount => currentAttackCount;
     public int PlannedAttackCount => plannedAttackCount;
@@ -37,13 +46,15 @@ public class EnemyStat : MonoBehaviour
         AttackDamage = data.attackDamage;
         GaugeSpeed = data.gaugeSpeed;
         currentHp = maxHp;
-        hasDied = false; // »ç¸Á ÇÃ·¡±× ÃÊ±âÈ­
+        hasDied = false; // ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­
+    gaugeStep = 0;
+    midPatternTriggered = false;
 
         OnHpChanged?.Invoke(currentHp, maxHp);
 
         RollNewAttackPlan();
 
-        Debug.Log($"[{data.enemyName}] ÄÃ·³{columnIndex} / HP:{maxHp} / DMG:{AttackDamage} / Speed:{GaugeSpeed} / °ø°ÝÈ½¼ö:{currentAttackCount}");
+        Debug.Log($"[{data.enemyName}] ï¿½Ã·ï¿½{columnIndex} / HP:{maxHp} / DMG:{AttackDamage} / Speed:{GaugeSpeed} / ï¿½ï¿½ï¿½ï¿½È½ï¿½ï¿½:{currentAttackCount}");
     }
 
     public void TakeDamage(float damage)
@@ -53,11 +64,11 @@ public class EnemyStat : MonoBehaviour
         currentHp -= damage;
         OnHpChanged?.Invoke(currentHp, maxHp);
 
-        // »ç¸Á ÇÃ·¡±×¸¦ È®ÀÎÇÏ¿© OnDied ÀÌº¥Æ®°¡ ÇÑ ¹ø¸¸ ¹ß»ýÇÏµµ·Ï ÇÔ
+        // ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½×¸ï¿½ È®ï¿½ï¿½ï¿½Ï¿ï¿½ OnDied ï¿½Ìºï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ß»ï¿½ï¿½Ïµï¿½ï¿½ï¿½ ï¿½ï¿½
         if (!IsAlive && !hasDied)
         {
             hasDied = true;
-            Debug.Log($"[EnemyStat.OnDied] {enemyData.enemyName} »ç¸Á - OnDied ÀÌº¥Æ® ¹ß»ý");
+            Debug.Log($"[EnemyStat.OnDied] {enemyData.enemyName} ï¿½ï¿½ï¿½ - OnDied ï¿½Ìºï¿½Æ® ï¿½ß»ï¿½");
             OnDied?.Invoke();
         }
     }
@@ -73,6 +84,31 @@ public class EnemyStat : MonoBehaviour
     {
         currentAttackCount = Mathf.Max(0, currentAttackCount - amount);
         OnAttackCountChanged?.Invoke(currentAttackCount);
+    }
+
+    /// <summary>Called by ElementSlotSystem.UseSlot â€” advances the 10-step gauge</summary>
+    public void ConsumeGaugeStep()
+    {
+        if (!IsAlive) return;
+
+        gaugeStep++;
+        OnGaugeStepChanged?.Invoke((float)gaugeStep / GAUGE_MAX_STEPS);
+
+        // Mid-point (step 5): trigger disruption pattern once per cycle
+        if (gaugeStep == GAUGE_MAX_STEPS / 2 && !midPatternTriggered)
+        {
+            midPatternTriggered = true;
+            OnMidPattern?.Invoke();
+        }
+
+        // Full gauge (step 10): enemy attacks, gauge resets
+        if (gaugeStep >= GAUGE_MAX_STEPS)
+        {
+            gaugeStep = 0;
+            midPatternTriggered = false;
+            OnGaugeStepChanged?.Invoke(0f);
+            OnGaugeFull?.Invoke();
+        }
     }
 }
 

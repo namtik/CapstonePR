@@ -17,8 +17,65 @@ public class Roundmanager : MonoBehaviour
     private IRoundHandler currentRoundHandler;
     private int clearedCombatCount = 0;
 
+    void EnsureRuntimePlayerExists()
+    {
+        Player existingPlayer = FindFirstObjectByType<Player>();
+        if (existingPlayer != null)
+        {
+            existingPlayer.UpdateUIForExternalSync();
+            return;
+        }
+
+        GameObject playerObject = new GameObject("PlayerLogic");
+        playerObject.AddComponent<Player>();
+        DontDestroyOnLoad(playerObject);
+
+        Debug.Log("[RoundManager] Hidden runtime Player created");
+    }
+
+    public void EnsurePlayerUiSync()
+    {
+        EnsureRuntimePlayerExists();
+    }
+
+    void EnsureElementCombatSystems()
+    {
+        EnsureRuntimePlayerExists();
+
+        // Ensure slot system exists even when scene setup is missing.
+        var slotSystem = ElementSlotSystem.Instance ?? FindFirstObjectByType<ElementSlotSystem>();
+        if (slotSystem == null)
+        {
+            var go = new GameObject("ElementSlotSystem");
+            slotSystem = go.AddComponent<ElementSlotSystem>();
+            DontDestroyOnLoad(go);
+        }
+
+        // Ensure HUD exists.
+        var hud = FindFirstObjectByType<ElementSlotHUD>();
+        if (hud == null)
+        {
+            var hudGo = new GameObject("ElementSlotHUD");
+            DontDestroyOnLoad(hudGo);
+            hudGo.AddComponent<ElementSlotHUD>();
+        }
+
+        // Force legacy hand UI system off so only 4-slot HUD remains.
+        var legacySystems = FindObjectsByType<CardSystem>(FindObjectsSortMode.None);
+        foreach (var legacy in legacySystems)
+        {
+            if (legacy != null)
+            {
+                legacy.ForceDisableForElementSystem();
+                legacy.gameObject.SetActive(false);
+            }
+        }
+    }
+
     public void StartRound(RoundData roundData)
     {
+        EnsureElementCombatSystems();
+
         currentRoundData = roundData;
         currentEnemyIndex = 0;
 
@@ -34,6 +91,7 @@ public class Roundmanager : MonoBehaviour
 
     public void EndRound()
     {
+        ElementSlotSystem.Instance?.EndBattle();
 
         currentRoundHandler.OnExitRound(this);
         OnRoundClear?.Invoke();
@@ -44,6 +102,9 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void StartCombat(CombatRoundData data)
     {
+        EnsureElementCombatSystems();
+        ElementSlotSystem.Instance?.StartBattle();
+
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
     }
@@ -53,6 +114,9 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void StartCombat(EliteRoundData data)
     {
+        EnsureElementCombatSystems();
+        ElementSlotSystem.Instance?.StartBattle();
+
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
     }
@@ -62,6 +126,9 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void StartBoss(BossRoundData data)
     {
+        EnsureElementCombatSystems();
+        ElementSlotSystem.Instance?.StartBattle();
+
         SpawnEnemy(data.bossEnemy, data.columnIndex, NodeType.Boss);
     }
 
@@ -109,6 +176,8 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void ReturnToMap()
     {
+        ElementSlotSystem.Instance?.EndBattle();
+
         var stateController = GameStateController.Instance;
         if (stateController == null)
         {

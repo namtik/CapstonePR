@@ -1,17 +1,19 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
 public class Player : MonoBehaviour
 {
     [Header("능력치")]
-    public int maxHp = 3;
+    public int maxHp = 100;
     public int currentHp;
     public float attackDamage = 10f;
 
     [Header("UI")]
     public HeartUI heartUI;
     public TMP_Text hpText;
+    public Slider hpBar;
     public Slider cooldownBar; // 쿨타임 슬라이더
     public Text cooldownText; // 쿨타임 표시 텍스트
     public Text resultText; // 방어/회피 결과 텍스트
@@ -31,136 +33,171 @@ public class Player : MonoBehaviour
 
     void Awake()
     {
+        ResolveUiReferences();
         currentHp = maxHp;
         UpdateUI();
     }
 
     void Start()
     {
-        // UI 텍스트 자동 생성 (Start에서 실행)
-        CreateUITexts();
-        //UpdateCooldownUI();
+        ResolveUiReferences();
+        HideUnusedCooldownUI();
         if (resultText != null) resultText.text = "";
+    }
+
+    void ResolveUiReferences()
+    {
+        if (heartUI == null)
+            heartUI = FindFirstObjectByType<HeartUI>();
+
+        DisableLegacyHpSliders();
+
+        if (hpText == null)
+        {
+            foreach (TMP_Text text in GetAllSceneHpTexts())
+            {
+                if (text != null && text.gameObject.activeInHierarchy)
+                {
+                    hpText = text;
+                    break;
+                }
+            }
+
+            if (hpText == null)
+            {
+                foreach (TMP_Text text in GetAllSceneHpTexts())
+                {
+                    hpText = text;
+                    break;
+                }
+            }
+        }
+
+        if (hpBar == null)
+        {
+            foreach (Slider slider in GetAllScenePlayerHpBars())
+            {
+                if (slider != null && slider.gameObject.activeInHierarchy)
+                {
+                    hpBar = slider;
+                    break;
+                }
+            }
+
+            if (hpBar == null)
+            {
+                foreach (Slider slider in GetAllScenePlayerHpBars())
+                {
+                    hpBar = slider;
+                    break;
+                }
+            }
+        }
+    }
+
+    bool IsSceneObject(GameObject go)
+    {
+        if (go == null) return false;
+        return go.scene.IsValid() && go.scene.isLoaded;
+    }
+
+    IEnumerable<TMP_Text> GetAllSceneHpTexts()
+    {
+        TMP_Text[] texts = Resources.FindObjectsOfTypeAll<TMP_Text>();
+        foreach (TMP_Text text in texts)
+        {
+            if (text == null) continue;
+            if (text.gameObject.name != "HpText") continue;
+            if (!IsSceneObject(text.gameObject)) continue;
+            yield return text;
+        }
+    }
+
+    IEnumerable<Slider> GetAllScenePlayerHpBars()
+    {
+        Slider[] sliders = Resources.FindObjectsOfTypeAll<Slider>();
+        foreach (Slider slider in sliders)
+        {
+            if (slider == null) continue;
+            if (slider.gameObject.name != "PlayerHpBar") continue;
+            if (!IsSceneObject(slider.gameObject)) continue;
+            yield return slider;
+        }
+    }
+
+    void DisableLegacyHpSliders()
+    {
+        Slider[] sliders = FindObjectsByType<Slider>(FindObjectsSortMode.None);
+        foreach (Slider slider in sliders)
+        {
+            if (slider != null && slider.gameObject.name == "HpSlider")
+                slider.gameObject.SetActive(false);
+        }
+    }
+
+    void HideUnusedCooldownUI()
+    {
+        if (cooldownBar != null)
+            cooldownBar.gameObject.SetActive(false);
+
+        if (cooldownText != null)
+            cooldownText.gameObject.SetActive(false);
+    }
+
+    RectTransform GetTopHpContainer()
+    {
+        if (hpText != null && hpText.transform.parent is RectTransform parentRect)
+            return parentRect;
+
+        if (heartUI != null && heartUI.transform is RectTransform heartRect)
+            return heartRect;
+
+        RectTransform[] rects = FindObjectsByType<RectTransform>(FindObjectsSortMode.None);
+        foreach (RectTransform rect in rects)
+        {
+            if (rect != null && rect.gameObject.name == "PlayerHP")
+                return rect;
+        }
+
+        return null;
+    }
+
+    Slider FindHpBarInContainer(RectTransform container)
+    {
+        if (container == null) return null;
+
+        for (int i = 0; i < container.childCount; i++)
+        {
+            Transform child = container.GetChild(i);
+            if (child == null || child.name != "PlayerHpBar") continue;
+
+            Slider slider = child.GetComponent<Slider>();
+            if (slider != null)
+                return slider;
+        }
+
+        return null;
+    }
+
+    void EnsureTopHpBarPlacement()
+    {
+        RectTransform container = GetTopHpContainer();
+        if (container == null) return;
+
+        if (hpBar == null || hpBar.gameObject.name != "PlayerHpBar" || hpBar.transform.parent != container)
+            hpBar = FindHpBarInContainer(container);
+
+        if (hpBar != null)
+        {
+            hpBar.interactable = false;
+            hpBar.transition = Selectable.Transition.None;
+        }
     }
 
     void CreateUITexts()
     {
-        // 이미 설정되었으면 스킵
-        if (cooldownText != null && resultText != null && cooldownBar != null) return;
-
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null)
-        {
-            GameObject canvasObj = new GameObject("Canvas");
-            canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-
-            canvasObj.AddComponent<GraphicRaycaster>();
-        }
-
-        // 쿨타임 슬라이더 생성
-        if (cooldownBar == null)
-        {
-            GameObject cooldownBarObj = new GameObject("CooldownBar");
-            cooldownBarObj.transform.SetParent(canvas.transform, false);
-
-            RectTransform barRect = cooldownBarObj.AddComponent<RectTransform>();
-            barRect.anchorMin = new Vector2(0f, 1f);
-            barRect.anchorMax = new Vector2(0f, 1f);
-            barRect.pivot = new Vector2(0f, 1f);
-            barRect.anchoredPosition = new Vector2(20f, -80f);
-            barRect.sizeDelta = new Vector2(200f, 20f);
-
-            cooldownBar = cooldownBarObj.AddComponent<Slider>();
-            cooldownBar.minValue = 0f;
-            cooldownBar.maxValue = 1f;
-            cooldownBar.value = 1f;
-
-            // Background
-            GameObject bgObj = new GameObject("Background");
-            bgObj.transform.SetParent(cooldownBarObj.transform, false);
-            RectTransform bgRect = bgObj.AddComponent<RectTransform>();
-            bgRect.anchorMin = Vector2.zero;
-            bgRect.anchorMax = Vector2.one;
-            bgRect.sizeDelta = Vector2.zero;
-            Image bgImage = bgObj.AddComponent<Image>();
-            bgImage.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
-
-            // Fill Area
-            GameObject fillAreaObj = new GameObject("Fill Area");
-            fillAreaObj.transform.SetParent(cooldownBarObj.transform, false);
-            RectTransform fillAreaRect = fillAreaObj.AddComponent<RectTransform>();
-            fillAreaRect.anchorMin = Vector2.zero;
-            fillAreaRect.anchorMax = Vector2.one;
-            fillAreaRect.sizeDelta = Vector2.zero;
-
-            // Fill
-            GameObject fillObj = new GameObject("Fill");
-            fillObj.transform.SetParent(fillAreaObj.transform, false);
-            RectTransform fillRect = fillObj.AddComponent<RectTransform>();
-            fillRect.anchorMin = Vector2.zero;
-            fillRect.anchorMax = Vector2.one;
-            fillRect.sizeDelta = Vector2.zero;
-            Image fillImage = fillObj.AddComponent<Image>();
-            fillImage.color = new Color(0.3f, 1f, 0.3f, 1f); // 초록색
-
-            cooldownBar.fillRect = fillRect;
-            cooldownBar.targetGraphic = fillImage;
-        }
-
-        // 쿨타임 텍스트 생성
-        if (cooldownText == null)
-        {
-            GameObject cooldownObj = new GameObject("CooldownText");
-            cooldownObj.transform.SetParent(canvas.transform, false);
-
-            RectTransform rectTransform = cooldownObj.AddComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0f, 1f);
-            rectTransform.anchorMax = new Vector2(0f, 1f);
-            rectTransform.pivot = new Vector2(0f, 1f);
-            rectTransform.anchoredPosition = new Vector2(20f, -110f);
-            rectTransform.sizeDelta = new Vector2(300f, 40f);
-
-            cooldownText = cooldownObj.AddComponent<Text>();
-            cooldownText.font = Font.CreateDynamicFontFromOSFont("Arial", 24);
-            cooldownText.fontSize = 24;
-            cooldownText.alignment = TextAnchor.MiddleLeft;
-            cooldownText.color = Color.white;
-
-            // Outline 추가 (가독성)
-            Outline outline = cooldownObj.AddComponent<Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(2, -2);
-        }
-
-        // 결과 텍스트 생성
-        if (resultText == null)
-        {
-            GameObject resultObj = new GameObject("ResultText");
-            resultObj.transform.SetParent(canvas.transform, false);
-
-            RectTransform rectTransform = resultObj.AddComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0f, 0.5f);
-            rectTransform.anchorMax = new Vector2(0f, 0.5f);
-            rectTransform.pivot = new Vector2(0f, 0.5f);
-            rectTransform.anchoredPosition = new Vector2(50f, 100f);
-            rectTransform.sizeDelta = new Vector2(300f, 60f);
-
-            resultText = resultObj.AddComponent<Text>();
-            resultText.font = Font.CreateDynamicFontFromOSFont("Arial", 36);
-            resultText.fontSize = 36;
-            resultText.alignment = TextAnchor.MiddleLeft;
-            resultText.fontStyle = FontStyle.Bold;
-
-            // Outline 추가 (가독성)
-            Outline outline = resultObj.AddComponent<Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(3, -3);
-        }
+        // Runtime auto-creation is disabled.
+        // Assign resultText in inspector if this UI is needed.
     }
 
     void Update()
@@ -252,7 +289,7 @@ public class Player : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        currentHp--;
+        currentHp -= Mathf.RoundToInt(damage);
         if (currentHp < 0) currentHp = 0;
         UpdateUI();
         if (currentHp <= 0) Debug.Log("플레이어 사망");
@@ -264,10 +301,34 @@ public class Player : MonoBehaviour
         UpdateUI();
     }
 
+    public void UpdateUIForExternalSync()
+    {
+        UpdateUI();
+    }
+
     void UpdateUI()
     {
+        ResolveUiReferences();
+        EnsureTopHpBarPlacement();
+
         //if (heartUI != null) heartUI.UpdateHearts(currentHp, maxHp);
-        hpText.text = $"{currentHp} / {maxHp}";
+        foreach (TMP_Text text in GetAllSceneHpTexts())
+            text.text = $"{currentHp} / {maxHp}";
+
+        if (hpText != null)
+            hpText.text = $"{currentHp} / {maxHp}";
+
+        foreach (Slider slider in GetAllScenePlayerHpBars())
+        {
+            slider.maxValue = maxHp;
+            slider.value = currentHp;
+        }
+
+        if (hpBar != null)
+        {
+            hpBar.maxValue = maxHp;
+            hpBar.value = currentHp;
+        }
     }
 
     //void UpdateCooldownUI()
@@ -317,8 +378,8 @@ public class Player : MonoBehaviour
 
     public void PlayAttackEffect()
     {
-
-        attackParticle.Play(); // 파티클 재생
+        if (attackParticle != null)
+            attackParticle.Play(); // 파티클 재생
     
     }
 }

@@ -26,14 +26,76 @@ public class CardSystem : MonoBehaviour
     public int baseDraw=10;
     public float drawTime=1f;
 
+    void Awake()
+    {
+        if (HasElementSlotSystem())
+            ForceDisableForElementSystem();
+    }
+
+    void OnEnable()
+    {
+        if (HasElementSlotSystem())
+            ForceDisableForElementSystem();
+    }
+
     void Start()
     {
+        if (HasElementSlotSystem())
+        {
+            ForceDisableForElementSystem();
+            return;
+        }
+
         player = FindFirstObjectByType<Player>();
         comboSystem = FindFirstObjectByType<ComboSystem>(); // 콤보 시스템 찾기
         RefreshEnemyRef();
 
         SetDeck();
         ShuffleDeck(deck);
+    }
+
+    public void ForceDisableForElementSystem()
+    {
+        ClearHandObjects();
+        DisableLegacyHandUI();
+        enabled = false;
+    }
+
+    bool HasElementSlotSystem()
+    {
+        return ElementSlotSystem.Instance != null || FindFirstObjectByType<ElementSlotSystem>() != null;
+    }
+
+    void ClearHandObjects()
+    {
+        foreach (var card in hand)
+        {
+            if (card != null) Destroy(card);
+        }
+
+        if (cardParent != null)
+        {
+            for (int i = cardParent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(cardParent.GetChild(i).gameObject);
+            }
+        }
+
+        hand.Clear();
+        deck.Clear();
+        graveyard.Clear();
+    }
+
+    void DisableLegacyHandUI()
+    {
+        if (cardParent != null)
+            cardParent.gameObject.SetActive(false);
+
+        if (deckText != null)
+            deckText.gameObject.SetActive(false);
+
+        if (graveyardText != null)
+            graveyardText.gameObject.SetActive(false);
     }
 
 

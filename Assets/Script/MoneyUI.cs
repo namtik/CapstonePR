@@ -3,22 +3,32 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// ÀçÈ­ UI Ç¥½Ã ÄÄÆ÷³ÍÆ®
-/// MoneyManagerÀÇ ÀçÈ­¸¦ TextMeshPro·Î È­¸é¿¡ Ç¥½ÃÇÕ´Ï´Ù.
+/// ï¿½ï¿½È­ UI Ç¥ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
+/// MoneyManagerï¿½ï¿½ ï¿½ï¿½È­ï¿½ï¿½ TextMeshProï¿½ï¿½ È­ï¿½é¿¡ Ç¥ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 /// </summary>
 [RequireComponent(typeof(TMP_Text))]
 public class MoneyUI : MonoBehaviour
 {
-    [Header("ÀçÈ­ ¾ÆÀÌÄÜ (¼±ÅÃ»çÇ×)")]
-    [SerializeField] private Image moneyIconImage;  // ÀçÈ­ ¾ÆÀÌÄÜ ÀÌ¹ÌÁö (ÅØ½ºÆ® ¿·¿¡ ¹èÄ¡)
+    [Header("ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½)")]
+    [SerializeField] private Image moneyIconImage;  // ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ (ï¿½Ø½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡)
     
+    private static MoneyUI activeInstance;
     private TMP_Text moneyText;
+    private bool isPrimaryInstance;
 
     void Awake()
     {
+        if (activeInstance != null && activeInstance != this)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
+        activeInstance = this;
+        isPrimaryInstance = true;
         moneyText = GetComponent<TMP_Text>();
         
-        // MoneyManager¿¡¼­ ÀçÈ­ ¾ÆÀÌÄÜ °¡Á®¿À±â
+        // MoneyManagerï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (moneyIconImage != null && MoneyManager.Instance != null && MoneyManager.Instance.MoneyIcon != null)
         {
             moneyIconImage.sprite = MoneyManager.Instance.MoneyIcon;
@@ -27,7 +37,9 @@ public class MoneyUI : MonoBehaviour
 
     void OnEnable()
     {
-        // MoneyManager ÀÌº¥Æ® ±¸µ¶
+        if (!isPrimaryInstance) return;
+
+        // MoneyManager ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ï¿½
         if (MoneyManager.Instance != null)
         {
             MoneyManager.Instance.OnMoneyChanged += UpdateMoneyDisplay;
@@ -37,16 +49,26 @@ public class MoneyUI : MonoBehaviour
 
     void OnDisable()
     {
-        // ÀÌº¥Æ® ±¸µ¶ ÇØÁö
+        if (!isPrimaryInstance) return;
+
+        // ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (MoneyManager.Instance != null)
         {
             MoneyManager.Instance.OnMoneyChanged -= UpdateMoneyDisplay;
         }
     }
 
+    void OnDestroy()
+    {
+        if (activeInstance == this)
+            activeInstance = null;
+    }
+
     void Start()
     {
-        // ÃÊ±â ÀçÈ­ Ç¥½Ã
+        if (!isPrimaryInstance) return;
+
+        // ï¿½Ê±ï¿½ ï¿½ï¿½È­ Ç¥ï¿½ï¿½
         if (MoneyManager.Instance != null)
         {
             UpdateMoneyDisplay(MoneyManager.Instance.CurrentMoney);

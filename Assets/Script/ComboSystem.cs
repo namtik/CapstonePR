@@ -37,7 +37,7 @@ public class ComboSystem : MonoBehaviour
 
     private Player player;
     private EnemyController enemyController;
-    private CardSystem CM;
+    // CardSystem 제거 — ElementSlotSystem으로 교체됨
     private Roundmanager roundManager;  
 
     public static ComboSystem Instance;
@@ -58,7 +58,7 @@ public class ComboSystem : MonoBehaviour
     void Start()
     {
         player = FindFirstObjectByType<Player>();
-        CM = FindFirstObjectByType<CardSystem>();
+        // CM(CardSystem) → ElementSlotSystem으로 교체됨, 참조 불필요
         RefreshEnemyRef();
 
         // UI 생성
@@ -469,12 +469,8 @@ public class ComboSystem : MonoBehaviour
 
     void ActivateSkill(SkillData skill)
     {
-        if(skill.draw > 0) 
-        {
-            CM.DrawCards(skill.draw);
-            Debug.Log($"{skill.draw}장 드로우!");
-        }
-            
+        // draw 기능은 ElementSlotSystem 슬롯 재충전으로 대체됨 (skill.draw 미사용)
+
         if (enemyController != null && player != null)
         {
             float damage = player.attackDamage * skill.damage;

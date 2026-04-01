@@ -1,20 +1,15 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class EnemyController : MonoBehaviour
 {
-    [Header("투사체 설정")]
-    [SerializeField] private GameObject projectilePrefab;
-    [SerializeField] private Transform projectileSpawnPoint;
-    [SerializeField] private Sprite projectileSprite;
+    [Header("공격 설정")]
+    [SerializeField] private int fallbackGaugeFullDamage = 10;
 
     private EnemyStat stat;
     private EnemyView view;
     private Player player;
     private Roundmanager roundmanager;
-    private float actionGauge = 0f;
     private bool isDead = false;
-    private bool isFiring = false;
 
     private void Awake()
     {
@@ -28,18 +23,22 @@ public class EnemyController : MonoBehaviour
         roundmanager = Object.FindFirstObjectByType<Roundmanager>();
 
         stat.OnDied += HandleDeath;
+        stat.OnMidPattern  += HandleMidPattern;
+        stat.OnGaugeFull   += HandleGaugeFull;
+        stat.OnGaugeStepChanged += view.UpdateActionGauge;
     }
 
     void OnDestroy()
     {
         stat.OnDied -= HandleDeath;
+        stat.OnMidPattern  -= HandleMidPattern;
+        stat.OnGaugeFull   -= HandleGaugeFull;
+        stat.OnGaugeStepChanged -= view.UpdateActionGauge;
     }
 
     void Update()
     {
         if (!stat.IsAlive) return;
-
-        UpdateActionGauge();
     }
 
     public void TakeDamage(float damage, string cardtype)
@@ -56,50 +55,34 @@ public class EnemyController : MonoBehaviour
         TakeDamage(damage, "Default");
     }
 
-
-    void UpdateActionGauge()
+    /// <summary>Called by ElementSlotSystem each time the player uses a slot</summary>
+    public void OnPlayerAction()
     {
-        if (isFiring) return; // 발사 중에는 게이지 정지
+        stat.ConsumeGaugeStep();
+    }
 
-        actionGauge += stat.GaugeSpeed * Time.deltaTime;
-        view.UpdateActionGauge(actionGauge / 100f);
+    void HandleMidPattern()
+    {
+        ElementSlotSystem.Instance?.TriggerDisruptionPattern();
+    }
 
-        if (actionGauge >= 100f)
+    void HandleGaugeFull()
+    {
+        if (player == null)
+            player = Object.FindFirstObjectByType<Player>();
+
+        int damageToApply = Mathf.RoundToInt(stat.AttackDamage);
+        if (damageToApply <= 0)
+            damageToApply = fallbackGaugeFullDamage;
+
+        if (player != null)
         {
-            if (stat.CurrentAttackCount > 0)
-            {
-                StartCoroutine(FireProjectiles(stat.CurrentAttackCount));
-            }
-            // 공격 횟수가 0이면 투사체 발사 없이 스킵
-
-            actionGauge = 0f;
-            view.UpdateActionGauge(0f);
-            stat.RollNewAttackPlan(); // 다음 사이클 공격 예고 생성
+            player.TakeDamage(damageToApply);
+            Debug.Log($"[EnemyController] Gauge full -> direct damage {damageToApply}");
         }
+
+        stat.RollNewAttackPlan();
     }
-
-
-    void Attack()
-    {
-        if (player == null) return;
-
-        Vector3 spawnPos = projectileSpawnPoint != null
-            ? projectileSpawnPoint.position
-            : transform.position;
-
-        GameObject go = projectilePrefab != null
-            ? Instantiate(projectilePrefab, spawnPos, Quaternion.identity)
-            : new GameObject("Projectile");
-
-        Projectile projectile = go.GetComponent<Projectile>()
-                             ?? go.AddComponent<Projectile>();
-
-        if (projectileSprite != null)
-            projectile.projectileSprite = projectileSprite;
-
-        projectile.Initialize(player.transform, stat.AttackDamage);
-    }
-
     void HandleDeath()
     {
         if (isDead) return;
@@ -111,36 +94,4 @@ public class EnemyController : MonoBehaviour
         Destroy(gameObject);
     }
 
-    IEnumerator FireProjectiles(int count)
-    {
-        isFiring = true;
-        for (int i = 0; i < count; i++)
-        {
-            FireSingleProjectile();
-            if (i < count - 1)
-                yield return new WaitForSeconds(0.2f);
-        }
-        isFiring = false;
-    }
-
-    void FireSingleProjectile()
-    {
-        if (player == null) return;
-
-        Vector3 spawnPos = projectileSpawnPoint != null
-            ? projectileSpawnPoint.position
-            : transform.position;
-
-        GameObject go = projectilePrefab != null
-            ? Instantiate(projectilePrefab, spawnPos, Quaternion.identity)
-            : new GameObject("Projectile");
-
-        Projectile projectile = go.GetComponent<Projectile>()
-                             ?? go.AddComponent<Projectile>();
-
-        if (projectileSprite != null)
-            projectile.projectileSprite = projectileSprite;
-
-        projectile.Initialize(player.transform, stat.AttackDamage);
-    }
 }

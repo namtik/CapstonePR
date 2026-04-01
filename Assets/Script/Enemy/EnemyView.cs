@@ -17,6 +17,9 @@ public class EnemyView : MonoBehaviour
     [SerializeField] private float fadeTime = 1f;
     [SerializeField] private float floatSpeed = 0.5f;
 
+    [Header("UI 위치 보정")]
+    [SerializeField] private float uiVerticalOffset = 76f;
+
     [Header("피격 이펙트 (파티클)")]
     public ParticleSystem qEffect;
     public ParticleSystem wEffect;
@@ -27,6 +30,34 @@ public class EnemyView : MonoBehaviour
     private Vector3 damageTextOriginLocalPos;
     private Color damageTextOriginColor;
     private Coroutine damageCoroutine;
+
+    void LayoutUiBelowEnemy()
+    {
+        RectTransform enemyRect = enemyImage != null ? enemyImage.rectTransform : GetComponent<RectTransform>();
+        if (enemyRect == null) return;
+
+        float enemyHeight = enemyRect.rect.height;
+        if (enemyHeight <= 0f)
+            enemyHeight = 360f;
+
+        // Move enemy UI upward to avoid overlap with bottom combo slots.
+        float baseY = -(enemyHeight * 0.5f) - 24f + uiVerticalOffset;
+
+        PositionUiRect(hpBar != null ? hpBar.GetComponent<RectTransform>() : null, baseY, new Vector2(220f, 18f));
+        PositionUiRect(actionGaugeBar != null ? actionGaugeBar.GetComponent<RectTransform>() : null, baseY - 24f, new Vector2(220f, 14f));
+        PositionUiRect(attackPreviewText != null ? attackPreviewText.rectTransform : null, baseY - 52f, new Vector2(220f, 28f));
+    }
+
+    void PositionUiRect(RectTransform rect, float anchoredY, Vector2 size)
+    {
+        if (rect == null) return;
+
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = new Vector2(0f, anchoredY);
+        rect.sizeDelta = size;
+    }
 
     void Awake()
     {
@@ -40,6 +71,8 @@ public class EnemyView : MonoBehaviour
             canvas.worldCamera = Camera.main;  // 카메라 연결
             canvas.sortingOrder = 10;          // Enemy 이미지보다 앞
         }
+
+        LayoutUiBelowEnemy();
     }
 
     void Start()
@@ -60,8 +93,10 @@ public class EnemyView : MonoBehaviour
         // EnemyStat 이벤트 구독
         stat.OnHpChanged += UpdateHpBar;
 
-        // 행동 게이지 초기화
+        // Action gauge bar: reset to 0 (updated via EnemyController → stat.OnGaugeStepChanged)
         if (actionGaugeBar != null) actionGaugeBar.value = 0f;
+
+        LayoutUiBelowEnemy();
     }
 
     void OnDestroy()
@@ -91,7 +126,7 @@ public class EnemyView : MonoBehaviour
         if (count <= 0)
             attackPreviewText.text = "";
         else
-            attackPreviewText.text = $"{(int)stat.AttackDamage}x{count}";
+            attackPreviewText.text = $"{Mathf.RoundToInt(stat.AttackDamage)}";
     }
 
     // EnemyController가 TakeDamage 직후 호출
@@ -109,6 +144,7 @@ public class EnemyView : MonoBehaviour
     {
         Debug.Log($"[EnemyView] enemyImage={enemyImage != null}, sprite={sprite?.name}");
         if (enemyImage != null) enemyImage.sprite = sprite;
+        LayoutUiBelowEnemy();
     }
 
 

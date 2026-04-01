@@ -113,6 +113,12 @@ public class GameStateController : MonoBehaviour
             Debug.LogError("mapStage와 mapCanvas 둘 다 null입니다!");
         }
 
+        // 맵 UI가 켜진 뒤 즉시 플레이어 HP UI 동기화
+        if (roundManager != null)
+        {
+            roundManager.EnsurePlayerUiSync();
+        }
+
         //  맵을 새로고침 (약간의 지연으로 MapManager 초기화 완료 대기)
         if (mapManager != null)
         {
@@ -129,6 +135,12 @@ public class GameStateController : MonoBehaviour
         // 한 프레임 대기하여 MapManager.Start() 완료 보장
         yield return null;
         mapManager.RefreshMap();
+
+        // 맵 갱신 직후 한 번 더 동기화해 첫 프레임 값 깜빡임 방지
+        if (roundManager != null)
+        {
+            roundManager.EnsurePlayerUiSync();
+        }
     }
 
     // 노드 타입에 따라 적절한 스테이지 표시

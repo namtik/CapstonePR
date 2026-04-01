@@ -34,6 +34,7 @@ public class BattleManger : MonoBehaviour
         {
             Instantiate(enemyPrefab, enemyParent);
         }
+        ElementSlotSystem.Instance?.StartBattle();
 
         battleInitialized = true;
         Debug.Log("전투 초기화 완료");
@@ -87,6 +88,7 @@ public class BattleManger : MonoBehaviour
         if (stateController != null)
         {
             Debug.Log("GameStateController.OnRoundClear 호출 중...");
+            ElementSlotSystem.Instance?.EndBattle();
             battleInitialized = false; // 다음 전투를 위해 리셋
             stateController.OnRoundClear();
             return;
