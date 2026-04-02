@@ -1,44 +1,63 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class ElementSlotHUD : MonoBehaviour
 {
+    [Header("Prefab Driven Slot UI")]
+    [SerializeField] private string rootObjectName = "ElementSlotRoot";
+    [SerializeField] private string combatStageName = "CombatStage";
+    [SerializeField] private string combatCanvasName = "Canvas";
+    [SerializeField] private string comboSlotName = "Comboslot";
+    [SerializeField] private GameObject qwerCardPrefab;
+    [SerializeField] private Vector2 rootAnchoredPosition = new Vector2(0f, 26f);
+    [SerializeField] private Vector2 rootSize = new Vector2(880f, 240f);
+    [SerializeField] private Vector2 slotSize = new Vector2(180f, 208f);
+    [SerializeField] private Vector2 statusBoxSize = new Vector2(180f, 44f);
+    [SerializeField] private Vector2 statusBoxOffset = new Vector2(0f, 0f);
+    [SerializeField] private int statusFontSize = 18;
+    [SerializeField] private Color statusBackgroundColor = new Color(0f, 0f, 0f, 0.7f);
+    [SerializeField] private Color statusTextColor = Color.white;
+    [SerializeField] private float slotAlphaWhenEmpty = 0.2f;
+    [SerializeField] private float slotAlphaWhenActive = 1f;
+    [SerializeField] private float slotAlphaWhenNeutral = 0.75f;
+    [SerializeField] private float slotAlphaWhenCursed = 0.95f;
+
     private ElementSlotSystem slotSystem;
     private ComboSystem comboSystem;
     private Canvas hudCanvas;
-    private RectTransform frameRoot;
-    private readonly Image[] slotPanels = new Image[4];
+    private RectTransform rootTransform;
     private readonly Image[] slotIcons = new Image[4];
-    private readonly Text[] keyLabels = new Text[4];
-    private readonly Text[] infoLabels = new Text[4];
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Bootstrap()
-    {
-        if (FindFirstObjectByType<ElementSlotHUD>() != null)
-            return;
-
-        GameObject hudObject = new GameObject("ElementSlotHUD");
-        DontDestroyOnLoad(hudObject);
-        hudObject.AddComponent<ElementSlotHUD>();
-    }
+    private readonly Image[] statusBoxes = new Image[4];
+    private readonly Text[] statusTexts = new Text[4];
 
     void Awake()
     {
-        BuildUI();
+        ResolveSystems();
+        BuildOrBindUI();
+        SuppressLegacyHandUI();
+    }
+
+    void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    void OnSceneLoaded(Scene _, LoadSceneMode __)
+    {
+        ResolveSystems();
+        BuildOrBindUI();
+        SuppressLegacyHandUI();
     }
 
     void Update()
     {
-        if (slotSystem == null)
-            slotSystem = ElementSlotSystem.Instance ?? FindFirstObjectByType<ElementSlotSystem>();
-
-        if (comboSystem == null)
-            comboSystem = ComboSystem.Instance ?? FindFirstObjectByType<ComboSystem>();
-
-        SuppressLegacyHandUI();
-
-        if (slotSystem == null)
+        if (slotSystem == null || hudCanvas == null)
         {
             SetHudVisible(false);
             return;
@@ -52,38 +71,41 @@ public class ElementSlotHUD : MonoBehaviour
             UpdateSlot(index);
     }
 
-    void BuildUI()
+    void ResolveSystems()
     {
-        GameObject canvasObject = new GameObject("ElementSlotHUD_Canvas");
-        canvasObject.transform.SetParent(transform, false);
+        slotSystem = ElementSlotSystem.Instance ?? FindFirstObjectByType<ElementSlotSystem>();
+        comboSystem = ComboSystem.Instance ?? FindFirstObjectByType<ComboSystem>();
 
-        hudCanvas = canvasObject.AddComponent<Canvas>();
-        hudCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        hudCanvas.sortingOrder = 5000;
+        if (qwerCardPrefab == null && comboSystem != null)
+            qwerCardPrefab = comboSystem.cardPrefab;
+    }
 
-        CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
+    void BuildOrBindUI()
+    {
+        Canvas targetCanvas = ResolveTargetCanvas();
+        if (targetCanvas == null)
+            return;
 
-        canvasObject.AddComponent<GraphicRaycaster>();
+        hudCanvas = targetCanvas;
 
-        GameObject frameObject = new GameObject("SlotFrame");
-        frameObject.transform.SetParent(canvasObject.transform, false);
-        frameRoot = frameObject.AddComponent<RectTransform>();
-        frameRoot.anchorMin = new Vector2(0.5f, 0f);
-        frameRoot.anchorMax = new Vector2(0.5f, 0f);
-        frameRoot.pivot = new Vector2(0.5f, 0f);
-        frameRoot.anchoredPosition = new Vector2(0f, 26f);
-        frameRoot.sizeDelta = new Vector2(880f, 240f);
+        Transform existingRoot = hudCanvas.transform.Find(rootObjectName);
+        if (existingRoot != null)
+        {
+            rootTransform = existingRoot as RectTransform;
+            CacheOrCreateSlotIcons();
+            return;
+        }
 
-        Image frameImage = frameObject.AddComponent<Image>();
-        frameImage.color = new Color(0.08f, 0.05f, 0.03f, 0.88f);
+        GameObject rootObject = new GameObject(rootObjectName);
+        rootObject.transform.SetParent(hudCanvas.transform, false);
+        rootTransform = rootObject.AddComponent<RectTransform>();
+        rootTransform.anchorMin = new Vector2(0.5f, 0f);
+        rootTransform.anchorMax = new Vector2(0.5f, 0f);
+        rootTransform.pivot = new Vector2(0.5f, 0f);
+        rootTransform.anchoredPosition = rootAnchoredPosition;
+        rootTransform.sizeDelta = rootSize;
 
-        Outline frameOutline = frameObject.AddComponent<Outline>();
-        frameOutline.effectColor = new Color(0f, 0f, 0f, 0.65f);
-        frameOutline.effectDistance = new Vector2(4f, -4f);
-
-        HorizontalLayoutGroup layout = frameObject.AddComponent<HorizontalLayoutGroup>();
+        HorizontalLayoutGroup layout = rootObject.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = 14f;
         layout.padding = new RectOffset(22, 22, 16, 16);
         layout.childAlignment = TextAnchor.MiddleCenter;
@@ -93,100 +115,198 @@ public class ElementSlotHUD : MonoBehaviour
         layout.childControlWidth = false;
 
         for (int index = 0; index < 4; index++)
-            BuildSlotPanel(index);
+            BuildSlotPanel(index, rootTransform);
 
         SetHudVisible(false);
     }
 
-    void BuildSlotPanel(int index)
+    Canvas ResolveTargetCanvas()
     {
-        GameObject slotObject = new GameObject("Slot_" + ElementSlotSystem.SLOT_KEYS[index]);
-        slotObject.transform.SetParent(frameRoot, false);
+        GameObject combatStageObject = GameObject.Find(combatStageName);
+        if (combatStageObject == null)
+            return FindFirstObjectByType<Canvas>();
 
-        RectTransform slotRect = slotObject.AddComponent<RectTransform>();
-        slotRect.sizeDelta = new Vector2(198f, 208f);
+        Transform stageTransform = combatStageObject.transform;
 
-        Image panelImage = slotObject.AddComponent<Image>();
-        panelImage.color = new Color(0.22f, 0.2f, 0.18f, 0.96f);
-        slotPanels[index] = panelImage;
+        Transform namedCanvas = stageTransform.Find(combatCanvasName);
+        if (namedCanvas != null)
+        {
+            Canvas target = namedCanvas.GetComponent<Canvas>();
+            if (target != null)
+                return target;
+        }
 
-        Outline panelOutline = slotObject.AddComponent<Outline>();
-        panelOutline.effectColor = new Color(0f, 0f, 0f, 0.75f);
-        panelOutline.effectDistance = new Vector2(3f, -3f);
+        return combatStageObject.GetComponentInChildren<Canvas>(true);
+    }
 
-        GameObject keyObject = new GameObject("KeyLabel");
-        keyObject.transform.SetParent(slotObject.transform, false);
-        RectTransform keyRect = keyObject.AddComponent<RectTransform>();
-        keyRect.anchorMin = new Vector2(0.5f, 1f);
-        keyRect.anchorMax = new Vector2(0.5f, 1f);
-        keyRect.pivot = new Vector2(0.5f, 1f);
-        keyRect.anchoredPosition = new Vector2(0f, -10f);
-        keyRect.sizeDelta = new Vector2(140f, 38f);
+    void CacheOrCreateSlotIcons()
+    {
+        for (int index = 0; index < 4; index++)
+        {
+            string slotName = "Slot_" + ElementSlotSystem.SLOT_KEYS[index];
+            Transform slotTransform = rootTransform.Find(slotName);
+            if (slotTransform == null)
+            {
+                BuildSlotPanel(index, rootTransform);
+                continue;
+            }
 
-        Text keyText = keyObject.AddComponent<Text>();
-        keyText.font = Font.CreateDynamicFontFromOSFont("Arial", 28);
-        keyText.fontSize = 28;
-        keyText.fontStyle = FontStyle.Bold;
-        keyText.alignment = TextAnchor.MiddleCenter;
-        keyText.color = new Color(1f, 0.96f, 0.86f, 1f);
-        keyLabels[index] = keyText;
+            Image iconImage = slotTransform.GetComponent<Image>();
+            if (iconImage == null)
+                iconImage = slotTransform.gameObject.AddComponent<Image>();
 
-        GameObject iconObject = new GameObject("Icon");
-        iconObject.transform.SetParent(slotObject.transform, false);
-        RectTransform iconRect = iconObject.AddComponent<RectTransform>();
-        iconRect.anchorMin = new Vector2(0.5f, 0.5f);
-        iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-        iconRect.pivot = new Vector2(0.5f, 0.5f);
-        iconRect.anchoredPosition = new Vector2(0f, 8f);
-        iconRect.sizeDelta = new Vector2(110f, 140f);
+            slotIcons[index] = iconImage;
 
-        Image iconImage = iconObject.AddComponent<Image>();
-        iconImage.color = new Color(1f, 1f, 1f, 0.95f);
+            RectTransform slotRect = slotTransform as RectTransform;
+            if (slotRect != null)
+                slotRect.sizeDelta = slotSize;
+
+            EnsureStatusBox(index, slotTransform);
+        }
+    }
+
+    void BuildSlotPanel(int index, Transform parent)
+    {
+        GameObject slotObject;
+
+        // Prefab-first construction keeps slot visuals editable in project assets.
+        if (qwerCardPrefab != null)
+            slotObject = Instantiate(qwerCardPrefab, parent, false);
+        else
+            slotObject = new GameObject();
+
+        slotObject.name = "Slot_" + ElementSlotSystem.SLOT_KEYS[index];
+
+        RectTransform slotRect = slotObject.GetComponent<RectTransform>();
+        if (slotRect == null)
+            slotRect = slotObject.AddComponent<RectTransform>();
+        slotRect.sizeDelta = slotSize;
+
+        Image iconImage = slotObject.GetComponent<Image>();
+        if (iconImage == null)
+            iconImage = slotObject.AddComponent<Image>();
         iconImage.preserveAspect = true;
+
         slotIcons[index] = iconImage;
 
-        GameObject infoObject = new GameObject("InfoLabel");
-        infoObject.transform.SetParent(slotObject.transform, false);
-        RectTransform infoRect = infoObject.AddComponent<RectTransform>();
-        infoRect.anchorMin = new Vector2(0.5f, 0f);
-        infoRect.anchorMax = new Vector2(0.5f, 0f);
-        infoRect.pivot = new Vector2(0.5f, 0f);
-        infoRect.anchoredPosition = new Vector2(0f, 10f);
-        infoRect.sizeDelta = new Vector2(176f, 54f);
+        EnsureStatusBox(index, slotObject.transform);
+    }
 
-        Text infoText = infoObject.AddComponent<Text>();
-        infoText.font = Font.CreateDynamicFontFromOSFont("Arial", 20);
-        infoText.fontSize = 20;
-        infoText.alignment = TextAnchor.MiddleCenter;
-        infoText.color = Color.white;
-        infoLabels[index] = infoText;
+    void EnsureStatusBox(int index, Transform slotTransform)
+    {
+        Transform existingBox = slotTransform.Find("StatusBox");
+        if (existingBox == null)
+        {
+            GameObject statusObject = new GameObject("StatusBox");
+            statusObject.transform.SetParent(slotTransform, false);
+            existingBox = statusObject.transform;
+
+            RectTransform statusRect = statusObject.AddComponent<RectTransform>();
+            ApplyStatusBoxLayout(statusRect, slotTransform);
+
+            Image statusImage = statusObject.AddComponent<Image>();
+            statusImage.color = statusBackgroundColor;
+            statusBoxes[index] = statusImage;
+
+            Outline outline = statusObject.AddComponent<Outline>();
+            outline.effectColor = new Color(1f, 1f, 1f, 0.75f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            GameObject textObject = new GameObject("StatusText");
+            textObject.transform.SetParent(statusObject.transform, false);
+            RectTransform textRect = textObject.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            Text statusText = textObject.AddComponent<Text>();
+            statusText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            statusText.fontSize = statusFontSize;
+            statusText.alignment = TextAnchor.MiddleCenter;
+            statusText.color = statusTextColor;
+            statusText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            statusText.verticalOverflow = VerticalWrapMode.Overflow;
+            statusTexts[index] = statusText;
+            return;
+        }
+
+        RectTransform existingRect = existingBox as RectTransform;
+        if (existingRect != null)
+            ApplyStatusBoxLayout(existingRect, slotTransform);
+
+        Image existingImage = existingBox.GetComponent<Image>();
+        if (existingImage == null)
+            existingImage = existingBox.gameObject.AddComponent<Image>();
+        existingImage.color = statusBackgroundColor;
+        statusBoxes[index] = existingImage;
+
+        Transform textTransform = existingBox.Find("StatusText");
+        if (textTransform == null)
+        {
+            GameObject textObject = new GameObject("StatusText");
+            textObject.transform.SetParent(existingBox, false);
+            textTransform = textObject.transform;
+            RectTransform textRect = textObject.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+        }
+
+        Text textComponent = textTransform.GetComponent<Text>();
+        if (textComponent == null)
+            textComponent = textTransform.gameObject.AddComponent<Text>();
+        textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        textComponent.fontSize = statusFontSize;
+        textComponent.alignment = TextAnchor.MiddleCenter;
+        textComponent.color = statusTextColor;
+        textComponent.horizontalOverflow = HorizontalWrapMode.Wrap;
+        textComponent.verticalOverflow = VerticalWrapMode.Overflow;
+        statusTexts[index] = textComponent;
+    }
+
+    void ApplyStatusBoxLayout(RectTransform statusRect, Transform slotTransform)
+    {
+        statusRect.anchorMin = new Vector2(0.5f, 0f);
+        statusRect.anchorMax = new Vector2(0.5f, 0f);
+        statusRect.pivot = new Vector2(0.5f, 1f);
+        statusRect.anchoredPosition = statusBoxOffset;
+
+        float slotWidth = slotSize.x;
+        RectTransform slotRect = slotTransform as RectTransform;
+        if (slotRect != null)
+            slotWidth = slotRect.sizeDelta.x;
+
+        statusRect.sizeDelta = new Vector2(slotWidth, statusBoxSize.y);
     }
 
     void UpdateSlot(int index)
     {
         ElementSlotSystem.SlotState slot = slotSystem.GetSlot(index);
-        if (slot == null)
+        if (slot == null || slotIcons[index] == null)
             return;
 
         bool isNeutral = slot.hasNeutralCard;
         bool isEmpty = slot.currentCard == null && !isNeutral;
         bool isCursed = slot.curseTurns > 0;
 
-        keyLabels[index].text = ElementSlotSystem.SLOT_KEYS[index];
-        slotPanels[index].color = GetSlotColor(slot.elementKey, isCursed, isNeutral, isEmpty);
-
         Sprite iconSprite = GetSlotSprite(index);
         slotIcons[index].sprite = iconSprite;
         slotIcons[index].enabled = iconSprite != null;
         slotIcons[index].color = GetIconColor(isCursed, isNeutral, isEmpty);
 
-        infoLabels[index].text = GetStatusLine(slot, isNeutral, isEmpty, isCursed) + "\nLeft " + slot.RemainingCount;
+        if (statusTexts[index] != null)
+            statusTexts[index].text = BuildStatusText(slot.RemainingCount, isCursed, isNeutral, isEmpty);
+
+        if (statusBoxes[index] != null)
+            statusBoxes[index].enabled = true;
     }
 
     void SetHudVisible(bool visible)
     {
-        if (hudCanvas != null && hudCanvas.gameObject.activeSelf != visible)
-            hudCanvas.gameObject.SetActive(visible);
+        if (rootTransform != null && rootTransform.gameObject.activeSelf != visible)
+            rootTransform.gameObject.SetActive(visible);
     }
 
     void SuppressLegacyHandUI()
@@ -210,57 +330,33 @@ public class ElementSlotHUD : MonoBehaviour
         return comboSystem.cardSprites[index];
     }
 
-    string GetStatusLine(ElementSlotSystem.SlotState slot, bool isNeutral, bool isEmpty, bool isCursed)
-    {
-        if (isNeutral)
-            return "Neutral";
-
-        if (isEmpty)
-            return "Empty";
-
-        if (isCursed)
-            return slot.elementKey + "  Curse " + slot.curseTurns;
-
-        return slot.elementKey;
-    }
-
-    Color GetSlotColor(string elementKey, bool cursed, bool neutral, bool empty)
-    {
-        if (neutral)
-            return new Color(0.42f, 0.42f, 0.42f, 0.96f);
-
-        if (cursed)
-            return new Color(0.42f, 0.12f, 0.12f, 0.98f);
-
-        if (empty)
-            return new Color(0.18f, 0.18f, 0.18f, 0.9f);
-
-        switch (elementKey)
-        {
-            case "fire":
-                return new Color(0.62f, 0.17f, 0.1f, 0.98f);
-            case "water":
-                return new Color(0.11f, 0.32f, 0.67f, 0.98f);
-            case "wind":
-                return new Color(0.15f, 0.5f, 0.32f, 0.98f);
-            case "earth":
-                return new Color(0.48f, 0.34f, 0.16f, 0.98f);
-            default:
-                return new Color(0.22f, 0.2f, 0.18f, 0.96f);
-        }
-    }
-
     Color GetIconColor(bool cursed, bool neutral, bool empty)
     {
         if (empty)
-            return new Color(1f, 1f, 1f, 0.18f);
+            return new Color(1f, 1f, 1f, slotAlphaWhenEmpty);
 
         if (neutral)
-            return new Color(1f, 1f, 1f, 0.75f);
+            return new Color(1f, 1f, 1f, slotAlphaWhenNeutral);
 
         if (cursed)
-            return new Color(1f, 0.84f, 0.84f, 0.95f);
+            return new Color(1f, 0.84f, 0.84f, slotAlphaWhenCursed);
 
-        return Color.white;
+        return new Color(1f, 1f, 1f, slotAlphaWhenActive);
+    }
+
+    string BuildStatusText(int remainingCount, bool cursed, bool neutral, bool empty)
+    {
+        string stateText = "일반";
+
+        if (empty)
+            stateText = "비어있음";
+
+        if (neutral)
+            stateText = "중립";
+
+        if (cursed)
+            stateText = neutral ? "중립, 저주" : "저주";
+
+        return "남은 장수 " + remainingCount + " | " + stateText;
     }
 }

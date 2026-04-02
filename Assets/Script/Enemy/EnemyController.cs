@@ -63,7 +63,11 @@ public class EnemyController : MonoBehaviour
 
     void HandleMidPattern()
     {
-        ElementSlotSystem.Instance?.TriggerDisruptionPattern();
+        string patternMessage = ElementSlotSystem.Instance?.TriggerDisruptionPattern();
+        if (string.IsNullOrEmpty(patternMessage))
+            patternMessage = "패턴 발동";
+
+        view?.ShowMidPatternNotice(patternMessage);
     }
 
     void HandleGaugeFull()
@@ -71,14 +75,19 @@ public class EnemyController : MonoBehaviour
         if (player == null)
             player = Object.FindFirstObjectByType<Player>();
 
-        int damageToApply = Mathf.RoundToInt(stat.AttackDamage);
-        if (damageToApply <= 0)
-            damageToApply = fallbackGaugeFullDamage;
+        int damagePerHit = Mathf.RoundToInt(stat.AttackDamage);
+        if (damagePerHit <= 0)
+            damagePerHit = fallbackGaugeFullDamage;
+
+        int hitCount = Mathf.Max(0, stat.CurrentAttackCount);
 
         if (player != null)
         {
-            player.TakeDamage(damageToApply);
-            Debug.Log($"[EnemyController] Gauge full -> direct damage {damageToApply}");
+            // We resolve planned multi-hit attacks as separate hits so count-based difficulty is felt directly in combat.
+            for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
+                player.TakeDamage(damagePerHit);
+
+            Debug.Log($"[EnemyController] Gauge full -> direct damage {damagePerHit}x{hitCount}");
         }
 
         stat.RollNewAttackPlan();

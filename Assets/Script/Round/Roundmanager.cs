@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework.Interfaces;
@@ -56,7 +57,9 @@ public class Roundmanager : MonoBehaviour
         if (hud == null)
         {
             var hudGo = new GameObject("ElementSlotHUD");
-            DontDestroyOnLoad(hudGo);
+            Canvas combatCanvas = ResolveCombatStageCanvas();
+            if (combatCanvas != null)
+                hudGo.transform.SetParent(combatCanvas.transform, false);
             hudGo.AddComponent<ElementSlotHUD>();
         }
 
@@ -70,6 +73,22 @@ public class Roundmanager : MonoBehaviour
                 legacy.gameObject.SetActive(false);
             }
         }
+    }
+
+    Canvas ResolveCombatStageCanvas()
+    {
+        if (combatStageController != null)
+        {
+            Canvas fromController = combatStageController.GetComponentInChildren<Canvas>(true);
+            if (fromController != null)
+                return fromController;
+        }
+
+        GameObject combatStageObject = GameObject.Find("CombatStage");
+        if (combatStageObject == null)
+            return FindFirstObjectByType<Canvas>();
+
+        return combatStageObject.GetComponentInChildren<Canvas>(true);
     }
 
     public void StartRound(RoundData roundData)

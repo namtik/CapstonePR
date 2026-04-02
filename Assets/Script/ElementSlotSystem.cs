@@ -74,6 +74,10 @@ public class ElementSlotSystem : MonoBehaviour
     // ── 슬롯 배열 ─────────────────────────────────────────────────────
     public SlotState[] slots = new SlotState[4];
 
+    [Header("슬롯 피해 계산")]
+    [SerializeField] private float fallbackPlayerAttackDamage = 10f;
+    [SerializeField] private float slotDamagePerAttackPoint = 0.1f;
+
     // ── 내부 참조 ─────────────────────────────────────────────────────
     private ComboSystem     comboSystem;
     private Player          player;
@@ -121,6 +125,9 @@ public class ElementSlotSystem : MonoBehaviour
     {
         if (enemyController == null || !enemyController.gameObject.activeInHierarchy)
             enemyController = FindFirstObjectByType<EnemyController>();
+
+        if (player == null || !player.gameObject.activeInHierarchy)
+            player = FindFirstObjectByType<Player>();
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -298,7 +305,7 @@ public class ElementSlotSystem : MonoBehaviour
         // ── 속성 피해 적용 (무속성 제외) ──────────────────────────
         if (!isNeutral && enemyController != null)
         {
-            int dmg = card.BaseDamage + GetElementUpgradeLevel(slot.elementKey);
+            int dmg = CalculateSlotDamage(card, slot.elementKey);
             enemyController.TakeDamage(dmg, SLOT_KEYS[index]);
             Debug.Log($"[{SLOT_KEYS[index]}] {slot.elementKey} 피해 {dmg}");
         }
@@ -325,14 +332,17 @@ public class ElementSlotSystem : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────
 
     /// <summary>랜덤 슬롯에 저주 or 무속성 카드 혼입</summary>
-    public void TriggerDisruptionPattern()
+    public string TriggerDisruptionPattern()
     {
         int  slotIndex = Random.Range(0, 4);
         bool isCurse   = Random.value < 0.5f;
 
+        string resultMessage;
+
         if (isCurse)
         {
             slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
+            resultMessage = $"Pattern: {SLOT_KEYS[slotIndex]} Curse {SLOT_CURSE_TURNS}T";
             Debug.Log($"[방해] {SLOT_KEYS[slotIndex]} 슬롯 저주 {SLOT_CURSE_TURNS}턴");
         }
         else
@@ -344,8 +354,11 @@ public class ElementSlotSystem : MonoBehaviour
             if (slots[slotIndex].currentCard == null)
                 DrawCardForSlot(slotIndex);
 
+            resultMessage = $"Pattern: {SLOT_KEYS[slotIndex]} Neutral Added";
             Debug.Log($"[방해] {SLOT_KEYS[slotIndex]} 슬롯 무속성 카드 혼입");
         }
+
+        return resultMessage;
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -398,6 +411,16 @@ public class ElementSlotSystem : MonoBehaviour
     {
         int i = System.Array.IndexOf(SLOT_KEYS, slotKey);
         return i >= 0 ? ELEMENT_KEYS[i] : "";
+    }
+
+    int CalculateSlotDamage(RunDeckCard card, string elementKey)
+    {
+        float playerAttack = player != null ? player.attackDamage : fallbackPlayerAttackDamage;
+        int totalLevel = card.BaseDamage + GetElementUpgradeLevel(elementKey);
+
+        // This keeps slot damage tied to player stats while preserving legacy balance when attackDamage=10.
+        float scaledDamage = playerAttack * totalLevel * slotDamagePerAttackPoint;
+        return Mathf.Max(1, Mathf.RoundToInt(scaledDamage));
     }
 
     void ShuffleList<T>(List<T> list)
