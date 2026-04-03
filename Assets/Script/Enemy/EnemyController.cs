@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
@@ -105,19 +106,30 @@ public class EnemyController : MonoBehaviour
             damagePerHit = fallbackGaugeFullDamage;
 
         int hitCount = Mathf.Max(0, stat.CurrentAttackCount);
-
         if (player != null)
         {
-            // We resolve planned multi-hit attacks as separate hits so count-based difficulty is felt directly in combat.
-            for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
-                player.TakeDamage(damagePerHit);
-                hitVFX.Stop();
-                hitVFX.Play();
-
-            Debug.Log($"[EnemyController] Gauge full -> direct damage {damagePerHit}x{hitCount}");
+            // 연타 연출을 위해 코루틴으로 분리하여 호출
+            StartCoroutine(ExecuteMultiHit(hitCount, damagePerHit));
         }
 
         stat.RollNewAttackPlan();
+    }
+    IEnumerator ExecuteMultiHit(int count, int damage)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            player.TakeDamage(damage);
+
+            if (hitVFX != null)
+            {
+                hitVFX.Stop();
+                hitVFX.Play();
+            }
+
+            // 타격 사이의 짧은 간격 (0.1~0.15초 정도가 적당합니다)
+            yield return new WaitForSeconds(0.1f);
+        }
+        Debug.Log($"[EnemyController] {count} hit");
     }
     void HandleDeath()
     {
