@@ -112,6 +112,7 @@ public class ElementSlotSystem : MonoBehaviour
         comboSystem = FindFirstObjectByType<ComboSystem>();
         player      = FindFirstObjectByType<Player>();
         RefreshEnemyRef();
+        EnsureHudComponent();
     }
 
     void Update()
@@ -130,6 +131,16 @@ public class ElementSlotSystem : MonoBehaviour
 
         if (player == null || !player.gameObject.activeInHierarchy)
             player = FindFirstObjectByType<Player>();
+    }
+
+    void EnsureHudComponent()
+    {
+        ElementSlotHUD existingHud = FindFirstObjectByType<ElementSlotHUD>();
+        if (existingHud != null)
+            return;
+
+        gameObject.AddComponent<ElementSlotHUD>();
+        Debug.Log("[ElementSlotSystem] ElementSlotHUD가 없어 자동으로 추가했습니다.");
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -362,11 +373,10 @@ public class ElementSlotSystem : MonoBehaviour
 
         if (isCurse)
         {
-            for (int i = 0; i < slots.Length; i++)
-                slots[i].curseTurns = SLOT_CURSE_TURNS;
+            slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
 
-            resultMessage = $"패턴 발동: 모든 슬롯 저주 {SLOT_CURSE_TURNS}회";
-            Debug.Log($"[방해] 모든 슬롯 저주 {SLOT_CURSE_TURNS}회");
+            resultMessage = $"패턴 발동: {SLOT_KEYS[slotIndex]} 카드 저주 {SLOT_CURSE_TURNS}회";
+            Debug.Log($"[방해] {SLOT_KEYS[slotIndex]} 슬롯 저주 {SLOT_CURSE_TURNS}회");
         }
         else
         {

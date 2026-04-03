@@ -11,21 +11,11 @@ public class MoneyUI : MonoBehaviour
 {
     [Header("��ȭ ������ (���û���)")]
     [SerializeField] private Image moneyIconImage;  // ��ȭ ������ �̹��� (�ؽ�Ʈ ���� ��ġ)
-    
-    private static MoneyUI activeInstance;
+
     private TMP_Text moneyText;
-    private bool isPrimaryInstance;
 
     void Awake()
     {
-        if (activeInstance != null && activeInstance != this)
-        {
-            gameObject.SetActive(false);
-            return;
-        }
-
-        activeInstance = this;
-        isPrimaryInstance = true;
         moneyText = GetComponent<TMP_Text>();
         
         // MoneyManager���� ��ȭ ������ ��������
@@ -37,8 +27,6 @@ public class MoneyUI : MonoBehaviour
 
     void OnEnable()
     {
-        if (!isPrimaryInstance) return;
-
         // MoneyManager �̺�Ʈ ����
         if (MoneyManager.Instance != null)
         {
@@ -49,8 +37,6 @@ public class MoneyUI : MonoBehaviour
 
     void OnDisable()
     {
-        if (!isPrimaryInstance) return;
-
         // �̺�Ʈ ���� ����
         if (MoneyManager.Instance != null)
         {
@@ -60,14 +46,10 @@ public class MoneyUI : MonoBehaviour
 
     void OnDestroy()
     {
-        if (activeInstance == this)
-            activeInstance = null;
     }
 
     void Start()
     {
-        if (!isPrimaryInstance) return;
-
         // �ʱ� ��ȭ ǥ��
         if (MoneyManager.Instance != null)
         {

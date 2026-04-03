@@ -17,6 +17,7 @@ public class ElementSlotHUD : MonoBehaviour
     [SerializeField] private Vector2 statusBoxOffset = new Vector2(0f, 0f);
     [SerializeField] private int statusFontSize = 18;
     [SerializeField] private Color statusBackgroundColor = new Color(0f, 0f, 0f, 0.7f);
+    [SerializeField] private Color cursedStatusBackgroundColor = new Color(0.19f, 0.1f, 0.25f, 0.75f);
     [SerializeField] private Color statusTextColor = Color.white;
     [SerializeField] private float slotAlphaWhenEmpty = 0.2f;
     [SerializeField] private float slotAlphaWhenActive = 1f;
@@ -300,7 +301,10 @@ public class ElementSlotHUD : MonoBehaviour
             statusTexts[index].text = BuildStatusText(slot.RemainingCount, isCursed, isNeutral, isEmpty);
 
         if (statusBoxes[index] != null)
+        {
             statusBoxes[index].enabled = true;
+            statusBoxes[index].color = isCursed ? cursedStatusBackgroundColor : statusBackgroundColor;
+        }
     }
 
     void SetHudVisible(bool visible)
