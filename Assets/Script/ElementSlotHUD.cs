@@ -10,14 +10,16 @@ public class ElementSlotHUD : MonoBehaviour
     [SerializeField] private string combatCanvasName = "Canvas";
     [SerializeField] private string comboSlotName = "Comboslot";
     [SerializeField] private GameObject qwerCardPrefab;
+    [SerializeField] private Sprite neutralCardSprite;
     [SerializeField] private Vector2 rootAnchoredPosition = new Vector2(0f, 26f);
     [SerializeField] private Vector2 rootSize = new Vector2(880f, 240f);
     [SerializeField] private Vector2 slotSize = new Vector2(180f, 208f);
     [SerializeField] private Vector2 statusBoxSize = new Vector2(180f, 44f);
     [SerializeField] private Vector2 statusBoxOffset = new Vector2(0f, 0f);
+    [SerializeField] private Font statusFont;
     [SerializeField] private int statusFontSize = 18;
     [SerializeField] private Color statusBackgroundColor = new Color(0f, 0f, 0f, 0.7f);
-    [SerializeField] private Color cursedStatusBackgroundColor = new Color(0.19f, 0.1f, 0.25f, 0.75f);
+    [SerializeField] private Color cursedStatusBackgroundColor = new Color(0.05f, 0.02f, 0.08f, 0.97f);
     [SerializeField] private Color statusTextColor = Color.white;
     [SerializeField] private float slotAlphaWhenEmpty = 0.2f;
     [SerializeField] private float slotAlphaWhenActive = 1f;
@@ -195,6 +197,8 @@ public class ElementSlotHUD : MonoBehaviour
 
     void EnsureStatusBox(int index, Transform slotTransform)
     {
+        Font resolvedStatusFont = ResolveStatusFont();
+
         Transform existingBox = slotTransform.Find("StatusBox");
         if (existingBox == null)
         {
@@ -222,7 +226,7 @@ public class ElementSlotHUD : MonoBehaviour
             textRect.offsetMax = Vector2.zero;
 
             Text statusText = textObject.AddComponent<Text>();
-            statusText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            statusText.font = resolvedStatusFont;
             statusText.fontSize = statusFontSize;
             statusText.alignment = TextAnchor.MiddleCenter;
             statusText.color = statusTextColor;
@@ -258,13 +262,21 @@ public class ElementSlotHUD : MonoBehaviour
         Text textComponent = textTransform.GetComponent<Text>();
         if (textComponent == null)
             textComponent = textTransform.gameObject.AddComponent<Text>();
-        textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        textComponent.font = resolvedStatusFont;
         textComponent.fontSize = statusFontSize;
         textComponent.alignment = TextAnchor.MiddleCenter;
         textComponent.color = statusTextColor;
         textComponent.horizontalOverflow = HorizontalWrapMode.Wrap;
         textComponent.verticalOverflow = VerticalWrapMode.Overflow;
         statusTexts[index] = textComponent;
+    }
+
+    Font ResolveStatusFont()
+    {
+        if (statusFont != null)
+            return statusFont;
+
+        return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
     }
 
     void ApplyStatusBoxLayout(RectTransform statusRect, Transform slotTransform)
@@ -292,13 +304,13 @@ public class ElementSlotHUD : MonoBehaviour
         bool isEmpty = slot.currentCard == null && !isNeutral;
         bool isCursed = slot.curseTurns > 0;
 
-        Sprite iconSprite = GetSlotSprite(index);
+        Sprite iconSprite = isNeutral && neutralCardSprite != null ? neutralCardSprite : GetSlotSprite(index);
         slotIcons[index].sprite = iconSprite;
         slotIcons[index].enabled = iconSprite != null;
         slotIcons[index].color = GetIconColor(isCursed, isNeutral, isEmpty);
 
         if (statusTexts[index] != null)
-            statusTexts[index].text = BuildStatusText(slot.RemainingCount, isCursed, isNeutral, isEmpty);
+            statusTexts[index].text = BuildStatusText(slot.RemainingCount, slot.curseTurns, isCursed, isNeutral, isEmpty);
 
         if (statusBoxes[index] != null)
         {
@@ -340,7 +352,7 @@ public class ElementSlotHUD : MonoBehaviour
             return new Color(1f, 1f, 1f, slotAlphaWhenEmpty);
 
         if (neutral)
-            return new Color(1f, 1f, 1f, slotAlphaWhenNeutral);
+            return new Color(1f, 1f, 1f, 1f);
 
         if (cursed)
             return new Color(1f, 0.84f, 0.84f, slotAlphaWhenCursed);
@@ -348,7 +360,7 @@ public class ElementSlotHUD : MonoBehaviour
         return new Color(1f, 1f, 1f, slotAlphaWhenActive);
     }
 
-    string BuildStatusText(int remainingCount, bool cursed, bool neutral, bool empty)
+    string BuildStatusText(int remainingCount, int curseTurns, bool cursed, bool neutral, bool empty)
     {
         string stateText = "일반";
 
@@ -359,7 +371,10 @@ public class ElementSlotHUD : MonoBehaviour
             stateText = "중립";
 
         if (cursed)
-            stateText = neutral ? "중립, 저주" : "저주";
+        {
+            string curseText = "저주" + Mathf.Max(1, curseTurns);
+            stateText = neutral ? "중립, " + curseText : curseText;
+        }
 
         return "남은 장수 " + remainingCount + " | " + stateText;
     }
