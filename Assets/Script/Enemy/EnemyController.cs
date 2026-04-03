@@ -1,7 +1,9 @@
-﻿using System.Collections;
+﻿using Mono.Cecil;
+using System;
+using System.Collections;
 using UnityEngine;
 
-public class EnemyController : MonoBehaviour
+public class EnemyController : MonoBehaviour, IBattleUnit
 {
     [Header("공격 설정")]
     [SerializeField] private int fallbackGaugeFullDamage = 10;
@@ -21,8 +23,8 @@ public class EnemyController : MonoBehaviour
 
     private void Start()
     {
-        player = Object.FindFirstObjectByType<Player>();
-        roundmanager = Object.FindFirstObjectByType<Roundmanager>();
+        player = FindFirstObjectByType<Player>();
+        roundmanager = FindFirstObjectByType<Roundmanager>();
 
         stat.OnDied += HandleDeath;
         stat.OnMidPattern  += HandleMidPattern;
@@ -61,10 +63,16 @@ public class EnemyController : MonoBehaviour
         TakeDamage(damage, "Default");
     }
 
+    public event Action<string, int> OnStatusChanged;
     public void AddStatus(string type, int amount)
     {
         if (!stat.statusEffects.ContainsKey(type)) return;
+
+
         stat.statusEffects[type] += amount;
+
+        // 일반적인 상태이상 추가 시 갱신 신호 발송
+        OnStatusChanged?.Invoke(type, stat.statusEffects[type]);
     }
 
     public int GetStatus(string type)
@@ -74,7 +82,15 @@ public class EnemyController : MonoBehaviour
 
     public void SetStatus(string type, int amount)
     {
-        if (stat.statusEffects.ContainsKey(type)) stat.statusEffects[type] = amount;
+        if (stat.statusEffects.ContainsKey(type))
+        {
+            stat.statusEffects[type] = amount;
+            OnStatusChanged?.Invoke(type, amount);
+        }
+    }
+    public float GetAttackDamage()
+    {
+        return stat.AttackDamage;
     }
 
     public void AddGuard(float amount)
@@ -99,7 +115,7 @@ public class EnemyController : MonoBehaviour
     void HandleGaugeFull()
     {
         if (player == null)
-            player = Object.FindFirstObjectByType<Player>();
+            player = FindFirstObjectByType<Player>();
 
         int damagePerHit = Mathf.RoundToInt(stat.AttackDamage);
         if (damagePerHit <= 0)

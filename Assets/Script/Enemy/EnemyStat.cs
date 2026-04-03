@@ -24,6 +24,7 @@ public class EnemyStat : MonoBehaviour
     public int GaugeStep => gaugeStep;
 
     private EnemyData enemyData;
+    private EnemyController controller;
     private int columnIndex;
     private NodeType nodeType;
     private DifficultyConfig config;
@@ -101,7 +102,7 @@ public class EnemyStat : MonoBehaviour
         if (!IsAlive) return;
         if (statusEffects["freeze"]>0)
         {
-            statusEffects["freeze"]--; // 감소
+            GetComponent<EnemyController>().AddStatus("freeze", -1);
             return; // 얼린 상태면 게이지 안 차오름
         }
             

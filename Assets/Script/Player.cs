@@ -2,8 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using System;
 
-public class Player : MonoBehaviour
+public class Player : MonoBehaviour, IBattleUnit
 {
     [Header("능력치")]
     public int maxHp = 100;
@@ -51,6 +52,9 @@ public class Player : MonoBehaviour
         ResolveUiReferences();
         HideUnusedCooldownUI();
         if (resultText != null) resultText.text = "";
+        statusEffects["launcher"] = 0;
+        statusEffects["fortify"] = 0;
+        statusEffects["charge"] = 0;
     }
 
     void ResolveUiReferences()
@@ -322,6 +326,9 @@ public class Player : MonoBehaviour
             }
         }
     }
+
+    public event Action<string, int> OnStatusChanged;
+
     public void AddStatus(string type, int amount)
     {
         if (!statusEffects.ContainsKey(type)) return;
@@ -330,9 +337,12 @@ public class Player : MonoBehaviour
         {
             statusEffects["freeze"] += statusEffects["wet"];
             statusEffects["wet"] = 0;
+            OnStatusChanged?.Invoke("freeze", statusEffects["freeze"]);
+            OnStatusChanged?.Invoke("wet", 0);
             return;
         }
         statusEffects[type] += amount;
+        OnStatusChanged?.Invoke(type, statusEffects[type]);
     }
 
     public int GetStatus(string type)
@@ -342,8 +352,13 @@ public class Player : MonoBehaviour
 
     public void SetStatus(string type, int amount)
     {
-        if (statusEffects.ContainsKey(type)) statusEffects[type] = amount;
-    }
+        if (statusEffects.ContainsKey(type))
+        {
+            statusEffects[type] = amount;
+            OnStatusChanged?.Invoke(type, amount);
+        }
+
+     }
     public float GetAttackDamage()
     {
         return attackDamage;
