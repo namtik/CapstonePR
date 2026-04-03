@@ -344,6 +344,7 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
+    public event Action OnPlayerDied;
     public event Action<string, int> OnStatusChanged;
 
     public void AddStatus(string type, int amount)
@@ -389,6 +390,9 @@ public class Player : MonoBehaviour, IBattleUnit
     void Die()
     {
         Debug.Log("플레이어 사망!");
+        currentHp = 0;
+        UpdateUI();
+        OnPlayerDied?.Invoke();
     }
 
     public void Heal(int amount)
