@@ -1,8 +1,8 @@
 ﻿INT,STRING,FLOAT,STRING,STRING,STRING,STRING,INT,INT,STRING
 ID,Name,Damage,Combo,EffectName,SkillImg,StatusType,StatusAmount,GuardAmount,Description
-1001,화염폭,300,qqq,QSignatureMv_Eff,QSignatureMv_Img,burn,3,0,"공격력의 300% 데미지를 입히고, 화상 +3을 부여한다."
-1002,화염파,225,qqw,QQWMix_Eff,QQWMix_Img,freeze,0,0,"공격력의 225% 데미지를 입히고, 젖음을 빙결로 전환한다."
-1003,화염격,225,qqe,QQEMix_Eff,QQEMix_Img,launcher,3,0,"공격력의 225% 데미지를 입히고, 사출기 +3을 획득한다."
+1001,화염폭,300,QQQ,QSignatureMv_Eff,QSignatureMv_Img,burn,3,0,"공격력의 300% 데미지를 입히고, 화상 +3을 부여한다."
+1002,화염파,225,QQW,QQWMix_Eff,QQWMix_Img,freeze,0,0,"공격력의 225% 데미지를 입히고, 젖음을 빙결로 전환한다."
+1003,화염격,225,QQE,QQEMix_Eff,QQEMix_Img,launcher,3,0,"공격력의 225% 데미지를 입히고, 사출기 +3을 획득한다."
 1004,화염쇄,200,qqr,QQRMix_Eff,QQRMix_Img,spend,0,2,"공격력의 200% 데미지를 입히고, 흙 1당 방어도 2를 획득한다."
 1005,화류폭,225,qwq,QWQMix_Eff,QWQMix_Img,burn,5,0,"공격력의 225% 데미지를 입히고, 화상 +5을 부여한다."
 1006,화류파,200,qww,QWWMix_Eff,QWWMix_Img,wet,6,0,"공격력의 200% 데미지를 입히고, 젖음 +6을 부여한다."
