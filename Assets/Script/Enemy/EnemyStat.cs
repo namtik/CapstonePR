@@ -56,8 +56,8 @@ public class EnemyStat : MonoBehaviour
         GaugeSpeed = data.gaugeSpeed;
         currentHp = maxHp;
         hasDied = false;
-    gaugeStep = 0;
-    midPatternTriggered = false;
+        gaugeStep = 0;
+        midPatternTriggered = false;
 
         OnHpChanged?.Invoke(currentHp, maxHp);
 

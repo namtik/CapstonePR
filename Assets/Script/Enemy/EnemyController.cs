@@ -4,6 +4,7 @@ public class EnemyController : MonoBehaviour
 {
     [Header("공격 설정")]
     [SerializeField] private int fallbackGaugeFullDamage = 10;
+    [SerializeField] private ParticleSystem hitVFX;
 
     private EnemyStat stat;
     private EnemyView view;
@@ -110,6 +111,8 @@ public class EnemyController : MonoBehaviour
             // We resolve planned multi-hit attacks as separate hits so count-based difficulty is felt directly in combat.
             for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
                 player.TakeDamage(damagePerHit);
+                hitVFX.Stop();
+                hitVFX.Play();
 
             Debug.Log($"[EnemyController] Gauge full -> direct damage {damagePerHit}x{hitCount}");
         }
