@@ -15,6 +15,9 @@ public class Roundmanager : MonoBehaviour
     [SerializeField] private StatusPanelUI playerStatusPanel;
     [SerializeField] private StatusPanelUI enemyStatusPanel;
 
+    [Header("보상 UI")]
+    [SerializeField] private RewardHubUIController rewardHubUIController;
+
     private RoundData currentRoundData;
     private int currentEnemyIndex = 0;
     private EnemyStat currentEnemy;
@@ -206,7 +209,26 @@ public class Roundmanager : MonoBehaviour
     public void ShowSkillReward()
     {
         Debug.Log("스킬 보상 선택 UI 표시");
-        SkillDataParser.Instance.SkillRewardUI.ShowRewardOptions();
+
+        if (rewardHubUIController == null)
+            rewardHubUIController = FindFirstObjectByType<RewardHubUIController>(FindObjectsInactive.Include);
+
+        Debug.Log($"[Roundmanager] rewardHubUIController={(rewardHubUIController != null ? rewardHubUIController.name : "NULL")}");
+
+        if (rewardHubUIController != null)
+        {
+            Debug.Log("[Roundmanager] Opening RewardHubUIController.OpenHub()");
+            rewardHubUIController.OpenHub();
+            return;
+        }
+
+        if (SkillDataParser.Instance != null && SkillDataParser.Instance.SkillRewardUI != null)
+        {
+            Debug.Log("[Roundmanager] Fallback -> SkillRewardUI.ShowRewardOptions()");
+            SkillDataParser.Instance.SkillRewardUI.ShowRewardOptions();
+        }
+        else
+            Debug.LogError("[Roundmanager] RewardHubUIController와 SkillRewardUI가 모두 없습니다.");
     }
 
 

@@ -12,6 +12,14 @@ public class SkillRewardUI : MonoBehaviour
     public MapNode currentNode;                      // 현재 노드 참조
 
     public int currentStage;
+    [SerializeField] private bool returnToMapAfterSelection = true;
+
+    public System.Action<SkillData> OnSkillSelected;
+
+    public void SetReturnToMapAfterSelection(bool enabled)
+    {
+        returnToMapAfterSelection = enabled;
+    }
 
     public void ShowRewardOptions()
     {
@@ -53,9 +61,18 @@ public class SkillRewardUI : MonoBehaviour
             Time.timeScale = 1f;
             return;
         }
+
         rewardPanel.SetActive(false);
-        Time.timeScale = 1f;
         ComboSystem.Instance.LearnSkill(skill);
-        roundManager.ReturnToMap();
+        OnSkillSelected?.Invoke(skill);
+
+        if (returnToMapAfterSelection)
+        {
+            Time.timeScale = 1f;
+            if (roundManager != null)
+                roundManager.ReturnToMap();
+            else
+                Debug.LogWarning("[SkillRewardUI] roundManager reference is missing.");
+        }
     }
 }
