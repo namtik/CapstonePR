@@ -1,6 +1,6 @@
 ﻿INT,STRING,FLOAT,STRING,STRING,STRING,STRING,INT,INT,STRING
 ID,Name,Damage,Combo,EffectName,SkillImg,StatusType,StatusAmount,GuardAmount,Description
-1001,화염폭,300,qqq,QSignatureMv_Eff,QSignatureMv_Img,burn,3,0,"공격력의 300% 데미지, 화상 +5"
+1001,화염폭,300,qqq,QSignatureMv_Eff,QSignatureMv_Img,burn,5,0,"공격력의 300% 데미지, 화상 +5"
 1002,화염파,225,qqw,QQWMix_Eff,QQWMix_Img,freeze,0,0,"공격력의 225% 데미지, 젖음을 빙결로 전환한다."
 1003,화염격,225,qqe,QQEMix_Eff,QQEMix_Img,launcher,3,0,"공격력의 225% 데미지, 사출기 +3"
 1004,화염쇄,200,qqr,QQRMix_Eff,QQRMix_Img,spend,0,2,"공격력의 200% 데미지, 흙 1당 방어도 2를 획득한다."
@@ -63,4 +63,4 @@ ID,Name,Damage,Combo,EffectName,SkillImg,StatusType,StatusAmount,GuardAmount,Des
 1061,지벽폭,200,rrq,RRQMix_Eff,RRQMix_Img,detonate,0,0,"공격력의 200% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
 1062,지벽파,175,rrw,RRWMix_Eff,RRWMix_Img,freeze,0,0,"공격력의 175% 데미지, 젖음을 빙결로 전환한다."
 1063,지벽격,175,rre,RREMix_Eff,RREMix_Img,launcher,2,0,"공격력의 175% 데미지, 사출기 +2"
-1064,지벽쇄,250,rrr,RSignatureMv_Eff,RSignatureMv_Img,fortify,5,0,"공격력의 250% 데미지, 흙 +8"
+1064,지벽쇄,250,rrr,RSignatureMv_Eff,RSignatureMv_Img,fortify,8,0,"공격력의 250% 데미지, 흙 +8"
