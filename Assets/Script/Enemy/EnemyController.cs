@@ -127,7 +127,7 @@ public class EnemyController : MonoBehaviour
             }
 
             // 타격 사이의 짧은 간격 (0.1~0.15초 정도가 적당합니다)
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.15f);
         }
         Debug.Log($"[EnemyController] {count} hit");
     }
