@@ -296,7 +296,31 @@ public class GameStateController : MonoBehaviour
     public void RestartGame()
     {
         Time.timeScale = 1f;
+
+        // DontDestroyOnLoad 싱글턴들을 파괴하여 완전 초기화
+        DestroyPersistentSingletons();
+
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    void DestroyPersistentSingletons()
+    {
+        if (MoneyManager.Instance != null)
+            Destroy(MoneyManager.Instance.gameObject);
+
+        if (ElementSlotSystem.Instance != null)
+            Destroy(ElementSlotSystem.Instance.gameObject);
+
+        if (ComboSystem.Instance != null)
+            Destroy(ComboSystem.Instance.gameObject);
+
+        if (GameManager.Instance != null)
+            Destroy(GameManager.Instance.gameObject);
+
+        // Roundmanager가 생성한 런타임 Player 오브젝트 정리
+        Player[] players = FindObjectsByType<Player>(FindObjectsSortMode.None);
+        foreach (Player p in players)
+            Destroy(p.gameObject);
     }
 
 }
