@@ -5604,6 +5604,7 @@ GameObject:
   - component: {fileID: 814307232}
   - component: {fileID: 814307234}
   - component: {fileID: 814307233}
+  - component: {fileID: 814307235}
   m_Layer: 5
   m_Name: background
   m_TagString: Untagged
@@ -5707,6 +5708,7 @@ RectTransform:
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &818459577
+--- !u!114 &814307235
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5744,6 +5746,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 818459575}
   m_CullTransparentMesh: 1
+  m_GameObject: {fileID: 814307231}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6dd2160794a240a44bc8b72246b953a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkillListItemUI
+  nameText: {fileID: 0}
+  commandIconContainer: {fileID: 0}
+  iconQ: {fileID: 0}
+  iconW: {fileID: 0}
+  iconE: {fileID: 0}
+  iconR: {fileID: 0}
 --- !u!1 &829038369
 GameObject:
   m_ObjectHideFlags: 0
@@ -6566,7 +6580,8 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 61b6a5b059cfc924782b56acdd6a29e4, type: 3}
   - {fileID: 21300000, guid: 2e6bfe16f25a9b849af5c0397b7af0d8, type: 3}
   - {fileID: 21300000, guid: d252295a260726949ba25aa3f5f1d4fb, type: 3}
-  skillIconParent: {fileID: 1528637484}
+  skillListParent: {fileID: 0}
+  skillListItemPrefab: {fileID: 3856369562249949566, guid: 9064903e50b48d74a8c5312089e6fada, type: 3}
   skillActivationText: {fileID: 1132707912}
   skillActivationTextObjectName: SkillActivationText
   enableNextComboHints: 1
@@ -10221,8 +10236,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 590, y: 206}
-  m_SizeDelta: {x: 500, y: 100}
+  m_AnchoredPosition: {x: 590, y: -31}
+  m_SizeDelta: {x: 500, y: 900}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1528637485
 MonoBehaviour:
