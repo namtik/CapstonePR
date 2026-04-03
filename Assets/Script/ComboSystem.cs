@@ -95,7 +95,9 @@ public class ComboSystem : MonoBehaviour
     {
         learnedSkills.Add(newSkill);
         Debug.Log($"스킬 습득: {newSkill.name} ({newSkill.combo})");
-        comboLookup[newSkill.combo] = newSkill;
+        string comboKey = NormalizeCombo(newSkill.combo);
+        if (!string.IsNullOrEmpty(comboKey))
+            comboLookup[comboKey] = newSkill;
         learnedSkillCount += 1;
 
         // 스킬 아이콘 UI에 추가
@@ -396,6 +398,10 @@ public class ComboSystem : MonoBehaviour
 
     public void OnCardUsed(string cardType)
     {
+        string normalizedCardType = NormalizeCombo(cardType);
+        if (string.IsNullOrEmpty(normalizedCardType))
+            return;
+
         if (comboInput.Count >= 3)// 이미 3개가 꽉 차 있다면, 가장 오래된 것(0번)을 제거
         {
             comboInput.RemoveAt(0);
@@ -403,7 +409,7 @@ public class ComboSystem : MonoBehaviour
         
 
         // 새 카드 추가
-        comboInput.Add(cardType);
+        comboInput.Add(normalizedCardType);
         Debug.Log($"현재 콤보: {string.Join("-", comboInput)}"); // 디버깅용
 
         if (comboInput.Count == 3)
@@ -427,16 +433,17 @@ public class ComboSystem : MonoBehaviour
             if (i >= emptySlots.Count) break;
 
             string type = comboInput[i];
+            string displayType = type.ToUpperInvariant();
 
             // i번째 빈 슬롯의 자식으로 카드 생성
             GameObject newCard = Instantiate(cardPrefab, emptySlots[i].transform);
 
             // 카드 스크립트 설정
             Card cardScript = newCard.GetComponent<Card>();
-            int spriteIndex = System.Array.IndexOf(cardTypes, type);
+            int spriteIndex = System.Array.IndexOf(cardTypes, displayType);
             if (spriteIndex >= 0 && spriteIndex < cardSprites.Length)
             {
-                cardScript.SetType(type, cardSprites[spriteIndex]);
+                cardScript.SetType(displayType, cardSprites[spriteIndex]);
             }
 
             // UI 위치 초기화 (부모인 EmptySlot의 정중앙에 오도록)
@@ -454,7 +461,7 @@ public class ComboSystem : MonoBehaviour
 
     void CheckAndActivateSkills()
     {
-        string currentCombo = string.Join("", comboInput);
+        string currentCombo = NormalizeCombo(string.Join("", comboInput));
         Debug.Log($"현재 콤보: {currentCombo}"); // 디버깅용
         // 배운 스킬 중 콤보 길이가 긴 순서대로 정렬하여 매칭 (QQQ가 QQ보다 먼저 검색됨)
         if (comboLookup.TryGetValue(currentCombo, out SkillData skill))
@@ -494,5 +501,13 @@ public class ComboSystem : MonoBehaviour
         }
 
 
+    }
+
+    string NormalizeCombo(string combo)
+    {
+        if (string.IsNullOrWhiteSpace(combo))
+            return string.Empty;
+
+        return combo.Trim().ToLowerInvariant();
     }
 }
