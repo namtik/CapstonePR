@@ -789,7 +789,24 @@ public class ComboSystem : MonoBehaviour
         else
             HideSkillActivationText();
 
+        // 스킬이 하나도 없으면 랜덤 초기 스킬 1개 지급
+        if (learnedSkills.Count == 0)
+            LearnStarterSkill();
+
         UpdateNextComboHints();
+    }
+
+    void LearnStarterSkill()
+    {
+        if (SkillDataParser.Instance == null || SkillDataParser.Instance.allSkills.Count == 0)
+            return;
+
+        var candidates = SkillDataParser.Instance.GetRandomSkills(1, new HashSet<int>());
+        if (candidates.Count > 0)
+        {
+            LearnSkill(candidates[0]);
+            Debug.Log($"[ComboSystem] 초기 스킬 지급: {candidates[0].name}");
+        }
     }
 
     void Update()
