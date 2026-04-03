@@ -12,6 +12,7 @@ public class ComboSystem : MonoBehaviour
     [Header("콤보 슬롯 설정")]
     public Transform comboSlotParent; // 콤보 슬롯이 표시될 부모 오브젝트
     public GameObject cardPrefab; // 카드 프리팹 (콤보 슬롯에 표시용)
+    public GameObject EleslotPrefab;
     public Sprite[] cardSprites; // Q, W, E, R 카드 스프라이트
 
     private string[] cardTypes = { "Q", "W", "E", "R" };
@@ -177,7 +178,7 @@ public class ComboSystem : MonoBehaviour
                 rect.anchorMax = new Vector2(0.5f, 1f);
                 rect.pivot = new Vector2(0.5f, 1f);
                 rect.anchoredPosition = new Vector2(0f, -50f);
-                rect.sizeDelta = new Vector2(400f, 120f);
+                rect.sizeDelta = new Vector2(200f, 120f);
 
                 // HorizontalLayoutGroup 추가
                 HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
@@ -214,7 +215,7 @@ public class ComboSystem : MonoBehaviour
             emptySlot.transform.SetParent(comboSlotParent, false);
 
             RectTransform rect = emptySlot.AddComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(60f, 80f);
+            rect.sizeDelta = new Vector2(80f, 80f);
 
             // 빈 슬롯 배경 이미지 (회색 테두리)
             Image slotImage = emptySlot.AddComponent<Image>();
