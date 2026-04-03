@@ -389,6 +389,11 @@ public class Player : MonoBehaviour, IBattleUnit
     void Die()
     {
         Debug.Log("플레이어 사망!");
+
+        if (GameStateController.Instance != null)
+        {
+            GameStateController.Instance.OnPlayerDeath();
+        }
     }
 
     public void Heal(int amount)
