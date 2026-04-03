@@ -7,4 +7,6 @@ public interface IBattleUnit
     int GetStatus(string type);
     void SetStatus(string type, int amount);
     void AddGuard(float amount);
+    float GetAttackDamage();
 }
+

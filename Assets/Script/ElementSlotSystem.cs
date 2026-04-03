@@ -276,6 +276,7 @@ public class ElementSlotSystem : MonoBehaviour
         var slot = slots[index];
         if (!slot.HasCard) return;
 
+
         bool isNeutral        = slot.hasNeutralCard;
         RunDeckCard card      = slot.currentCard;
         bool triggeredCurse   = !isNeutral && slot.IsCursed;

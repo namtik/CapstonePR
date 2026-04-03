@@ -18,16 +18,20 @@ public class Player : MonoBehaviour
     public Text cooldownText; // 쿨타임 표시 텍스트
     public Text resultText; // 방어/회피 결과 텍스트
 
-    [Header("방어/회피 설정")]
-    public float defenseWindow = 0.5f; // 방어/회피 입력 유효 시간 (초)
-    public float defenseActionCooldown = 3f; // 방어/회피 쿨타임 (초)
+    [Header("상태이상 및 방어도")]
+    public float guard = 0f;
+    public Dictionary<string, int> statusEffects = new Dictionary<string, int>();
 
-    private bool isDefending = false;
-    private bool isDodging = false;
-    private float inputTimer = 0f;
-    private float cooldownTimer = 0f;
-    private bool isOnCooldown = false;
-    private float resultDisplayTimer = 0f;
+    //[Header("방어/회피 설정")]
+    //public float defenseWindow = 0.5f; // 방어/회피 입력 유효 시간 (초)
+    //public float defenseActionCooldown = 3f; // 방어/회피 쿨타임 (초)
+
+    //private bool isDefending = false;
+    //private bool isDodging = false;
+    //private float inputTimer = 0f;
+    //private float cooldownTimer = 0f;
+    //private bool isOnCooldown = false;
+    //private float resultDisplayTimer = 0f;
 
     public ParticleSystem attackParticle;
 
@@ -35,6 +39,10 @@ public class Player : MonoBehaviour
     {
         ResolveUiReferences();
         currentHp = maxHp;
+
+        statusEffects["launcher"] = 0;
+        statusEffects["fortify"] = 0;
+        statusEffects["charge"] = 0;
         UpdateUI();
     }
 
@@ -283,16 +291,71 @@ public class Player : MonoBehaviour
         //    return;
         //}
 
-        ShowResult("피격!", Color.red);
-        TakeDamage(damage);
+        //ShowResult("피격!", Color.red);
+        //TakeDamage(damage);
     }
 
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damage, string cardtype = "normal")
     {
-        currentHp -= Mathf.RoundToInt(damage);
-        if (currentHp < 0) currentHp = 0;
-        UpdateUI();
-        if (currentHp <= 0) Debug.Log("플레이어 사망");
+        if (guard > 0)
+        {
+            if (guard >= damage)
+            {
+                guard -= damage;
+                damage = 0;
+            }
+            else
+            {
+                damage -= guard;
+                guard = 0;
+            }
+        }
+        int finalDamage = Mathf.RoundToInt(damage);
+        if (finalDamage > 0)
+        {
+            currentHp -= finalDamage;
+            UpdateUI();
+
+            if (currentHp <= 0)
+            {
+                Die();
+            }
+        }
+    }
+    public void AddStatus(string type, int amount)
+    {
+        if (!statusEffects.ContainsKey(type)) return;
+
+        if (type == "freeze" && statusEffects["wet"] > 0)
+        {
+            statusEffects["freeze"] += statusEffects["wet"];
+            statusEffects["wet"] = 0;
+            return;
+        }
+        statusEffects[type] += amount;
+    }
+
+    public int GetStatus(string type)
+    {
+        return statusEffects.ContainsKey(type) ? statusEffects[type] : 0;
+    }
+
+    public void SetStatus(string type, int amount)
+    {
+        if (statusEffects.ContainsKey(type)) statusEffects[type] = amount;
+    }
+    public float GetAttackDamage()
+    {
+        return attackDamage;
+    }
+    public void AddGuard(float amount)
+    {
+        guard += amount;
+    }
+
+    void Die()
+    {
+        Debug.Log("플레이어 사망!");
     }
 
     public void Heal(int amount)
@@ -359,22 +422,22 @@ public class Player : MonoBehaviour
     //    }
     //}
 
-    void StartCooldown()
-    {
-        isOnCooldown = true;
-        cooldownTimer = defenseActionCooldown;
-        //UpdateCooldownUI();
-    }
+    //void StartCooldown()
+    //{
+    //    isOnCooldown = true;
+    //    cooldownTimer = defenseActionCooldown;
+    //    //UpdateCooldownUI();
+    //}
 
-    void ShowResult(string message, Color color)
-    {
-        if (resultText != null)
-        {
-            resultText.text = message;
-            resultText.color = color;
-            resultDisplayTimer = 0.5f; // 2초 동안 표시
-        }
-    }
+    //void ShowResult(string message, Color color)
+    //{
+    //    if (resultText != null)
+    //    {
+    //        resultText.text = message;
+    //        resultText.color = color;
+    //        resultDisplayTimer = 0.5f; // 2초 동안 표시
+    //    }
+    //}
 
     public void PlayAttackEffect()
     {

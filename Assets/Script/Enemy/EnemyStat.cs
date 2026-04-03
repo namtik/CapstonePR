@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class EnemyStat : MonoBehaviour
@@ -8,6 +9,9 @@ public class EnemyStat : MonoBehaviour
     public float AttackDamage;
     public float GaugeSpeed;
     public bool IsAlive => currentHp > 0;
+
+    public float guard = 0f;
+    public Dictionary<string, int> statusEffects = new Dictionary<string, int>();
 
     private int plannedAttackCount;
     private int currentAttackCount;
@@ -34,7 +38,12 @@ public class EnemyStat : MonoBehaviour
     public int CurrentAttackCount => currentAttackCount;
     public int PlannedAttackCount => plannedAttackCount;
 
-    //
+    private void Awake()
+    {
+        statusEffects["burn"] = 0;
+        statusEffects["wet"] = 0;
+        statusEffects["freeze"] = 0;
+    }
     public void Initialize(EnemyData data, int columnIndex, NodeType nodeType, DifficultyConfig config)
     {
         this.enemyData = data;
@@ -46,7 +55,7 @@ public class EnemyStat : MonoBehaviour
         AttackDamage = data.attackDamage;
         GaugeSpeed = data.gaugeSpeed;
         currentHp = maxHp;
-        hasDied = false; // ��� �÷��� �ʱ�ȭ
+        hasDied = false;
     gaugeStep = 0;
     midPatternTriggered = false;
 
@@ -90,7 +99,12 @@ public class EnemyStat : MonoBehaviour
     public void ConsumeGaugeStep()
     {
         if (!IsAlive) return;
-
+        if (statusEffects["freeze"]>0)
+        {
+            statusEffects["freeze"]--; // 감소
+            return; // 얼린 상태면 게이지 안 차오름
+        }
+            
         gaugeStep++;
         OnGaugeStepChanged?.Invoke((float)gaugeStep / GAUGE_MAX_STEPS);
 
