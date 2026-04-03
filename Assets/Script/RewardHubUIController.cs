@@ -10,6 +10,7 @@ public class RewardHubUIController : MonoBehaviour
     [Header("References")]
     [SerializeField] private Roundmanager roundManager;
     [SerializeField] private SkillRewardUI skillRewardUI;
+    [SerializeField] private CardUpgradeUIController cardUpgradeUIController;
 
     [Header("Auto Find Names (Fallback)")]
     [SerializeField] private string rewardHubRootName = "RewardHubUI";
@@ -57,6 +58,9 @@ public class RewardHubUIController : MonoBehaviour
 
         rewardFlowActive = true;
         Time.timeScale = 0f;
+        if (cardUpgradeUIController != null)
+            cardUpgradeUIController.SetUpgradeClaimed(false);
+
         Debug.Log($"[RewardHubUIController] OpenHub -> root={rewardHubRoot.name}, activeInHierarchy={rewardHubRoot.activeInHierarchy}");
         SetOnly(rewardHubRoot);
     }
@@ -82,6 +86,10 @@ public class RewardHubUIController : MonoBehaviour
 
         ResolveReferences();
         SetOnly(cardUpgradeRoot);
+        if (cardUpgradeUIController != null)
+            cardUpgradeUIController.ShowUpgradeOptions();
+        else
+            Debug.LogError("[RewardHubUIController] cardUpgradeUIController reference is missing.");
     }
 
     public void BackToHub()
@@ -155,6 +163,9 @@ public class RewardHubUIController : MonoBehaviour
 
         if (roundManager == null)
             roundManager = FindFirstObjectByType<Roundmanager>(FindObjectsInactive.Include);
+
+        if (cardUpgradeUIController == null && cardUpgradeRoot != null)
+            cardUpgradeUIController = cardUpgradeRoot.GetComponent<CardUpgradeUIController>();
 
         if (skillRewardUI != null)
             skillRewardUI.SetReturnToMapAfterSelection(false);

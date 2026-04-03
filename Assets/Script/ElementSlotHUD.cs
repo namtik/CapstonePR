@@ -18,6 +18,10 @@ public class ElementSlotHUD : MonoBehaviour
     [SerializeField] private Vector2 statusBoxOffset = new Vector2(0f, 0f);
     [SerializeField] private Font statusFont;
     [SerializeField] private int statusFontSize = 18;
+    [SerializeField] private Vector2 upgradeTextSize = new Vector2(56f, 30f);
+    [SerializeField] private Vector2 upgradeTextOffset = new Vector2(-8f, -8f);
+    [SerializeField] private int upgradeTextFontSize = 22;
+    [SerializeField] private Color upgradeTextColor = new Color(1f, 0.93f, 0.35f, 1f);
     [SerializeField] private Color statusBackgroundColor = new Color(0f, 0f, 0f, 0.7f);
     [SerializeField] private Color cursedStatusBackgroundColor = new Color(0.05f, 0.02f, 0.08f, 0.97f);
     [SerializeField] private Color statusTextColor = Color.white;
@@ -33,6 +37,7 @@ public class ElementSlotHUD : MonoBehaviour
     private readonly Image[] slotIcons = new Image[4];
     private readonly Image[] statusBoxes = new Image[4];
     private readonly Text[] statusTexts = new Text[4];
+    private readonly Text[] upgradeTexts = new Text[4];
 
     void Awake()
     {
@@ -165,6 +170,7 @@ public class ElementSlotHUD : MonoBehaviour
                 slotRect.sizeDelta = slotSize;
 
             EnsureStatusBox(index, slotTransform);
+            EnsureUpgradeText(index, slotTransform);
         }
     }
 
@@ -193,6 +199,59 @@ public class ElementSlotHUD : MonoBehaviour
         slotIcons[index] = iconImage;
 
         EnsureStatusBox(index, slotObject.transform);
+        EnsureUpgradeText(index, slotObject.transform);
+    }
+
+    void EnsureUpgradeText(int index, Transform slotTransform)
+    {
+        Font resolvedStatusFont = ResolveStatusFont();
+
+        Transform existingText = slotTransform.Find("UpgradeText");
+        if (existingText == null)
+        {
+            GameObject textObject = new GameObject("UpgradeText");
+            textObject.transform.SetParent(slotTransform, false);
+            existingText = textObject.transform;
+
+            RectTransform textRect = textObject.AddComponent<RectTransform>();
+            ApplyUpgradeTextLayout(textRect);
+
+            Text upgradeText = textObject.AddComponent<Text>();
+            upgradeText.font = resolvedStatusFont;
+            upgradeText.fontSize = upgradeTextFontSize;
+            upgradeText.alignment = TextAnchor.MiddleRight;
+            upgradeText.color = upgradeTextColor;
+            upgradeText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            upgradeText.verticalOverflow = VerticalWrapMode.Overflow;
+            upgradeText.text = "";
+            upgradeText.gameObject.SetActive(false);
+            upgradeTexts[index] = upgradeText;
+            return;
+        }
+
+        RectTransform existingRect = existingText as RectTransform;
+        if (existingRect != null)
+            ApplyUpgradeTextLayout(existingRect);
+
+        Text textComponent = existingText.GetComponent<Text>();
+        if (textComponent == null)
+            textComponent = existingText.gameObject.AddComponent<Text>();
+        textComponent.font = resolvedStatusFont;
+        textComponent.fontSize = upgradeTextFontSize;
+        textComponent.alignment = TextAnchor.MiddleRight;
+        textComponent.color = upgradeTextColor;
+        textComponent.horizontalOverflow = HorizontalWrapMode.Overflow;
+        textComponent.verticalOverflow = VerticalWrapMode.Overflow;
+        upgradeTexts[index] = textComponent;
+    }
+
+    void ApplyUpgradeTextLayout(RectTransform textRect)
+    {
+        textRect.anchorMin = new Vector2(1f, 1f);
+        textRect.anchorMax = new Vector2(1f, 1f);
+        textRect.pivot = new Vector2(1f, 1f);
+        textRect.anchoredPosition = upgradeTextOffset;
+        textRect.sizeDelta = upgradeTextSize;
     }
 
     void EnsureStatusBox(int index, Transform slotTransform)
@@ -316,6 +375,14 @@ public class ElementSlotHUD : MonoBehaviour
         {
             statusBoxes[index].enabled = true;
             statusBoxes[index].color = isCursed ? cursedStatusBackgroundColor : statusBackgroundColor;
+        }
+
+        if (upgradeTexts[index] != null)
+        {
+            bool showUpgrade = slot.currentCard != null && !isNeutral && !isEmpty;
+            upgradeTexts[index].gameObject.SetActive(showUpgrade);
+            if (showUpgrade)
+                upgradeTexts[index].text = "+" + Mathf.Max(0, slot.currentCard.upgradeLevel);
         }
     }
 
