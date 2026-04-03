@@ -32,11 +32,14 @@ public class FreezeEffect : StatusEffectBase
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         int wetAmount = target.GetStatus("wet");
-        if (wetAmount > 0)
+        if (wetAmount >= 5)
         {
-            target.SetStatus("wet", 0);
-            target.AddStatus("freeze", wetAmount);
-            Debug.Log($"[효과 발동] 대상의 젖음({wetAmount})이 빙결로 전환됨!");
+            int remainder = wetAmount % 5; // 5로 나누고 남은 젖음 수치
+            int freezeGain = wetAmount / 5; // 증가할 빙결 수치
+
+            target.SetStatus("wet", remainder); // 남은 젖음 수치만 세팅
+            target.AddStatus("freeze", freezeGain);
+            Debug.Log($"[효과 발동] 대상의 젖음이 빙결 {freezeGain}로 전환됨! (남은 젖음: {remainder})");
         }
     }
 }
@@ -78,14 +81,13 @@ public class FortifyEffect : StatusEffectBase
 
 public class ChargeEffect : StatusEffectBase
 {
-    Player player;
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         int launcherCount = caster.GetStatus("launcher");
         if (launcherCount > 0)
         {
             caster.SetStatus("launcher", 0);
-            float extraDamage = launcherCount * (player.attackDamage/10); // 사출기 당 추가 데미지
+            float extraDamage = launcherCount * (caster.GetAttackDamage() / 10f); // 사출기 당 추가 데미지
             target.TakeDamage(extraDamage, "Charge");
             Debug.Log($"[효과 발동] 화상 폭발! 대상에게 추가 데미지 {extraDamage}!");
         }

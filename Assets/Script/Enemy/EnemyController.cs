@@ -41,13 +41,17 @@ public class EnemyController : MonoBehaviour
         if (!stat.IsAlive) return;
     }
 
-    public void TakeDamage(float damage, string cardtype)
+    public void TakeDamage(float damage, string cardtype = "normal")
     {
         if (!stat.IsAlive) return;
 
-        stat.TakeDamage(damage);
-        view.ShowDamage(damage);
-        view.PlayHitEffect(cardtype);
+        // 실제 피해
+        if (damage > 0)
+        {
+            stat.TakeDamage(damage);
+            view.ShowDamage(damage);
+            view.PlayHitEffect(cardtype);
+        }
     }
 
     public void TakeDamage(float damage)
@@ -55,6 +59,26 @@ public class EnemyController : MonoBehaviour
         TakeDamage(damage, "Default");
     }
 
+    public void AddStatus(string type, int amount)
+    {
+        if (!stat.statusEffects.ContainsKey(type)) return;
+        stat.statusEffects[type] += amount;
+    }
+
+    public int GetStatus(string type)
+    {
+        return stat.statusEffects.ContainsKey(type) ? stat.statusEffects[type] : 0;
+    }
+
+    public void SetStatus(string type, int amount)
+    {
+        if (stat.statusEffects.ContainsKey(type)) stat.statusEffects[type] = amount;
+    }
+
+    public void AddGuard(float amount)
+    {
+        stat.guard += amount;
+    }
     /// <summary>Called by ElementSlotSystem each time the player uses a slot</summary>
     public void OnPlayerAction()
     {
