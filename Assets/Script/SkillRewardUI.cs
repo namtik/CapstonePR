@@ -13,7 +13,22 @@ public class SkillRewardUI : MonoBehaviour
 
     public int currentStage;
 
+    private bool isStarterSelection = false;
+
     public void ShowRewardOptions()
+    {
+        isStarterSelection = false;
+        ShowSkillSelection();
+    }
+
+    /// <summary>게임 시작 시 초기 스킬 선택 UI 표시</summary>
+    public void ShowStarterSkillSelection()
+    {
+        isStarterSelection = true;
+        ShowSkillSelection();
+    }
+
+    void ShowSkillSelection()
     {
         rewardPanel.SetActive(true);
         Time.timeScale = 0f; // 게임 일시정지
@@ -22,14 +37,16 @@ public class SkillRewardUI : MonoBehaviour
         foreach (Transform t in cardContainer) Destroy(t.gameObject);
 
         HashSet<int> learnedSkillIds = new HashSet<int>();
-        foreach (SkillData skill in ComboSystem.Instance.learnedSkills)
+        if (ComboSystem.Instance != null)
         {
-            learnedSkillIds.Add(skill.id);
+            foreach (SkillData skill in ComboSystem.Instance.learnedSkills)
+            {
+                learnedSkillIds.Add(skill.id);
+            }
         }
 
         // 랜덤 3개 가져오기
         List<SkillData> options = SkillDataParser.Instance.GetRandomSkills(3, learnedSkillIds);
-
 
         foreach (SkillData skill in options)
         {
@@ -38,7 +55,6 @@ public class SkillRewardUI : MonoBehaviour
             SkillCardUI cardUI = card.GetComponent<SkillCardUI>();
             if (cardUI != null)
             {
-                // 데이터와 클릭했을 때 할 행동(OnSelectSkill)을 전달
                 cardUI.Setup(skill, OnSelectSkill);
             }
         }
@@ -53,9 +69,18 @@ public class SkillRewardUI : MonoBehaviour
             Time.timeScale = 1f;
             return;
         }
+
         rewardPanel.SetActive(false);
         Time.timeScale = 1f;
         ComboSystem.Instance.LearnSkill(skill);
+
+        // 초기 스킬 선택이면 맵 복귀 없이 종료
+        if (isStarterSelection)
+        {
+            isStarterSelection = false;
+            return;
+        }
+
         roundManager.ReturnToMap();
     }
 }

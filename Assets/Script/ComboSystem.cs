@@ -789,7 +789,20 @@ public class ComboSystem : MonoBehaviour
         else
             HideSkillActivationText();
 
+        // 스킬이 하나도 없으면 랜덤 초기 스킬 1개 지급
+        if (learnedSkills.Count == 0)
+            LearnStarterSkill();
+
         UpdateNextComboHints();
+    }
+
+    void LearnStarterSkill()
+    {
+        if (SkillDataParser.Instance == null || SkillDataParser.Instance.SkillRewardUI == null)
+            return;
+
+        SkillDataParser.Instance.SkillRewardUI.ShowStarterSkillSelection();
+        Debug.Log("[ComboSystem] 초기 스킬 선택 UI 표시");
     }
 
     void Update()
