@@ -34,6 +34,7 @@ public class EnemyView : MonoBehaviour
     public ParticleSystem wEffect;
     public ParticleSystem eEffect;
     public ParticleSystem rEffect;
+    public ParticleSystem LEffect;
 
     private EnemyStat stat;
     private Vector3 damageTextOriginLocalPos;
@@ -289,6 +290,9 @@ public class EnemyView : MonoBehaviour
                 break;
             case "R":
                 if (rEffect != null) rEffect.Play();
+                break;
+            case "L":
+                if (LEffect != null) LEffect.Play();
                 break;
         }
     }

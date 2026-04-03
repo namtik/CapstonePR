@@ -10,7 +10,11 @@ public class Roundmanager : MonoBehaviour
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField] private Transform enemySpawnPoint;
     [SerializeField] private CombatStageController combatStageController;
-    
+
+    [Header("상태이상 UI 패널")]
+    [SerializeField] private StatusPanelUI playerStatusPanel;
+    [SerializeField] private StatusPanelUI enemyStatusPanel;
+
     private RoundData currentRoundData;
     private int currentEnemyIndex = 0;
     private EnemyStat currentEnemy;
@@ -18,18 +22,25 @@ public class Roundmanager : MonoBehaviour
     private IRoundHandler currentRoundHandler;
     private int clearedCombatCount = 0;
 
+
     void EnsureRuntimePlayerExists()
     {
         Player existingPlayer = FindFirstObjectByType<Player>();
         if (existingPlayer != null)
         {
             existingPlayer.UpdateUIForExternalSync();
+
+            if (playerStatusPanel != null) playerStatusPanel.SetTarget(existingPlayer);
             return;
         }
 
         GameObject playerObject = new GameObject("PlayerLogic");
-        playerObject.AddComponent<Player>();
+        Player newPlayer = playerObject.AddComponent<Player>();
         DontDestroyOnLoad(playerObject);
+
+        Debug.Log("[RoundManager] Hidden runtime Player created");
+
+        if (playerStatusPanel != null) playerStatusPanel.SetTarget(newPlayer);
 
         Debug.Log("[RoundManager] Hidden runtime Player created");
     }
@@ -124,6 +135,9 @@ public class Roundmanager : MonoBehaviour
         EnsureElementCombatSystems();
         ElementSlotSystem.Instance?.StartBattle();
 
+        Player player = FindFirstObjectByType<Player>();
+        if (player != null) player.ResetStatusForNewBattle();
+
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
     }
@@ -136,6 +150,9 @@ public class Roundmanager : MonoBehaviour
         EnsureElementCombatSystems();
         ElementSlotSystem.Instance?.StartBattle();
 
+        Player player = FindFirstObjectByType<Player>();
+        if (player != null) player.ResetStatusForNewBattle();
+
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
     }
@@ -147,6 +164,9 @@ public class Roundmanager : MonoBehaviour
     {
         EnsureElementCombatSystems();
         ElementSlotSystem.Instance?.StartBattle();
+
+        Player player = FindFirstObjectByType<Player>();
+        if (player != null) player.ResetStatusForNewBattle();
 
         SpawnEnemy(data.bossEnemy, data.columnIndex, NodeType.Boss);
     }
@@ -246,10 +266,16 @@ public class Roundmanager : MonoBehaviour
         EnemyStat stat = go.GetComponent<EnemyStat>();
         EnemyView view = go.GetComponent<EnemyView>();
 
+        EnemyController controller = go.GetComponent<EnemyController>();
+
         if (stat == null)
         {
             Debug.LogError("RoundManager: enemyPrefab에 EnemyStat이 없습니다.");
             return;
+        }
+        if (enemyStatusPanel != null && controller != null)
+        {
+            enemyStatusPanel.SetTarget(controller);
         }
         Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}");
         

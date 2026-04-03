@@ -2,8 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using System;
 
-public class Player : MonoBehaviour
+public class Player : MonoBehaviour, IBattleUnit
 {
     [Header("능력치")]
     public int maxHp = 100;
@@ -51,6 +52,7 @@ public class Player : MonoBehaviour
         ResolveUiReferences();
         HideUnusedCooldownUI();
         if (resultText != null) resultText.text = "";
+
     }
 
     void ResolveUiReferences()
@@ -208,6 +210,24 @@ public class Player : MonoBehaviour
         // Assign resultText in inspector if this UI is needed.
     }
 
+    public void ResetStatusForNewBattle()
+    {
+        // 방어도 초기화
+        guard = 0f;
+
+        // 모든 상태이상 수치를 0으로 만들고 UI 패널에 알림
+        List<string> keys = new List<string>(statusEffects.Keys);
+        foreach (string key in keys)
+        {
+            if (statusEffects[key] > 0)
+            {
+                statusEffects[key] = 0;
+
+                // UI 아이콘이 지워지도록 0이 되었다는 신호 발송!
+                OnStatusChanged?.Invoke(key, 0);
+            }
+        }
+    }
     void Update()
     {
         //HandleDefenseInput();
@@ -309,6 +329,7 @@ public class Player : MonoBehaviour
                 damage -= guard;
                 guard = 0;
             }
+            OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
         }
         int finalDamage = Mathf.RoundToInt(damage);
         if (finalDamage > 0)
@@ -322,6 +343,9 @@ public class Player : MonoBehaviour
             }
         }
     }
+
+    public event Action<string, int> OnStatusChanged;
+
     public void AddStatus(string type, int amount)
     {
         if (!statusEffects.ContainsKey(type)) return;
@@ -330,9 +354,12 @@ public class Player : MonoBehaviour
         {
             statusEffects["freeze"] += statusEffects["wet"];
             statusEffects["wet"] = 0;
+            OnStatusChanged?.Invoke("freeze", statusEffects["freeze"]);
+            OnStatusChanged?.Invoke("wet", 0);
             return;
         }
         statusEffects[type] += amount;
+        OnStatusChanged?.Invoke(type, statusEffects[type]);
     }
 
     public int GetStatus(string type)
@@ -342,8 +369,13 @@ public class Player : MonoBehaviour
 
     public void SetStatus(string type, int amount)
     {
-        if (statusEffects.ContainsKey(type)) statusEffects[type] = amount;
-    }
+        if (statusEffects.ContainsKey(type))
+        {
+            statusEffects[type] = amount;
+            OnStatusChanged?.Invoke(type, amount);
+        }
+
+     }
     public float GetAttackDamage()
     {
         return attackDamage;
@@ -351,6 +383,7 @@ public class Player : MonoBehaviour
     public void AddGuard(float amount)
     {
         guard += amount;
+        OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
     }
 
     void Die()

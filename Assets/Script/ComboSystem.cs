@@ -656,6 +656,16 @@ public class ComboSystem : MonoBehaviour
             Debug.Log($"{skill.name} 발동! 데미지: {damage}");
         }
 
+        if (EffectManager.Instance != null)
+        {
+            // 스킬 데이터에 있는 상태이상 종류와 수치를 넘겨줍니다.
+            // (caster는 플레이어, target은 적)
+            EffectManager.Instance.ApplySkillEffect(skill.statusType, skill.statusAmount, player, enemyController);
+        }
+        else
+        {
+            Debug.LogError("EffectManager.Instance가 존재하지 않습니다! 씬에 EffectManager가 있는지 확인하세요.");
+        }
         if (skillActivationText == null)
             ResolveSkillActivationText();
 
