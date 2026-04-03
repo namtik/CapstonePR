@@ -5,6 +5,7 @@ using static SkillDataParser;
 using System.Linq;
 using System;
 using Object = UnityEngine.Object;
+using TMPro;
 
 // 콤보 스킬 시스템 관리 클래스
 public class ComboSystem : MonoBehaviour
@@ -25,8 +26,22 @@ public class ComboSystem : MonoBehaviour
     private List<GameObject> comboSlotCards = new List<GameObject>(); // 콤보 슬롯에 표시된 카드 오브젝트
     private List<GameObject> emptySlots = new List<GameObject>(); // 빈 슬롯 오브젝트 (항상 표시)
 
-    // 스킬 발동 알림 UI
-    private Text skillActivationText;
+    [Header("스킬 발동 알림 UI")]
+    [SerializeField] private TMP_Text skillActivationText;
+    [SerializeField] private string skillActivationTextObjectName = "SkillActivationText";
+
+    [Header("다음 콤보 힌트 UI")]
+    [SerializeField] private bool enableNextComboHints = true;
+    [SerializeField] private string elementSlotRootName = "ElementSlotRoot";
+    [SerializeField] private string slotObjectPrefix = "Slot_";
+    [SerializeField] private string nextHintObjectPrefix = "NextSkillHint_";
+    [SerializeField] private TMP_FontAsset nextHintFont;
+    [SerializeField] private int nextHintFontSize = 22;
+    [SerializeField] private FontStyles nextHintFontStyle = FontStyles.Bold;
+    [SerializeField] private Color nextHintColor = new Color(1f, 0.9f, 0.4f, 1f);
+    [SerializeField] private Vector2 nextHintOffset = new Vector2(0f, 12f);
+    [SerializeField] private Vector2 nextHintSize = new Vector2(170f, 34f);
+    [SerializeField] private bool nextHintAutoSize = false;
     private float skillTextTimer = 0f;
     private bool isShowingSkillText = false;
     private const float SKILL_TEXT_DISPLAY_TIME = 0.5f;
@@ -40,6 +55,9 @@ public class ComboSystem : MonoBehaviour
     private EnemyController enemyController;
     // CardSystem 제거 — ElementSlotSystem으로 교체됨
     private Roundmanager roundManager;  
+
+    private readonly Dictionary<string, TMP_Text> nextHintTexts = new Dictionary<string, TMP_Text>();
+    private static readonly string[] hintKeys = { "q", "w", "e", "r" };
 
     public static ComboSystem Instance;
 
@@ -65,6 +83,17 @@ public class ComboSystem : MonoBehaviour
         // UI 생성
         CreateComboSlots();
         CreateSkillIcons();
+
+        ResolveSkillActivationText();
+
+        if (skillActivationText == null)
+            Debug.LogWarning("[ComboSystem] skillActivationText를 찾지 못했습니다. 인스펙터 연결 또는 이름 매칭을 확인하세요.");
+        else
+        {
+            HideSkillActivationText();
+        }
+
+        UpdateNextComboHints();
     }
 
     void Update()
@@ -78,17 +107,185 @@ public class ComboSystem : MonoBehaviour
                 isShowingSkillText = false;
                 if (skillActivationText != null)
                 {
-                    skillActivationText.text = "";
+                    HideSkillActivationText();
                 }
             }
         }
 
         RefreshEnemyRef();
+
+        if (enableNextComboHints && !HasAllHintBindings())
+        {
+            UpdateNextComboHints();
+        }
     }
     void RefreshEnemyRef()
     {
         if (enemyController == null || !enemyController.gameObject.activeInHierarchy)
             enemyController = Object.FindFirstObjectByType<EnemyController>();
+
+        if (skillActivationText == null)
+            ResolveSkillActivationText();
+    }
+
+    bool HasAllHintBindings()
+    {
+        foreach (string key in hintKeys)
+        {
+            if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText) || hintText == null)
+                return false;
+        }
+
+        return true;
+    }
+
+    void EnsureNextHintBindings()
+    {
+        if (!enableNextComboHints)
+            return;
+
+        GameObject slotRootObject = GameObject.Find(elementSlotRootName);
+        if (slotRootObject == null)
+            return;
+
+        Transform slotRoot = slotRootObject.transform;
+
+        foreach (string key in hintKeys)
+        {
+            string slotName = slotObjectPrefix + key.ToUpperInvariant();
+            Transform slotTransform = slotRoot.Find(slotName);
+            if (slotTransform == null)
+                continue;
+
+            string hintObjectName = nextHintObjectPrefix + key.ToUpperInvariant();
+            Transform hintTransform = slotTransform.Find(hintObjectName);
+            if (hintTransform == null)
+            {
+                GameObject hintObject = new GameObject(hintObjectName);
+                hintObject.transform.SetParent(slotTransform, false);
+                hintTransform = hintObject.transform;
+            }
+
+            RectTransform hintRect = hintTransform as RectTransform;
+            if (hintRect == null)
+                hintRect = hintTransform.gameObject.AddComponent<RectTransform>();
+
+            hintRect.anchorMin = new Vector2(0.5f, 1f);
+            hintRect.anchorMax = new Vector2(0.5f, 1f);
+            hintRect.pivot = new Vector2(0.5f, 0f);
+            hintRect.anchoredPosition = nextHintOffset;
+            hintRect.sizeDelta = nextHintSize;
+
+            TMP_Text hintText = hintTransform.GetComponent<TMP_Text>();
+            if (hintText == null)
+                hintText = hintTransform.gameObject.AddComponent<TextMeshProUGUI>();
+
+            hintText.alignment = TextAlignmentOptions.Center;
+            hintText.color = nextHintColor;
+            hintText.fontSize = nextHintFontSize;
+            hintText.fontStyle = nextHintFontStyle;
+            hintText.enableAutoSizing = nextHintAutoSize;
+            hintText.raycastTarget = false;
+            hintText.textWrappingMode = TextWrappingModes.NoWrap;
+            hintText.overflowMode = TextOverflowModes.Overflow;
+            if (nextHintFont != null)
+                hintText.font = nextHintFont;
+
+            nextHintTexts[key] = hintText;
+        }
+    }
+
+    void ClearNextComboHints()
+    {
+        foreach (string key in hintKeys)
+        {
+            if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText) || hintText == null)
+                continue;
+
+            hintText.text = "";
+            hintText.gameObject.SetActive(false);
+        }
+    }
+
+    void UpdateNextComboHints()
+    {
+        if (!enableNextComboHints)
+            return;
+
+        EnsureNextHintBindings();
+        ClearNextComboHints();
+
+        if (comboInput.Count < 2)
+            return;
+
+        string prefix = comboInput[comboInput.Count - 2] + comboInput[comboInput.Count - 1];
+        Dictionary<string, SkillData> previewByNextKey = new Dictionary<string, SkillData>();
+
+        foreach (SkillData skill in learnedSkills)
+        {
+            if (skill == null)
+                continue;
+
+            string combo = NormalizeCombo(skill.combo);
+            if (combo.Length < 3)
+                continue;
+
+            if (!combo.StartsWith(prefix, StringComparison.Ordinal))
+                continue;
+
+            string nextKey = combo.Substring(2, 1);
+            if (!previewByNextKey.ContainsKey(nextKey))
+                previewByNextKey[nextKey] = skill;
+        }
+
+        foreach (KeyValuePair<string, SkillData> pair in previewByNextKey)
+        {
+            if (!nextHintTexts.TryGetValue(pair.Key, out TMP_Text hintText) || hintText == null)
+                continue;
+
+            hintText.text = pair.Value.name;
+            hintText.gameObject.SetActive(true);
+        }
+    }
+
+    void ResolveSkillActivationText()
+    {
+        if (skillActivationText != null)
+            return;
+
+        if (enemyController != null)
+        {
+            TMP_Text[] enemyTexts = enemyController.GetComponentsInChildren<TMP_Text>(true);
+            foreach (TMP_Text text in enemyTexts)
+            {
+                if (text != null && text.name == skillActivationTextObjectName)
+                {
+                    skillActivationText = text;
+                    HideSkillActivationText();
+                    return;
+                }
+            }
+        }
+
+        TMP_Text[] allTexts = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (TMP_Text text in allTexts)
+        {
+            if (text != null && text.name == skillActivationTextObjectName)
+            {
+                skillActivationText = text;
+                HideSkillActivationText();
+                return;
+            }
+        }
+    }
+
+    void HideSkillActivationText()
+    {
+        if (skillActivationText == null)
+            return;
+
+        skillActivationText.text = "";
+        skillActivationText.gameObject.SetActive(false);
     }
 
     public void LearnSkill(SkillData newSkill)
@@ -102,6 +299,8 @@ public class ComboSystem : MonoBehaviour
 
         // 스킬 아이콘 UI에 추가
         CreateSkillIcon(newSkill, learnedSkills.Count - 1);
+
+        UpdateNextComboHints();
 
     }
 
@@ -195,8 +394,6 @@ public class ComboSystem : MonoBehaviour
 
         // 빈 슬롯 3개 생성 (항상 표시)
         CreateEmptySlots();
-        // 스킬 발동 알림 텍스트 생성 (콤보 슬롯 아래)
-        CreateSkillActivationText();
     }
 
     // 빈 콤보 슬롯 3개 생성
@@ -225,36 +422,6 @@ public class ComboSystem : MonoBehaviour
 
             emptySlots.Add(emptySlot);
         }
-    }
-
-    // 스킬 발동 알림 텍스트 생성
-    void CreateSkillActivationText()
-    {
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null) return;
-
-        GameObject textObj = new GameObject("SkillActivationText");
-        textObj.transform.SetParent(canvas.transform, false);
-
-        RectTransform rect = textObj.AddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 1f);
-        rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = new Vector2(0f, -200f);
-        rect.sizeDelta = new Vector2(500f, 60f);
-
-        skillActivationText = textObj.AddComponent<Text>();
-        skillActivationText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        skillActivationText.fontSize = 32;
-        skillActivationText.alignment = TextAnchor.MiddleCenter;
-        skillActivationText.color = new Color(1f, 0.8f, 0f, 1f);
-        skillActivationText.fontStyle = FontStyle.Bold;
-        skillActivationText.text = "";
-
-        // Outline 추가
-        Outline outline = textObj.AddComponent<Outline>();
-        outline.effectColor = Color.black;
-        outline.effectDistance = new Vector2(3, -3);
     }
 
     // 스킬 아이콘 UI 생성 (화면 하단 중앙, 카드 위)
@@ -394,6 +561,8 @@ public class ComboSystem : MonoBehaviour
             if (card != null) Destroy(card);
         }
         comboSlotCards.Clear();
+
+        ClearNextComboHints();
     }
 
     public void OnCardUsed(string cardType)
@@ -416,6 +585,7 @@ public class ComboSystem : MonoBehaviour
             CheckAndActivateSkills();
 
         UpdateComboSlotUI();
+        UpdateNextComboHints();
     }
 
     void UpdateComboSlotUI()
@@ -486,8 +656,13 @@ public class ComboSystem : MonoBehaviour
             Debug.Log($"{skill.name} 발동! 데미지: {damage}");
         }
 
+        if (skillActivationText == null)
+            ResolveSkillActivationText();
+
         if (skillActivationText != null)
         {
+            skillActivationText.gameObject.SetActive(true);
+
             skillActivationText.text = $"{skill.name} 발동!";
             skillTextTimer = SKILL_TEXT_DISPLAY_TIME;
             isShowingSkillText = true;
