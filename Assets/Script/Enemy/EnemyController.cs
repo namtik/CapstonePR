@@ -52,6 +52,12 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         // 실제 피해
         if (damage > 0)
         {
+            if (player.statusEffects["launcher"] > 0)
+            {
+                stat.TakeDamage(player.attackDamage / 10f);
+                view.PlayHitEffect("L");
+                player.AddStatus("launcher", -1);
+            }
             stat.TakeDamage(damage);
             view.ShowDamage(damage);
             view.PlayHitEffect(cardtype);
@@ -67,7 +73,10 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     public void AddStatus(string type, int amount)
     {
         if (!stat.statusEffects.ContainsKey(type)) return;
-
+        if (type == "freeze" && stat.statusEffects["wet"] > 0)
+        {
+            stat.isNewlyFrozen = true;
+        }
 
         stat.statusEffects[type] += amount;
 

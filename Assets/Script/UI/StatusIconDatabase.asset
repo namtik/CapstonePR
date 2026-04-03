@@ -23,5 +23,5 @@ MonoBehaviour:
     iconSprite: {fileID: 21300000, guid: 0bad83de17ddea14c91e271b2b6c3d53, type: 3}
   - statusKey: fortify
     iconSprite: {fileID: 21300000, guid: 21ecf082b491ea742aea8771d0034e60, type: 3}
-  - statusKey: gaurd
+  - statusKey: guard
     iconSprite: {fileID: 21300000, guid: dc150ce8dabf22346a5e7c96e838c5be, type: 3}

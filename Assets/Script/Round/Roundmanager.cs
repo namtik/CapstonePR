@@ -135,6 +135,9 @@ public class Roundmanager : MonoBehaviour
         EnsureElementCombatSystems();
         ElementSlotSystem.Instance?.StartBattle();
 
+        Player player = FindFirstObjectByType<Player>();
+        if (player != null) player.ResetStatusForNewBattle();
+
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
     }
@@ -147,6 +150,9 @@ public class Roundmanager : MonoBehaviour
         EnsureElementCombatSystems();
         ElementSlotSystem.Instance?.StartBattle();
 
+        Player player = FindFirstObjectByType<Player>();
+        if (player != null) player.ResetStatusForNewBattle();
+
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
     }
@@ -158,6 +164,9 @@ public class Roundmanager : MonoBehaviour
     {
         EnsureElementCombatSystems();
         ElementSlotSystem.Instance?.StartBattle();
+
+        Player player = FindFirstObjectByType<Player>();
+        if (player != null) player.ResetStatusForNewBattle();
 
         SpawnEnemy(data.bossEnemy, data.columnIndex, NodeType.Boss);
     }

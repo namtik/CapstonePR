@@ -2267,7 +2267,7 @@ MonoBehaviour:
     m_Bottom: 0
   m_ChildAlignment: 0
   m_StartCorner: 0
-  m_StartAxis: 0
+  m_StartAxis: 1
   m_CellSize: {x: 100, y: 100}
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 0
@@ -3758,7 +3758,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 348}
+  m_AnchoredPosition: {x: 0, y: 402}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &734949239
@@ -3794,7 +3794,7 @@ MonoBehaviour:
     m_Bottom: 0
   m_ChildAlignment: 0
   m_StartCorner: 0
-  m_StartAxis: 0
+  m_StartAxis: 1
   m_CellSize: {x: 100, y: 100}
   m_Spacing: {x: 0, y: 0}
   m_Constraint: 0
@@ -4441,6 +4441,19 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 2e6bfe16f25a9b849af5c0397b7af0d8, type: 3}
   - {fileID: 21300000, guid: d252295a260726949ba25aa3f5f1d4fb, type: 3}
   skillIconParent: {fileID: 1528637484}
+  skillActivationText: {fileID: 0}
+  skillActivationTextObjectName: SkillActivationText
+  enableNextComboHints: 1
+  elementSlotRootName: ElementSlotRoot
+  slotObjectPrefix: Slot_
+  nextHintObjectPrefix: NextSkillHint_
+  nextHintFont: {fileID: 0}
+  nextHintFontSize: 22
+  nextHintFontStyle: 1
+  nextHintColor: {r: 1, g: 0.9, b: 0.4, a: 1}
+  nextHintOffset: {x: 0, y: 12}
+  nextHintSize: {x: 170, y: 34}
+  nextHintAutoSize: 0
   learnedSkills: []
   learnedSkillCount: 0
 --- !u!4 &921928112

@@ -52,9 +52,7 @@ public class Player : MonoBehaviour, IBattleUnit
         ResolveUiReferences();
         HideUnusedCooldownUI();
         if (resultText != null) resultText.text = "";
-        statusEffects["launcher"] = 0;
-        statusEffects["fortify"] = 0;
-        statusEffects["charge"] = 0;
+
     }
 
     void ResolveUiReferences()
@@ -212,6 +210,24 @@ public class Player : MonoBehaviour, IBattleUnit
         // Assign resultText in inspector if this UI is needed.
     }
 
+    public void ResetStatusForNewBattle()
+    {
+        // 방어도 초기화
+        guard = 0f;
+
+        // 모든 상태이상 수치를 0으로 만들고 UI 패널에 알림
+        List<string> keys = new List<string>(statusEffects.Keys);
+        foreach (string key in keys)
+        {
+            if (statusEffects[key] > 0)
+            {
+                statusEffects[key] = 0;
+
+                // UI 아이콘이 지워지도록 0이 되었다는 신호 발송!
+                OnStatusChanged?.Invoke(key, 0);
+            }
+        }
+    }
     void Update()
     {
         //HandleDefenseInput();
@@ -313,6 +329,7 @@ public class Player : MonoBehaviour, IBattleUnit
                 damage -= guard;
                 guard = 0;
             }
+            OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
         }
         int finalDamage = Mathf.RoundToInt(damage);
         if (finalDamage > 0)
@@ -366,6 +383,7 @@ public class Player : MonoBehaviour, IBattleUnit
     public void AddGuard(float amount)
     {
         guard += amount;
+        OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
     }
 
     void Die()

@@ -35,6 +35,7 @@ public class EnemyStat : MonoBehaviour
     public event Action OnMidPattern;              // 50% step reached
     public event Action OnGaugeFull;               // 100% - enemy attacks
     public event Action<float> OnGaugeStepChanged; // gauge ratio 0~1
+    public bool isNewlyFrozen = false;
 
     public int CurrentAttackCount => currentAttackCount;
     public int PlannedAttackCount => plannedAttackCount;
@@ -100,12 +101,24 @@ public class EnemyStat : MonoBehaviour
     public void ConsumeGaugeStep()
     {
         if (!IsAlive) return;
-        if (statusEffects["freeze"]>0)
+        if (statusEffects.ContainsKey("freeze") && statusEffects["freeze"] > 0)
         {
-            GetComponent<EnemyController>().AddStatus("freeze", -1);
-            return; // 얼린 상태면 게이지 안 차오름
+            if (isNewlyFrozen)
+            {
+                isNewlyFrozen = false; 
+            }
+            else
+            {
+  
+                EnemyController myController = GetComponent<EnemyController>();
+                if (myController != null)
+                {
+                    myController.AddStatus("freeze", -1);
+                }
+                return; 
+            }
         }
-            
+
         gaugeStep++;
         OnGaugeStepChanged?.Invoke((float)gaugeStep / GAUGE_MAX_STEPS);
 
