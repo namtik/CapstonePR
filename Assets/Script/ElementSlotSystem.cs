@@ -342,7 +342,7 @@ public class ElementSlotSystem : MonoBehaviour
         if (isCurse)
         {
             slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
-            resultMessage = $"Pattern: {SLOT_KEYS[slotIndex]} Curse {SLOT_CURSE_TURNS}T";
+            resultMessage = $"패턴 발동: {SLOT_KEYS[slotIndex]} 카드 저주받음 {SLOT_CURSE_TURNS}턴";
             Debug.Log($"[방해] {SLOT_KEYS[slotIndex]} 슬롯 저주 {SLOT_CURSE_TURNS}턴");
         }
         else
@@ -354,7 +354,7 @@ public class ElementSlotSystem : MonoBehaviour
             if (slots[slotIndex].currentCard == null)
                 DrawCardForSlot(slotIndex);
 
-            resultMessage = $"Pattern: {SLOT_KEYS[slotIndex]} Neutral Added";
+            resultMessage = $"패턴 발동: {SLOT_KEYS[slotIndex]}에 무속성 카드 추가";
             Debug.Log($"[방해] {SLOT_KEYS[slotIndex]} 슬롯 무속성 카드 혼입");
         }
 
