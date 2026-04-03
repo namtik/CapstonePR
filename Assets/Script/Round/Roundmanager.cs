@@ -106,6 +106,9 @@ public class Roundmanager : MonoBehaviour
     {
         EnsureElementCombatSystems();
 
+        // 플레이어 사망 이벤트 구독 (전투 시작마다 갱신)
+        GameStateController.Instance?.SubscribePlayerDeath();
+
         currentRoundData = roundData;
         currentEnemyIndex = 0;
 

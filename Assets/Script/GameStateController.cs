@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // 게임 상태를 관리하고 캔버스 전환을 담당
 //  씬 전환 대신 캔버스 활성화/비활성화로 상태 전환
@@ -23,6 +24,9 @@ public class GameStateController : MonoBehaviour
     public BattleManger battleManager;
     public Roundmanager roundManager;  // 라운드 관리자 추가
 
+    [Header("Game Over")]
+    public GameObject gameOverPanel;
+
     [Header("Game State")]
     public int lastVisitedNodeIndex = -1;
     public System.Collections.Generic.List<int> clearedNodes = new System.Collections.Generic.List<int>();
@@ -45,6 +49,11 @@ public class GameStateController : MonoBehaviour
         // 게임 시작 시 초기화 및 맵 화면 표시
         InitializeGameState();
         ShowMap();
+
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(false);
+
+        SubscribePlayerDeath();
     }
 
     void InitializeGameState()
@@ -235,6 +244,59 @@ public class GameStateController : MonoBehaviour
         {
             MarkNodeCleared(lastVisitedNodeIndex);
         }
+    }
+
+    // ── 플레이어 사망 처리 ──
+
+    /// <summary>
+    /// 현재 존재하는 Player에 사망 이벤트를 구독합니다.
+    /// Player가 나중에 생성될 수도 있으므로 전투 시작 시에도 호출합니다.
+    /// </summary>
+    public void SubscribePlayerDeath()
+    {
+        Player player = FindFirstObjectByType<Player>();
+        if (player != null)
+        {
+            player.OnPlayerDied -= OnPlayerDied; // 중복 방지
+            player.OnPlayerDied += OnPlayerDied;
+        }
+    }
+
+    void OnPlayerDied()
+    {
+        Debug.Log("=== 플레이어 사망 — Game Over ===");
+
+        // 전투 시스템 정리
+        ElementSlotSystem.Instance?.EndBattle();
+
+        // Game Over 패널 표시
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+
+            // 최상단에 표시되도록 Canvas 설정
+            Canvas canvas = gameOverPanel.GetComponent<Canvas>();
+            if (canvas == null)
+            {
+                canvas = gameOverPanel.AddComponent<Canvas>();
+            }
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 999;
+
+            if (gameOverPanel.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
+                gameOverPanel.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+        }
+        else
+        {
+            Debug.LogWarning("gameOverPanel이 할당되지 않았습니다. 바로 재시작합니다.");
+            RestartGame();
+        }
+    }
+
+    public void RestartGame()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
 }
