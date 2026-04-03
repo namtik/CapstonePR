@@ -45,6 +45,8 @@ public class ElementSlotSystem : MonoBehaviour
         public string       slotKey;      // "Q" / "W" / "E" / "R"
         public RunDeckCard  currentCard;  // 현재 장전된 카드 (null = 빈 슬롯)
         public bool         hasNeutralCard; // 무속성 카드 혼입 여부
+        public int          neutralDeckCount; // 뽑기 대기 중인 무속성 카드 수
+        public int          neutralGraveCount; // 사용 후 대기 중인 무속성 카드 수(재구성 시 deck으로 이동)
         public int          curseTurns;   // 저주 남은 횟수 (0 = 정상)
 
         public List<RunDeckCard> deck  = new List<RunDeckCard>();
@@ -53,7 +55,7 @@ public class ElementSlotSystem : MonoBehaviour
         public bool IsEmpty   => currentCard == null && !hasNeutralCard && deck.Count == 0;
         public bool IsCursed  => curseTurns > 0;
         public bool HasCard   => currentCard != null || hasNeutralCard;
-        public int  RemainingCount => (currentCard != null ? 1 : 0) + (hasNeutralCard ? 1 : 0) + deck.Count;
+        public int  RemainingCount => (currentCard != null ? 1 : 0) + (hasNeutralCard ? 1 : 0) + deck.Count + neutralDeckCount;
     }
 
     // ── 싱글턴 ───────────────────────────────────────────────────────
@@ -162,7 +164,9 @@ public class ElementSlotSystem : MonoBehaviour
                 slotKey       = SLOT_KEYS[i],
                 elementKey    = ELEMENT_KEYS[i],
                 curseTurns    = 0,
-                hasNeutralCard = false
+                hasNeutralCard = false,
+                neutralDeckCount = 0,
+                neutralGraveCount = 0
             };
         }
 
@@ -191,6 +195,8 @@ public class ElementSlotSystem : MonoBehaviour
             slot.grave.Clear();
             slot.currentCard   = null;
             slot.hasNeutralCard = false;
+            slot.neutralDeckCount = 0;
+            slot.neutralGraveCount = 0;
         }
 
         // 런 덱을 셔플 후 속성별로 분류
@@ -212,7 +218,7 @@ public class ElementSlotSystem : MonoBehaviour
     {
         for (int i = 0; i < 4; i++)
         {
-            if (!slots[i].HasCard && slots[i].deck.Count > 0)
+            if (!slots[i].HasCard && (slots[i].deck.Count > 0 || slots[i].neutralDeckCount > 0))
                 DrawCardForSlot(i);
         }
 
@@ -223,8 +229,20 @@ public class ElementSlotSystem : MonoBehaviour
     void DrawCardForSlot(int index)
     {
         var slot = slots[index];
-        if (slot.currentCard != null) return;
-        if (slot.deck.Count == 0) return;
+        if (slot.HasCard) return;
+
+        int normalCount = slot.deck.Count;
+        int neutralCount = slot.neutralDeckCount;
+        int total = normalCount + neutralCount;
+        if (total == 0) return;
+
+        int pick = Random.Range(0, total);
+        if (pick < neutralCount)
+        {
+            slot.hasNeutralCard = true;
+            slot.neutralDeckCount--;
+            return;
+        }
 
         slot.currentCard = slot.deck[0];
         slot.deck.RemoveAt(0);
@@ -233,7 +251,7 @@ public class ElementSlotSystem : MonoBehaviour
     bool AreAllElementResourcesSpent()
     {
         foreach (var slot in slots)
-            if (slot.currentCard != null || slot.hasNeutralCard || slot.deck.Count > 0) return false;
+            if (slot.currentCard != null || slot.hasNeutralCard || slot.deck.Count > 0 || slot.neutralDeckCount > 0) return false;
         return true;
     }
 
@@ -241,7 +259,7 @@ public class ElementSlotSystem : MonoBehaviour
     {
         bool anyGrave = false;
         foreach (var slot in slots)
-            if (slot.grave.Count > 0) { anyGrave = true; break; }
+            if (slot.grave.Count > 0 || slot.neutralGraveCount > 0) { anyGrave = true; break; }
 
         if (!anyGrave) return;
 
@@ -249,6 +267,8 @@ public class ElementSlotSystem : MonoBehaviour
         {
             slot.deck.AddRange(slot.grave);
             slot.grave.Clear();
+            slot.neutralDeckCount += slot.neutralGraveCount;
+            slot.neutralGraveCount = 0;
             ShuffleList(slot.deck);
         }
 
@@ -286,6 +306,7 @@ public class ElementSlotSystem : MonoBehaviour
         if (isNeutral)
         {
             slot.hasNeutralCard = false;
+            slot.neutralGraveCount++;
             Debug.Log($"[{SLOT_KEYS[index]}] 무속성 카드 사용 — 콤보 미적용");
         }
         else
@@ -293,10 +314,6 @@ public class ElementSlotSystem : MonoBehaviour
             slot.grave.Add(card);
             slot.currentCard = null;
             consumedRealCard = true;
-
-            // 저주 턴 감소
-            if (slot.curseTurns > 0)
-                slot.curseTurns--;
         }
 
         // ── 콤보 히스토리 업데이트 (무속성 제외) ──────────────────
@@ -317,6 +334,9 @@ public class ElementSlotSystem : MonoBehaviour
             player?.TakeDamage(CURSED_SLOT_DAMAGE);
             Debug.Log($"[{SLOT_KEYS[index]}] 저주 반동 — 플레이어 {CURSED_SLOT_DAMAGE} 피해");
         }
+
+        // 저주는 슬롯별이 아닌 전역 2회 카운트로 소모한다.
+        ConsumeGlobalCurseUse();
 
         // ── 다음 카드 드로우 ───────────────────────────────────────
         if (consumedRealCard)
@@ -342,17 +362,25 @@ public class ElementSlotSystem : MonoBehaviour
 
         if (isCurse)
         {
-            slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
-            resultMessage = $"패턴 발동: {SLOT_KEYS[slotIndex]} 카드 저주받음 {SLOT_CURSE_TURNS}턴";
-            Debug.Log($"[방해] {SLOT_KEYS[slotIndex]} 슬롯 저주 {SLOT_CURSE_TURNS}턴");
+            for (int i = 0; i < slots.Length; i++)
+                slots[i].curseTurns = SLOT_CURSE_TURNS;
+
+            resultMessage = $"패턴 발동: 모든 슬롯 저주 {SLOT_CURSE_TURNS}회";
+            Debug.Log($"[방해] 모든 슬롯 저주 {SLOT_CURSE_TURNS}회");
         }
         else
         {
-            slots[slotIndex].hasNeutralCard = true;
+            slots[slotIndex].neutralDeckCount++;
 
-            // Neutral is an extra temporary card, not a replacement for the slot's real card.
-            // If the slot currently has no loaded real card, immediately load one underneath.
-            if (slots[slotIndex].currentCard == null)
+            // 중립카드를 획득한 즉시 슬롯 최상단에 올려 즉시 사용 가능하게 한다.
+            if (!slots[slotIndex].hasNeutralCard)
+            {
+                slots[slotIndex].hasNeutralCard = true;
+                slots[slotIndex].neutralDeckCount = Mathf.Max(0, slots[slotIndex].neutralDeckCount - 1);
+            }
+
+            // Neutral is an extra card mixed into this slot's draw pool.
+            if (!slots[slotIndex].HasCard)
                 DrawCardForSlot(slotIndex);
 
             resultMessage = $"패턴 발동: {SLOT_KEYS[slotIndex]}에 무속성 카드 추가";
@@ -402,6 +430,29 @@ public class ElementSlotSystem : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────
     // 유틸
     // ─────────────────────────────────────────────────────────────────
+
+    void ConsumeGlobalCurseUse()
+    {
+        bool hadCurse = false;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] != null && slots[i].curseTurns > 0)
+            {
+                hadCurse = true;
+                break;
+            }
+        }
+
+        if (!hadCurse)
+            return;
+
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] != null && slots[i].curseTurns > 0)
+                slots[i].curseTurns = Mathf.Max(0, slots[i].curseTurns - 1);
+        }
+    }
 
     public int       GetElementUpgradeLevel(string key)
         => elementUpgradeLevels.TryGetValue(key, out int lv) ? lv : 0;
