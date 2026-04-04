@@ -283,16 +283,4 @@ public class GameStateController : MonoBehaviour
         SceneManager.LoadScene(currentScene.name);
     }
 
-    // 게임 종료 (게임오버 패널의 종료 버튼에서 호출)
-    public void QuitGame()
-    {
-        Debug.Log("=== 게임 종료 ===");
-
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
-    }
-
 }
