@@ -337,55 +337,8 @@ public class ElementSlotSystem : MonoBehaviour
             int dmg = CalculateSlotDamage(card, slot.elementKey);
             enemyController.TakeDamage(dmg, SLOT_KEYS[index]);
             Debug.Log($"[{SLOT_KEYS[index]}] {slot.elementKey} 피해 {dmg}");
-
-            int effectAmount = CalculateEffectAmount(card, slot.elementKey);
-            if (effectAmount > 0)                           // 0이면 효과 없음 (기본 레벨)
-                ApplyElementEffect(slot.elementKey, effectAmount);
         }
 
-        int CalculateEffectAmount(RunDeckCard card, string elementKey)
-        {
-            return card.EffectBonus + GetElementUpgradeLevel(elementKey);
-            //     = upgradeLevel  + elementUpgradeLevels["fire"] 등
-        }
-
-        void ApplyElementEffect(string elementKey, int amount)
-        {
-            switch (elementKey)
-            {
-                case "fire":
-                    // Q 슬롯 → 적에게 화상 (burn) 부여
-                    // burn이 쌓이면 나중에 DetonateEffect(폭발)로 일괄 소모 가능
-                    if (enemyController != null)
-                    {
-                    }
-                    break;
-
-                case "water":
-                    if (enemyController != null)
-                    {
-                        enemyController.AddStatus("wet", amount);
-                        Debug.Log($"[속성 효과] 적에게 습기 {amount} 부여");
-                    }
-                    break;
-
-                case "wind":
-                    if (player != null)
-                    {
-                        player.AddStatus("launcher", amount);
-                        Debug.Log($"[속성 효과] 플레이어에게 런처 {amount} 부여");
-                    }
-                    break;
-
-                case "earth":
-                    if (player != null)
-                    {
-                        player.AddStatus("fortify", amount);
-                        Debug.Log($"[속성 효과] 플레이어에게 강화 {amount} 부여");
-                    }
-                    break;
-            }
-        }
         // ── 저주 반동 ──────────────────────────────────────────────
         if (triggeredCurse)
         {

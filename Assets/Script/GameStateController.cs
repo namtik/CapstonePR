@@ -1,6 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.SceneManagement;  // ← 추가: 씬 재로드용
-using TMPro;
 
 // 게임 상태를 관리하고 캔버스 전환을 담당
 //  씬 전환 대신 캔버스 활성화/비활성화로 상태 전환
@@ -19,10 +17,6 @@ public class GameStateController : MonoBehaviour
     public GameObject shopStage;         // ShopStage GameObject (있다면)
     public GameObject restStage;         // RestStage GameObject (있다면)
     public GameObject eventStage;        // EventStage GameObject (이벤트 노드)
-
-    [Header("Game Over UI")]
-    public GameObject gameOverPanel;     // ← Unity Editor에서 Game Over 패널 드래그 할당
-    public TMP_Text gameOverText;
 
     [Header("Managers")]
     public MapManager mapManager;
@@ -51,12 +45,6 @@ public class GameStateController : MonoBehaviour
         // 게임 시작 시 초기화 및 맵 화면 표시
         InitializeGameState();
         ShowMap();
-
-        if (gameOverPanel != null)
-            gameOverPanel.SetActive(false);
-
-        // 현재 존재하는 Player의 사망 이벤트를 구독
-        SubscribePlayerDeath();
     }
 
     void InitializeGameState()
@@ -213,7 +201,6 @@ public class GameStateController : MonoBehaviour
         if (shopStage != null) shopStage.SetActive(false);
         if (restStage != null) restStage.SetActive(false);
         if (eventStage != null) eventStage.SetActive(false);
-        if (gameOverPanel != null) gameOverPanel.SetActive(false);
     }
 
     // 전투 화면으로 전환
@@ -249,89 +236,5 @@ public class GameStateController : MonoBehaviour
             MarkNodeCleared(lastVisitedNodeIndex);
         }
     }
-    public void SubscribePlayerDeath()
-    {
-        Player player = FindFirstObjectByType<Player>();
-        if (player != null)
-        {
-            player.OnPlayerDied -= OnPlayerDied; // 중복 구독 방지 (같은 함수 두 번 등록 X)
-            player.OnPlayerDied += OnPlayerDied; // 사망 이벤트에 OnPlayerDied 연결
-        }
-    }
-    void OnPlayerDied()
-    {
-        OnPlayerDeath();  // 이벤트 → public 메서드로 중계
-    }
 
-    // 플레이어 사망 시 호출 (이벤트 또는 Player에서 직접 호출)
-    public void OnPlayerDeath()
-    {
-        Debug.Log("=== 게임 오버 ===");
-
-        HideAllStages();                         // 맵, 전투 등 모든 스테이지 숨김
-        ElementSlotSystem.Instance?.EndBattle();  // 전투 시스템 정리
-
-        if (gameOverPanel != null)
-        {
-            gameOverPanel.SetActive(true);       // Game Over 패널 표시
-
-            // 다른 UI 위에 확실히 보이도록 Canvas 설정
-            Canvas canvas = gameOverPanel.GetComponent<Canvas>();
-            if (canvas == null)
-                canvas = gameOverPanel.AddComponent<Canvas>();
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = 999;           // 최상단 렌더링
-
-            // 클릭 이벤트가 작동하려면 GraphicRaycaster 필요
-            if (gameOverPanel.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
-                gameOverPanel.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-        }
-
-        if (gameOverText != null)
-            gameOverText.text = "사망하였습니다...";  // 사망 문구 설정
-    }
-
-    public void RestartGame()
-    {
-        Debug.Log("=== 게임 재시작 ===");
-        Time.timeScale = 1f;  // 일시정지 해제 (게임오버 시 멈춰있을 수 있으므로)
-
-        DestroyPersistentSingletons();  // DontDestroyOnLoad 객체들 파괴
-
-        // 현재 씬을 처음부터 다시 로드 → 모든 것이 Awake/Start부터 재실행
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-    }
-
-    void DestroyPersistentSingletons()
-    {
-        // 각 싱글턴은 DontDestroyOnLoad로 씬 재로드 후에도 살아남음
-        // → 수동으로 파괴해야 이전 런의 데이터(돈, 스킬, 슬롯)가 남지 않음
-
-        if (MoneyManager.Instance != null)        // 돈 초기화
-            Destroy(MoneyManager.Instance.gameObject);
-
-        if (ElementSlotSystem.Instance != null)   // 슬롯/덱 초기화
-            Destroy(ElementSlotSystem.Instance.gameObject);
-
-        if (ComboSystem.Instance != null)         // 학습한 스킬 + 콤보 UI 초기화
-            Destroy(ComboSystem.Instance.gameObject);
-
-        if (GameManager.Instance != null)         // 클리어 노드 기록 초기화
-            Destroy(GameManager.Instance.gameObject);
-
-        // Roundmanager가 DontDestroyOnLoad로 생성한 Player 오브젝트도 정리
-        Player[] players = FindObjectsByType<Player>(FindObjectsSortMode.None);
-        foreach (Player p in players)
-            Destroy(p.gameObject);
-    }
-
-    public void QuitGame()
-    {
-        Debug.Log("=== 게임 종료 ===");
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;  // 에디터에서는 플레이 중지
-#else
-    Application.Quit();                               // 빌드에서는 앱 종료
-#endif
-    }
 }
