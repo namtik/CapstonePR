@@ -86,6 +86,7 @@ public class SkillRewardUI : MonoBehaviour
         if (isStarterSelection)
         {
             isStarterSelection = false;
+            Time.timeScale = 1f;
             return;
         }
 

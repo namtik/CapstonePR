@@ -340,6 +340,7 @@ public class ElementSlotSystem : MonoBehaviour
 
             // ── 속성별 부가 효과 (업그레이드 레벨 비례) ──────────
             int effectAmount = CalculateEffectAmount(card, slot.elementKey);
+            Debug.Log($"[부가효과] 속성={slot.elementKey}, cardLevel={card.upgradeLevel}, elementLevel={GetElementUpgradeLevel(slot.elementKey)}, effectAmount={effectAmount}");
             if (effectAmount > 0)
                 ApplyElementEffect(slot.elementKey, effectAmount);
         }
