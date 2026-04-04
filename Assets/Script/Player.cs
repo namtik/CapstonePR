@@ -389,6 +389,12 @@ public class Player : MonoBehaviour, IBattleUnit
     void Die()
     {
         Debug.Log("플레이어 사망!");
+
+        GameOverUI gameOverUI = FindFirstObjectByType<GameOverUI>(FindObjectsInactive.Include);
+        if (gameOverUI != null)
+        {
+            gameOverUI.Show("당신은 사망했습니다...");
+        }
     }
 
     public void Heal(int amount)
