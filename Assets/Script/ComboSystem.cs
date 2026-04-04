@@ -792,7 +792,7 @@ public class ComboSystem : MonoBehaviour
         UpdateNextComboHints();
     }
 
-    void LearnStarterSkill()
+    public void LearnStarterSkill()
     {
         if (SkillDataParser.Instance == null)
             return;

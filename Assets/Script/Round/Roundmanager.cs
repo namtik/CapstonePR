@@ -109,6 +109,41 @@ public class Roundmanager : MonoBehaviour
     {
         EnsureElementCombatSystems();
 
+        // 첫 스테이지 진입 시 스킬이 없으면 초기 스킬 선택 후 라운드 시작
+        if (ComboSystem.Instance != null && ComboSystem.Instance.learnedSkills.Count == 0)
+        {
+            ComboSystem.Instance.LearnStarterSkill();
+
+            // 스킬 선택 완료 후 라운드 진행
+            SkillRewardUI rewardUI = SkillDataParser.Instance?.SkillRewardUI;
+            if (rewardUI != null)
+            {
+                rewardUI.OnSkillSelected += OnStarterSkillSelected;
+                pendingRoundData = roundData;
+                return;
+            }
+        }
+
+        ContinueStartRound(roundData);
+    }
+
+    private RoundData pendingRoundData;
+
+    void OnStarterSkillSelected(SkillDataParser.SkillData skill)
+    {
+        SkillRewardUI rewardUI = SkillDataParser.Instance?.SkillRewardUI;
+        if (rewardUI != null)
+            rewardUI.OnSkillSelected -= OnStarterSkillSelected;
+
+        if (pendingRoundData != null)
+        {
+            ContinueStartRound(pendingRoundData);
+            pendingRoundData = null;
+        }
+    }
+
+    void ContinueStartRound(RoundData roundData)
+    {
         currentRoundData = roundData;
         currentEnemyIndex = 0;
 
