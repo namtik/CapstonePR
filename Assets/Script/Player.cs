@@ -344,6 +344,7 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
+    public event Action OnPlayerDied;
     public event Action<string, int> OnStatusChanged;
 
     public void AddStatus(string type, int amount)
@@ -389,6 +390,15 @@ public class Player : MonoBehaviour, IBattleUnit
     void Die()
     {
         Debug.Log("플레이어 사망!");
+        currentHp = 0;           // HP를 정확히 0으로 고정 (음수 방지)
+        UpdateUI();              // HP바, 텍스트 등 UI에 0 반영
+        OnPlayerDied?.Invoke();  // 이벤트 구독자(GameStateController)에게 알림
+
+        // UpdatingSys 측 직접 호출 방식도 병행 (이벤트 구독 누락 시 안전장치)
+        if (GameStateController.Instance != null)
+        {
+            GameStateController.Instance.OnPlayerDeath();
+        }
     }
 
     public void Heal(int amount)

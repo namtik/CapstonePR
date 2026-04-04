@@ -108,6 +108,8 @@ public class Roundmanager : MonoBehaviour
     public void StartRound(RoundData roundData)
     {
         EnsureElementCombatSystems();
+        
+        GameStateController.Instance?.SubscribePlayerDeath();
 
         currentRoundData = roundData;
         currentEnemyIndex = 0;

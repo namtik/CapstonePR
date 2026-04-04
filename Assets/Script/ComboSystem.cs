@@ -788,7 +788,8 @@ public class ComboSystem : MonoBehaviour
             Debug.LogWarning("[ComboSystem] skillActivationText를 찾지 못했습니다.");
         else
             HideSkillActivationText();
-
+        if (learnedSkills.Count == 0)
+            LearnStarterSkill();
         UpdateNextComboHints();
     }
 
@@ -832,6 +833,16 @@ public class ComboSystem : MonoBehaviour
                 return false;
         }
         return true;
+    }
+
+    void LearnStarterSkill()
+    {
+        // SkillDataParser가 아직 로드 안 됐거나 UI가 없으면 스킵
+        if (SkillDataParser.Instance == null || SkillDataParser.Instance.SkillRewardUI == null)
+            return;
+
+        SkillDataParser.Instance.SkillRewardUI.ShowStarterSkillSelection();
+        Debug.Log("[ComboSystem] 초기 스킬 선택 UI 표시");
     }
 
     void EnsureNextHintBindings()

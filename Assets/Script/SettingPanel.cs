@@ -99,12 +99,30 @@ public class SettingPanel : MonoBehaviour
     public void RestartGame()
     {
         Time.timeScale = 1f;
+
+        // GameStateController.RestartGame()을 통해 싱글턴 파괴 후 재시작
+        // → 돈, 스킬, 슬롯이 모두 초기화됨
+        if (GameStateController.Instance != null)
+        {
+            GameStateController.Instance.RestartGame();
+            return;  // RestartGame() 안에서 씬 로드하므로 여기서 끝
+        }
+
+        // GameStateController가 없는 경우 (비정상) 직접 로드
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void ReloadCurrentScene()
     {
         Time.timeScale = 1f;
+
+        // 동일하게 GameStateController 경유
+        if (GameStateController.Instance != null)
+        {
+            GameStateController.Instance.RestartGame();
+            return;
+        }
+
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
