@@ -792,6 +792,25 @@ public class ComboSystem : MonoBehaviour
         UpdateNextComboHints();
     }
 
+    void LearnStarterSkill()
+    {
+        if (SkillDataParser.Instance == null)
+            return;
+
+        // Inspector 미연결 시 자동 탐색
+        if (SkillDataParser.Instance.SkillRewardUI == null)
+            SkillDataParser.Instance.SkillRewardUI = FindFirstObjectByType<SkillRewardUI>(FindObjectsInactive.Include);
+
+        if (SkillDataParser.Instance.SkillRewardUI == null)
+        {
+            Debug.LogWarning("[ComboSystem] SkillRewardUI를 찾을 수 없어 초기 스킬 선택을 건너뜁니다.");
+            return;
+        }
+
+        SkillDataParser.Instance.SkillRewardUI.ShowStarterSkillSelection();
+        Debug.Log("[ComboSystem] 초기 스킬 선택 UI 표시");
+    }
+
     void Update()
     {
         if (isShowingSkillText)

@@ -337,6 +337,12 @@ public class ElementSlotSystem : MonoBehaviour
             int dmg = CalculateSlotDamage(card, slot.elementKey);
             enemyController.TakeDamage(dmg, SLOT_KEYS[index]);
             Debug.Log($"[{SLOT_KEYS[index]}] {slot.elementKey} 피해 {dmg}");
+
+            // ── 속성별 부가 효과 (업그레이드 레벨 비례) ──────────
+            int effectAmount = CalculateEffectAmount(card, slot.elementKey);
+            Debug.Log($"[부가효과] 속성={slot.elementKey}, cardLevel={card.upgradeLevel}, elementLevel={GetElementUpgradeLevel(slot.elementKey)}, effectAmount={effectAmount}");
+            if (effectAmount > 0)
+                ApplyElementEffect(slot.elementKey, effectAmount);
         }
 
         // ── 저주 반동 ──────────────────────────────────────────────

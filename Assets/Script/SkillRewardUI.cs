@@ -66,6 +66,14 @@ public class SkillRewardUI : MonoBehaviour
         ComboSystem.Instance.LearnSkill(skill);
         OnSkillSelected?.Invoke(skill);
 
+        // 초기 스킬 선택이면 맵 복귀 없이 종료
+        if (isStarterSelection)
+        {
+            isStarterSelection = false;
+            Time.timeScale = 1f;
+            return;
+        }
+
         if (returnToMapAfterSelection)
         {
             Time.timeScale = 1f;
