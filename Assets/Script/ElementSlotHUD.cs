@@ -58,6 +58,17 @@ public class ElementSlotHUD : MonoBehaviour
 
     void OnSceneLoaded(Scene _, LoadSceneMode __)
     {
+        // 이전 씬의 파괴된 참조 정리
+        hudCanvas = null;
+        rootTransform = null;
+        for (int i = 0; i < 4; i++)
+        {
+            slotIcons[i] = null;
+            statusBoxes[i] = null;
+            statusTexts[i] = null;
+            upgradeTexts[i] = null;
+        }
+
         ResolveSystems();
         BuildOrBindUI();
         SuppressLegacyHandUI();
