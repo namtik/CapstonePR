@@ -337,11 +337,6 @@ public class ElementSlotSystem : MonoBehaviour
             int dmg = CalculateSlotDamage(card, slot.elementKey);
             enemyController.TakeDamage(dmg, SLOT_KEYS[index]);
             Debug.Log($"[{SLOT_KEYS[index]}] {slot.elementKey} 피해 {dmg}");
-
-            // ── 속성별 부가 효과 (업그레이드 레벨 비례) ──────────
-            int effectAmount = CalculateEffectAmount(card, slot.elementKey);
-            if (effectAmount > 0)
-                ApplyElementEffect(slot.elementKey, effectAmount);
         }
 
         // ── 저주 반동 ──────────────────────────────────────────────
@@ -479,65 +474,6 @@ public class ElementSlotSystem : MonoBehaviour
         int i = System.Array.IndexOf(SLOT_KEYS, slotKey);
         return i >= 0 ? ELEMENT_KEYS[i] : "";
     }
-
-    // ─────────────────────────────────────────────────────────────────
-    // 속성별 부가 효과
-    // ─────────────────────────────────────────────────────────────────
-
-    /// <summary>카드 upgradeLevel + 속성 전체 강화 레벨 합산</summary>
-    int CalculateEffectAmount(RunDeckCard card, string elementKey)
-    {
-        return card.EffectBonus + GetElementUpgradeLevel(elementKey);
-    }
-
-    /// <summary>
-    /// 속성에 맞는 부가 효과를 적용합니다.
-    ///   fire  → 적에게 burn(화상)
-    ///   water → 적에게 wet(습기)
-    ///   wind  → 플레이어에게 launcher(런처)
-    ///   earth → 플레이어에게 fortify(강화)
-    /// </summary>
-    void ApplyElementEffect(string elementKey, int amount)
-    {
-        switch (elementKey)
-        {
-            case "fire":
-                if (enemyController != null)
-                {
-                    enemyController.AddStatus("burn", amount);
-                    Debug.Log($"[속성 효과] 적에게 화상 {amount} 부여");
-                }
-                break;
-
-            case "water":
-                if (enemyController != null)
-                {
-                    enemyController.AddStatus("wet", amount);
-                    Debug.Log($"[속성 효과] 적에게 습기 {amount} 부여");
-                }
-                break;
-
-            case "wind":
-                if (player != null)
-                {
-                    player.AddStatus("launcher", amount);
-                    Debug.Log($"[속성 효과] 플레이어에게 런처 {amount} 부여");
-                }
-                break;
-
-            case "earth":
-                if (player != null)
-                {
-                    player.AddStatus("fortify", amount);
-                    Debug.Log($"[속성 효과] 플레이어에게 강화 {amount} 부여");
-                }
-                break;
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // 피해 계산
-    // ─────────────────────────────────────────────────────────────────
 
     int CalculateSlotDamage(RunDeckCard card, string elementKey)
     {
