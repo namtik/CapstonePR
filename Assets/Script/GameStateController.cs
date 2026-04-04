@@ -1,6 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.SceneManagement;
-using TMPro;
 
 // 게임 상태를 관리하고 캔버스 전환을 담당
 //  씬 전환 대신 캔버스 활성화/비활성화로 상태 전환
@@ -10,7 +8,7 @@ public class GameStateController : MonoBehaviour
 
     [Header("Canvas References")]
     public Canvas mapCanvas;
-
+    
     [Header("Stage GameObjects")]
     public GameObject mapStage;          // MapStage GameObject
     public GameObject combatStage;       // CombatStage GameObject
@@ -19,10 +17,6 @@ public class GameStateController : MonoBehaviour
     public GameObject shopStage;         // ShopStage GameObject (있다면)
     public GameObject restStage;         // RestStage GameObject (있다면)
     public GameObject eventStage;        // EventStage GameObject (이벤트 노드)
-
-    [Header("Game Over UI")]
-    public GameObject gameOverPanel;     // 사망 시 표시할 게임오버 패널
-    public TMP_Text gameOverText;        // 사망 문구 텍스트
 
     [Header("Managers")]
     public MapManager mapManager;
@@ -207,7 +201,6 @@ public class GameStateController : MonoBehaviour
         if (shopStage != null) shopStage.SetActive(false);
         if (restStage != null) restStage.SetActive(false);
         if (eventStage != null) eventStage.SetActive(false);
-        if (gameOverPanel != null) gameOverPanel.SetActive(false);
     }
 
     // 전투 화면으로 전환
@@ -242,45 +235,6 @@ public class GameStateController : MonoBehaviour
         {
             MarkNodeCleared(lastVisitedNodeIndex);
         }
-    }
-
-    // 플레이어 사망 시 호출
-    public void OnPlayerDeath()
-    {
-        Debug.Log("=== 게임 오버 ===");
-
-        // 모든 스테이지 숨기고 게임오버 패널 표시
-        HideAllStages();
-
-        if (gameOverPanel != null)
-        {
-            gameOverPanel.SetActive(true);
-        }
-
-        if (gameOverText != null)
-        {
-            gameOverText.text = "사망하였습니다...";
-        }
-
-        // 전투 시스템 정리
-        ElementSlotSystem.Instance?.EndBattle();
-    }
-
-    // 게임 초기화 (게임오버 패널의 재시작 버튼에서 호출)
-    public void RestartGame()
-    {
-        Debug.Log("=== 게임 재시작 ===");
-
-        // GameManager 상태 초기화
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.lastVisitedNodeIndex = -1;
-            GameManager.Instance.clearedNodes.Clear();
-        }
-
-        // 현재 씬 다시 로드
-        Scene currentScene = SceneManager.GetActiveScene();
-        SceneManager.LoadScene(currentScene.name);
     }
 
 }
