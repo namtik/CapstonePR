@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 
@@ -51,6 +51,11 @@ public class GameStateController : MonoBehaviour
         // 게임 시작 시 초기화 및 맵 화면 표시
         InitializeGameState();
         ShowMap();
+
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(false);
+
+        SubscribePlayerDeath();
     }
 
     void InitializeGameState()
@@ -61,11 +66,11 @@ public class GameStateController : MonoBehaviour
             lastVisitedNodeIndex = GameManager.Instance.lastVisitedNodeIndex;
             clearedNodes = new System.Collections.Generic.List<int>(GameManager.Instance.clearedNodes);
         }
-        
+
         // Panel raycastTarget 비활성화
         EnsureGraphicRaycaster();
     }
-    
+
     void EnsureGraphicRaycaster()
     {
         if (mapCanvas != null)
@@ -75,21 +80,21 @@ public class GameStateController : MonoBehaviour
             {
                 mapCanvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             }
-            
+
             // Panel이나 background 이미지가 클릭을 막지 않도록 설정
             DisablePanelRaycast();
         }
     }
-    
+
     void DisablePanelRaycast()
     {
         if (mapCanvas == null) return;
-        
+
         // Canvas 하위의 모든 Image 중 Panel, Background 등의 raycastTarget 비활성화
         var allImages = mapCanvas.GetComponentsInChildren<UnityEngine.UI.Image>(true);
         foreach (var img in allImages)
         {
-            if (img.gameObject.name.ToLower().Contains("panel") || 
+            if (img.gameObject.name.ToLower().Contains("panel") ||
                 img.gameObject.name.ToLower().Contains("background"))
             {
                 img.raycastTarget = false;
@@ -244,6 +249,28 @@ public class GameStateController : MonoBehaviour
         }
     }
 
+    // ── 플레이어 사망 처리 ──
+
+    /// <summary>
+    /// 현재 존재하는 Player에 사망 이벤트를 구독합니다.
+    /// Player가 나중에 생성될 수도 있으므로 전투 시작 시에도 호출합니다.
+    /// </summary>
+    public void SubscribePlayerDeath()
+    {
+        Player player = FindFirstObjectByType<Player>();
+        if (player != null)
+        {
+            player.OnPlayerDied -= OnPlayerDied; // 중복 방지
+            player.OnPlayerDied += OnPlayerDied;
+        }
+    }
+
+    /// <summary>Player.Die()의 OnPlayerDied 이벤트 또는 직접 호출용</summary>
+    void OnPlayerDied()
+    {
+        OnPlayerDeath();
+    }
+
     // 플레이어 사망 시 호출
     public void OnPlayerDeath()
     {
@@ -252,35 +279,62 @@ public class GameStateController : MonoBehaviour
         // 모든 스테이지 숨기고 게임오버 패널 표시
         HideAllStages();
 
+        // 전투 시스템 정리
+        ElementSlotSystem.Instance?.EndBattle();
+
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
+
+            // 최상단에 표시되도록 Canvas 설정
+            Canvas canvas = gameOverPanel.GetComponent<Canvas>();
+            if (canvas == null)
+            {
+                canvas = gameOverPanel.AddComponent<Canvas>();
+            }
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 999;
+
+            if (gameOverPanel.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
+                gameOverPanel.AddComponent<UnityEngine.UI.GraphicRaycaster>();
         }
 
         if (gameOverText != null)
         {
             gameOverText.text = "사망하였습니다...";
         }
-
-        // 전투 시스템 정리
-        ElementSlotSystem.Instance?.EndBattle();
     }
 
     // 게임 초기화 (게임오버 패널의 재시작 버튼에서 호출)
     public void RestartGame()
     {
         Debug.Log("=== 게임 재시작 ===");
+        Time.timeScale = 1f;
 
-        // GameManager 상태 초기화
+        // DontDestroyOnLoad 싱글턴들을 파괴하여 완전 초기화
+        DestroyPersistentSingletons();
+
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    void DestroyPersistentSingletons()
+    {
+        if (MoneyManager.Instance != null)
+            Destroy(MoneyManager.Instance.gameObject);
+
+        if (ElementSlotSystem.Instance != null)
+            Destroy(ElementSlotSystem.Instance.gameObject);
+
+        if (ComboSystem.Instance != null)
+            Destroy(ComboSystem.Instance.gameObject);
+
         if (GameManager.Instance != null)
-        {
-            GameManager.Instance.lastVisitedNodeIndex = -1;
-            GameManager.Instance.clearedNodes.Clear();
-        }
+            Destroy(GameManager.Instance.gameObject);
 
-        // 현재 씬 다시 로드
-        Scene currentScene = SceneManager.GetActiveScene();
-        SceneManager.LoadScene(currentScene.name);
+        // Roundmanager가 생성한 런타임 Player 오브젝트 정리
+        Player[] players = FindObjectsByType<Player>(FindObjectsSortMode.None);
+        foreach (Player p in players)
+            Destroy(p.gameObject);
     }
 
     // 게임 종료 (게임오버 패널의 종료 버튼에서 호출)
