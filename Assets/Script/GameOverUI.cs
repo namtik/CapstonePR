@@ -45,7 +45,7 @@ public class GameOverUI : MonoBehaviour
         canvasGroup.interactable = false;
     }
 
-    public void Show(string message = "당신은 사망했습니다...")
+    public void Show(string message = "사망했습니다..")
     {
         if (deathMessageText != null)
             deathMessageText.text = message;
