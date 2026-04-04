@@ -125,13 +125,6 @@ public class GameOverUI : MonoBehaviour
             GameManager.Instance.lastVisitedNodeIndex = -1;
             GameManager.Instance.clearedNodes.Clear();
         }
-
-        // DontDestroyOnLoad로 생성된 Player 제거 (씬 재로드 시 새로 생성되도록)
-        Player[] allPlayers = FindObjectsByType<Player>(FindObjectsSortMode.None);
-        foreach (Player p in allPlayers)
-        {
-            Destroy(p.gameObject);
-        }
     }
 
     void QuitGame()

@@ -779,45 +779,6 @@ public class ComboSystem : MonoBehaviour
         comboLookup.Clear();
         learnedSkillCount = 0;
         comboInput.Clear();
-
-        // 파괴된 UI 참조 정리
-        comboSlotParent = null;
-        skillListParent = null;
-        comboSlotCards.Clear();
-        emptySlots.Clear();
-        nextHintTexts.Clear();
-        skillActivationText = null;
-    }
-
-    void OnEnable()
-    {
-        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    void OnDisable()
-    {
-        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
-
-    void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
-    {
-        // 씬 재로드 시 UI 참조 재바인딩
-        comboSlotParent = null;
-        comboSlotCards.Clear();
-        emptySlots.Clear();
-        nextHintTexts.Clear();
-        skillActivationText = null;
-
-        player = FindFirstObjectByType<Player>();
-        RefreshEnemyRef();
-        CreateComboSlots();
-        CreateSkillList();
-        ResolveSkillActivationText();
-
-        if (skillActivationText != null)
-            HideSkillActivationText();
-
-        UpdateNextComboHints();
     }
 
     void Start()
