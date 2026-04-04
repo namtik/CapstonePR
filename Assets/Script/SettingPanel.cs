@@ -99,27 +99,12 @@ public class SettingPanel : MonoBehaviour
     public void RestartGame()
     {
         Time.timeScale = 1f;
-
-        // GameStateController를 통해 싱글턴 정리 후 재시작
-        if (GameStateController.Instance != null)
-        {
-            GameStateController.Instance.RestartGame();
-            return;
-        }
-
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void ReloadCurrentScene()
     {
         Time.timeScale = 1f;
-
-        if (GameStateController.Instance != null)
-        {
-            GameStateController.Instance.RestartGame();
-            return;
-        }
-
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
