@@ -1068,33 +1068,42 @@ public class ComboSystem : MonoBehaviour
     {
         if (comboSlotParent == null)
         {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas == null) return;
-
-            Transform existingSlotParent = canvas.transform.Find("ComboSlotParent");
-            if (existingSlotParent != null)
+            // 씬에 존재하는 Comboslot 오브젝트를 우선 검색
+            GameObject sceneSlot = GameObject.Find("Comboslot");
+            if (sceneSlot != null)
             {
-                comboSlotParent = existingSlotParent;
+                comboSlotParent = sceneSlot.transform;
             }
             else
             {
-                GameObject slotParentObj = new GameObject("ComboSlotParent");
-                slotParentObj.transform.SetParent(canvas.transform, false);
+                Canvas canvas = FindFirstObjectByType<Canvas>();
+                if (canvas == null) return;
 
-                RectTransform rect = slotParentObj.AddComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0.5f, 1f);
-                rect.anchorMax = new Vector2(0.5f, 1f);
-                rect.pivot = new Vector2(0.5f, 1f);
-                rect.anchoredPosition = new Vector2(0f, -50f);
-                rect.sizeDelta = new Vector2(200f, 120f);
+                Transform existingSlotParent = canvas.transform.Find("ComboSlotParent");
+                if (existingSlotParent != null)
+                {
+                    comboSlotParent = existingSlotParent;
+                }
+                else
+                {
+                    GameObject slotParentObj = new GameObject("ComboSlotParent");
+                    slotParentObj.transform.SetParent(canvas.transform, false);
 
-                HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
-                layout.spacing = 30f;
-                layout.childAlignment = TextAnchor.MiddleCenter;
-                layout.childControlWidth = false;
-                layout.childControlHeight = false;
+                    RectTransform rect = slotParentObj.AddComponent<RectTransform>();
+                    rect.anchorMin = new Vector2(0.5f, 1f);
+                    rect.anchorMax = new Vector2(0.5f, 1f);
+                    rect.pivot = new Vector2(0.5f, 1f);
+                    rect.anchoredPosition = new Vector2(0f, -50f);
+                    rect.sizeDelta = new Vector2(200f, 120f);
 
-                comboSlotParent = slotParentObj.transform;
+                    HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
+                    layout.spacing = 30f;
+                    layout.childAlignment = TextAnchor.MiddleCenter;
+                    layout.childControlWidth = false;
+                    layout.childControlHeight = false;
+
+                    comboSlotParent = slotParentObj.transform;
+                }
             }
         }
         CreateEmptySlots();
