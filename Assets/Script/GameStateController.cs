@@ -1,5 +1,6 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 // 게임 상태를 관리하고 캔버스 전환을 담당
 //  씬 전환 대신 캔버스 활성화/비활성화로 상태 전환
@@ -9,7 +10,7 @@ public class GameStateController : MonoBehaviour
 
     [Header("Canvas References")]
     public Canvas mapCanvas;
-    
+
     [Header("Stage GameObjects")]
     public GameObject mapStage;          // MapStage GameObject
     public GameObject combatStage;       // CombatStage GameObject
@@ -19,13 +20,14 @@ public class GameStateController : MonoBehaviour
     public GameObject restStage;         // RestStage GameObject (있다면)
     public GameObject eventStage;        // EventStage GameObject (이벤트 노드)
 
+    [Header("Game Over UI")]
+    public GameObject gameOverPanel;     // 사망 시 표시할 게임오버 패널
+    public TMP_Text gameOverText;        // 사망 문구 텍스트
+
     [Header("Managers")]
     public MapManager mapManager;
     public BattleManger battleManager;
     public Roundmanager roundManager;  // 라운드 관리자 추가
-
-    [Header("Game Over")]
-    public GameObject gameOverPanel;
 
     [Header("Game State")]
     public int lastVisitedNodeIndex = -1;
@@ -64,11 +66,11 @@ public class GameStateController : MonoBehaviour
             lastVisitedNodeIndex = GameManager.Instance.lastVisitedNodeIndex;
             clearedNodes = new System.Collections.Generic.List<int>(GameManager.Instance.clearedNodes);
         }
-        
+
         // Panel raycastTarget 비활성화
         EnsureGraphicRaycaster();
     }
-    
+
     void EnsureGraphicRaycaster()
     {
         if (mapCanvas != null)
@@ -78,21 +80,21 @@ public class GameStateController : MonoBehaviour
             {
                 mapCanvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             }
-            
+
             // Panel이나 background 이미지가 클릭을 막지 않도록 설정
             DisablePanelRaycast();
         }
     }
-    
+
     void DisablePanelRaycast()
     {
         if (mapCanvas == null) return;
-        
+
         // Canvas 하위의 모든 Image 중 Panel, Background 등의 raycastTarget 비활성화
         var allImages = mapCanvas.GetComponentsInChildren<UnityEngine.UI.Image>(true);
         foreach (var img in allImages)
         {
-            if (img.gameObject.name.ToLower().Contains("panel") || 
+            if (img.gameObject.name.ToLower().Contains("panel") ||
                 img.gameObject.name.ToLower().Contains("background"))
             {
                 img.raycastTarget = false;
@@ -210,6 +212,7 @@ public class GameStateController : MonoBehaviour
         if (shopStage != null) shopStage.SetActive(false);
         if (restStage != null) restStage.SetActive(false);
         if (eventStage != null) eventStage.SetActive(false);
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
     }
 
     // 전투 화면으로 전환
@@ -262,14 +265,23 @@ public class GameStateController : MonoBehaviour
         }
     }
 
+    /// <summary>Player.Die()의 OnPlayerDied 이벤트 또는 직접 호출용</summary>
     void OnPlayerDied()
     {
-        Debug.Log("=== 플레이어 사망 — Game Over ===");
+        OnPlayerDeath();
+    }
+
+    // 플레이어 사망 시 호출
+    public void OnPlayerDeath()
+    {
+        Debug.Log("=== 게임 오버 ===");
+
+        // 모든 스테이지 숨기고 게임오버 패널 표시
+        HideAllStages();
 
         // 전투 시스템 정리
         ElementSlotSystem.Instance?.EndBattle();
 
-        // Game Over 패널 표시
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
@@ -286,15 +298,17 @@ public class GameStateController : MonoBehaviour
             if (gameOverPanel.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null)
                 gameOverPanel.AddComponent<UnityEngine.UI.GraphicRaycaster>();
         }
-        else
+
+        if (gameOverText != null)
         {
-            Debug.LogWarning("gameOverPanel이 할당되지 않았습니다. 바로 재시작합니다.");
-            RestartGame();
+            gameOverText.text = "사망하였습니다...";
         }
     }
 
+    // 게임 초기화 (게임오버 패널의 재시작 버튼에서 호출)
     public void RestartGame()
     {
+        Debug.Log("=== 게임 재시작 ===");
         Time.timeScale = 1f;
 
         // DontDestroyOnLoad 싱글턴들을 파괴하여 완전 초기화
@@ -321,6 +335,18 @@ public class GameStateController : MonoBehaviour
         Player[] players = FindObjectsByType<Player>(FindObjectsSortMode.None);
         foreach (Player p in players)
             Destroy(p.gameObject);
+    }
+
+    // 게임 종료 (게임오버 패널의 종료 버튼에서 호출)
+    public void QuitGame()
+    {
+        Debug.Log("=== 게임 종료 ===");
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
 }

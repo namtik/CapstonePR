@@ -393,6 +393,11 @@ public class Player : MonoBehaviour, IBattleUnit
         currentHp = 0;
         UpdateUI();
         OnPlayerDied?.Invoke();
+
+        if (GameStateController.Instance != null)
+        {
+            GameStateController.Instance.OnPlayerDeath();
+        }
     }
 
     public void Heal(int amount)
