@@ -491,7 +491,7 @@ public class ElementSlotSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// 속성에 맞는 부가 효과를 적용합니다.
+    /// 속성에 맞는 부가 효과를 적용합니다. 강화 레벨만큼 효과 부여.
     ///   fire  → 적에게 burn(화상)
     ///   water → 적에게 wet(습기)
     ///   wind  → 플레이어에게 launcher(런처)
