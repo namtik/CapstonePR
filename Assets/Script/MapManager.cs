@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// MapGenerator¸¦ »ç¿ëÇÏ¿© ¸Ê »ı¼º ¹× ·»´õ¸µ
+// MapGeneratorï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 public class MapManager : MonoBehaviour
 {
     public GameObject nodePrefab;
@@ -16,12 +16,12 @@ public class MapManager : MonoBehaviour
     public float currentPositionScale = 1.3f;
 
     [Header("Map Scroll")]
-    public MapScrollController scrollController;  // : ¸Ê ½ºÅ©·Ñ ÄÁÆ®·Ñ·¯
+    public MapScrollController scrollController;  // : ï¿½ï¿½ ï¿½ï¿½Å©ï¿½ï¿½ ï¿½ï¿½Æ®ï¿½Ñ·ï¿½
 
     [Header("Node Visual")]
-    public NodeVisualConfig nodeVisualConfig;  // ³ëµå ºñÁÖ¾ó ¼³Á¤
+    public NodeVisualConfig nodeVisualConfig;  // ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ö¾ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-    // : MapGenerator·Î ÀÚµ¿ »ı¼ºµÈ ¸Ê µ¥ÀÌÅÍ (·±Å¸ÀÓ Àü¿ë)
+    // : MapGeneratorï¿½ï¿½ ï¿½Úµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
     private MapData mapData;
     private MapGenerator mapGenerator;
 
@@ -29,20 +29,20 @@ public class MapManager : MonoBehaviour
     private List<GameObject> pathLines = new List<GameObject>();
     private Sprite lineSprite;
 
-    public Roundmanager roundManager;  // : ¶ó¿îµå ¸Å´ÏÀú ÂüÁ¶
+    public Roundmanager roundManager;  // : ï¿½ï¿½ï¿½ï¿½ ï¿½Å´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-    private bool isMapGenerated = false;  // ¸ÊÀÌ ÀÌ¹Ì »ı¼ºµÇ¾ú´ÂÁö ÃßÀû
+    private bool isMapGenerated = false;  // ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
     void Awake()
     {
-        //  MapGenerator ÄÄÆ÷³ÍÆ® È®º¸
+        //  MapGenerator ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® È®ï¿½ï¿½
         mapGenerator = GetComponent<MapGenerator>();
         if (mapGenerator == null)
         {
             mapGenerator = gameObject.AddComponent<MapGenerator>();
         }
 
-        //  °æ·Î¼±¿ë ½ºÇÁ¶óÀÌÆ® ÁØºñ
+        //  ï¿½ï¿½Î¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½Øºï¿½
         if (lineSprite == null)
         {
             lineSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
@@ -51,7 +51,7 @@ public class MapManager : MonoBehaviour
 
     void Start()
     {
-        //  °ÔÀÓ ½ÃÀÛ ½Ã ¸Ê »ı¼º (ÇÑ ¹ø¸¸)
+        //  ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
         if (!isMapGenerated)
         {
             GenerateMap();
@@ -59,30 +59,30 @@ public class MapManager : MonoBehaviour
         }
     }
     
-    // ¸Ê »õ·Î°íÄ§ (GameStateController¿¡¼­ È£Ãâ)
-    //  ¸Ê È­¸éÀ¸·Î µ¹¾Æ¿Ã ¶§¸¶´Ù ½ÇÇà
+    // ï¿½ï¿½ ï¿½ï¿½ï¿½Î°ï¿½Ä§ (GameStateControllerï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½)
+    //  ï¿½ï¿½ È­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Æ¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     public void RefreshMap()
     {
-        // ±âÁ¸ ¸ÊÀÌ ¾øÀ¸¸é »ı¼º
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (nodes.Count == 0 || mapData == null)
         {
             GenerateMap();
         }
         else
         {
-            //  ±âÁ¸ ¸ÊÀÌ ÀÖÀ¸¸é »óÅÂ¸¸ ¾÷µ¥ÀÌÆ®
+            //  ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
             UpdateNodeStates();
             UpdateNodeAvailability();
             HighlightCurrentPosition();
             
-            //  Ä«¸Ş¶ó¸¦ ÇöÀç À§Ä¡·Î ÀÌµ¿
+            //  Ä«ï¿½Ş¶ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½Ìµï¿½
             UpdateScrollPosition();
         }
     }
 
     void UpdateNodeStates()
     {
-        //  GameStateController¿¡¼­ Å¬¸®¾î »óÅÂ º¹¿ø
+        //  GameStateControllerï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         var stateController = GameStateController.Instance;
         if (stateController == null) return;
 
@@ -94,26 +94,26 @@ public class MapManager : MonoBehaviour
 
     void UpdateNodeAvailability()
     {
-        //  ¸ğµç ³ëµå ºñÈ°¼ºÈ­
+        //  ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½È°ï¿½ï¿½È­
         for (int i = 0; i < nodes.Count; i++)
         {
             var btn = nodes[i].GetComponent<Button>();
             if (btn != null) btn.interactable = false;
         }
 
-        //  GameStateController¿¡¼­ ÇöÀç À§Ä¡ È®ÀÎ
+        //  GameStateControllerï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ È®ï¿½ï¿½
         var stateController = GameStateController.Instance;
         if (stateController == null) return;
 
         int current = stateController.lastVisitedNodeIndex;
 
-        //  MapData ¾øÀ½ ¿¹¿Ü Ã³¸®
+        //  MapData ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
         if (mapData == null || mapData.nodes == null || mapData.nodes.Count == 0)
         {
             return;
         }
 
-        //  °ÔÀÓ ½ÃÀÛ Àü - ½ÃÀÛ ³ëµå¸¸ È°¼ºÈ­
+        //  ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ - ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¸¸ È°ï¿½ï¿½È­
         if (current < 0)
         {
             if (mapData.startIndex >= 0 && mapData.startIndex < nodes.Count)
@@ -129,7 +129,7 @@ public class MapManager : MonoBehaviour
             return;
         }
 
-        //  ÇöÀç ³ëµåÀÇ ¿¬°áµÈ ´ÙÀ½ ³ëµå È°¼ºÈ­
+        //  ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ È°ï¿½ï¿½È­
         if (current >= 0 && current < mapData.nodes.Count)
         {
             var conns = mapData.nodes[current].connections;
@@ -154,26 +154,26 @@ public class MapManager : MonoBehaviour
     {
         ClearNodes();
 
-        //  MapGenerator·Î ·£´ı ¸Ê »ı¼º
+        //  MapGeneratorï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (mapGenerator != null)
         {
             mapData = mapGenerator.GenerateMap();
         }
 
-        //  MapData È®ÀÎ
+        //  MapData È®ï¿½ï¿½
         if (mapData == null || mapData.nodes == null || mapData.nodes.Count == 0)
         {
             return;
         }
 
-        //  ³ëµå »ı¼º
+        //  ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         for (int i = 0; i < mapData.nodes.Count; i++)
         {
             var entry = mapData.nodes[i];
             CreateNode(entry.anchoredPosition, i, entry.roundData, entry.nodeType);
         }
 
-        // °æ·Î¼± ±×¸®±â
+        // ï¿½ï¿½Î¼ï¿½ ï¿½×¸ï¿½ï¿½ï¿½
         for (int i = 0; i < mapData.nodes.Count; i++)
         {
             var entry = mapData.nodes[i];
@@ -187,23 +187,23 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        //  ÇöÀç ÇÃ·¹ÀÌ¾î À§Ä¡ ÇÏÀÌ¶óÀÌÆ®
+        //  ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½Ì¶ï¿½ï¿½ï¿½Æ®
         HighlightCurrentPosition();
 
-        //  ³ëµå È°¼ºÈ­ »óÅÂ ¾÷µ¥ÀÌÆ®
+        //  ï¿½ï¿½ï¿½ È°ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
         UpdateNodeAvailability();
 
-        //  ½ºÅ©·ÑÀ» ½ÃÀÛ ³ëµå·Î Áï½Ã ÀÌµ¿
+        //  ï¿½ï¿½Å©ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
         UpdateScrollPosition(true);
     }
 
-    // ½ºÅ©·ÑÀ» ÇöÀç À§Ä¡ ³ëµå·Î ÀÌµ¿
-    //¸Ê º¹±Í ½Ã ÇöÀç À§Ä¡ ÃßÀû
+    // ï¿½ï¿½Å©ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
+    //ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
     void UpdateScrollPosition(bool snapImmediately = false)
     {
         if (scrollController == null)
         {
-            //  MapScrollController ÀÚµ¿ Ã£±â
+            //  MapScrollController ï¿½Úµï¿½ Ã£ï¿½ï¿½
             scrollController = FindFirstObjectByType<MapScrollController>();
             if (scrollController == null) return;
         }
@@ -213,7 +213,7 @@ public class MapManager : MonoBehaviour
 
         int currentPos = stateController.lastVisitedNodeIndex;
 
-        // °ÔÀÓ ½ÃÀÛ ÀüÀÌ¸é ½ÃÀÛ ³ëµå·Î ÀÌµ¿
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
         if (currentPos < 0)
         {
             if (mapData != null && mapData.startIndex >= 0 && mapData.startIndex < nodes.Count)
@@ -222,7 +222,7 @@ public class MapManager : MonoBehaviour
 
                 if (snapImmediately)
                 {
-                    //  ¸Ê »ı¼º Á÷ÈÄ´Â Áï½Ã ÀÌµ¿
+                    //  ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ä´ï¿½ ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
                     scrollController.SnapToNode(startNodeRect);
                 }
                 else
@@ -233,7 +233,7 @@ public class MapManager : MonoBehaviour
             return;
         }
 
-        //  ÇöÀç À§Ä¡ ³ëµå·Î ÀÌµ¿
+        //  ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
         if (currentPos >= 0 && currentPos < nodes.Count)
         {
             RectTransform currentNodeRect = nodes[currentPos].GetComponent<RectTransform>();
@@ -256,13 +256,13 @@ public class MapManager : MonoBehaviour
 
         int currentPos = stateController.lastVisitedNodeIndex;
 
-        //  ¸ÕÀú ¸ğµç ³ëµåÀÇ ÇöÀç À§Ä¡ Ç¥½Ã ÇØÁ¦
+        //  ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ Ç¥ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         for (int i = 0; i < nodes.Count; i++)
         {
             nodes[i].ClearCurrentPositionHighlight();
         }
 
-        //  °ÔÀÓ ½ÃÀÛ ÀüÀÌ°Å³ª À¯È¿ÇÏÁö ¾ÊÀº ÀÎµ¦½º¸é ½ºÅµ
+        //  ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì°Å³ï¿½ ï¿½ï¿½È¿ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Îµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Åµ
         if (currentPos < 0 || currentPos >= nodes.Count)
         {
             return;
@@ -270,7 +270,7 @@ public class MapManager : MonoBehaviour
 
         MapNode currentNode = nodes[currentPos];
 
-        // ÇöÀç À§Ä¡ ³ëµå¸¦ Æ¯º°ÇÏ°Ô Ç¥½Ã
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½å¸¦ Æ¯ï¿½ï¿½ï¿½Ï°ï¿½ Ç¥ï¿½ï¿½
         currentNode.HighlightAsCurrentPosition(currentPositionScale);
     }
 
@@ -326,42 +326,42 @@ public class MapManager : MonoBehaviour
             rt.anchoredPosition = anchoredPos;
         }
         
-        // ³ëµå°¡ °æ·Î¼±º¸´Ù ¾Õ¿¡ ¿Àµµ·Ï (Å¬¸¯ °¡´ÉÇÏ°Ô)
+        // ï¿½ï¿½å°¡ ï¿½ï¿½Î¼ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Õ¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (Å¬ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½)
         go.transform.SetAsLastSibling();
 
         MapNode node = go.GetComponent<MapNode>() ?? go.AddComponent<MapNode>();
         node.nodeIndex = idx;
         node.roundData = roundData;
-        node.nodeType = nodeType;  // NodeType Á÷Á¢ ¼³Á¤
+        node.nodeType = nodeType;  // NodeType ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         node.mapManager = this;
-        node.visualConfig = nodeVisualConfig;  // ºñÁÖ¾ó ¼³Á¤ Àü´Ş
+        node.visualConfig = nodeVisualConfig;  // ï¿½ï¿½ï¿½Ö¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-        //  GameStateControllerÀÇ Å¬¸®¾î »óÅÂ º¹¿ø
+        //  GameStateControllerï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         var stateController = GameStateController.Instance;
         if (stateController != null)
         {
             node.SetCleared(stateController.IsNodeCleared(idx));
         }
 
-        //  ¹öÆ° ÀÌº¥Æ® ¿¬°á
+        //  ï¿½ï¿½Æ° ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ï¿½
         var btn = go.GetComponent<Button>();
         if (btn != null)
         {
             btn.onClick.RemoveAllListeners();
             
-            // ¶÷´Ù·Î Ä¸Ã³ÇØ¼­ ¿Ã¹Ù¸¥ ³ëµå ÂüÁ¶ º¸Àå
+            // ï¿½ï¿½ï¿½Ù·ï¿½ Ä¸Ã³ï¿½Ø¼ï¿½ ï¿½Ã¹Ù¸ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             MapNode capturedNode = node;
             btn.onClick.AddListener(() => capturedNode.OnClicked());
             
             btn.interactable = false;
             
-            // NavigationÀ» NoneÀ¸·Î ¼³Á¤
+            // Navigationï¿½ï¿½ Noneï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             var navigation = btn.navigation;
             navigation.mode = UnityEngine.UI.Navigation.Mode.None;
             btn.navigation = navigation;
         }
         
-        // Image raycastTarget ¼³Á¤
+        // Image raycastTarget ï¿½ï¿½ï¿½ï¿½
         var img = go.GetComponent<Image>();
         if (img != null)
         {
@@ -373,29 +373,40 @@ public class MapManager : MonoBehaviour
 
     public void OnNodeSelected(MapNode node)
     {
-        //  »óÈ£ÀÛ¿ë °¡´É ¿©ºÎ Ã¼Å©
+        //  ï¿½ï¿½È£ï¿½Û¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã¼Å©
         var btn = node.GetComponent<Button>();
         if (btn == null || !btn.interactable) return;
 
-        //  GameStateController¿¡ ÇöÀç ³ëµå ±â·Ï
+        //  GameStateControllerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
         var stateController = GameStateController.Instance;
         if (stateController == null) return;
 
         stateController.lastVisitedNodeIndex = node.nodeIndex;
 
-        // ³ëµå°¡ º¸½º ³ëµåÀÎÁö È®ÀÎ
+        // ï¿½ï¿½å°¡ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½
         bool isBossNode = (mapData != null && node.nodeIndex == mapData.bossIndex);
 
-        //  ³ëµå Å¸ÀÔ¿¡ µû¶ó ÀûÀıÇÑ Äµ¹ö½º Ç¥½Ã
+        //  ï¿½ï¿½ï¿½ Å¸ï¿½Ô¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Äµï¿½ï¿½ï¿½ï¿½ Ç¥ï¿½ï¿½
         stateController.ShowCanvasForNodeType(node.nodeType, isBossNode);
 
-        //  RoundData »ı¼º ¹× ¶ó¿îµå ½ÃÀÛ
+        //  RoundData ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         RoundData roundData = mapData.nodes[node.nodeIndex].roundData;
         if (roundData != null)
+        {
+            // ë…¸ë“œì˜ ì»¬ëŸ¼ ì¸ë±ìŠ¤ë¥¼ RoundDataì— ë™ì ìœ¼ë¡œ ì„¤ì • (ë‚œì´ë„ ìŠ¤ì¼€ì¼ë§)
+            int col = mapData.nodes[node.nodeIndex].column;
+            if (roundData is CombatRoundData combat)
+                combat.columnIndex = col;
+            else if (roundData is EliteRoundData elite)
+                elite.columnIndex = col;
+            else if (roundData is BossRoundData boss)
+                boss.columnIndex = col;
+
             roundManager.StartRound(roundData);
+        }
     }
 
-    // ³ëµå Å¸ÀÔ¿¡ ¸Â´Â RoundData·Î ¶ó¿îµå ½ÃÀÛ
+    // ï¿½ï¿½ï¿½ Å¸ï¿½Ô¿ï¿½ ï¿½Â´ï¿½ RoundDataï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     
 
 }

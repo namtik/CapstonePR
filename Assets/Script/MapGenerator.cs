@@ -2,93 +2,93 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-// È¾½ºÅ©·Ñ ·Î±×¶óÀÌÅ© ¸Ê »ý¼º±â
-// °¢ÁÖ: ¿ÞÂÊ¿¡¼­ ¿À¸¥ÂÊÀ¸·Î ÁøÇàÇÏ´Â 10°³ ÄÃ·³ + º¸½º¹æ ±¸Á¶
+// È¾ï¿½ï¿½Å©ï¿½ï¿½ ï¿½Î±×¶ï¿½ï¿½ï¿½Å© ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ 10ï¿½ï¿½ ï¿½Ã·ï¿½ + ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 public class MapGenerator : MonoBehaviour
 {
-    [Header("¸Ê ±¸Á¶ ¼³Á¤")]
-    [Tooltip("ÀÏ¹Ý ½ºÅ×ÀÌÁö ÄÃ·³ °³¼ö")]
+    [Header("ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
+    [Tooltip("ï¿½Ï¹ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public int totalColumns = 10;
     
-    [Tooltip("Elite°¡ ³ª¿Ã È®·ü (0~1)")]
+    [Tooltip("Eliteï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ (0~1)")]
     [Range(0f, 1f)]
     public float eliteChance = 0.2f;
-    [Tooltip("Elite°¡ ³ª¿Ã ¼ö ÀÖ´Â ÃÖ¼Ò ÄÃ·³")]
+    [Tooltip("Eliteï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½Ö¼ï¿½ ï¿½Ã·ï¿½")]
     public int eliteColumnMin = 3;
 
-    [Tooltip("°¢ ÄÃ·³´ç ÃÖ¼Ò ³ëµå °³¼ö")]
+    [Tooltip("ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½Ö¼ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public int minNodesPerColumn = 3;
     
-    [Tooltip("°¢ ÄÃ·³´ç ÃÖ´ë ³ëµå °³¼ö")]
+    [Tooltip("ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public int maxNodesPerColumn = 4;
     
-    [Header("¹èÄ¡ ¼³Á¤")]
-    [Tooltip("ÄÃ·³ °£ °¡·Î °£°Ý")]
+    [Header("ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½")]
+    [Tooltip("ï¿½Ã·ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public float columnSpacing = 250f;
     
-    [Tooltip("³ëµå °£ ÃÖ¼Ò ¼¼·Î °£°Ý")]
+    [Tooltip("ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö¼ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public float minNodeSpacing = 100f;
     
-    [Tooltip("³ëµå °£ ÃÖ´ë ¼¼·Î °£°Ý")]
+    [Tooltip("ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public float maxNodeSpacing = 200f;
     
-    [Tooltip("¿¬°á °¡´ÉÇÑ ÃÖ´ë YÃà °Å¸®")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ Yï¿½ï¿½ ï¿½Å¸ï¿½")]
     public float maxConnectionDistance = 300f;
     
-    [Header("Æ¯¼ö¹æ À§Ä¡ (·£´ý ¹üÀ§)")]
-    [Tooltip("»óÁ¡¹æÀÌ ³ª¿Ã ÃÖ¼Ò ÄÃ·³ ÀÎµ¦½º")]
+    [Header("Æ¯ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¼ï¿½ ï¿½Ã·ï¿½ ï¿½Îµï¿½ï¿½ï¿½")]
     public int shopColumnMin = 5;
-    [Tooltip("»óÁ¡¹æÀÌ ³ª¿Ã ÃÖ´ë ÄÃ·³ ÀÎµ¦½º")]
+    [Tooltip("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½Ã·ï¿½ ï¿½Îµï¿½ï¿½ï¿½")]
     public int shopColumnMax = 4;
     
-    [Tooltip("ÈÞ½Ä¹æÀÌ ³ª¿Ã ÃÖ¼Ò ÄÃ·³ ÀÎµ¦½º")]
+    [Tooltip("ï¿½Þ½Ä¹ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¼ï¿½ ï¿½Ã·ï¿½ ï¿½Îµï¿½ï¿½ï¿½")]
     public int restColumnMin = 9;
-    [Tooltip("ÈÞ½Ä¹æÀÌ ³ª¿Ã ÃÖ´ë ÄÃ·³ ÀÎµ¦½º")]
+    [Tooltip("ï¿½Þ½Ä¹ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½Ã·ï¿½ ï¿½Îµï¿½ï¿½ï¿½")]
     public int restColumnMax = 8;
     
-    [Header("ÀÌº¥Æ® ³ëµå ¼³Á¤")]
-    [Tooltip("ÀÌº¥Æ® ³ëµå »ý¼º ÃÖ¼Ò °³¼ö")]
+    [Header("ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
+    [Tooltip("ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¼ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public int minEventNodes = 1;
-    [Tooltip("ÀÌº¥Æ® ³ëµå »ý¼º ÃÖ´ë °³¼ö")]
+    [Tooltip("ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public int maxEventNodes = 2;
-    [Tooltip("ÀÌº¥Æ® ³ëµå°¡ »ý¼ºµÉ ¼ö ÀÖ´Â ÃÖ¼Ò ÄÃ·³ (»óÁ¡/ÈÞ½Ä Á¦¿Ü)")]
+    [Tooltip("ï¿½Ìºï¿½Æ® ï¿½ï¿½å°¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½Ö¼ï¿½ ï¿½Ã·ï¿½ (ï¿½ï¿½ï¿½ï¿½/ï¿½Þ½ï¿½ ï¿½ï¿½ï¿½ï¿½)")]
     public int eventColumnMin = 2;
-    [Tooltip("ÀÌº¥Æ® ³ëµå°¡ »ý¼ºµÉ ¼ö ÀÖ´Â ÃÖ´ë ÄÃ·³ (º¸½º Á¦¿Ü)")]
+    [Tooltip("ï¿½Ìºï¿½Æ® ï¿½ï¿½å°¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½Ö´ï¿½ ï¿½Ã·ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)")]
     public int eventColumnMax = 7;
 
     [SerializeField] private RoundDataConfig roundDataConfig;
 
-    // »ý¼ºµÈ ¸Ê µ¥ÀÌÅÍ
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     private MapData generatedMapData;
     
-    // °¢ ÄÃ·³º° ³ëµå ¸®½ºÆ® (¿¬°á °è»ê¿ë)
+    // ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
     private List<List<int>> columnNodes = new List<List<int>>();
     
-    // °¢ÁÖ: ÇöÀç ¸Ê¿¡¼­ ½ÇÁ¦·Î »ç¿ëµÇ´Â Æ¯¼ö¹æ ÄÃ·³ (¸Å¹ø ·£´ý)
+    // ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ç´ï¿½ Æ¯ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ (ï¿½Å¹ï¿½ ï¿½ï¿½ï¿½ï¿½)
     private int actualShopColumn;
     private int actualRestColumn;
     private List<int> actualEventColumns = new List<int>();
 
     /// <summary>
-    /// ¸Ê »ý¼º ¸ÞÀÎ ÇÔ¼ö
-    /// °¢ÁÖ: ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÏ¸é »õ·Î¿î ¸ÊÀÌ »ý¼ºµÊ
+    /// ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½
+    /// ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ ï¿½Ô¼ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½Ï¸ï¿½ ï¿½ï¿½ï¿½Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public MapData GenerateMap()
     {
-        // 1. MapData ÃÊ±âÈ­
+        // 1. MapData ï¿½Ê±ï¿½È­
         generatedMapData = ScriptableObject.CreateInstance<MapData>();
         generatedMapData.nodes = new List<MapData.NodeEntry>();
         columnNodes.Clear();
 
-        // °¢ÁÖ: Æ¯¼ö¹æ À§Ä¡¸¦ ¸Å¹ø ·£´ýÇÏ°Ô °áÁ¤
+        // ï¿½ï¿½ï¿½ï¿½: Æ¯ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½Å¹ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½
         actualShopColumn = Random.Range(shopColumnMin, shopColumnMax + 1);
         actualRestColumn = Random.Range(restColumnMin, restColumnMax + 1);
         
-        // ÀÌº¥Æ® ÄÃ·³ ·£´ý ¼±ÅÃ (1~2°³)
+        // ï¿½Ìºï¿½Æ® ï¿½Ã·ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (1~2ï¿½ï¿½)
         actualEventColumns.Clear();
         int eventCount = Random.Range(minEventNodes, maxEventNodes + 1);
         
-        // »óÁ¡°ú ÈÞ½Ä ÄÃ·³À» Á¦¿ÜÇÑ °¡´ÉÇÑ ÄÃ·³ ¸ñ·Ï »ý¼º
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Þ½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         List<int> availableColumns = new List<int>();
         for (int i = eventColumnMin; i <= eventColumnMax; i++)
         {
@@ -98,7 +98,7 @@ public class MapGenerator : MonoBehaviour
             }
         }
         
-        // °¡´ÉÇÑ ÄÃ·³¿¡¼­ ·£´ýÇÏ°Ô ¼±ÅÃ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½
         for (int i = 0; i < eventCount && availableColumns.Count > 0; i++)
         {
             int randomIndex = Random.Range(0, availableColumns.Count);
@@ -106,27 +106,27 @@ public class MapGenerator : MonoBehaviour
             availableColumns.RemoveAt(randomIndex);
         }
         
-        Debug.Log($"ÀÌ¹ø ¸Ê: »óÁ¡={actualShopColumn}¹ø ÄÃ·³, ÈÞ½Ä={actualRestColumn}¹ø ÄÃ·³, ÀÌº¥Æ®={string.Join(",", actualEventColumns)}¹ø ÄÃ·³");
+        Debug.Log($"ï¿½Ì¹ï¿½ ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½={actualShopColumn}ï¿½ï¿½ ï¿½Ã·ï¿½, ï¿½Þ½ï¿½={actualRestColumn}ï¿½ï¿½ ï¿½Ã·ï¿½, ï¿½Ìºï¿½Æ®={string.Join(",", actualEventColumns)}ï¿½ï¿½ ï¿½Ã·ï¿½");
 
         int nodeIndex = 0;
 
-        // 2. °¢ ÄÃ·³º°·Î ³ëµå »ý¼º (0~9¹ø ÄÃ·³)
+        // 2. ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (0~9ï¿½ï¿½ ï¿½Ã·ï¿½)
         for (int col = 0; col < totalColumns; col++)
         {
             List<int> currentColumnIndices = new List<int>();
             
-            // °¢ÁÖ: 0¹ø ÄÃ·³(½ÃÀÛ)Àº Ç×»ó 1°³¸¸, ³ª¸ÓÁö´Â ·£´ý 3~5°³
+            // ï¿½ï¿½ï¿½ï¿½: 0ï¿½ï¿½ ï¿½Ã·ï¿½(ï¿½ï¿½ï¿½ï¿½)ï¿½ï¿½ ï¿½×»ï¿½ 1ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ 3~5ï¿½ï¿½
             int nodeCount;
             if (col == 0)
             {
-                nodeCount = 1; // ½ÃÀÛ ³ëµå 1°³¸¸
+                nodeCount = 1; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ 1ï¿½ï¿½ï¿½ï¿½
             }
             else
             {
                 nodeCount = Random.Range(minNodesPerColumn, maxNodesPerColumn + 1);
             }
             
-            // YÃà ¹èÄ¡ À§Ä¡ °áÁ¤
+            // Yï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
             float[] yPositions = GenerateYPositions(nodeCount);
             
             for (int i = 0; i < nodeCount; i++)
@@ -138,6 +138,7 @@ public class MapGenerator : MonoBehaviour
                     roundData = roundDataConfig != null
                         ? roundDataConfig.GetRoundData(DetermineNodeType(col, i, nodeCount))
                         : null,
+                    column = col,
                     connections = new List<int>()
                 };
                 
@@ -149,51 +150,52 @@ public class MapGenerator : MonoBehaviour
             columnNodes.Add(currentColumnIndices);
         }
 
-        // 3. º¸½º ¹æ »ý¼º (11¹øÂ° ÄÃ·³)
+        // 3. ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (11ï¿½ï¿½Â° ï¿½Ã·ï¿½)
         MapData.NodeEntry bossNode = new MapData.NodeEntry
         {
             anchoredPosition = new Vector2(totalColumns * columnSpacing, 0f),
-            nodeType = NodeType.Boss, // º¸½º¹æ
+            nodeType = NodeType.Boss,
             roundData = roundDataConfig != null
                 ? roundDataConfig.GetRoundData(NodeType.Boss)
                 : null,
+            column = totalColumns,
             connections = new List<int>()
         };
         generatedMapData.nodes.Add(bossNode);
         int bossIndex = nodeIndex;
         generatedMapData.bossIndex = bossIndex;
         
-        // 4. ½ÃÀÛ ³ëµå ¼³Á¤ (0¹ø ÄÃ·³ÀÇ À¯ÀÏÇÑ ³ëµå)
+        // 4. ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (0ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½)
         if (columnNodes.Count > 0 && columnNodes[0].Count > 0)
         {
-            generatedMapData.startIndex = columnNodes[0][0]; // °¢ÁÖ: 0¹ø ÄÃ·³ÀÇ Ã¹ ¹øÂ°(À¯ÀÏÇÑ) ³ëµå
+            generatedMapData.startIndex = columnNodes[0][0]; // ï¿½ï¿½ï¿½ï¿½: 0ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ Ã¹ ï¿½ï¿½Â°(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½) ï¿½ï¿½ï¿½
         }
 
-        // 5. ³ëµå °£ ¿¬°á »ý¼º
+        // 5. ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         ConnectNodes();
 
-        Debug.Log($"¸Ê »ý¼º ¿Ï·á: ÃÑ {generatedMapData.nodes.Count}°³ ³ëµå");
+        Debug.Log($"ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ï·ï¿½: ï¿½ï¿½ {generatedMapData.nodes.Count}ï¿½ï¿½ ï¿½ï¿½ï¿½");
         return generatedMapData;
     }
 
     /// <summary>
-    /// YÃà À§Ä¡ »ý¼º (±Õµî ºÐÆ÷ + ·£´ý ¿ÀÇÁ¼Â)
-    /// °¢ÁÖ: ³ëµåµéÀÌ °ãÄ¡Áö ¾Ê°í °ñ°í·ç ¹èÄ¡µÇµµ·Ï ÇÔ
+    /// Yï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½ (ï¿½Õµï¿½ ï¿½ï¿½ï¿½ï¿½ + ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
+    /// ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½Ê°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½Çµï¿½ï¿½ï¿½ ï¿½ï¿½
     /// </summary>
     float[] GenerateYPositions(int count)
     {
         float[] positions = new float[count];
         
-        // ÀüÃ¼ ³ôÀÌ ¹üÀ§ °è»ê
+        // ï¿½ï¿½Ã¼ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
         float totalHeight = (count - 1) * ((minNodeSpacing + maxNodeSpacing) / 2f);
         float startY = -totalHeight / 2f;
         
         for (int i = 0; i < count; i++)
         {
-            // ±âº» ±Õµî ¹èÄ¡
+            // ï¿½âº» ï¿½Õµï¿½ ï¿½ï¿½Ä¡
             float baseY = startY + i * ((minNodeSpacing + maxNodeSpacing) / 2f);
             
-            // ·£´ý ¿ÀÇÁ¼Â Ãß°¡ (³Ê¹« ÀÏÁ÷¼±ÀÌ µÇÁö ¾Êµµ·Ï)
+            // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ (ï¿½Ê¹ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Êµï¿½ï¿½ï¿½)
             float randomOffset = Random.Range(-30f, 30f);
             positions[i] = baseY + randomOffset;
         }
@@ -202,78 +204,78 @@ public class MapGenerator : MonoBehaviour
     }
 
     /// <summary>
-    /// ³ëµå Å¸ÀÔ °áÁ¤
-    /// °¢ÁÖ: Ã¹ ¹øÂ° ÄÃ·³Àº ÀüÅõ¹æ, ·£´ý ÄÃ·³¿¡ »óÁ¡/ÈÞ½Ä/ÀÌº¥Æ®¹æ ¹èÄ¡
+    /// ï¿½ï¿½ï¿½ Å¸ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½ï¿½ï¿½: Ã¹ ï¿½ï¿½Â° ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½/ï¿½Þ½ï¿½/ï¿½Ìºï¿½Æ®ï¿½ï¿½ ï¿½ï¿½Ä¡
     /// </summary>
     NodeType DetermineNodeType(int columnIndex, int nodeIndexInColumn, int totalNodesInColumn)
     {
-        // Ã¹ ¹øÂ° ÄÃ·³Àº ¹«Á¶°Ç ÀüÅõ¹æ
+        // Ã¹ ï¿½ï¿½Â° ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if (columnIndex == 0)
             return NodeType.Combat;
         
-        // °¢ÁÖ: ·£´ýÀ¸·Î °áÁ¤µÈ »óÁ¡ ÄÃ·³ (Áß°£ ³ëµå¸¸)
+        // ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ (ï¿½ß°ï¿½ ï¿½ï¿½å¸¸)
         if (columnIndex == actualShopColumn && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Shop;
         
-        // °¢ÁÖ: ·£´ýÀ¸·Î °áÁ¤µÈ ÈÞ½Ä ÄÃ·³ (Áß°£ ³ëµå¸¸)
+        // ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Þ½ï¿½ ï¿½Ã·ï¿½ (ï¿½ß°ï¿½ ï¿½ï¿½å¸¸)
         if (columnIndex == actualRestColumn && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Rest;
         
-        // °¢ÁÖ: ·£´ýÀ¸·Î °áÁ¤µÈ ÀÌº¥Æ® ÄÃ·³ (Áß°£ ³ëµå¸¸)
+        // ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ìºï¿½Æ® ï¿½Ã·ï¿½ (ï¿½ß°ï¿½ ï¿½ï¿½å¸¸)
         if (actualEventColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Event;
         
         if (columnIndex >= eliteColumnMin && Random.value < eliteChance)
             return NodeType.Elite;
 
-        // ³ª¸ÓÁö´Â ÀüÅõ¹æ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         return NodeType.Combat;
     }
 
     /// <summary>
-    /// ³ëµå °£ ¿¬°á »ý¼º
-    /// °¢ÁÖ: °¢ ³ëµå´Â ´ÙÀ½ ÄÃ·³ÀÇ °¡±î¿î ³ëµåµé°ú ¿¬°áµÊ
+    /// ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     void ConnectNodes()
     {
-        // 1. ÀÏ¹Ý ÄÃ·³ °£ ¿¬°á (0¡æ1, 1¡æ2, ..., 9¡æº¸½º)
+        // 1. ï¿½Ï¹ï¿½ ï¿½Ã·ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (0ï¿½ï¿½1, 1ï¿½ï¿½2, ..., 9ï¿½æº¸ï¿½ï¿½)
         for (int col = 0; col < columnNodes.Count; col++)
         {
             List<int> currentColumn = columnNodes[col];
             
-            // ´ÙÀ½ ÄÃ·³ °áÁ¤
+            // ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ ï¿½ï¿½ï¿½ï¿½
             List<int> nextColumn = null;
             if (col < columnNodes.Count - 1)
             {
-                // ´ÙÀ½ ÀÏ¹Ý ÄÃ·³
+                // ï¿½ï¿½ï¿½ï¿½ ï¿½Ï¹ï¿½ ï¿½Ã·ï¿½
                 nextColumn = columnNodes[col + 1];
             }
             else
             {
-                // ¸¶Áö¸· ÄÃ·³ ¡æ º¸½º¹æ
+                // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 nextColumn = new List<int> { generatedMapData.bossIndex };
             }
 
-            // ÇöÀç ÄÃ·³ÀÇ °¢ ³ëµå¿¡¼­ ´ÙÀ½ ÄÃ·³À¸·Î ¿¬°á
+            // ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½å¿¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             foreach (int nodeIndex in currentColumn)
             {
                 ConnectToNextColumn(nodeIndex, nextColumn);
             }
         }
 
-        // 2. °í¸³µÈ ³ëµå ÇØ°á (¿ª¹æÇâ ¿¬°á Ãß°¡)
+        // 2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ø°ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½)
         EnsureAllNodesConnected();
     }
 
     /// <summary>
-    /// ÇÑ ³ëµå¸¦ ´ÙÀ½ ÄÃ·³ ³ëµåµé°ú ¿¬°á
-    /// °¢ÁÖ: YÃà °Å¸®°¡ °¡±î¿î ³ëµåµé¸¸ ¿¬°á (1~3°³)
+    /// ï¿½ï¿½ ï¿½ï¿½å¸¦ ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½ï¿½ï¿½: Yï¿½ï¿½ ï¿½Å¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½é¸¸ ï¿½ï¿½ï¿½ï¿½ (1~3ï¿½ï¿½)
     /// </summary>
     void ConnectToNextColumn(int fromIndex, List<int> nextColumnIndices)
     {
         Vector2 fromPos = generatedMapData.nodes[fromIndex].anchoredPosition;
         
-        // °Å¸® ¼øÀ¸·Î Á¤·Ä
+        // ï¿½Å¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         var sortedTargets = nextColumnIndices
             .Select(idx => new {
                 Index = idx,
@@ -283,14 +285,14 @@ public class MapGenerator : MonoBehaviour
             .OrderBy(x => x.Distance)
             .ToList();
 
-        // ÃÖ¼Ò 1°³, ÃÖ´ë 3°³ ¿¬°á
+        // ï¿½Ö¼ï¿½ 1ï¿½ï¿½, ï¿½Ö´ï¿½ 3ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         int connectCount = Mathf.Min(Random.Range(1, 3), sortedTargets.Count);
         
         for (int i = 0; i < connectCount; i++)
         {
             int targetIndex = sortedTargets[i].Index;
             
-            // Áßº¹ ¿¬°á ¹æÁö
+            // ï¿½ßºï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             if (!generatedMapData.nodes[fromIndex].connections.Contains(targetIndex))
             {
                 generatedMapData.nodes[fromIndex].connections.Add(targetIndex);
@@ -299,12 +301,12 @@ public class MapGenerator : MonoBehaviour
     }
 
     /// <summary>
-    /// ¸ðµç ³ëµå°¡ ÃÖ¼Ò 1°³ ÀÌ»óÀÇ ¿¬°áÀ» °¡Áöµµ·Ï º¸Àå
-    /// °¢ÁÖ: ÀÔ±¸°¡ ¾ø´Â ³ëµå¿¡ ¿ª¹æÇâ ¿¬°á Ãß°¡
+    /// ï¿½ï¿½ï¿½ ï¿½ï¿½å°¡ ï¿½Ö¼ï¿½ 1ï¿½ï¿½ ï¿½Ì»ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½ï¿½ï¿½: ï¿½Ô±ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½å¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
     /// </summary>
     void EnsureAllNodesConnected()
     {
-        // °¢ ³ëµå°¡ ÀÔ±¸¸¦ °¡Áö´ÂÁö Ã¼Å©
+        // ï¿½ï¿½ ï¿½ï¿½å°¡ ï¿½Ô±ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã¼Å©
         HashSet<int> nodesWithIncoming = new HashSet<int>();
         
         for (int i = 0; i < generatedMapData.nodes.Count; i++)
@@ -315,14 +317,14 @@ public class MapGenerator : MonoBehaviour
             }
         }
 
-        // ÀÔ±¸°¡ ¾ø´Â ³ëµå Ã£±â (Ã¹ ÄÃ·³ Á¦¿Ü)
+        // ï¿½Ô±ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ Ã£ï¿½ï¿½ (Ã¹ ï¿½Ã·ï¿½ ï¿½ï¿½ï¿½ï¿½)
         for (int col = 1; col < columnNodes.Count; col++)
         {
             foreach (int nodeIndex in columnNodes[col])
             {
                 if (!nodesWithIncoming.Contains(nodeIndex))
                 {
-                    // ÀÌÀü ÄÃ·³¿¡¼­ °¡Àå °¡±î¿î ³ëµå Ã£±â
+                    // ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ Ã£ï¿½ï¿½
                     List<int> prevColumn = columnNodes[col - 1];
                     Vector2 targetPos = generatedMapData.nodes[nodeIndex].anchoredPosition;
                     
@@ -330,7 +332,7 @@ public class MapGenerator : MonoBehaviour
                         .OrderBy(idx => Mathf.Abs(generatedMapData.nodes[idx].anchoredPosition.y - targetPos.y))
                         .First();
                     
-                    // ¿¬°á Ãß°¡
+                    // ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
                     if (!generatedMapData.nodes[closestIndex].connections.Contains(nodeIndex))
                     {
                         generatedMapData.nodes[closestIndex].connections.Add(nodeIndex);
@@ -339,11 +341,11 @@ public class MapGenerator : MonoBehaviour
             }
         }
 
-        // º¸½º¹æ ÀÔ±¸ º¸Àå
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ô±ï¿½ ï¿½ï¿½ï¿½ï¿½
         int bossIndex = generatedMapData.bossIndex;
         if (!nodesWithIncoming.Contains(bossIndex))
         {
-            // ¸¶Áö¸· ÄÃ·³ÀÇ ¸ðµç ³ëµå¸¦ º¸½º¹æ¿¡ ¿¬°á
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½å¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½æ¿¡ ï¿½ï¿½ï¿½ï¿½
             List<int> lastColumn = columnNodes[columnNodes.Count - 1];
             foreach (int nodeIndex in lastColumn)
             {
@@ -356,19 +358,19 @@ public class MapGenerator : MonoBehaviour
     }
 
     /// <summary>
-    /// µð¹ö±×¿ë: »ý¼ºµÈ ¸Ê Á¤º¸ Ãâ·Â
+    /// ï¿½ï¿½ï¿½ï¿½×¿ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
     /// </summary>
     public void PrintMapInfo()
     {
-        Debug.Log("=== ¸Ê »ý¼º Á¤º¸ ===");
-        Debug.Log($"ÃÑ ³ëµå ¼ö: {generatedMapData.nodes.Count}");
-        Debug.Log($"½ÃÀÛ ³ëµå: {generatedMapData.startIndex}");
-        Debug.Log($"º¸½º ³ëµå: {generatedMapData.bossIndex}");
+        Debug.Log("=== ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ===");
+        Debug.Log($"ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½: {generatedMapData.nodes.Count}");
+        Debug.Log($"ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½: {generatedMapData.startIndex}");
+        Debug.Log($"ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½: {generatedMapData.bossIndex}");
         
         for (int i = 0; i < generatedMapData.nodes.Count; i++)
         {
             var node = generatedMapData.nodes[i];
-            Debug.Log($"³ëµå {i}: {node.nodeType}, À§Ä¡ ({node.anchoredPosition.x}, {node.anchoredPosition.y}), ¿¬°á ¡æ [{string.Join(", ", node.connections)}]");
+            Debug.Log($"ï¿½ï¿½ï¿½ {i}: {node.nodeType}, ï¿½ï¿½Ä¡ ({node.anchoredPosition.x}, {node.anchoredPosition.y}), ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ [{string.Join(", ", node.connections)}]");
         }
     }
 }

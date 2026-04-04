@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BossRoundData
   roundName: Boss
   roundType: 4
-  bossEnemy: {fileID: 11400000, guid: b238274c392b1a242967606b877103b7, type: 2}
+  bossEnemy: {fileID: 11400000, guid: cb86b2a99ff0e3c4fa39c3a0f32434a6, type: 2}
   columnIndex: 0
