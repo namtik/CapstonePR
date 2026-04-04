@@ -773,6 +773,14 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    public void ResetForNewGame()
+    {
+        learnedSkills.Clear();
+        comboLookup.Clear();
+        learnedSkillCount = 0;
+        comboInput.Clear();
+    }
+
     void Start()
     {
         player = FindFirstObjectByType<Player>();
