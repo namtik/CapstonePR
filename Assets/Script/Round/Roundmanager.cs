@@ -131,12 +131,15 @@ public class Roundmanager : MonoBehaviour
 
     void OnStarterSkillSelected(SkillDataParser.SkillData skill)
     {
+        Debug.Log("[Roundmanager] OnStarterSkillSelected 호출됨");
+
         SkillRewardUI rewardUI = SkillDataParser.Instance?.SkillRewardUI;
         if (rewardUI != null)
             rewardUI.OnSkillSelected -= OnStarterSkillSelected;
 
         if (pendingRoundData != null)
         {
+            Debug.Log("[Roundmanager] ContinueStartRound 실행");
             ContinueStartRound(pendingRoundData);
             pendingRoundData = null;
         }
@@ -176,6 +179,9 @@ public class Roundmanager : MonoBehaviour
         Player player = FindFirstObjectByType<Player>();
         if (player != null) player.ResetStatusForNewBattle();
 
+        // 사망 이벤트 구독 갱신
+        GameStateController.Instance?.SubscribePlayerDeath();
+
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
     }
@@ -190,6 +196,8 @@ public class Roundmanager : MonoBehaviour
 
         Player player = FindFirstObjectByType<Player>();
         if (player != null) player.ResetStatusForNewBattle();
+
+        GameStateController.Instance?.SubscribePlayerDeath();
 
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
@@ -310,12 +318,21 @@ public class Roundmanager : MonoBehaviour
             return;
         }
 
+        // 이전 적 오브젝트 제거
+        if (currentEnemy != null && currentEnemy.gameObject != null)
+        {
+            Destroy(currentEnemy.gameObject);
+        }
+
         GameObject go = Instantiate(enemyPrefab, enemySpawnPoint);
 
         // 적을 중앙에 배치
         RectTransform rectTransform = go.GetComponent<RectTransform>();
         if (rectTransform != null)
         {
+            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
             rectTransform.anchoredPosition = Vector2.zero;
             rectTransform.localScale = Vector3.one;
         }

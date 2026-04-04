@@ -293,6 +293,13 @@ public class ElementSlotSystem : MonoBehaviour
 
     void HandleInput()
     {
+        // UI에 포커스가 있으면 키 입력이 먹히지 않을 수 있으므로 해제
+        var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+        if (eventSystem != null && eventSystem.currentSelectedGameObject != null)
+        {
+            eventSystem.SetSelectedGameObject(null);
+        }
+
         if (Input.GetKeyDown(KeyCode.Q)) UseSlot(0);
         else if (Input.GetKeyDown(KeyCode.W)) UseSlot(1);
         else if (Input.GetKeyDown(KeyCode.E)) UseSlot(2);

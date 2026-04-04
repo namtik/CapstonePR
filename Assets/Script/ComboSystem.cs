@@ -848,7 +848,11 @@ public class ComboSystem : MonoBehaviour
         foreach (string key in hintKeys)
         {
             if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText) || hintText == null)
+            {
+                // 파괴된 참조를 클리어
+                nextHintTexts.Remove(key);
                 return false;
+            }
         }
         return true;
     }
@@ -859,45 +863,53 @@ public class ComboSystem : MonoBehaviour
         GameObject slotRootObject = GameObject.Find(elementSlotRootName);
         if (slotRootObject == null) return;
         Transform slotRoot = slotRootObject.transform;
+        if (slotRoot == null) return;
 
         foreach (string key in hintKeys)
         {
-            string slotName = slotObjectPrefix + key.ToUpperInvariant();
-            Transform slotTransform = slotRoot.Find(slotName);
-            if (slotTransform == null) continue;
-
-            string hintObjectName = nextHintObjectPrefix + key.ToUpperInvariant();
-            Transform hintTransform = slotTransform.Find(hintObjectName);
-            if (hintTransform == null)
+            try
             {
-                GameObject hintObject = new GameObject(hintObjectName);
-                hintObject.transform.SetParent(slotTransform, false);
-                hintTransform = hintObject.transform;
+                string slotName = slotObjectPrefix + key.ToUpperInvariant();
+                Transform slotTransform = slotRoot.Find(slotName);
+                if (slotTransform == null) continue;
+
+                string hintObjectName = nextHintObjectPrefix + key.ToUpperInvariant();
+                Transform hintTransform = slotTransform.Find(hintObjectName);
+                if (hintTransform == null)
+                {
+                    GameObject hintObject = new GameObject(hintObjectName);
+                    hintObject.transform.SetParent(slotTransform, false);
+                    hintTransform = hintObject.transform;
+                }
+
+                RectTransform hintRect = hintTransform as RectTransform;
+                if (hintRect == null) hintRect = hintTransform.gameObject.AddComponent<RectTransform>();
+
+                hintRect.anchorMin = new Vector2(0.5f, 1f);
+                hintRect.anchorMax = new Vector2(0.5f, 1f);
+                hintRect.pivot = new Vector2(0.5f, 0f);
+                hintRect.anchoredPosition = nextHintOffset;
+                hintRect.sizeDelta = nextHintSize;
+
+                TMP_Text hintText = hintTransform.GetComponent<TMP_Text>();
+                if (hintText == null) hintText = hintTransform.gameObject.AddComponent<TextMeshProUGUI>();
+
+                hintText.alignment = TextAlignmentOptions.Center;
+                hintText.color = nextHintColor;
+                hintText.fontSize = nextHintFontSize;
+                hintText.fontStyle = nextHintFontStyle;
+                hintText.enableAutoSizing = nextHintAutoSize;
+                hintText.raycastTarget = false;
+                hintText.textWrappingMode = TextWrappingModes.NoWrap;
+                hintText.overflowMode = TextOverflowModes.Overflow;
+                if (nextHintFont != null) hintText.font = nextHintFont;
+
+                nextHintTexts[key] = hintText;
             }
-
-            RectTransform hintRect = hintTransform as RectTransform;
-            if (hintRect == null) hintRect = hintTransform.gameObject.AddComponent<RectTransform>();
-
-            hintRect.anchorMin = new Vector2(0.5f, 1f);
-            hintRect.anchorMax = new Vector2(0.5f, 1f);
-            hintRect.pivot = new Vector2(0.5f, 0f);
-            hintRect.anchoredPosition = nextHintOffset;
-            hintRect.sizeDelta = nextHintSize;
-
-            TMP_Text hintText = hintTransform.GetComponent<TMP_Text>();
-            if (hintText == null) hintText = hintTransform.gameObject.AddComponent<TextMeshProUGUI>();
-
-            hintText.alignment = TextAlignmentOptions.Center;
-            hintText.color = nextHintColor;
-            hintText.fontSize = nextHintFontSize;
-            hintText.fontStyle = nextHintFontStyle;
-            hintText.enableAutoSizing = nextHintAutoSize;
-            hintText.raycastTarget = false;
-            hintText.textWrappingMode = TextWrappingModes.NoWrap;
-            hintText.overflowMode = TextOverflowModes.Overflow;
-            if (nextHintFont != null) hintText.font = nextHintFont;
-
-            nextHintTexts[key] = hintText;
+            catch (MissingReferenceException)
+            {
+                nextHintTexts.Remove(key);
+            }
         }
     }
 
@@ -905,9 +917,17 @@ public class ComboSystem : MonoBehaviour
     {
         foreach (string key in hintKeys)
         {
-            if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText) || hintText == null) continue;
-            hintText.text = "";
-            hintText.gameObject.SetActive(false);
+            if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText)) continue;
+            try
+            {
+                if (hintText == null) { nextHintTexts.Remove(key); continue; }
+                hintText.text = "";
+                hintText.gameObject.SetActive(false);
+            }
+            catch (MissingReferenceException)
+            {
+                nextHintTexts.Remove(key);
+            }
         }
     }
 
@@ -1150,6 +1170,10 @@ public class ComboSystem : MonoBehaviour
             if (card != null) Destroy(card);
         }
         comboSlotCards.Clear();
+
+        // 이전 전투의 파괴된 UI 참조를 정리
+        nextHintTexts.Clear();
+
         ClearNextComboHints();
     }
 

@@ -25,7 +25,7 @@ public class DifficultyConfig : ScriptableObject
     public int GetAttackCount(int baseCount, int column, NodeType type)
     {
         float t = (float)column / totalColumns;
-        float scaled = baseCount * attackCountCurve.Evaluate(t) * GetTypeMultiplier(type);
+        float scaled = baseCount * attackCountCurve.Evaluate(t);
         return Mathf.Max(1, Mathf.RoundToInt(scaled));
     }
 

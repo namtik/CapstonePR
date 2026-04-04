@@ -83,20 +83,32 @@ public class SkillRewardUI : MonoBehaviour
 
         rewardPanel.SetActive(false);
         ComboSystem.Instance.LearnSkill(skill);
-        OnSkillSelected?.Invoke(skill);
 
         // 초기 스킬 선택이면 맵 복귀 없이 종료
         if (isStarterSelection)
         {
             isStarterSelection = false;
             Time.timeScale = 1f;
+
+            // UI 포커스 해제 — EventSystem이 키보드 입력을 삼키지 않도록
+            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(null);
+
             EnsureContainerActive(false);
+
+            // OnSkillSelected는 timeScale 복원 후 호출 (Roundmanager가 전투를 시작하므로)
+            OnSkillSelected?.Invoke(skill);
             return;
         }
+
+        OnSkillSelected?.Invoke(skill);
 
         if (returnToMapAfterSelection)
         {
             Time.timeScale = 1f;
+
+            // UI 포커스 해제
+            UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(null);
+
             if (roundManager != null)
                 roundManager.ReturnToMap();
             else
