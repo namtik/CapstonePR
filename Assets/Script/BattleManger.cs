@@ -12,7 +12,7 @@ public class BattleManger : MonoBehaviour
 
     void OnEnable()
     {
-        // °¢ÁÖ: Äµ¹ö½º°¡ È°¼ºÈ­µÉ ¶§¸¶´Ù ÀüÅõ ÃÊ±âÈ­
+        // ìº”ë²„ìŠ¤ê°€ í™œì„±í™”ë  ë•Œë§ˆë‹¤ ì „íˆ¬ ì´ˆê¸°í™”
         if (!battleInitialized)
         {
             InitializeBattle();
@@ -21,10 +21,10 @@ public class BattleManger : MonoBehaviour
 
     void InitializeBattle()
     {
-        // °¢ÁÖ: ±âÁ¸ ÇÃ·¹ÀÌ¾î/Àû Á¦°Å
+        // ê¸°ì¡´ í”Œë ˆì´ì–´/ì  ì œê±°
         ClearBattleObjects();
 
-        // °¢ÁÖ: »õ·Î »ı¼º
+        // ìƒˆë¡œ ìƒì„±
         if (playerPrefab != null && playerParent != null)
         {
             Instantiate(playerPrefab, playerParent);
@@ -34,14 +34,15 @@ public class BattleManger : MonoBehaviour
         {
             Instantiate(enemyPrefab, enemyParent);
         }
+        ElementSlotSystem.Instance?.StartBattle();
 
         battleInitialized = true;
-        Debug.Log("ÀüÅõ ÃÊ±âÈ­ ¿Ï·á");
+        Debug.Log("ì „íˆ¬ ì´ˆê¸°í™” ì™„ë£Œ");
     }
 
     void ClearBattleObjects()
     {
-        // °¢ÁÖ: ±âÁ¸ Player/Enemy Á¦°Å
+        // ê¸°ì¡´ Player/Enemy ì œê±°
         var existingPlayers = FindObjectsByType<Player>(FindObjectsSortMode.None);
         foreach (var p in existingPlayers)
         {
@@ -77,17 +78,18 @@ public class BattleManger : MonoBehaviour
         }
     }
 
-    // ÀüÅõ Å¬¸®¾î ÈÄ È£Ãâ: ¸Ê È­¸éÀ¸·Î º¹±Í
+    // ì „íˆ¬ í´ë¦¬ì–´ í›„ í˜¸ì¶œ: ë§µ í™”ë©´ìœ¼ë¡œ ë³µê·€
     public void OnBattleClear()
     {
-        Debug.Log("=== BattleManger.OnBattleClear È£ÃâµÊ ===");
-        
-        //GameStateController¸¦ ÅëÇØ ¸ÊÀ¸·Î º¹±Í
+        Debug.Log("=== BattleManger.OnBattleClear í˜¸ì¶œë¨ ===");
+
+        // GameStateControllerë¥¼ í†µí•´ ìƒíƒœ ì „í™˜ ì²˜ë¦¬
         GameStateController stateController = GameStateController.Instance;
         if (stateController != null)
         {
-            Debug.Log("GameStateController.OnBattleClear È£Ãâ Áß...");
-            battleInitialized = false; //´ÙÀ½ ÀüÅõ¸¦ À§ÇØ ¸®¼Â
+            Debug.Log("GameStateController.OnRoundClear í˜¸ì¶œ ì¤‘...");
+            ElementSlotSystem.Instance?.EndBattle();
+            battleInitialized = false; // ë‹¤ìŒ ì „íˆ¬ë¥¼ ìœ„í•´ ë¦¬ì…‹
             stateController.OnRoundClear();
             return;
         }

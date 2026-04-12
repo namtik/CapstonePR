@@ -1,5 +1,6 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -9,28 +10,28 @@ public class SkillDataParser : MonoBehaviour
     [System.Serializable]
     public class SkillData
     {
-        public int id;              // ½ºÅ³ °íÀ¯ ID
-        public string name;         // ½ºÅ³ ÀÌ¸§
-        public float damage;        // µ¥¹ÌÁö
-        public int draw;           // µå·Î¿ì Ä«µå ¼ö
-        public String combo;      // ÄŞº¸ Ä¿¸Ç´õ
-        public string effectName;   // ÀÌÆåÆ® ÇÁ¸®ÆÕ ÀÌ¸§
+        public int id;              // ìŠ¤í‚¬ ê³ ìœ  ID
+        public string name;         // ìŠ¤í‚¬ ì´ë¦„
+        public float damage;        // ë°ë¯¸ì§€
+        public string combo;        // ì½¤ë³´ ì»¤ë§¨ë“œ
+        public string effectName;   // ì´í™íŠ¸ í”„ë¦¬íŒ¹ ì´ë¦„
 
-        public string iconName;// CSV¿¡¼­ ÀĞ¾î¿Â ÆÄÀÏ¸í
-        public Sprite skillIcon;// °ÔÀÓ¿¡¼­ »ç¿ëµÉ ½ºÇÁ¶óÀÌÆ®
+        public string iconName;     // CSVì—ì„œ ì½ì–´ì˜¨ íŒŒì¼ëª…
+        public Sprite skillIcon;    // ê²Œì„ì—ì„œ ì‚¬ìš©ë  ìŠ¤í”„ë¼ì´íŠ¸
 
-        public string createCard1;   // »ı¼º Ä«µå 1
-        public string createCard2;   // »ı¼º Ä«µå 2
+        public string statusType;   // ìƒíƒœì´ìƒ íƒ€ì…
+        public int statusAmount;    // ìƒíƒœì´ìƒ ìˆ˜ì¹˜
+        public int guardAmount;
 
-        public string description;  // ½ºÅ³ ¼³¸í
+        public string description;  // ìŠ¤í‚¬ ì„¤ëª…
     }
 
     public static SkillDataParser Instance;
+    public SkillRewardUI SkillRewardUI; // ë³´ìƒ UI ì°¸ì¡°
 
-    // ID¸¦ ÅëÇØ ½ºÅ³ µ¥ÀÌÅÍ Å½»ö¿ë µñ¼Å³Ê¸®
+    // IDë¥¼ í†µí•´ ìŠ¤í‚¬ ë°ì´í„° íƒìƒ‰ìš© ë”•ì…”ë„ˆë¦¬
     public Dictionary<int, SkillData> skillDic = new Dictionary<int, SkillData>();
     public List<SkillData> allSkills = new List<SkillData>();
-    public SkillRewardUI SkillRewardUI; // º¸»ó UI ÂüÁ¶
 
     void Awake()
     {
@@ -38,51 +39,50 @@ public class SkillDataParser : MonoBehaviour
         else Destroy(gameObject);
 
         LoadSkillData();
-        SkillRewardUI.ShowRewardOptions();
     }
 
     void LoadSkillData()
     {
-        // °æ·Î Assets/Resources/SkillDB.csv
+        // ë¡œë“œí•  íŒŒì¼ëª… "SkillDB"
         TextAsset csvData = Resources.Load<TextAsset>("SkillDB");
 
         if (csvData == null)
         {
-            Debug.LogError("½ºÅ³DB.csv ÆÄÀÏÀ» Ã£À» ¼ö ¾ø½À´Ï´Ù!");
+            Debug.LogError("SkillDB.csv íŒŒì¼ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
             return;
         }
 
-        // ÁÙ¹Ù²ŞÀ¸·Î µ¥ÀÌÅÍ ÂÉ°³±â
+        // ì¤„ë°”ê¿ˆìœ¼ë¡œ ë°ì´í„° ìª¼ê°œê¸°
         string[] lines = csvData.text.Split('\n');
 
-        // 0¹ø(Å¸ÀÔ), 1¹ø(Çì´õ) ÁÙÀº °Ç³Ê¶Ù°í 2¹øºÎÅÍ µ¥ÀÌÅÍ ÆÄ½Ì
+        // 0ë²ˆ(íƒ€ì…), 1ë²ˆ(í—¤ë”) ì¤„ì€ ê±´ë„ˆë›°ê³  2ë²ˆë¶€í„° ë°ì´í„° íŒŒì‹±
         for (int i = 2; i < lines.Length; i++)
         {
-            if (string.IsNullOrWhiteSpace(lines[i])) continue; // ºó ÁÙ ¹«½Ã
+            if (string.IsNullOrWhiteSpace(lines[i])) continue; // ë¹ˆ ì¤„ ë¬´ì‹œ
 
-            string[] row = lines[i].Split(',');
+            // ë”°ì˜´í‘œ("") ì•ˆì˜ ì‰¼í‘œëŠ” ë¬´ì‹œí•˜ê³  ë°ì´í„°ë¥¼ ë¶„ë¦¬
+            string[] row = Regex.Split(lines[i].Trim(), ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
-            // µ¥ÀÌÅÍ °³¼ö Ã¼Å©
+            // ë°ì´í„° ê°œìˆ˜ ì²´í¬ (ì´ 10ê°œ ì»¬ëŸ¼)
             if (row.Length < 10) continue;
 
             try
             {
                 SkillData skill = new SkillData();
 
-                skill.id = int.Parse(row[0]);           // ID
-                skill.name = row[1];                    // Name
-                skill.damage = float.Parse(row[2])/100;     // Damage
-                skill.combo = row[3];                   // Combo
-                skill.draw = int.Parse(row[4]);    // Draw
-                skill.effectName = row[5];              // EffectName
-                skill.iconName = row[6];                // SkillImg
+                skill.id = int.Parse(row[0]);               // ID
+                skill.name = row[1];                        // Name
+                skill.damage = float.Parse(row[2]) / 100f;  // Damage
+                skill.combo = row[3];                       // Combo
+                skill.effectName = row[4];                  // EffectName
+                skill.iconName = row[5];                    // SkillImg
+                skill.statusType = row[6];                  // StatusType
+                skill.statusAmount = int.Parse(row[7]);     // StatusAmount
 
+                skill.guardAmount = int.Parse(row[8]);      //GuardAmount
 
-                skill.createCard1 = row[7];             // »ı¼º 1Àå
-                skill.createCard2 = row[8];             // »ı¼º 2Àå
-
-                // ¼³¸í (¿¢¼¿ ÁÙ¹Ù²Ş ¹®ÀÚ Á¦°Å)
-                skill.description = row[9].Replace("\r", "");
+                // ì—‘ì…€ ì¤„ë°”ê¿ˆ ë¬¸ì ë° ì–‘ë ë”°ì˜´í‘œ ì œê±°
+                skill.description = row[9].Replace("\r", "").Replace("\"", "");
 
                 skill.skillIcon = Resources.Load<Sprite>($"SkillIcons/{skill.iconName}");
                 allSkills.Add(skill);
@@ -94,11 +94,11 @@ public class SkillDataParser : MonoBehaviour
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"{i}¹øÂ° ÁÙ ÆÄ½Ì ¿¡·¯: {e.Message}");
+                Debug.LogError($"{i}ë²ˆì§¸ ì¤„ íŒŒì‹± ì—ëŸ¬: {e.Message}");
             }
         }
 
-        Debug.Log($"ÃÑ {skillDic.Count}°³ÀÇ ½ºÅ³ ·Îµå ¿Ï·á!");
+        Debug.Log($"ì´ {skillDic.Count}ê°œì˜ ìŠ¤í‚¬ ë¡œë“œ ì™„ë£Œ!");
     }
 
     public SkillData GetSkill(int id)
@@ -107,17 +107,24 @@ public class SkillDataParser : MonoBehaviour
         return null;
     }
 
-    public List<SkillData> GetRandomSkills(int count)// ½ºÅ³ ·£´ı ÃßÃâ (Áßº¹ ¾øÀÌ)
+    public List<SkillData> GetRandomSkills(int count, HashSet<int> excludeIds) // ìŠ¤í‚¬ ëœë¤ ì¶”ì¶œ (ì¤‘ë³µ ì—†ì´)
     {
         List<SkillData> result = new List<SkillData>();
-        List<SkillData> tempPool = new List<SkillData>(allSkills);
+        List<SkillData> tempPool = new List<SkillData>();
+        foreach (SkillData skill in allSkills)
+        {
+            if (!excludeIds.Contains(skill.id))
+            {
+                tempPool.Add(skill);
+            }
+        }
 
         for (int i = 0; i < count; i++)
         {
             if (tempPool.Count == 0) break;
             int randIndex = Random.Range(0, tempPool.Count);
             result.Add(tempPool[randIndex]);
-            tempPool.RemoveAt(randIndex); // Áßº¹ »Ì±â ¹æÁö
+            tempPool.RemoveAt(randIndex); // ì¤‘ë³µ ë½‘ê¸° ë°©ì§€
         }
         return result;
     }

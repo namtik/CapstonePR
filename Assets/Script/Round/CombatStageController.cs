@@ -1,12 +1,12 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 
 public class CombatStageController : MonoBehaviour
 {
-    [Header("¹è°æ")]
+    [Header("ë°°ê²½")]
     [SerializeField] private Image backgroundImage;
 
-    [Header("¹è°æ ½ºÇÁ¶óÀÌÆ®")]
+    [Header("ë°°ê²½ ìŠ¤í”„ë¼ì´íŠ¸")]
     [SerializeField] private Sprite normalSprite;
     [SerializeField] private Sprite eliteSprite;
     [SerializeField] private Sprite bossSprite;
@@ -14,8 +14,18 @@ public class CombatStageController : MonoBehaviour
     public void Initialize(RoundData roundData)
     {
         SwitchBackground(roundData);
+
+        // ë±/ì†íŒ¨ ì´ˆê¸°í™”
+        var cardSystem = FindFirstObjectByType<CardSystem>();
+        if (cardSystem != null)
+        {
+            cardSystem.ResetDeck();
+        }
+
+        // ì½¤ë³´ ìŠ¬ë¡¯ ì´ˆê¸°í™” ë° ìŠ¤í‚¬ UI ê°±ì‹ 
         if (ComboSystem.Instance != null)
         {
+            ComboSystem.Instance.ResetComboInput();
             ComboSystem.Instance.RefreshSkillUI();
             ComboSystem.Instance.RefreshComboSlotUI();
         }
@@ -37,9 +47,9 @@ public class CombatStageController : MonoBehaviour
 
     void OnValidate()
     {
-        if (backgroundImage == null) Debug.LogWarning("CombatStageController: backgroundImage°¡ ¾ø½À´Ï´Ù.");
-        if (normalSprite == null) Debug.LogWarning("CombatStageController: normalSprite°¡ ¾ø½À´Ï´Ù.");
-        if (eliteSprite == null) Debug.LogWarning("CombatStageController: eliteSprite°¡ ¾ø½À´Ï´Ù.");
-        if (bossSprite == null) Debug.LogWarning("CombatStageController: bossSprite°¡ ¾ø½À´Ï´Ù.");
+        if (backgroundImage == null) Debug.LogWarning("CombatStageController: backgroundImageê°€ ì—†ìŠµë‹ˆë‹¤.");
+        if (normalSprite == null) Debug.LogWarning("CombatStageController: normalSpriteê°€ ì—†ìŠµë‹ˆë‹¤.");
+        if (eliteSprite == null) Debug.LogWarning("CombatStageController: eliteSpriteê°€ ì—†ìŠµë‹ˆë‹¤.");
+        if (bossSprite == null) Debug.LogWarning("CombatStageController: bossSpriteê°€ ì—†ìŠµë‹ˆë‹¤.");
     }
 }

@@ -2,29 +2,31 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// MapData: ¿¡µğÅÍ¿¡¼­ ¸Ê ·¹ÀÌ¾Æ¿ô Á¤ÀÇÇÏ´Â SOÀÓ
-// °¢ÁÖ: MapManager´Â ÀÌ SO¸¦ ÀĞ¾î ³ëµå¸¦ »ı¼ºÇÏ°í °æ·Î¼±À» ±×¸²
+// MapData: ï¿½ï¿½ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¾Æ¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ SOï¿½ï¿½
+// ï¿½ï¿½ï¿½ï¿½: MapManagerï¿½ï¿½ ï¿½ï¿½ SOï¿½ï¿½ ï¿½Ğ¾ï¿½ ï¿½ï¿½å¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½Î¼ï¿½ï¿½ï¿½ ï¿½×¸ï¿½
 [CreateAssetMenu(fileName = "MapData", menuName = "Map/MapData")]
 public class MapData : ScriptableObject
 {
     [Serializable]
     public class NodeEntry
     {
-        // ³ëµåÀÇ UI Äµ¹ö½º »óÀÇ »ó´ë À§Ä¡(anchoredPosition).
-        // °¢ÁÖ: MapManager°¡ RectTransform.anchoredPosition¿¡ ±×´ë·Î »ç¿ëÇÕ´Ï´Ù.
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ UI Äµï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡(anchoredPosition).
+        // ï¿½ï¿½ï¿½ï¿½: MapManagerï¿½ï¿½ RectTransform.anchoredPositionï¿½ï¿½ ï¿½×´ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
         public Vector2 anchoredPosition = Vector2.zero;
 
-        // ³ëµå À¯Çü (Combat, Shop, Rest, Elite)
-        // MapNode »ö»ó ¹× µ¿ÀÛÀ» °áÁ¤ÇÏ´Â ±âº» Á¤º¸
+        // ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (Combat, Shop, Rest, Elite)
+        // MapNode ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½âº» ï¿½ï¿½ï¿½ï¿½
         public NodeType nodeType = NodeType.Combat;
 
-        // ÀÌ ³ëµå°¡ µé¾î°¥ ¾À ÀÌ¸§
+        // ï¿½ï¿½ ï¿½ï¿½å°¡ ï¿½ï¿½î°¥ ï¿½ï¿½ ï¿½Ì¸ï¿½
         public string sceneName = "";
 
-        public RoundData roundData; // ³ëµå¿¡¼­ ½ÃÀÛÇÒ ¶ó¿îµå Á¤º¸ (ÀüÅõ, »óÁ¡ µî)
+        public RoundData roundData; // ï¿½ï¿½å¿¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½)
 
-        // ¿¬°áµÈ ³ëµåµéÀÇ ÀÎµ¦½º ¸ñ·Ï
-        // ÀÎµ¦½º´Â MapData.nodes ¸®½ºÆ®ÀÇ ÀÎµ¦½º¸¦ ÂüÁ¶
+        public int column; // ì´ ë…¸ë“œê°€ ì†í•œ ì»¬ëŸ¼ ì¸ë±ìŠ¤ (ë‚œì´ë„ ìŠ¤ì¼€ì¼ë§ìš©)
+
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Îµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
+        // ï¿½Îµï¿½ï¿½ï¿½ï¿½ï¿½ MapData.nodes ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½Îµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         public List<int> connections = new List<int>();
     }
 

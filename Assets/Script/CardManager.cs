@@ -1,12 +1,12 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
 public class CardSystem : MonoBehaviour
 {
-    public GameObject cardPrefab; // Ä«µå ÇÁ¸®ÆÕ  
-    public Transform cardParent; // Ä«µå°¡ »ı¼ºµÉ ¿ÀºêÁ§Æ®  
+    public GameObject cardPrefab; // ì¹´ë“œ í”„ë¦¬íŒ¹  
+    public Transform cardParent; // ì¹´ë“œê°€ ìƒì„±ë  ì˜¤ë¸Œì íŠ¸  
     public Sprite[] cardSprites;
     private string[] cardTypes = { "Q", "W", "E", "R" };
 
@@ -17,7 +17,7 @@ public class CardSystem : MonoBehaviour
     private Player player;
     private EnemyController enemyController;
     private float drawTimer = 0f;
-    private ComboSystem comboSystem; // ÄŞº¸ ½Ã½ºÅÛ ÂüÁ¶
+    private ComboSystem comboSystem; // ì½¤ë³´ ì‹œìŠ¤í…œ ì°¸ì¡°
 
     public TMP_Text deckText;    
     public TMP_Text graveyardText;
@@ -26,16 +26,100 @@ public class CardSystem : MonoBehaviour
     public int baseDraw=10;
     public float drawTime=1f;
 
+    void Awake()
+    {
+        if (HasElementSlotSystem())
+            ForceDisableForElementSystem();
+    }
+
+    void OnEnable()
+    {
+        if (HasElementSlotSystem())
+            ForceDisableForElementSystem();
+    }
+
     void Start()
     {
+        if (HasElementSlotSystem())
+        {
+            ForceDisableForElementSystem();
+            return;
+        }
+
         player = FindFirstObjectByType<Player>();
-        comboSystem = FindFirstObjectByType<ComboSystem>(); // ÄŞº¸ ½Ã½ºÅÛ Ã£±â
+        comboSystem = FindFirstObjectByType<ComboSystem>(); // ì½¤ë³´ ì‹œìŠ¤í…œ ì°¾ê¸°
         RefreshEnemyRef();
 
         SetDeck();
         ShuffleDeck(deck);
-        DrawCards(baseDraw);
+    }
 
+    public void ForceDisableForElementSystem()
+    {
+        ClearHandObjects();
+        DisableLegacyHandUI();
+        enabled = false;
+    }
+
+    bool HasElementSlotSystem()
+    {
+        return ElementSlotSystem.Instance != null || FindFirstObjectByType<ElementSlotSystem>() != null;
+    }
+
+    void ClearHandObjects()
+    {
+        foreach (var card in hand)
+        {
+            if (card != null) Destroy(card);
+        }
+
+        if (cardParent != null)
+        {
+            for (int i = cardParent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(cardParent.GetChild(i).gameObject);
+            }
+        }
+
+        hand.Clear();
+        deck.Clear();
+        graveyard.Clear();
+    }
+
+    void DisableLegacyHandUI()
+    {
+        if (cardParent != null)
+            cardParent.gameObject.SetActive(false);
+
+        if (deckText != null)
+            deckText.gameObject.SetActive(false);
+
+        if (graveyardText != null)
+            graveyardText.gameObject.SetActive(false);
+    }
+
+
+    /// <summary>
+    /// ìƒˆ ìŠ¤í…Œì´ì§€ ì§„ì… ì‹œ ë±/ì†íŒ¨/ë¬˜ì§€ ì´ˆê¸°í™”
+    /// </summary>
+    public void ResetDeck()
+    {
+        // ì†íŒ¨ ì˜¤ë¸Œì íŠ¸ ì œê±°
+        foreach (var card in hand)
+        {
+            if (card != null) Destroy(card);
+        }
+        hand.Clear();
+
+        // ë±, ë¬˜ì§€ ì´ˆê¸°í™”
+        deck.Clear();
+        graveyard.Clear();
+        drawTimer = 0f;
+
+        // ë± ì¬êµ¬ì„±
+        SetDeck();
+        ShuffleDeck(deck);
+        DrawCards(baseDraw);
     }
 
     void Update()
@@ -65,7 +149,7 @@ public class CardSystem : MonoBehaviour
     {
         foreach (string type in cardTypes)
         {
-            for (int i = 0; i < 5; i++) // °¢ Ä«µå Å¸ÀÔ´ç 5Àå¾¿  
+            for (int i = 0; i < 5; i++) // ê° ì¹´ë“œ íƒ€ì…ë‹¹ 5ì¥ì”©  
             {
                 deck.Add(type);
             }
@@ -73,13 +157,13 @@ public class CardSystem : MonoBehaviour
         ReshuffleGraveyard();
     }
 
-    void ReshuffleGraveyard() // ¹¦ÁöÀÇ Ä«µå¸¦ µ¦À¸·Î ´Ù½Ã ¼¯À½
+    void ReshuffleGraveyard() // ë¬˜ì§€ì˜ ì¹´ë“œë¥¼ ë±ìœ¼ë¡œ ë‹¤ì‹œ ì„ìŒ
     {
         if (graveyard.Count == 0) return;
         deck.AddRange(graveyard);
         graveyard.Clear();
         ShuffleDeck(deck);
-        Debug.Log("¹¦ÁöÀÇ Ä«µå¸¦ µ¦À¸·Î ´Ù½Ã ¼¯À½");
+        Debug.Log("ë¬˜ì§€ì˜ ì¹´ë“œë¥¼ ë±ìœ¼ë¡œ ë‹¤ì‹œ ì„ìŒ");
     }
 
     void ShuffleDeck(List<string> list)
@@ -93,7 +177,7 @@ public class CardSystem : MonoBehaviour
         }
     }
 
-    void HandleInput() // Ä«µå Å° ÀÔ·Â Ã³¸®
+    void HandleInput() // ì¹´ë“œ í‚¤ ì…ë ¥ ì²˜ë¦¬
     {
         if (hand.Count == 0) return;
 
@@ -109,7 +193,7 @@ public class CardSystem : MonoBehaviour
         {
             Card cardScript = hand[i].GetComponent<Card>();
 
-            // ÀÔ·ÂÇÑ Å°¿Í Ä«µåÀÇ Å¸ÀÔÀÌ ÀÏÄ¡ÇÏ´Â Ã¹ ¹øÂ° Ä«µå¸¦ Ã£À½  
+            // ì…ë ¥í•œ í‚¤ì™€ ì¹´ë“œì˜ íƒ€ì…ì´ ì¼ì¹˜í•˜ëŠ” ì²« ë²ˆì§¸ ì¹´ë“œë¥¼ ì°¾ìŒ  
             if (cardScript.cardType == inputKey)
             {
                 UseCard(i);
@@ -123,20 +207,21 @@ public class CardSystem : MonoBehaviour
         GameObject cardObj = hand[index];
         string type = cardObj.GetComponent<Card>().cardType;
 
-        // µ¥¹ÌÁö °è»ê (ÇÃ·¹ÀÌ¾î °ø°İ·ÂÀÇ 100%)
+        // ë°ë¯¸ì§€ ê³„ì‚° (í”Œë ˆì´ì–´ ê³µê²©ë ¥ì˜ 100%)
         if (enemyController != null && player != null)
         {
             enemyController.TakeDamage(player.attackDamage, type);
-            Debug.Log($"{type} Ä«µå »ç¿ë! Àû¿¡°Ô {player.attackDamage} µ¥¹ÌÁö.");
+            Debug.Log($"{type} ì¹´ë“œ ì‚¬ìš©! ì ì—ê²Œ {player.attackDamage} ë°ë¯¸ì§€.");
+            player.PlayAttackEffect(); // ê³µê²© íš¨ê³¼ ì¬ìƒ
         }
 
-        // ÄŞº¸ ½Ã½ºÅÛ¿¡ Ä«µå ÀÔ·Â Àü´Ş
+        // ì½¤ë³´ ì‹œìŠ¤í…œì— ì¹´ë“œ ì…ë ¥ ì „ë‹¬
         if (comboSystem != null)
         {
             comboSystem.OnCardUsed(type);
         }
 
-        // ¹¦Áö·Î º¸³»±â ¹× ÆÄ±«  
+        // ë¬˜ì§€ë¡œ ë³´ë‚´ê¸° ë° íŒŒê´´  
         graveyard.Add(type);
         hand.RemoveAt(index);
         Destroy(cardObj);
@@ -156,7 +241,7 @@ public class CardSystem : MonoBehaviour
         }
         else
         {
-            drawTimer = 0f; // ÀÌ¹Ì °¡µæ Â÷ ÀÖÀ¸¸é Å¸ÀÌ¸Ó ¸®¼Â  
+            drawTimer = 0f; // ì´ë¯¸ ê°€ë“ ì°¨ ìˆìœ¼ë©´ íƒ€ì´ë¨¸ ë¦¬ì…‹  
         }
     }
 

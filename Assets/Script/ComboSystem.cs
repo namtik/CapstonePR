@@ -1,3 +1,703 @@
+ï»¿//using UnityEngine;
+//using UnityEngine.UI;
+//using System.Collections.Generic;
+//using static SkillDataParser;
+//using System.Linq;
+//using System;
+//using Object = UnityEngine.Object;
+//using TMPro;
+
+//// ì½¤ë³´ ìŠ¤í‚¬ ì‹œìŠ¤í…œ ê´€ë¦¬ í´ë˜ìŠ¤
+//public class ComboSystem : MonoBehaviour
+//{
+//    [Header("ì½¤ë³´ ìŠ¬ë¡¯ ì„¤ì •")]
+//    public Transform comboSlotParent; // ì½¤ë³´ ìŠ¬ë¡¯ì´ í‘œì‹œë  ë¶€ëª¨ ì˜¤ë¸Œì íŠ¸
+//    public GameObject cardPrefab; // ì¹´ë“œ í”„ë¦¬íŒ¹ (ì½¤ë³´ ìŠ¬ë¡¯ì— í‘œì‹œìš©)
+//    public GameObject EleslotPrefab;
+//    public Sprite[] cardSprites; // Q, W, E, R ì¹´ë“œ ìŠ¤í”„ë¼ì´íŠ¸
+
+//    private string[] cardTypes = { "Q", "W", "E", "R" };
+
+//    [Header("ìŠ¤í‚¬ ì•„ì´ì½˜ ì„¤ì •")]
+//    public Transform skillIconParent; // ìŠ¤í‚¬ ì•„ì´ì½˜ì´ í‘œì‹œë  ë¶€ëª¨ ì˜¤ë¸Œì íŠ¸
+//    public SkillListItemUI skillListItemPrefab;
+
+//    // ì½¤ë³´ ì…ë ¥ ì €ì¥
+//    private List<string> comboInput = new List<string>(); // í˜„ì¬ ì…ë ¥ëœ ì½¤ë³´ (ìµœëŒ€ 3ê°œ)
+//    private List<GameObject> comboSlotCards = new List<GameObject>(); // ì½¤ë³´ ìŠ¬ë¡¯ì— í‘œì‹œëœ ì¹´ë“œ ì˜¤ë¸Œì íŠ¸
+//    private List<GameObject> emptySlots = new List<GameObject>(); // ë¹ˆ ìŠ¬ë¡¯ ì˜¤ë¸Œì íŠ¸ (í•­ìƒ í‘œì‹œ)
+
+//    [Header("ìŠ¤í‚¬ ë°œë™ ì•Œë¦¼ UI")]
+//    [SerializeField] private TMP_Text skillActivationText;
+//    [SerializeField] private string skillActivationTextObjectName = "SkillActivationText";
+
+//    [Header("ë‹¤ìŒ ì½¤ë³´ íŒíŠ¸ UI")]
+//    [SerializeField] private bool enableNextComboHints = true;
+//    [SerializeField] private string elementSlotRootName = "ElementSlotRoot";
+//    [SerializeField] private string slotObjectPrefix = "Slot_";
+//    [SerializeField] private string nextHintObjectPrefix = "NextSkillHint_";
+//    [SerializeField] private TMP_FontAsset nextHintFont;
+//    [SerializeField] private int nextHintFontSize = 22;
+//    [SerializeField] private FontStyles nextHintFontStyle = FontStyles.Bold;
+//    [SerializeField] private Color nextHintColor = new Color(1f, 0.9f, 0.4f, 1f);
+//    [SerializeField] private Vector2 nextHintOffset = new Vector2(0f, 12f);
+//    [SerializeField] private Vector2 nextHintSize = new Vector2(170f, 34f);
+//    [SerializeField] private bool nextHintAutoSize = false;
+//    private float skillTextTimer = 0f;
+//    private bool isShowingSkillText = false;
+//    private const float SKILL_TEXT_DISPLAY_TIME = 0.5f;
+
+//    // ìŠ¤í‚¬ ì •ì˜
+//    public List<SkillData> learnedSkills = new List<SkillData>();
+//    private Dictionary<string, SkillData> comboLookup = new Dictionary<string, SkillData>();
+//    public int learnedSkillCount = 0;
+
+//    private Player player;
+//    private EnemyController enemyController;
+//    // CardSystem ì œê±° â€” ElementSlotSystemìœ¼ë¡œ êµì²´ë¨
+//    private Roundmanager roundManager;  
+
+//    private readonly Dictionary<string, TMP_Text> nextHintTexts = new Dictionary<string, TMP_Text>();
+//    private static readonly string[] hintKeys = { "q", "w", "e", "r" };
+
+//    public static ComboSystem Instance;
+
+//    void Awake()
+//    {
+//        if (Instance == null)
+//        {
+//            Instance = this;
+//            DontDestroyOnLoad(gameObject);
+//        }
+//        else
+//        {
+//            Destroy(gameObject);
+//            return;
+//        }
+//    }
+//    void Start()
+//    {
+//        player = FindFirstObjectByType<Player>();
+//        // CM(CardSystem) â†’ ElementSlotSystemìœ¼ë¡œ êµì²´ë¨, ì°¸ì¡° ë¶ˆí•„ìš”
+//        RefreshEnemyRef();
+
+//        // UI ìƒì„±
+//        CreateComboSlots();
+//        CreateSkillIcons();
+
+//        ResolveSkillActivationText();
+
+//        if (skillActivationText == null)
+//            Debug.LogWarning("[ComboSystem] skillActivationTextë¥¼ ì°¾ì§€ ëª»í–ˆìŠµë‹ˆë‹¤. ì¸ìŠ¤í™í„° ì—°ê²° ë˜ëŠ” ì´ë¦„ ë§¤ì¹­ì„ í™•ì¸í•˜ì„¸ìš”.");
+//        else
+//        {
+//            HideSkillActivationText();
+//        }
+
+//        UpdateNextComboHints();
+//    }
+
+//    void Update()
+//    {
+//        // ìŠ¤í‚¬ í…ìŠ¤íŠ¸ í‘œì‹œ íƒ€ì´ë¨¸
+//        if (isShowingSkillText)
+//        {
+//            skillTextTimer -= Time.deltaTime;
+//            if (skillTextTimer <= 0f)
+//            {
+//                isShowingSkillText = false;
+//                if (skillActivationText != null)
+//                {
+//                    HideSkillActivationText();
+//                }
+//            }
+//        }
+
+//        RefreshEnemyRef();
+
+//        if (enableNextComboHints && !HasAllHintBindings())
+//        {
+//            UpdateNextComboHints();
+//        }
+//    }
+//    void RefreshEnemyRef()
+//    {
+//        if (enemyController == null || !enemyController.gameObject.activeInHierarchy)
+//            enemyController = Object.FindFirstObjectByType<EnemyController>();
+
+//        if (skillActivationText == null)
+//            ResolveSkillActivationText();
+//    }
+
+//    bool HasAllHintBindings()
+//    {
+//        foreach (string key in hintKeys)
+//        {
+//            if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText) || hintText == null)
+//                return false;
+//        }
+
+//        return true;
+//    }
+
+//    void EnsureNextHintBindings()
+//    {
+//        if (!enableNextComboHints)
+//            return;
+
+//        GameObject slotRootObject = GameObject.Find(elementSlotRootName);
+//        if (slotRootObject == null)
+//            return;
+
+//        Transform slotRoot = slotRootObject.transform;
+
+//        foreach (string key in hintKeys)
+//        {
+//            string slotName = slotObjectPrefix + key.ToUpperInvariant();
+//            Transform slotTransform = slotRoot.Find(slotName);
+//            if (slotTransform == null)
+//                continue;
+
+//            string hintObjectName = nextHintObjectPrefix + key.ToUpperInvariant();
+//            Transform hintTransform = slotTransform.Find(hintObjectName);
+//            if (hintTransform == null)
+//            {
+//                GameObject hintObject = new GameObject(hintObjectName);
+//                hintObject.transform.SetParent(slotTransform, false);
+//                hintTransform = hintObject.transform;
+//            }
+
+//            RectTransform hintRect = hintTransform as RectTransform;
+//            if (hintRect == null)
+//                hintRect = hintTransform.gameObject.AddComponent<RectTransform>();
+
+//            hintRect.anchorMin = new Vector2(0.5f, 1f);
+//            hintRect.anchorMax = new Vector2(0.5f, 1f);
+//            hintRect.pivot = new Vector2(0.5f, 0f);
+//            hintRect.anchoredPosition = nextHintOffset;
+//            hintRect.sizeDelta = nextHintSize;
+
+//            TMP_Text hintText = hintTransform.GetComponent<TMP_Text>();
+//            if (hintText == null)
+//                hintText = hintTransform.gameObject.AddComponent<TextMeshProUGUI>();
+
+//            hintText.alignment = TextAlignmentOptions.Center;
+//            hintText.color = nextHintColor;
+//            hintText.fontSize = nextHintFontSize;
+//            hintText.fontStyle = nextHintFontStyle;
+//            hintText.enableAutoSizing = nextHintAutoSize;
+//            hintText.raycastTarget = false;
+//            hintText.textWrappingMode = TextWrappingModes.NoWrap;
+//            hintText.overflowMode = TextOverflowModes.Overflow;
+//            if (nextHintFont != null)
+//                hintText.font = nextHintFont;
+
+//            nextHintTexts[key] = hintText;
+//        }
+//    }
+
+//    void ClearNextComboHints()
+//    {
+//        foreach (string key in hintKeys)
+//        {
+//            if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText) || hintText == null)
+//                continue;
+
+//            hintText.text = "";
+//            hintText.gameObject.SetActive(false);
+//        }
+//    }
+
+//    void UpdateNextComboHints()
+//    {
+//        if (!enableNextComboHints)
+//            return;
+
+//        EnsureNextHintBindings();
+//        ClearNextComboHints();
+
+//        if (comboInput.Count < 2)
+//            return;
+
+//        string prefix = comboInput[comboInput.Count - 2] + comboInput[comboInput.Count - 1];
+//        Dictionary<string, SkillData> previewByNextKey = new Dictionary<string, SkillData>();
+
+//        foreach (SkillData skill in learnedSkills)
+//        {
+//            if (skill == null)
+//                continue;
+
+//            string combo = NormalizeCombo(skill.combo);
+//            if (combo.Length < 3)
+//                continue;
+
+//            if (!combo.StartsWith(prefix, StringComparison.Ordinal))
+//                continue;
+
+//            string nextKey = combo.Substring(2, 1);
+//            if (!previewByNextKey.ContainsKey(nextKey))
+//                previewByNextKey[nextKey] = skill;
+//        }
+
+//        foreach (KeyValuePair<string, SkillData> pair in previewByNextKey)
+//        {
+//            if (!nextHintTexts.TryGetValue(pair.Key, out TMP_Text hintText) || hintText == null)
+//                continue;
+
+//            hintText.text = pair.Value.name;
+//            hintText.gameObject.SetActive(true);
+//        }
+//    }
+
+//    void ResolveSkillActivationText()
+//    {
+//        if (skillActivationText != null)
+//            return;
+
+//        if (enemyController != null)
+//        {
+//            TMP_Text[] enemyTexts = enemyController.GetComponentsInChildren<TMP_Text>(true);
+//            foreach (TMP_Text text in enemyTexts)
+//            {
+//                if (text != null && text.name == skillActivationTextObjectName)
+//                {
+//                    skillActivationText = text;
+//                    HideSkillActivationText();
+//                    return;
+//                }
+//            }
+//        }
+
+//        TMP_Text[] allTexts = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+//        foreach (TMP_Text text in allTexts)
+//        {
+//            if (text != null && text.name == skillActivationTextObjectName)
+//            {
+//                skillActivationText = text;
+//                HideSkillActivationText();
+//                return;
+//            }
+//        }
+//    }
+
+//    void HideSkillActivationText()
+//    {
+//        if (skillActivationText == null)
+//            return;
+
+//        skillActivationText.text = "";
+//        skillActivationText.gameObject.SetActive(false);
+//    }
+
+//    public void LearnSkill(SkillData newSkill)
+//    {
+//        learnedSkills.Add(newSkill);
+//        Debug.Log($"ìŠ¤í‚¬ ìŠµë“: {newSkill.name} ({newSkill.combo})");
+//        string comboKey = NormalizeCombo(newSkill.combo);
+//        if (!string.IsNullOrEmpty(comboKey))
+//            comboLookup[comboKey] = newSkill;
+//        learnedSkillCount += 1;
+
+//        // ìŠ¤í‚¬ ì•„ì´ì½˜ UIì— ì¶”ê°€
+//        CreateSkillIcon(newSkill, learnedSkills.Count - 1);
+
+//        UpdateNextComboHints();
+
+//    }
+
+//    public void RefreshSkillUI()
+//    {
+//        // skillIconParentê°€ ì—†ê±°ë‚˜ íŒŒê´´ëìœ¼ë©´ ì¬ìƒì„±
+//        if (skillIconParent == null || !skillIconParent.gameObject.activeInHierarchy)
+//        {
+//            CreateSkillIcons();
+//        }
+
+//        foreach (Transform child in skillIconParent)
+//            Destroy(child.gameObject);
+
+//        // learnedSkills ë°ì´í„°ë¡œ ì•„ì´ì½˜ ì¬ìƒì„±
+//        for (int i = 0; i < learnedSkills.Count; i++)
+//            CreateSkillIcon(learnedSkills[i], i);
+
+//        Debug.Log($"[ComboSystem] ìŠ¤í‚¬ UI ì¬ë¹Œë“œ: {learnedSkills.Count}ê°œ");
+//    }
+//    public void RefreshComboSlotUI()
+//    {
+//        if (comboSlotParent == null)
+//        {
+//            emptySlots.Clear();
+//            comboSlotCards.Clear();
+//            CreateComboSlots();
+//            return;
+//        }
+
+//        if (!comboSlotParent.gameObject.activeInHierarchy)
+//        {
+//            comboSlotParent.gameObject.SetActive(true);
+
+//            emptySlots.Clear();
+//            comboSlotCards.Clear();
+//            CreateEmptySlots();
+//            UpdateComboSlotUI();
+//        }
+//    }
+
+//    public int LearnedSkillCount()
+//    {
+//        return learnedSkills.Count;
+//    }
+
+//    public HashSet<int> GetLearnedSkillIds()
+//    {
+//        var ids = new HashSet<int>();
+//        foreach (var skill in learnedSkills)
+//            ids.Add(skill.id);
+//        return ids;
+//    }
+
+
+//    // ì½¤ë³´ ìŠ¬ë¡¯ UI ìƒì„± (í™”ë©´ ìƒë‹¨ ì¤‘ì•™)
+//    void CreateComboSlots()
+//    {
+//        if (comboSlotParent == null)
+//        {
+//            Canvas canvas = FindFirstObjectByType<Canvas>();
+//            if (canvas == null) return;
+
+//            Transform existingSlotParent = canvas.transform.Find("ComboSlotParent");
+//            if (existingSlotParent != null)
+//            {
+//                comboSlotParent = existingSlotParent;
+//            }
+//            else
+//            {
+//                GameObject slotParentObj = new GameObject("ComboSlotParent");
+//                slotParentObj.transform.SetParent(canvas.transform, false);
+
+//                RectTransform rect = slotParentObj.AddComponent<RectTransform>();
+//                rect.anchorMin = new Vector2(0.5f, 1f);
+//                rect.anchorMax = new Vector2(0.5f, 1f);
+//                rect.pivot = new Vector2(0.5f, 1f);
+//                rect.anchoredPosition = new Vector2(0f, -50f);
+//                rect.sizeDelta = new Vector2(200f, 120f);
+
+//                // HorizontalLayoutGroup ì¶”ê°€
+//                HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
+//                layout.spacing = 30f;
+//                layout.childAlignment = TextAnchor.MiddleCenter;
+//                layout.childControlWidth = false;
+//                layout.childControlHeight = false;
+
+//                comboSlotParent = slotParentObj.transform;
+//            }
+//        }
+
+//        // ë¹ˆ ìŠ¬ë¡¯ 3ê°œ ìƒì„± (í•­ìƒ í‘œì‹œ)
+//        CreateEmptySlots();
+//    }
+
+//    // ë¹ˆ ì½¤ë³´ ìŠ¬ë¡¯ 3ê°œ ìƒì„±
+//    void CreateEmptySlots()
+//    {
+//        if (comboSlotParent == null) return;
+
+//        foreach (Transform child in comboSlotParent)
+//        {
+//            if (child != null && child.name.StartsWith("EmptySlot_"))
+//                Destroy(child.gameObject);
+//        }
+//        emptySlots.Clear();
+
+//        for (int i = 0; i < 3; i++)
+//        {
+//            GameObject emptySlot = new GameObject($"EmptySlot_{i}");
+//            emptySlot.transform.SetParent(comboSlotParent, false);
+
+//            RectTransform rect = emptySlot.AddComponent<RectTransform>();
+//            rect.sizeDelta = new Vector2(80f, 80f);
+
+//            // ë¹ˆ ìŠ¬ë¡¯ ë°°ê²½ ì´ë¯¸ì§€ (íšŒìƒ‰ í…Œë‘ë¦¬)
+//            Image slotImage = emptySlot.AddComponent<Image>();
+//            slotImage.color = new Color(0.3f, 0.3f, 0.3f, 0.5f);
+
+//            emptySlots.Add(emptySlot);
+//        }
+//    }
+
+//    // ìŠ¤í‚¬ ì•„ì´ì½˜ UI ìƒì„± (í™”ë©´ í•˜ë‹¨ ì¤‘ì•™, ì¹´ë“œ ìœ„)
+//    void CreateSkillIcons()
+//    {
+//        if (skillIconParent == null)
+//        {
+//            Canvas canvas = FindFirstObjectByType<Canvas>();
+//            if (canvas == null) return;
+
+//            GameObject iconParentObj = new GameObject("SkillIconParent");
+//            iconParentObj.layer = LayerMask.NameToLayer("UI");
+//            iconParentObj.transform.SetParent(canvas.transform, false);
+
+//            RectTransform rect = iconParentObj.AddComponent<RectTransform>();
+//            rect.anchorMin = new Vector2(0.5f, 0f);
+//            rect.anchorMax = new Vector2(0.5f, 0f);
+//            rect.pivot = new Vector2(0.5f, 0f);
+//            rect.anchoredPosition = new Vector2(0f, 180f);
+//            rect.sizeDelta = new Vector2(500f, 100f);
+//            rect.localScale = Vector3.one;
+
+//            HorizontalLayoutGroup layout = iconParentObj.AddComponent<HorizontalLayoutGroup>();
+//            layout.spacing = 20f; // ì•„ì´ì½˜ ê°„ê²©
+//            layout.childAlignment = TextAnchor.MiddleCenter;
+//            layout.childControlWidth = false;
+//            layout.childControlHeight = false;
+
+//            skillIconParent = iconParentObj.transform;
+//        }
+
+//    }
+
+//    // ê°œë³„ ìŠ¤í‚¬ ì•„ì´ì½˜ ìƒì„±
+//    void CreateSkillIcon(SkillData skillData, int index)
+//    {
+//        GameObject iconObj = new GameObject($"SkillIcon_{skillData.name}");
+//        iconObj.layer = LayerMask.NameToLayer("UI");
+//        iconObj.transform.SetParent(skillIconParent, false);
+
+//        RectTransform rect = iconObj.AddComponent<RectTransform>();
+//        rect.sizeDelta = new Vector2(80f, 80f); // ì•„ì´ì½˜ í¬ê¸°
+
+//        rect.localScale = Vector3.one;
+//        rect.localPosition = Vector3.zero;
+
+//        Image iconImage = iconObj.AddComponent<Image>();
+
+//        // ì•„ì´ì½˜ ì´ë¯¸ì§€ í• ë‹¹ (CSVì—ì„œ ë¡œë“œëœ ì´ë¯¸ì§€ ìš°ì„ )
+//        if (skillData.skillIcon != null)
+//            iconImage.sprite = skillData.skillIcon;
+//        else
+//            iconImage.color = Color.green; // ì—†ìœ¼ë©´ ì´ˆë¡ìƒ‰
+
+//        // íˆ´íŒ ë“± ë§ˆìš°ìŠ¤ ì´ë²¤íŠ¸ ì¶”ê°€
+//        GameObject tooltip = CreateTooltip(iconObj.transform, skillData);
+//        AddMouseEvents(iconObj, tooltip);
+//    }
+
+//    // íˆ´íŒ ìƒì„±
+//    GameObject CreateTooltip(Transform parent, SkillData skillData)
+//    {
+//        GameObject tooltipObj = new GameObject("Tooltip");
+//        tooltipObj.transform.SetParent(parent, false);
+
+//        RectTransform tooltipRect = tooltipObj.AddComponent<RectTransform>();
+//        tooltipRect.anchorMin = new Vector2(0.5f, 1f);
+//        tooltipRect.anchorMax = new Vector2(0.5f, 1f);
+//        tooltipRect.pivot = new Vector2(0.5f, 0f);
+//        tooltipRect.anchoredPosition = new Vector2(0f, 15f);
+//        tooltipRect.sizeDelta = new Vector2(200f, 150f);
+
+//        Image bgImage = tooltipObj.AddComponent<Image>();
+//        bgImage.color = new Color(0.9f, 0.7f, 0.3f, 1f);
+
+//        Outline bgOutline = tooltipObj.AddComponent<Outline>();
+//        bgOutline.effectColor = Color.black;
+//        bgOutline.effectDistance = new Vector2(2, -2);
+
+//        // ì œëª©
+//        GameObject titleObj = new GameObject("Title");
+//        titleObj.transform.SetParent(tooltipObj.transform, false);
+//        RectTransform titleRect = titleObj.AddComponent<RectTransform>();
+//        titleRect.anchorMin = new Vector2(0f, 1f);
+//        titleRect.anchorMax = new Vector2(1f, 1f);
+//        titleRect.sizeDelta = new Vector2(-10f, 40f);
+//        titleRect.anchoredPosition = new Vector2(0f, -5f);
+
+//        Text titleText = titleObj.AddComponent<Text>();
+//        titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+//        titleText.fontSize = 20;
+//        titleText.alignment = TextAnchor.MiddleCenter;
+//        titleText.color = Color.black;
+//        titleText.fontStyle = FontStyle.Bold;
+//        titleText.text = skillData.name;
+
+//        // ì„¤ëª…
+//        GameObject descObj = new GameObject("Description");
+//        descObj.transform.SetParent(tooltipObj.transform, false);
+//        RectTransform descRect = descObj.AddComponent<RectTransform>();
+//        descRect.anchorMin = Vector2.zero;
+//        descRect.anchorMax = Vector2.one;
+//        descRect.sizeDelta = new Vector2(-10f, -50f);
+//        descRect.anchoredPosition = new Vector2(0f, -10f);
+
+//        Text descText = descObj.AddComponent<Text>();
+//        descText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+//        descText.fontSize = 16;
+//        descText.alignment = TextAnchor.MiddleCenter;
+//        descText.color = Color.black;
+//        descText.text = $"ì½¤ë³´: {skillData.combo}\n\n{skillData.description}";
+
+//        tooltipObj.SetActive(false);
+//        return tooltipObj;
+//    }
+
+//    void AddMouseEvents(GameObject iconObj, GameObject tooltip)
+//    {
+//        UnityEngine.EventSystems.EventTrigger trigger = iconObj.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+
+//        var enterEntry = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerEnter };
+//        enterEntry.callback.AddListener((data) => { tooltip.SetActive(true); });
+//        trigger.triggers.Add(enterEntry);
+
+//        var exitEntry = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit };
+//        exitEntry.callback.AddListener((data) => { tooltip.SetActive(false); });
+//        trigger.triggers.Add(exitEntry);
+//    }
+
+//    // ìƒˆ ìŠ¤í…Œì´ì§€ ì§„ì… ì‹œ ì½¤ë³´ ì…ë ¥ê³¼ ìŠ¬ë¡¯ UI ì´ˆê¸°í™”
+//    public void ResetComboInput()
+//    {
+//        comboInput.Clear();
+
+//        foreach (var card in comboSlotCards)
+//        {
+//            if (card != null) Destroy(card);
+//        }
+//        comboSlotCards.Clear();
+
+//        ClearNextComboHints();
+//    }
+
+//    public void OnCardUsed(string cardType)
+//    {
+//        string normalizedCardType = NormalizeCombo(cardType);
+//        if (string.IsNullOrEmpty(normalizedCardType))
+//            return;
+
+//        if (comboInput.Count >= 3)// ì´ë¯¸ 3ê°œê°€ ê½‰ ì°¨ ìˆë‹¤ë©´, ê°€ì¥ ì˜¤ë˜ëœ ê²ƒ(0ë²ˆ)ì„ ì œê±°
+//        {
+//            comboInput.RemoveAt(0);
+//        }
+
+
+//        // ìƒˆ ì¹´ë“œ ì¶”ê°€
+//        comboInput.Add(normalizedCardType);
+//        Debug.Log($"í˜„ì¬ ì½¤ë³´: {string.Join("-", comboInput)}"); // ë””ë²„ê¹…ìš©
+
+//        if (comboInput.Count == 3)
+//            CheckAndActivateSkills();
+
+//        UpdateComboSlotUI();
+//        UpdateNextComboHints();
+//    }
+
+//    void UpdateComboSlotUI()
+//    {
+//        // ê¸°ì¡´ì— í‘œì‹œëœ ì¹´ë“œ ì˜¤ë¸Œì íŠ¸ë“¤ ëª¨ë‘ ì‚­ì œ
+//        foreach (var card in comboSlotCards)
+//        {
+//            if (card != null) Destroy(card);
+//        }
+//        comboSlotCards.Clear();
+
+//        // í˜„ì¬ ì½¤ë³´ ë¦¬ìŠ¤íŠ¸(comboInput)ì— ìˆëŠ” ë§Œí¼ ì¹´ë“œ ìƒì„±
+//        for (int i = 0; i < comboInput.Count; i++)
+//        {
+//            if (i >= emptySlots.Count) break;
+
+//            string type = comboInput[i];
+//            string displayType = type.ToUpperInvariant();
+
+//            // ië²ˆì§¸ ë¹ˆ ìŠ¬ë¡¯ì˜ ìì‹ìœ¼ë¡œ ì¹´ë“œ ìƒì„±
+//            GameObject newCard = Instantiate(cardPrefab, emptySlots[i].transform);
+
+//            // ì¹´ë“œ ìŠ¤í¬ë¦½íŠ¸ ì„¤ì •
+//            Card cardScript = newCard.GetComponent<Card>();
+//            int spriteIndex = System.Array.IndexOf(cardTypes, displayType);
+//            if (spriteIndex >= 0 && spriteIndex < cardSprites.Length)
+//            {
+//                cardScript.SetType(displayType, cardSprites[spriteIndex]);
+//            }
+
+//            // UI ìœ„ì¹˜ ì´ˆê¸°í™” (ë¶€ëª¨ì¸ EmptySlotì˜ ì •ì¤‘ì•™ì— ì˜¤ë„ë¡)
+//            RectTransform rect = newCard.GetComponent<RectTransform>();
+//            if (rect != null)
+//            {
+//                rect.anchorMin = Vector2.zero;
+//                rect.anchorMax = Vector2.one;
+//                rect.sizeDelta = Vector2.zero;
+//                rect.anchoredPosition = Vector2.zero;
+//            }
+//            comboSlotCards.Add(newCard);
+//        }
+//    }
+
+//    void CheckAndActivateSkills()
+//    {
+//        string currentCombo = NormalizeCombo(string.Join("", comboInput));
+//        Debug.Log($"í˜„ì¬ ì½¤ë³´: {currentCombo}"); // ë””ë²„ê¹…ìš©
+//        // ë°°ìš´ ìŠ¤í‚¬ ì¤‘ ì½¤ë³´ ê¸¸ì´ê°€ ê¸´ ìˆœì„œëŒ€ë¡œ ì •ë ¬í•˜ì—¬ ë§¤ì¹­ (QQQê°€ QQë³´ë‹¤ ë¨¼ì € ê²€ìƒ‰ë¨)
+//        if (comboLookup.TryGetValue(currentCombo, out SkillData skill))
+//        {
+//            Debug.Log($"[ìŠ¤í‚¬ë°œë™] {skill.name}");
+//            ActivateSkill(skill);
+//        }
+//        else
+//        {
+//            Debug.Log($"[ë¯¸ë°œë™] '{currentCombo}' ì¼ì¹˜í•˜ëŠ” ìŠ¤í‚¬ ì—†ìŒ");
+//        }
+//    }
+
+//    void ActivateSkill(SkillData skill)
+//    {
+//        // draw ê¸°ëŠ¥ì€ ElementSlotSystem ìŠ¬ë¡¯ ì¬ì¶©ì „ìœ¼ë¡œ ëŒ€ì²´ë¨ (skill.draw ë¯¸ì‚¬ìš©)
+
+//        if (enemyController != null && player != null)
+//        {
+//            float damage = player.attackDamage * skill.damage;
+//            enemyController.TakeDamage(damage);
+//            Debug.Log($"{skill.name} ë°œë™! ë°ë¯¸ì§€: {damage}");
+//        }
+
+//        if (EffectManager.Instance != null)
+//        {
+//            // ìŠ¤í‚¬ ë°ì´í„°ì— ìˆëŠ” ìƒíƒœì´ìƒ ì¢…ë¥˜ì™€ ìˆ˜ì¹˜ë¥¼ ë„˜ê²¨ì¤ë‹ˆë‹¤.
+//            // (casterëŠ” í”Œë ˆì´ì–´, targetì€ ì )
+//            EffectManager.Instance.ApplySkillEffect(skill.statusType, skill.statusAmount, player, enemyController);
+//        }
+//        else
+//        {
+//            Debug.LogError("EffectManager.Instanceê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤! ì”¬ì— EffectManagerê°€ ìˆëŠ”ì§€ í™•ì¸í•˜ì„¸ìš”.");
+//        }
+//        if (skillActivationText == null)
+//            ResolveSkillActivationText();
+
+//        if (skillActivationText != null)
+//        {
+//            skillActivationText.gameObject.SetActive(true);
+
+//            skillActivationText.text = $"{skill.name} ë°œë™!";
+//            skillTextTimer = SKILL_TEXT_DISPLAY_TIME;
+//            isShowingSkillText = true;
+//        }
+
+//        if (enemyController != null)
+//        {
+//            EnemyStat enemyStat = enemyController.GetComponent<EnemyStat>();
+//            if (enemyStat != null)
+//                enemyStat.ReduceAttackCount(1);
+//        }
+
+
+//    }
+
+//    string NormalizeCombo(string combo)
+//    {
+//        if (string.IsNullOrWhiteSpace(combo))
+//            return string.Empty;
+
+//        return combo.Trim().ToLowerInvariant();
+//    }
+//}
+
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
@@ -5,40 +705,57 @@ using static SkillDataParser;
 using System.Linq;
 using System;
 using Object = UnityEngine.Object;
+using TMPro;
 
-// ÄŞº¸ ½ºÅ³ ½Ã½ºÅÛ °ü¸® Å¬·¡½º
+// ì½¤ë³´ ìŠ¤í‚¬ ì‹œìŠ¤í…œ ê´€ë¦¬ í´ë˜ìŠ¤
 public class ComboSystem : MonoBehaviour
 {
-    [Header("ÄŞº¸ ½½·Ô ¼³Á¤")]
-    public Transform comboSlotParent; // ÄŞº¸ ½½·ÔÀÌ Ç¥½ÃµÉ ºÎ¸ğ ¿ÀºêÁ§Æ®
-    public GameObject cardPrefab; // Ä«µå ÇÁ¸®ÆÕ (ÄŞº¸ ½½·Ô¿¡ Ç¥½Ã¿ë)
-    public Sprite[] cardSprites; // Q, W, E, R Ä«µå ½ºÇÁ¶óÀÌÆ®
+    [Header("ì½¤ë³´ ìŠ¬ë¡¯ ì„¤ì •")]
+    public Transform comboSlotParent;
+    public GameObject cardPrefab;
+    public GameObject EleslotPrefab;
+    public Sprite[] cardSprites;
 
     private string[] cardTypes = { "Q", "W", "E", "R" };
 
-    [Header("½ºÅ³ ¾ÆÀÌÄÜ ¼³Á¤")]
-    public Transform skillIconParent; // ½ºÅ³ ¾ÆÀÌÄÜÀÌ Ç¥½ÃµÉ ºÎ¸ğ ¿ÀºêÁ§Æ®
+    [Header("ìŠ¤í‚¬ ëª©ë¡ UI ì„¤ì •")]
+    public Transform skillListParent; // ìŠ¤í‚¬ ëª©ë¡ì´ í‘œì‹œë  ë¶€ëª¨ íŒ¨ë„ (ì„¸ë¡œ ì •ë ¬)
+    public SkillListItemUI skillListItemPrefab; // ì•„ì´ì½˜+ì´ë¦„+ì»¤ë§¨ë“œê°€ ìˆëŠ” í”„ë¦¬íŒ¹
 
-    // ÄŞº¸ ÀÔ·Â ÀúÀå
-    private List<string> comboInput = new List<string>(); // ÇöÀç ÀÔ·ÂµÈ ÄŞº¸ (ÃÖ´ë 3°³)
-    private List<GameObject> comboSlotCards = new List<GameObject>(); // ÄŞº¸ ½½·Ô¿¡ Ç¥½ÃµÈ Ä«µå ¿ÀºêÁ§Æ®
-    private List<GameObject> emptySlots = new List<GameObject>(); // ºó ½½·Ô ¿ÀºêÁ§Æ® (Ç×»ó Ç¥½Ã)
+    private List<string> comboInput = new List<string>();
+    private List<GameObject> comboSlotCards = new List<GameObject>();
+    private List<GameObject> emptySlots = new List<GameObject>();
 
-    // ½ºÅ³ ¹ßµ¿ ¾Ë¸² UI
-    private Text skillActivationText;
+    [Header("ìŠ¤í‚¬ ë°œë™ ì•Œë¦¼ UI")]
+    [SerializeField] private TMP_Text skillActivationText;
+    [SerializeField] private string skillActivationTextObjectName = "SkillActivationText";
+
+    [Header("ë‹¤ìŒ ì½¤ë³´ íŒíŠ¸ UI")]
+    [SerializeField] private bool enableNextComboHints = true;
+    [SerializeField] private string elementSlotRootName = "ElementSlotRoot";
+    [SerializeField] private string slotObjectPrefix = "Slot_";
+    [SerializeField] private string nextHintObjectPrefix = "NextSkillHint_";
+    [SerializeField] private TMP_FontAsset nextHintFont;
+    [SerializeField] private int nextHintFontSize = 22;
+    [SerializeField] private FontStyles nextHintFontStyle = FontStyles.Bold;
+    [SerializeField] private Color nextHintColor = new Color(1f, 0.9f, 0.4f, 1f);
+    [SerializeField] private Vector2 nextHintOffset = new Vector2(0f, 12f);
+    [SerializeField] private Vector2 nextHintSize = new Vector2(170f, 34f);
+    [SerializeField] private bool nextHintAutoSize = false;
     private float skillTextTimer = 0f;
     private bool isShowingSkillText = false;
     private const float SKILL_TEXT_DISPLAY_TIME = 0.5f;
 
-    // ½ºÅ³ Á¤ÀÇ
-    private List<SkillData> learnedSkills = new List<SkillData>();
+    public List<SkillData> learnedSkills = new List<SkillData>();
     private Dictionary<string, SkillData> comboLookup = new Dictionary<string, SkillData>();
     public int learnedSkillCount = 0;
 
     private Player player;
     private EnemyController enemyController;
-    private CardSystem CM;
-    private Roundmanager roundManager;  
+    private Roundmanager roundManager;
+
+    private readonly Dictionary<string, TMP_Text> nextHintTexts = new Dictionary<string, TMP_Text>();
+    private static readonly string[] hintKeys = { "q", "w", "e", "r" };
 
     public static ComboSystem Instance;
 
@@ -55,20 +772,47 @@ public class ComboSystem : MonoBehaviour
             return;
         }
     }
+
     void Start()
     {
         player = FindFirstObjectByType<Player>();
-        CM = FindFirstObjectByType<CardSystem>();
         RefreshEnemyRef();
 
-        // UI »ı¼º
+        // UI ìƒì„±
         CreateComboSlots();
-        CreateSkillIcons();
+        CreateSkillList();
+
+        ResolveSkillActivationText();
+
+        if (skillActivationText == null)
+            Debug.LogWarning("[ComboSystem] skillActivationTextë¥¼ ì°¾ì§€ ëª»í–ˆìŠµë‹ˆë‹¤.");
+        else
+            HideSkillActivationText();
+
+        UpdateNextComboHints();
+    }
+
+    public void LearnStarterSkill()
+    {
+        if (SkillDataParser.Instance == null)
+            return;
+
+        // Inspector ë¯¸ì—°ê²° ì‹œ ìë™ íƒìƒ‰
+        if (SkillDataParser.Instance.SkillRewardUI == null)
+            SkillDataParser.Instance.SkillRewardUI = FindFirstObjectByType<SkillRewardUI>(FindObjectsInactive.Include);
+
+        if (SkillDataParser.Instance.SkillRewardUI == null)
+        {
+            Debug.LogWarning("[ComboSystem] SkillRewardUIë¥¼ ì°¾ì„ ìˆ˜ ì—†ì–´ ì´ˆê¸° ìŠ¤í‚¬ ì„ íƒì„ ê±´ë„ˆëœë‹ˆë‹¤.");
+            return;
+        }
+
+        SkillDataParser.Instance.SkillRewardUI.ShowStarterSkillSelection();
+        Debug.Log("[ComboSystem] ì´ˆê¸° ìŠ¤í‚¬ ì„ íƒ UI í‘œì‹œ");
     }
 
     void Update()
     {
-        // ½ºÅ³ ÅØ½ºÆ® Ç¥½Ã Å¸ÀÌ¸Ó
         if (isShowingSkillText)
         {
             skillTextTimer -= Time.deltaTime;
@@ -77,64 +821,221 @@ public class ComboSystem : MonoBehaviour
                 isShowingSkillText = false;
                 if (skillActivationText != null)
                 {
-                    skillActivationText.text = "";
+                    HideSkillActivationText();
                 }
             }
         }
 
         RefreshEnemyRef();
+
+        if (enableNextComboHints && !HasAllHintBindings())
+        {
+            UpdateNextComboHints();
+        }
     }
+
     void RefreshEnemyRef()
     {
         if (enemyController == null || !enemyController.gameObject.activeInHierarchy)
             enemyController = Object.FindFirstObjectByType<EnemyController>();
+
+        if (skillActivationText == null)
+            ResolveSkillActivationText();
+    }
+
+    bool HasAllHintBindings()
+    {
+        foreach (string key in hintKeys)
+        {
+            if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText) || hintText == null)
+                return false;
+        }
+        return true;
+    }
+
+    void EnsureNextHintBindings()
+    {
+        if (!enableNextComboHints) return;
+        GameObject slotRootObject = GameObject.Find(elementSlotRootName);
+        if (slotRootObject == null) return;
+        Transform slotRoot = slotRootObject.transform;
+
+        foreach (string key in hintKeys)
+        {
+            string slotName = slotObjectPrefix + key.ToUpperInvariant();
+            Transform slotTransform = slotRoot.Find(slotName);
+            if (slotTransform == null) continue;
+
+            string hintObjectName = nextHintObjectPrefix + key.ToUpperInvariant();
+            Transform hintTransform = slotTransform.Find(hintObjectName);
+            if (hintTransform == null)
+            {
+                GameObject hintObject = new GameObject(hintObjectName);
+                hintObject.transform.SetParent(slotTransform, false);
+                hintTransform = hintObject.transform;
+            }
+
+            RectTransform hintRect = hintTransform as RectTransform;
+            if (hintRect == null) hintRect = hintTransform.gameObject.AddComponent<RectTransform>();
+
+            hintRect.anchorMin = new Vector2(0.5f, 1f);
+            hintRect.anchorMax = new Vector2(0.5f, 1f);
+            hintRect.pivot = new Vector2(0.5f, 0f);
+            hintRect.anchoredPosition = nextHintOffset;
+            hintRect.sizeDelta = nextHintSize;
+
+            TMP_Text hintText = hintTransform.GetComponent<TMP_Text>();
+            if (hintText == null) hintText = hintTransform.gameObject.AddComponent<TextMeshProUGUI>();
+
+            hintText.alignment = TextAlignmentOptions.Center;
+            hintText.color = nextHintColor;
+            hintText.fontSize = nextHintFontSize;
+            hintText.fontStyle = nextHintFontStyle;
+            hintText.enableAutoSizing = nextHintAutoSize;
+            hintText.raycastTarget = false;
+            hintText.textWrappingMode = TextWrappingModes.NoWrap;
+            hintText.overflowMode = TextOverflowModes.Overflow;
+            if (nextHintFont != null) hintText.font = nextHintFont;
+
+            nextHintTexts[key] = hintText;
+        }
+    }
+
+    void ClearNextComboHints()
+    {
+        foreach (string key in hintKeys)
+        {
+            if (!nextHintTexts.TryGetValue(key, out TMP_Text hintText) || hintText == null) continue;
+            hintText.text = "";
+            hintText.gameObject.SetActive(false);
+        }
+    }
+
+    void UpdateNextComboHints()
+    {
+        if (!enableNextComboHints) return;
+        EnsureNextHintBindings();
+        ClearNextComboHints();
+
+        if (comboInput.Count < 2) return;
+
+        string prefix = comboInput[comboInput.Count - 2] + comboInput[comboInput.Count - 1];
+        Dictionary<string, SkillData> previewByNextKey = new Dictionary<string, SkillData>();
+
+        foreach (SkillData skill in learnedSkills)
+        {
+            if (skill == null) continue;
+            string combo = NormalizeCombo(skill.combo);
+            if (combo.Length < 3) continue;
+            if (!combo.StartsWith(prefix, StringComparison.Ordinal)) continue;
+
+            string nextKey = combo.Substring(2, 1);
+            if (!previewByNextKey.ContainsKey(nextKey))
+                previewByNextKey[nextKey] = skill;
+        }
+
+        foreach (KeyValuePair<string, SkillData> pair in previewByNextKey)
+        {
+            if (!nextHintTexts.TryGetValue(pair.Key, out TMP_Text hintText) || hintText == null) continue;
+            hintText.text = pair.Value.name;
+            hintText.gameObject.SetActive(true);
+        }
+    }
+
+    void ResolveSkillActivationText()
+    {
+        if (skillActivationText != null) return;
+        if (enemyController != null)
+        {
+            TMP_Text[] enemyTexts = enemyController.GetComponentsInChildren<TMP_Text>(true);
+            foreach (TMP_Text text in enemyTexts)
+            {
+                if (text != null && text.name == skillActivationTextObjectName)
+                {
+                    skillActivationText = text;
+                    HideSkillActivationText();
+                    return;
+                }
+            }
+        }
+        TMP_Text[] allTexts = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (TMP_Text text in allTexts)
+        {
+            if (text != null && text.name == skillActivationTextObjectName)
+            {
+                skillActivationText = text;
+                HideSkillActivationText();
+                return;
+            }
+        }
+    }
+
+    void HideSkillActivationText()
+    {
+        if (skillActivationText == null) return;
+        skillActivationText.text = "";
+        skillActivationText.gameObject.SetActive(false);
     }
 
     public void LearnSkill(SkillData newSkill)
     {
         learnedSkills.Add(newSkill);
-        Debug.Log($"½ºÅ³ ½Àµæ: {newSkill.name} ({newSkill.combo})");
-        comboLookup[newSkill.combo] = newSkill;
+        Debug.Log($"ìŠ¤í‚¬ ìŠµë“: {newSkill.name} ({newSkill.combo})");
+        string comboKey = NormalizeCombo(newSkill.combo);
+        if (!string.IsNullOrEmpty(comboKey))
+            comboLookup[comboKey] = newSkill;
         learnedSkillCount += 1;
 
-        // ½ºÅ³ ¾ÆÀÌÄÜ UI¿¡ Ãß°¡
-        CreateSkillIcon(newSkill, learnedSkills.Count - 1);
+        CreateSkillListItem(newSkill);
 
+        UpdateNextComboHints();
     }
 
     public void RefreshSkillUI()
     {
-        // skillIconParent°¡ ¾ø°Å³ª ÆÄ±«µÆÀ¸¸é Àç»ı¼º
-        if (skillIconParent == null || !skillIconParent.gameObject.activeInHierarchy)
+        if (skillListParent == null || !skillListParent.gameObject.activeInHierarchy)
         {
-            CreateSkillIcons();
+            CreateSkillList();
         }
 
-        foreach (Transform child in skillIconParent)
+        foreach (Transform child in skillListParent)
             Destroy(child.gameObject);
 
-        // learnedSkills µ¥ÀÌÅÍ·Î ¾ÆÀÌÄÜ Àç»ı¼º
         for (int i = 0; i < learnedSkills.Count; i++)
-            CreateSkillIcon(learnedSkills[i], i);
+            CreateSkillListItem(learnedSkills[i]);
 
-        Debug.Log($"[ComboSystem] ½ºÅ³ UI Àçºôµå: {learnedSkills.Count}°³");
+        Debug.Log($"[ComboSystem] ìŠ¤í‚¬ UI ì¬ë¹Œë“œ: {learnedSkills.Count}ê°œ");
     }
+
     public void RefreshComboSlotUI()
     {
-        if (comboSlotParent == null || !comboSlotParent.gameObject.activeInHierarchy)
+        if (comboSlotParent == null)
         {
             emptySlots.Clear();
             comboSlotCards.Clear();
             CreateComboSlots();
+            return;
+        }
+
+        if (!comboSlotParent.gameObject.activeInHierarchy)
+        {
+            comboSlotParent.gameObject.SetActive(true);
+            emptySlots.Clear();
+            comboSlotCards.Clear();
+            CreateEmptySlots();
+            UpdateComboSlotUI();
         }
     }
 
-    public int LearnedSkillCount()
+    public int LearnedSkillCount() => learnedSkills.Count;
+
+    public HashSet<int> GetLearnedSkillIds()
     {
-        return learnedSkills.Count;
+        var ids = new HashSet<int>();
+        foreach (var skill in learnedSkills) ids.Add(skill.id);
+        return ids;
     }
 
-    // ÄŞº¸ ½½·Ô UI »ı¼º (È­¸é »ó´Ü Áß¾Ó)
     void CreateComboSlots()
     {
         if (comboSlotParent == null)
@@ -142,44 +1043,54 @@ public class ComboSystem : MonoBehaviour
             Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
-            GameObject slotParentObj = new GameObject("ComboSlotParent");
-            slotParentObj.transform.SetParent(canvas.transform, false);
+            Transform existingSlotParent = canvas.transform.Find("ComboSlotParent");
+            if (existingSlotParent != null)
+            {
+                comboSlotParent = existingSlotParent;
+            }
+            else
+            {
+                GameObject slotParentObj = new GameObject("ComboSlotParent");
+                slotParentObj.transform.SetParent(canvas.transform, false);
 
-            RectTransform rect = slotParentObj.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 1f);
-            rect.anchorMax = new Vector2(0.5f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = new Vector2(0f, -50f);
-            rect.sizeDelta = new Vector2(400f, 120f);
+                RectTransform rect = slotParentObj.AddComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0.5f, 1f);
+                rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.anchoredPosition = new Vector2(0f, -50f);
+                rect.sizeDelta = new Vector2(200f, 120f);
 
-            // HorizontalLayoutGroup Ãß°¡
-            HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 30f;
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
+                HorizontalLayoutGroup layout = slotParentObj.AddComponent<HorizontalLayoutGroup>();
+                layout.spacing = 30f;
+                layout.childAlignment = TextAnchor.MiddleCenter;
+                layout.childControlWidth = false;
+                layout.childControlHeight = false;
 
-            comboSlotParent = slotParentObj.transform;
+                comboSlotParent = slotParentObj.transform;
+            }
         }
-
-        // ºó ½½·Ô 3°³ »ı¼º (Ç×»ó Ç¥½Ã)
         CreateEmptySlots();
-        // ½ºÅ³ ¹ßµ¿ ¾Ë¸² ÅØ½ºÆ® »ı¼º (ÄŞº¸ ½½·Ô ¾Æ·¡)
-        CreateSkillActivationText();
     }
 
-    // ºó ÄŞº¸ ½½·Ô 3°³ »ı¼º
     void CreateEmptySlots()
     {
+        if (comboSlotParent == null) return;
+
+        foreach (Transform child in comboSlotParent)
+        {
+            if (child != null && child.name.StartsWith("EmptySlot_"))
+                Destroy(child.gameObject);
+        }
+        emptySlots.Clear();
+
         for (int i = 0; i < 3; i++)
         {
             GameObject emptySlot = new GameObject($"EmptySlot_{i}");
             emptySlot.transform.SetParent(comboSlotParent, false);
 
             RectTransform rect = emptySlot.AddComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(60f, 80f);
+            rect.sizeDelta = new Vector2(80f, 80f);
 
-            // ºó ½½·Ô ¹è°æ ÀÌ¹ÌÁö (È¸»ö Å×µÎ¸®)
             Image slotImage = emptySlot.AddComponent<Image>();
             slotImage.color = new Color(0.3f, 0.3f, 0.3f, 0.5f);
 
@@ -187,210 +1098,100 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
-    // ½ºÅ³ ¹ßµ¿ ¾Ë¸² ÅØ½ºÆ® »ı¼º
-    void CreateSkillActivationText()
+    void CreateSkillList()
     {
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null) return;
-
-        GameObject textObj = new GameObject("SkillActivationText");
-        textObj.transform.SetParent(canvas.transform, false);
-
-        RectTransform rect = textObj.AddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.5f, 1f);
-        rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = new Vector2(0f, -200f);
-        rect.sizeDelta = new Vector2(500f, 60f);
-
-        skillActivationText = textObj.AddComponent<Text>();
-        skillActivationText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        skillActivationText.fontSize = 32;
-        skillActivationText.alignment = TextAnchor.MiddleCenter;
-        skillActivationText.color = new Color(1f, 0.8f, 0f, 1f);
-        skillActivationText.fontStyle = FontStyle.Bold;
-        skillActivationText.text = "";
-
-        // Outline Ãß°¡
-        Outline outline = textObj.AddComponent<Outline>();
-        outline.effectColor = Color.black;
-        outline.effectDistance = new Vector2(3, -3);
-    }
-
-    // ½ºÅ³ ¾ÆÀÌÄÜ UI »ı¼º (È­¸é ÇÏ´Ü Áß¾Ó, Ä«µå À§)
-    void CreateSkillIcons()
-    {
-        if (skillIconParent == null)
+        if (skillListParent == null)
         {
             Canvas canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
-            GameObject iconParentObj = new GameObject("SkillIconParent");
-            iconParentObj.layer = LayerMask.NameToLayer("UI");
-            iconParentObj.transform.SetParent(canvas.transform, false);
+            GameObject listParentObj = new GameObject("SkillListParent");
+            listParentObj.layer = LayerMask.NameToLayer("UI");
+            listParentObj.transform.SetParent(canvas.transform, false);
 
-            RectTransform rect = iconParentObj.AddComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0.5f, 0f);
-            rect.anchorMax = new Vector2(0.5f, 0f);
-            rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = new Vector2(0f, 180f);
-            rect.sizeDelta = new Vector2(500f, 100f);
-            rect.localScale = Vector3.one;
+            RectTransform rect = listParentObj.AddComponent<RectTransform>();
+            // í™”ë©´ ì™¼ìª½(Left)ì— ë°°ì¹˜
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f); // ê¸°ì¤€ì ì„ ìš°ì¸¡ ìƒë‹¨ìœ¼ë¡œ
+            rect.anchoredPosition = new Vector2(-150f, -150f); // ì˜¤ë¥¸ìª½ ëì—ì„œ ì™¼ìª½ìœ¼ë¡œ 30ë§Œí¼ ë„ì›€
+            rect.sizeDelta = new Vector2(250f, 500f);
 
-            HorizontalLayoutGroup layout = iconParentObj.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 20f; // ¾ÆÀÌÄÜ °£°İ
-            layout.childAlignment = TextAnchor.MiddleCenter;
+            // ì„¸ë¡œ ì •ë ¬ ë ˆì´ì•„ì›ƒ ì ìš©
+            VerticalLayoutGroup layout = listParentObj.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 15f; // í•­ëª© ê°„ê²©
+            layout.childAlignment = TextAnchor.UpperLeft;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
 
-            skillIconParent = iconParentObj.transform;
+            skillListParent = listParentObj.transform;
+        }
+    }
+
+    void CreateSkillListItem(SkillData skillData)
+    {
+        if (skillListItemPrefab == null)
+        {
+            Debug.LogError("[ComboSystem] skillListItemPrefabì´ ì—°ê²°ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤! ì¸ìŠ¤í™í„°ì—ì„œ í”„ë¦¬íŒ¹ì„ í• ë‹¹í•´ì£¼ì„¸ìš”.");
+            return;
         }
 
+        SkillListItemUI newItem = Instantiate(skillListItemPrefab, skillListParent);
+        newItem.Setup(skillData);
     }
 
-    // °³º° ½ºÅ³ ¾ÆÀÌÄÜ »ı¼º
-    void CreateSkillIcon(SkillData skillData, int index)
+    public void ResetComboInput()
     {
-        GameObject iconObj = new GameObject($"SkillIcon_{skillData.name}");
-        iconObj.layer = LayerMask.NameToLayer("UI");
-        iconObj.transform.SetParent(skillIconParent, false);
-
-        RectTransform rect = iconObj.AddComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(80f, 80f); // ¾ÆÀÌÄÜ Å©±â
-
-        rect.localScale = Vector3.one;
-        rect.localPosition = Vector3.zero;
-
-        Image iconImage = iconObj.AddComponent<Image>();
-
-        // ¾ÆÀÌÄÜ ÀÌ¹ÌÁö ÇÒ´ç (CSV¿¡¼­ ·ÎµåµÈ ÀÌ¹ÌÁö ¿ì¼±)
-        if (skillData.skillIcon != null)
-            iconImage.sprite = skillData.skillIcon;
-        else
-            iconImage.color = Color.green; // ¾øÀ¸¸é ÃÊ·Ï»ö
-
-        // ÅøÆÁ µî ¸¶¿ì½º ÀÌº¥Æ® Ãß°¡
-        GameObject tooltip = CreateTooltip(iconObj.transform, skillData);
-        AddMouseEvents(iconObj, tooltip);
-    }
-
-    // ÅøÆÁ »ı¼º
-    GameObject CreateTooltip(Transform parent, SkillData skillData)
-    {
-        GameObject tooltipObj = new GameObject("Tooltip");
-        tooltipObj.transform.SetParent(parent, false);
-
-        RectTransform tooltipRect = tooltipObj.AddComponent<RectTransform>();
-        tooltipRect.anchorMin = new Vector2(0.5f, 1f);
-        tooltipRect.anchorMax = new Vector2(0.5f, 1f);
-        tooltipRect.pivot = new Vector2(0.5f, 0f);
-        tooltipRect.anchoredPosition = new Vector2(0f, 15f);
-        tooltipRect.sizeDelta = new Vector2(200f, 150f);
-
-        Image bgImage = tooltipObj.AddComponent<Image>();
-        bgImage.color = new Color(0.9f, 0.7f, 0.3f, 1f);
-
-        Outline bgOutline = tooltipObj.AddComponent<Outline>();
-        bgOutline.effectColor = Color.black;
-        bgOutline.effectDistance = new Vector2(2, -2);
-
-        // Á¦¸ñ
-        GameObject titleObj = new GameObject("Title");
-        titleObj.transform.SetParent(tooltipObj.transform, false);
-        RectTransform titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0f, 1f);
-        titleRect.anchorMax = new Vector2(1f, 1f);
-        titleRect.sizeDelta = new Vector2(-10f, 40f);
-        titleRect.anchoredPosition = new Vector2(0f, -5f);
-
-        Text titleText = titleObj.AddComponent<Text>();
-        titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        titleText.fontSize = 20;
-        titleText.alignment = TextAnchor.MiddleCenter;
-        titleText.color = Color.black;
-        titleText.fontStyle = FontStyle.Bold;
-        titleText.text = skillData.name;
-
-        // ¼³¸í
-        GameObject descObj = new GameObject("Description");
-        descObj.transform.SetParent(tooltipObj.transform, false);
-        RectTransform descRect = descObj.AddComponent<RectTransform>();
-        descRect.anchorMin = Vector2.zero;
-        descRect.anchorMax = Vector2.one;
-        descRect.sizeDelta = new Vector2(-10f, -50f);
-        descRect.anchoredPosition = new Vector2(0f, -10f);
-
-        Text descText = descObj.AddComponent<Text>();
-        descText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        descText.fontSize = 16;
-        descText.alignment = TextAnchor.MiddleCenter;
-        descText.color = Color.black;
-        descText.text = $"ÄŞº¸: {skillData.combo}\n\n{skillData.description}";
-
-        tooltipObj.SetActive(false);
-        return tooltipObj;
-    }
-
-    void AddMouseEvents(GameObject iconObj, GameObject tooltip)
-    {
-        UnityEngine.EventSystems.EventTrigger trigger = iconObj.AddComponent<UnityEngine.EventSystems.EventTrigger>();
-
-        var enterEntry = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerEnter };
-        enterEntry.callback.AddListener((data) => { tooltip.SetActive(true); });
-        trigger.triggers.Add(enterEntry);
-
-        var exitEntry = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit };
-        exitEntry.callback.AddListener((data) => { tooltip.SetActive(false); });
-        trigger.triggers.Add(exitEntry);
+        comboInput.Clear();
+        foreach (var card in comboSlotCards)
+        {
+            if (card != null) Destroy(card);
+        }
+        comboSlotCards.Clear();
+        ClearNextComboHints();
     }
 
     public void OnCardUsed(string cardType)
     {
-        if (comboInput.Count >= 3)// ÀÌ¹Ì 3°³°¡ ²Ë Â÷ ÀÖ´Ù¸é, °¡Àå ¿À·¡µÈ °Í(0¹ø)À» Á¦°Å
-        {
-            comboInput.RemoveAt(0);
-        }
-        
+        string normalizedCardType = NormalizeCombo(cardType);
+        if (string.IsNullOrEmpty(normalizedCardType)) return;
 
-        // »õ Ä«µå Ãß°¡
-        comboInput.Add(cardType);
-        Debug.Log($"ÇöÀç ÄŞº¸: {string.Join("-", comboInput)}"); // µğ¹ö±ë¿ë
+        if (comboInput.Count >= 3) comboInput.RemoveAt(0);
 
-        if (comboInput.Count == 3)
-            CheckAndActivateSkills();
+        comboInput.Add(normalizedCardType);
+        Debug.Log($"í˜„ì¬ ì½¤ë³´: {string.Join("-", comboInput)}");
+
+        if (comboInput.Count == 3) CheckAndActivateSkills();
 
         UpdateComboSlotUI();
+        UpdateNextComboHints();
     }
 
     void UpdateComboSlotUI()
     {
-        // ±âÁ¸¿¡ Ç¥½ÃµÈ Ä«µå ¿ÀºêÁ§Æ®µé ¸ğµÎ »èÁ¦
         foreach (var card in comboSlotCards)
         {
             if (card != null) Destroy(card);
         }
         comboSlotCards.Clear();
 
-        // ÇöÀç ÄŞº¸ ¸®½ºÆ®(comboInput)¿¡ ÀÖ´Â ¸¸Å­ Ä«µå »ı¼º
         for (int i = 0; i < comboInput.Count; i++)
         {
-            
             if (i >= emptySlots.Count) break;
 
             string type = comboInput[i];
+            string displayType = type.ToUpperInvariant();
 
-            // i¹øÂ° ºó ½½·ÔÀÇ ÀÚ½ÄÀ¸·Î Ä«µå »ı¼º
             GameObject newCard = Instantiate(cardPrefab, emptySlots[i].transform);
-
-            // Ä«µå ½ºÅ©¸³Æ® ¼³Á¤
             Card cardScript = newCard.GetComponent<Card>();
-            int spriteIndex = System.Array.IndexOf(cardTypes, type);
+            int spriteIndex = System.Array.IndexOf(cardTypes, displayType);
             if (spriteIndex >= 0 && spriteIndex < cardSprites.Length)
             {
-                cardScript.SetType(type, cardSprites[spriteIndex]);
+                cardScript.SetType(displayType, cardSprites[spriteIndex]);
             }
 
-            // UI À§Ä¡ ÃÊ±âÈ­ (ºÎ¸ğÀÎ EmptySlotÀÇ Á¤Áß¾Ó¿¡ ¿Àµµ·Ï)
             RectTransform rect = newCard.GetComponent<RectTransform>();
             if (rect != null)
             {
@@ -405,40 +1206,57 @@ public class ComboSystem : MonoBehaviour
 
     void CheckAndActivateSkills()
     {
-        string currentCombo = string.Join("", comboInput);
-        Debug.Log($"ÇöÀç ÄŞº¸: {currentCombo}"); // µğ¹ö±ë¿ë
-        // ¹è¿î ½ºÅ³ Áß ÄŞº¸ ±æÀÌ°¡ ±ä ¼ø¼­´ë·Î Á¤·ÄÇÏ¿© ¸ÅÄª (QQQ°¡ QQº¸´Ù ¸ÕÀú °Ë»öµÊ)
+        string currentCombo = NormalizeCombo(string.Join("", comboInput));
+        Debug.Log($"í˜„ì¬ ì½¤ë³´: {currentCombo}");
         if (comboLookup.TryGetValue(currentCombo, out SkillData skill))
         {
-            Debug.Log($"[½ºÅ³¹ßµ¿] {skill.name}");
+            Debug.Log($"[ìŠ¤í‚¬ë°œë™] {skill.name}");
             ActivateSkill(skill);
         }
         else
         {
-            Debug.Log($"[¹Ì¹ßµ¿] '{currentCombo}' ÀÏÄ¡ÇÏ´Â ½ºÅ³ ¾øÀ½");
+            Debug.Log($"[ë¯¸ë°œë™] '{currentCombo}' ì¼ì¹˜í•˜ëŠ” ìŠ¤í‚¬ ì—†ìŒ");
         }
     }
 
     void ActivateSkill(SkillData skill)
     {
-        if(skill.draw > 0) 
-        {
-            CM.DrawCards(skill.draw);
-            Debug.Log($"{skill.draw}Àå µå·Î¿ì!");
-        }
-            
         if (enemyController != null && player != null)
         {
             float damage = player.attackDamage * skill.damage;
             enemyController.TakeDamage(damage);
-            Debug.Log($"{skill.name} ¹ßµ¿! µ¥¹ÌÁö: {damage}");
+            Debug.Log($"{skill.name} ë°œë™! ë°ë¯¸ì§€: {damage}");
         }
+
+        if (EffectManager.Instance != null)
+        {
+            EffectManager.Instance.ApplySkillEffect(skill.statusType, skill.statusAmount, player, enemyController);
+        }
+        else
+        {
+            Debug.LogError("EffectManager.Instanceê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤! ì”¬ì— EffectManagerê°€ ìˆëŠ”ì§€ í™•ì¸í•˜ì„¸ìš”.");
+        }
+
+        if (skillActivationText == null) ResolveSkillActivationText();
 
         if (skillActivationText != null)
         {
-            skillActivationText.text = $"{skill.name} ¹ßµ¿!";
+            skillActivationText.gameObject.SetActive(true);
+            skillActivationText.text = $"{skill.name} ë°œë™!";
             skillTextTimer = SKILL_TEXT_DISPLAY_TIME;
             isShowingSkillText = true;
         }
+
+        if (enemyController != null)
+        {
+            EnemyStat enemyStat = enemyController.GetComponent<EnemyStat>();
+            if (enemyStat != null) enemyStat.ReduceAttackCount(1);
+        }
+    }
+
+    string NormalizeCombo(string combo)
+    {
+        if (string.IsNullOrWhiteSpace(combo)) return string.Empty;
+        return combo.Trim().ToLowerInvariant();
     }
 }

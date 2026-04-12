@@ -1,304 +1,481 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
+using System.Collections.Generic;
+using System;
 
-public class Player : MonoBehaviour
+public class Player : MonoBehaviour, IBattleUnit
 {
-    [Header("¥…∑¬ƒ°")]
-    public float maxHp = 100f;
-    public float currentHp;
+    [Header("Îä•Î†•Ïπò")]
+    public int maxHp = 100;
+    public int currentHp;
     public float attackDamage = 10f;
 
     [Header("UI")]
+    public HeartUI heartUI;
+    public TMP_Text hpText;
     public Slider hpBar;
-    public Slider cooldownBar; // ƒ≈∏¿” ¡¯«‡πŸ
-    public Text cooldownText; // ƒ≈∏¿” «•Ω√ ≈ÿΩ∫∆Æ
-    public Text resultText; // º∫∞¯/Ω«∆– ∞·∞˙ ≈ÿΩ∫∆Æ
+    public Slider cooldownBar; // Ïø®ÌÉÄÏûÑ Ïä¨ÎùºÏù¥Îçî
+    public Text cooldownText; // Ïø®ÌÉÄÏûÑ ÌëúÏãú ÌÖçÏä§Ìä∏
+    public Text resultText; // Î∞©Ïñ¥/ÌöåÌîº Í≤∞Í≥º ÌÖçÏä§Ìä∏
 
-    [Header("πÊæÓ/»∏«« º≥¡§")]
-    public float defenseWindow = 0.5f; // πÊæÓ/»∏«« ¿‘∑¬ ¿Ø»ø Ω√∞£ (√ )
-    public float defenseActionCooldown = 3f; // πÊæÓ/»∏«« ƒ≈∏¿” (√ )
-    
-    private bool isDefending = false;
-    private bool isDodging = false;
-    private float inputTimer = 0f;
-    private float cooldownTimer = 0f;
-    private bool isOnCooldown = false;
-    private float resultDisplayTimer = 0f;
+    [Header("ÏÉÅÌÉúÏù¥ÏÉÅ Î∞è Î∞©Ïñ¥ÎèÑ")]
+    public float guard = 0f;
+    public Dictionary<string, int> statusEffects = new Dictionary<string, int>();
+
+    //[Header("Î∞©Ïñ¥/ÌöåÌîº ÏÑ§Ï†ï")]
+    //public float defenseWindow = 0.5f; // Î∞©Ïñ¥/ÌöåÌîº ÏûÖÎ†• Ïú†Ìö® ÏãúÍ∞Ñ (Ï¥à)
+    //public float defenseActionCooldown = 3f; // Î∞©Ïñ¥/ÌöåÌîº Ïø®ÌÉÄÏûÑ (Ï¥à)
+
+    //private bool isDefending = false;
+    //private bool isDodging = false;
+    //private float inputTimer = 0f;
+    //private float cooldownTimer = 0f;
+    //private bool isOnCooldown = false;
+    //private float resultDisplayTimer = 0f;
+
+    public ParticleSystem attackParticle;
 
     void Awake()
     {
+        ResolveUiReferences();
         currentHp = maxHp;
+
+        statusEffects["launcher"] = 0;
+        statusEffects["fortify"] = 0;
+        statusEffects["charge"] = 0;
         UpdateUI();
     }
 
     void Start()
     {
-        // UI ≈ÿΩ∫∆Æ ¿⁄µø ª˝º∫ (Startø°º≠ Ω««‡)
-        CreateUITexts();
-        UpdateCooldownUI();
+        ResolveUiReferences();
+        HideUnusedCooldownUI();
         if (resultText != null) resultText.text = "";
+
+    }
+
+    void ResolveUiReferences()
+    {
+        if (heartUI == null)
+            heartUI = FindFirstObjectByType<HeartUI>();
+
+        DisableLegacyHpSliders();
+
+        if (hpText == null)
+        {
+            foreach (TMP_Text text in GetAllSceneHpTexts())
+            {
+                if (text != null && text.gameObject.activeInHierarchy)
+                {
+                    hpText = text;
+                    break;
+                }
+            }
+
+            if (hpText == null)
+            {
+                foreach (TMP_Text text in GetAllSceneHpTexts())
+                {
+                    hpText = text;
+                    break;
+                }
+            }
+        }
+
+        if (hpBar == null)
+        {
+            foreach (Slider slider in GetAllScenePlayerHpBars())
+            {
+                if (slider != null && slider.gameObject.activeInHierarchy)
+                {
+                    hpBar = slider;
+                    break;
+                }
+            }
+
+            if (hpBar == null)
+            {
+                foreach (Slider slider in GetAllScenePlayerHpBars())
+                {
+                    hpBar = slider;
+                    break;
+                }
+            }
+        }
+    }
+
+    bool IsSceneObject(GameObject go)
+    {
+        if (go == null) return false;
+        return go.scene.IsValid() && go.scene.isLoaded;
+    }
+
+    IEnumerable<TMP_Text> GetAllSceneHpTexts()
+    {
+        TMP_Text[] texts = Resources.FindObjectsOfTypeAll<TMP_Text>();
+        foreach (TMP_Text text in texts)
+        {
+            if (text == null) continue;
+            if (text.gameObject.name != "HpText") continue;
+            if (!IsSceneObject(text.gameObject)) continue;
+            yield return text;
+        }
+    }
+
+    IEnumerable<Slider> GetAllScenePlayerHpBars()
+    {
+        Slider[] sliders = Resources.FindObjectsOfTypeAll<Slider>();
+        foreach (Slider slider in sliders)
+        {
+            if (slider == null) continue;
+            if (slider.gameObject.name != "PlayerHpBar") continue;
+            if (!IsSceneObject(slider.gameObject)) continue;
+            yield return slider;
+        }
+    }
+
+    void DisableLegacyHpSliders()
+    {
+        Slider[] sliders = FindObjectsByType<Slider>(FindObjectsSortMode.None);
+        foreach (Slider slider in sliders)
+        {
+            if (slider != null && slider.gameObject.name == "HpSlider")
+                slider.gameObject.SetActive(false);
+        }
+    }
+
+    void HideUnusedCooldownUI()
+    {
+        if (cooldownBar != null)
+            cooldownBar.gameObject.SetActive(false);
+
+        if (cooldownText != null)
+            cooldownText.gameObject.SetActive(false);
+    }
+
+    RectTransform GetTopHpContainer()
+    {
+        if (hpText != null && hpText.transform.parent is RectTransform parentRect)
+            return parentRect;
+
+        if (heartUI != null && heartUI.transform is RectTransform heartRect)
+            return heartRect;
+
+        RectTransform[] rects = FindObjectsByType<RectTransform>(FindObjectsSortMode.None);
+        foreach (RectTransform rect in rects)
+        {
+            if (rect != null && rect.gameObject.name == "PlayerHP")
+                return rect;
+        }
+
+        return null;
+    }
+
+    Slider FindHpBarInContainer(RectTransform container)
+    {
+        if (container == null) return null;
+
+        for (int i = 0; i < container.childCount; i++)
+        {
+            Transform child = container.GetChild(i);
+            if (child == null || child.name != "PlayerHpBar") continue;
+
+            Slider slider = child.GetComponent<Slider>();
+            if (slider != null)
+                return slider;
+        }
+
+        return null;
+    }
+
+    void EnsureTopHpBarPlacement()
+    {
+        RectTransform container = GetTopHpContainer();
+        if (container == null) return;
+
+        if (hpBar == null || hpBar.gameObject.name != "PlayerHpBar" || hpBar.transform.parent != container)
+            hpBar = FindHpBarInContainer(container);
+
+        if (hpBar != null)
+        {
+            hpBar.interactable = false;
+            hpBar.transition = Selectable.Transition.None;
+        }
     }
 
     void CreateUITexts()
     {
-        // ¿ÃπÃ ª˝º∫µ«æ˙¿∏∏È Ω∫≈µ
-        if (cooldownText != null && resultText != null && cooldownBar != null) return;
-
-        Canvas canvas = FindFirstObjectByType<Canvas>();
-        if (canvas == null)
-        {
-            GameObject canvasObj = new GameObject("Canvas");
-            canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            
-            CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            
-            canvasObj.AddComponent<GraphicRaycaster>();
-        }
-
-        // ƒ≈∏¿” ¡¯«‡πŸ ª˝º∫
-        if (cooldownBar == null)
-        {
-            GameObject cooldownBarObj = new GameObject("CooldownBar");
-            cooldownBarObj.transform.SetParent(canvas.transform, false);
-            
-            RectTransform barRect = cooldownBarObj.AddComponent<RectTransform>();
-            barRect.anchorMin = new Vector2(0f, 1f);
-            barRect.anchorMax = new Vector2(0f, 1f);
-            barRect.pivot = new Vector2(0f, 1f);
-            barRect.anchoredPosition = new Vector2(20f, -80f);
-            barRect.sizeDelta = new Vector2(200f, 20f);
-            
-            cooldownBar = cooldownBarObj.AddComponent<Slider>();
-            cooldownBar.minValue = 0f;
-            cooldownBar.maxValue = 1f;
-            cooldownBar.value = 1f;
-            
-            // Background
-            GameObject bgObj = new GameObject("Background");
-            bgObj.transform.SetParent(cooldownBarObj.transform, false);
-            RectTransform bgRect = bgObj.AddComponent<RectTransform>();
-            bgRect.anchorMin = Vector2.zero;
-            bgRect.anchorMax = Vector2.one;
-            bgRect.sizeDelta = Vector2.zero;
-            Image bgImage = bgObj.AddComponent<Image>();
-            bgImage.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
-            
-            // Fill Area
-            GameObject fillAreaObj = new GameObject("Fill Area");
-            fillAreaObj.transform.SetParent(cooldownBarObj.transform, false);
-            RectTransform fillAreaRect = fillAreaObj.AddComponent<RectTransform>();
-            fillAreaRect.anchorMin = Vector2.zero;
-            fillAreaRect.anchorMax = Vector2.one;
-            fillAreaRect.sizeDelta = Vector2.zero;
-            
-            // Fill
-            GameObject fillObj = new GameObject("Fill");
-            fillObj.transform.SetParent(fillAreaObj.transform, false);
-            RectTransform fillRect = fillObj.AddComponent<RectTransform>();
-            fillRect.anchorMin = Vector2.zero;
-            fillRect.anchorMax = Vector2.one;
-            fillRect.sizeDelta = Vector2.zero;
-            Image fillImage = fillObj.AddComponent<Image>();
-            fillImage.color = new Color(0.3f, 1f, 0.3f, 1f); // √ ∑œªˆ
-            
-            cooldownBar.fillRect = fillRect;
-            cooldownBar.targetGraphic = fillImage;
-        }
-
-        // ƒ≈∏¿” ≈ÿΩ∫∆Æ ª˝º∫
-        if (cooldownText == null)
-        {
-            GameObject cooldownObj = new GameObject("CooldownText");
-            cooldownObj.transform.SetParent(canvas.transform, false);
-            
-            RectTransform rectTransform = cooldownObj.AddComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0f, 1f);
-            rectTransform.anchorMax = new Vector2(0f, 1f);
-            rectTransform.pivot = new Vector2(0f, 1f);
-            rectTransform.anchoredPosition = new Vector2(20f, -110f);
-            rectTransform.sizeDelta = new Vector2(300f, 40f);
-            
-            cooldownText = cooldownObj.AddComponent<Text>();
-            cooldownText.font = Font.CreateDynamicFontFromOSFont("Arial", 24);
-            cooldownText.fontSize = 24;
-            cooldownText.alignment = TextAnchor.MiddleLeft;
-            cooldownText.color = Color.white;
-            
-            // Outline √ﬂ∞° (∞°µ∂º∫)
-            Outline outline = cooldownObj.AddComponent<Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(2, -2);
-        }
-
-        // ∞·∞˙ ≈ÿΩ∫∆Æ ª˝º∫
-        if (resultText == null)
-        {
-            GameObject resultObj = new GameObject("ResultText");
-            resultObj.transform.SetParent(canvas.transform, false);
-            
-            RectTransform rectTransform = resultObj.AddComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0f, 0.5f);
-            rectTransform.anchorMax = new Vector2(0f, 0.5f);
-            rectTransform.pivot = new Vector2(0f, 0.5f);
-            rectTransform.anchoredPosition = new Vector2(50f, 100f);
-            rectTransform.sizeDelta = new Vector2(300f, 60f);
-            
-            resultText = resultObj.AddComponent<Text>();
-            resultText.font = Font.CreateDynamicFontFromOSFont("Arial", 36);
-            resultText.fontSize = 36;
-            resultText.alignment = TextAnchor.MiddleLeft;
-            resultText.fontStyle = FontStyle.Bold;
-            
-            // Outline √ﬂ∞° (∞°µ∂º∫)
-            Outline outline = resultObj.AddComponent<Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(3, -3);
-        }
+        // Runtime auto-creation is disabled.
+        // Assign resultText in inspector if this UI is needed.
     }
 
+    public void ResetStatusForNewBattle()
+    {
+        // Î∞©Ïñ¥ÎèÑ Ï¥àÍ∏∞Ìôî
+        guard = 0f;
+
+        // Î™®Îì† ÏÉÅÌÉúÏù¥ÏÉÅ ÏàòÏπòÎ•º 0ÏúºÎ°ú ÎßåÎì§Í≥† UI Ìå®ÎÑêÏóê ÏïåÎ¶º
+        List<string> keys = new List<string>(statusEffects.Keys);
+        foreach (string key in keys)
+        {
+            if (statusEffects[key] > 0)
+            {
+                statusEffects[key] = 0;
+
+                // UI ÏïÑÏù¥ÏΩòÏù¥ ÏßÄÏõåÏßÄÎèÑÎ°ù 0Ïù¥ ÎêòÏóàÎã§Îäî Ïã†Ìò∏ Î∞úÏÜ°!
+                OnStatusChanged?.Invoke(key, 0);
+            }
+        }
+    }
     void Update()
     {
-        HandleDefenseInput();
-        
-        // πÊæÓ/»∏«« ªÛ≈¬ ≈∏¿Ã∏” ∞®º“
-        if (inputTimer > 0)
-        {
-            inputTimer -= Time.deltaTime;
-        }
-        else
-        {
-            isDefending = false;
-            isDodging = false;
-        }
+        //HandleDefenseInput();
 
-        // ƒ≈∏¿” √≥∏Æ
-        if (isOnCooldown)
-        {
-            cooldownTimer -= Time.deltaTime;
-            UpdateCooldownUI();
-            
-            if (cooldownTimer <= 0f)
-            {
-                isOnCooldown = false;
-                cooldownTimer = 0f;
-                UpdateCooldownUI();
-            }
-        }
+        //// Î∞©Ïñ¥/ÌöåÌîº ÏûÖÎ†• ÌÉÄÏù¥Î®∏ Í∞êÏÜå
+        //if (inputTimer > 0)
+        //{
+        //    inputTimer -= Time.deltaTime;
+        //}
+        //else
+        //{
+        //    isDefending = false;
+        //    isDodging = false;
+        //}
 
-        // ∞·∞˙ ≈ÿΩ∫∆Æ «•Ω√ ≈∏¿Ã∏”
-        if (resultDisplayTimer > 0f)
-        {
-            resultDisplayTimer -= Time.deltaTime;
-            if (resultDisplayTimer <= 0f && resultText != null)
-            {
-                resultText.text = "";
-            }
-        }
+        //// Ïø®ÌÉÄÏûÑ Ï≤òÎ¶¨
+        //if (isOnCooldown)
+        //{
+        //    cooldownTimer -= Time.deltaTime;
+        //    UpdateCooldownUI();
+
+        //    if (cooldownTimer <= 0f)
+        //    {
+        //        isOnCooldown = false;
+        //        cooldownTimer = 0f;
+        //        UpdateCooldownUI();
+        //    }
+        //}
+
+        //// Í≤∞Í≥º ÌÖçÏä§Ìä∏ ÌëúÏãú ÌÉÄÏù¥Î®∏
+        //if (resultDisplayTimer > 0f)
+        //{
+        //    resultDisplayTimer -= Time.deltaTime;
+        //    if (resultDisplayTimer <= 0f && resultText != null)
+        //    {
+        //        resultText.text = "";
+        //    }
+        //}
     }
 
-    void HandleDefenseInput()
-    {
-        if (isOnCooldown) return;
+    //void HandleDefenseInput()
+    //{
+    //    if (isOnCooldown) return;
 
-        // øﬁ¬  πÊ«‚≈∞ (<): »∏««
-        if (Input.GetKeyDown(KeyCode.LeftArrow))
-        {
-            isDodging = true;
-            isDefending = false;
-            inputTimer = defenseWindow;
-            StartCooldown();
-        }
-        // ø¿∏•¬  πÊ«‚≈∞ (>): πÊæÓ
-        else if (Input.GetKeyDown(KeyCode.RightArrow))
-        {
-            isDefending = true;
-            isDodging = false;
-            inputTimer = defenseWindow;
-            StartCooldown();
-        }
-    }
+    //    // ÏôºÏ™Ω Î∞©Ìñ•ÌÇ§ (<): ÌöåÌîº
+    //    if (Input.GetKeyDown(KeyCode.LeftArrow))
+    //    {
+    //        isDodging = true;
+    //        isDefending = false;
+    //        inputTimer = defenseWindow;
+    //        StartCooldown();
+    //    }
+    //    // Ïò§Î•∏Ï™Ω Î∞©Ìñ•ÌÇ§ (>): Î∞©Ïñ¥
+    //    else if (Input.GetKeyDown(KeyCode.RightArrow))
+    //    {
+    //        isDefending = true;
+    //        isDodging = false;
+    //        inputTimer = defenseWindow;
+    //        StartCooldown();
+    //    }
+    //}
 
     public void OnProjectileHit(float damage)
     {
-        if (isDodging)
-        {
-            ShowResult("»∏«« º∫∞¯!", Color.green);
-            isDodging = false;
-            inputTimer = 0f;
-            return;
-        }
-        
-        if (isDefending)
-        {
-            float reducedDamage = damage * 0.5f;
-            ShowResult("πÊæÓ º∫∞¯!", Color.cyan);
-            TakeDamage(reducedDamage);
-            isDefending = false;
-            inputTimer = 0f;
-            return;
-        }
+        //if (isDodging)
+        //{
+        //    ShowResult("ÌöåÌîº ÏÑ±Í≥µ!", Color.green);
+        //    isDodging = false;
+        //    inputTimer = 0f;
+        //    damage = 0f; // ÌöåÌîº ÏÑ±Í≥µ
+        //    return;
+        //}
 
-        ShowResult("««∞›!", Color.red);
-        TakeDamage(damage);
+        //if (isDefending)
+        //{
+        //    float reducedDamage = damage * 0.5f;
+        //    ShowResult("Î∞©Ïñ¥ ÏÑ±Í≥µ!", Color.cyan);
+        //    isDefending = false;
+        //    inputTimer = 0f;
+        //    damage=0f; // Î∞©Ïñ¥ ÏÑ±Í≥µ
+        //    return;
+        //}
+
+        //ShowResult("ÌîºÍ≤©!", Color.red);
+        //TakeDamage(damage);
     }
 
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damage, string cardtype = "normal")
     {
-        currentHp -= damage;
+        if (guard > 0)
+        {
+            if (guard >= damage)
+            {
+                guard -= damage;
+                damage = 0;
+            }
+            else
+            {
+                damage -= guard;
+                guard = 0;
+            }
+            OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
+        }
+        int finalDamage = Mathf.RoundToInt(damage);
+        if (finalDamage > 0)
+        {
+            currentHp -= finalDamage;
+            UpdateUI();
+
+            if (currentHp <= 0)
+            {
+                Die();
+            }
+        }
+    }
+
+    public event Action<string, int> OnStatusChanged;
+
+    public void AddStatus(string type, int amount)
+    {
+        if (!statusEffects.ContainsKey(type)) return;
+
+        if (type == "freeze" && statusEffects["wet"] > 0)
+        {
+            statusEffects["freeze"] += statusEffects["wet"];
+            statusEffects["wet"] = 0;
+            OnStatusChanged?.Invoke("freeze", statusEffects["freeze"]);
+            OnStatusChanged?.Invoke("wet", 0);
+            return;
+        }
+        statusEffects[type] += amount;
+        OnStatusChanged?.Invoke(type, statusEffects[type]);
+    }
+
+    public int GetStatus(string type)
+    {
+        return statusEffects.ContainsKey(type) ? statusEffects[type] : 0;
+    }
+
+    public void SetStatus(string type, int amount)
+    {
+        if (statusEffects.ContainsKey(type))
+        {
+            statusEffects[type] = amount;
+            OnStatusChanged?.Invoke(type, amount);
+        }
+
+     }
+    public float GetAttackDamage()
+    {
+        return attackDamage;
+    }
+    public void AddGuard(float amount)
+    {
+        guard += amount;
+        OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
+    }
+
+    void Die()
+    {
+        Debug.Log("ÌîåÎ†àÏù¥Ïñ¥ ÏÇ¨Îßù!");
+    }
+
+    public void Heal(int amount)
+    {
+        currentHp = Mathf.Min(currentHp + amount, maxHp);
         UpdateUI();
-        if (currentHp <= 0) Debug.Log("«√∑π¿ÃæÓ ªÁ∏¡");
+    }
+
+    public void UpdateUIForExternalSync()
+    {
+        UpdateUI();
     }
 
     void UpdateUI()
     {
-        if (hpBar != null) hpBar.value = currentHp / maxHp;
-    }
+        ResolveUiReferences();
+        EnsureTopHpBarPlacement();
 
-    void UpdateCooldownUI()
-    {
-        if (cooldownText == null) return;
+        //if (heartUI != null) heartUI.UpdateHearts(currentHp, maxHp);
+        foreach (TMP_Text text in GetAllSceneHpTexts())
+            text.text = $"{currentHp} / {maxHp}";
 
-        if (isOnCooldown)
+        if (hpText != null)
+            hpText.text = $"{currentHp} / {maxHp}";
+
+        foreach (Slider slider in GetAllScenePlayerHpBars())
         {
-            cooldownText.text = $"ƒ≈∏¿”: {cooldownTimer:F1}√ ";
-            cooldownText.color = Color.yellow;
-            
-            // ƒ≈∏¿” ¡¯«‡πŸ æ˜µ•¿Ã∆Æ
-            if (cooldownBar != null)
-            {
-                cooldownBar.value = 1f - (cooldownTimer / defenseActionCooldown);
-            }
+            slider.maxValue = maxHp;
+            slider.value = currentHp;
         }
-        else
+
+        if (hpBar != null)
         {
-            cooldownText.text = "πÊæÓ/»∏«« ¡ÿ∫Ò";
-            cooldownText.color = Color.white;
-            
-            // ƒ≈∏¿” ¡¯«‡πŸ ∞°µÊ √§øÏ±‚
-            if (cooldownBar != null)
-            {
-                cooldownBar.value = 1f;
-            }
+            hpBar.maxValue = maxHp;
+            hpBar.value = currentHp;
         }
     }
 
-    void StartCooldown()
-    {
-        isOnCooldown = true;
-        cooldownTimer = defenseActionCooldown;
-        UpdateCooldownUI();
-    }
+    //void UpdateCooldownUI()
+    //{
+    //    if (cooldownText == null) return;
 
-    void ShowResult(string message, Color color)
+    //    if (isOnCooldown)
+    //    {
+    //        cooldownText.text = $"Ïø®ÌÉÄÏûÑ: {cooldownTimer:F1}Ï¥à";
+    //        cooldownText.color = Color.yellow;
+
+    //        // Ïø®ÌÉÄÏûÑ Ïä¨ÎùºÏù¥Îçî ÏóÖÎç∞Ïù¥Ìä∏
+    //        if (cooldownBar != null)
+    //        {
+    //            cooldownBar.value = 1f - (cooldownTimer / defenseActionCooldown);
+    //        }
+    //    }
+    //    else
+    //    {
+    //        cooldownText.text = "Î∞©Ïñ¥/ÌöåÌîº Ï§ÄÎπÑ";
+    //        cooldownText.color = Color.white;
+
+    //        // Ïø®ÌÉÄÏûÑ Ïä¨ÎùºÏù¥Îçî ÏôÑÏ†Ñ Ï±ÑÏö∞Í∏∞
+    //        if (cooldownBar != null)
+    //        {
+    //            cooldownBar.value = 1f;
+    //        }
+    //    }
+    //}
+
+    //void StartCooldown()
+    //{
+    //    isOnCooldown = true;
+    //    cooldownTimer = defenseActionCooldown;
+    //    //UpdateCooldownUI();
+    //}
+
+    //void ShowResult(string message, Color color)
+    //{
+    //    if (resultText != null)
+    //    {
+    //        resultText.text = message;
+    //        resultText.color = color;
+    //        resultDisplayTimer = 0.5f; // 2Ï¥à ÎèôÏïà ÌëúÏãú
+    //    }
+    //}
+
+    public void PlayAttackEffect()
     {
-        if (resultText != null)
-        {
-            resultText.text = message;
-            resultText.color = color;
-            resultDisplayTimer = 2f; // 2√  µøæ» «•Ω√
-        }
+        if (attackParticle != null)
+            attackParticle.Play(); // ÌååÌã∞ÌÅ¥ Ïû¨ÏÉù
+    
     }
 }

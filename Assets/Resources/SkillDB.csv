@@ -1,15 +1,66 @@
-﻿INT,STRING,FLOAT,STRING,INT,STRING,STRING,STRING,STRING,STRING
-ID,Name,Damage,Combo,Draw,EffectName,SkillImg,생성 1장,생성 2장,Description
-1001,강타Q,200,QQW,0,QQWMix_Eff,QQWMix_Img,0,0,공격력의 200% 데미지를 입힌다.
-1002,강타W,200,WWE,0,WWEMix_Eff,WWEMix_Img,0,0,공격력의 200% 데미지를 입힌다.
-1003,강타E,200,EER,0,EERMix_Eff,EERMix_Img,0,0,공격력의 200% 데미지를 입힌다.
-1004,강타R,200,RRQ,0,RRQMix_Eff,RRQMix_Img,0,0,공격력의 200% 데미지를 입힌다.
-1005,필살기 Q,300,QQQ,0,QSignatureMv_Eff,QSignatureMv_Img,0,0,공격력의 300% 데미지를 입힌다.
-1006,필살기 W,300,WWW,0,WSignatureMv_Eff,WSignatureMv_Img,0,0,공격력의 300% 데미지를 입힌다.
-1007,필살기 E,300,EEE,0,ESignatureMv_Eff,ESignatureMv_Img,0,0,공격력의 300% 데미지를 입힌다.
-1008,필살기 R,300,RRR,0,RSignatureMv_Eff,RSignatureMv_Img,0,0,공격력의 300% 데미지를 입힌다.
-1009,조합1,150,WEQ,0,WEQMix_Eff,WEQMix_Img,0,0,공격력의 150% 데미지를 입힌다.
-1010,조합2,150,QWR,0,QWRMix_Eff,QWRMix_Img,0,0,공격력의 150% 데미지를 입힌다.
-1011,합공,250,QWE,0,QWEMix_Eff,QWEMix_Img,0,0,공격력의 250% 데미지를 입힌다.
-1012,카드 뽑기,50,WEW,2,DrawCardSkill_Eff,DrawCardSkill_Img,0,0,공격력의 200% 데미지를 입히고 카드를 2장 뽑는다.
-1013,카드 생성,100,WQQ,0,CreateCardSkill_Eff,CreateCardSkill_Img,Q,0,공격력의 100% 데미지를 입히고 Q 카드를 생성한다. 
+﻿INT,STRING,FLOAT,STRING,STRING,STRING,STRING,INT,INT,STRING
+ID,Name,Damage,Combo,EffectName,SkillImg,StatusType,StatusAmount,GuardAmount,Description
+1001,화염폭,300,qqq,QSignatureMv_Eff,QSignatureMv_Img,burn,5,0,"공격력의 300% 데미지, 화상 +5"
+1002,화염파,225,qqw,QQWMix_Eff,QQWMix_Img,freeze,0,0,"공격력의 225% 데미지, 젖음을 빙결로 전환한다."
+1003,화염격,225,qqe,QQEMix_Eff,QQEMix_Img,launcher,3,0,"공격력의 225% 데미지, 사출기 +3"
+1004,화염쇄,200,qqr,QQRMix_Eff,QQRMix_Img,spend,0,2,"공격력의 200% 데미지, 흙 1당 방어도 2를 획득한다."
+1005,화류폭,225,qwq,QWQMix_Eff,QWQMix_Img,burn,5,0,"공격력의 225% 데미지, 화상 +5"
+1006,화류파,200,qww,QWWMix_Eff,QWWMix_Img,wet,6,0,"공격력의 200% 데미지, 젖음 +6"
+1007,화류격,150,qwe,QWEMix_Eff,QWEMix_Img,launcher,4,0,"공격력의 150% 데미지, 사출기 +4"
+1008,화류쇄,150,qwr,QWRMix_Eff,QWRMix_Img,spend,0,2,"공격력의 150% 데미지, 흙 1당 방어도 2를 획득한다."
+1009,화참폭,225,qeq,QEQMix_Eff,QEQMix_Img,burn,5,0,"공격력의 225% 데미지, 화상 +5"
+1010,화참파,175,qew,QEWMix_Eff,QEWMix_Img,freeze,0,0,"공격력의 175% 데미지, 젖음을 빙결로 전환한다."
+1011,화참격,200,qee,QEEMix_Eff,QEEMix_Img,charge,3,0,"공격력의 200% 데미지, 사출기를 전부 사용한다."
+1012,화참쇄,150,qer,QERMix_Eff,QERMix_Img,spend,0,2,"공격력의 150% 데미지, 흙 1당 방어도 2를 획득한다."
+1013,화벽폭,225,qrq,QRQMix_Eff,QRQMix_Img,burn,4,0,"공격력의 225% 데미지, 화상 +4"
+1014,화벽파,150,qrw,QRWMix_Eff,QRWMix_Img,freeze,0,0,"공격력의 150% 데미지, 젖음을 빙결로 전환한다."
+1015,화벽격,150,qre,QREMix_Eff,QREMix_Img,launcher,4,0,"공격력의 150% 데미지, 사출기 +4"
+1016,화벽쇄,200,qrr,QRRMix_Eff,QRRMix_Img,fortify,4,0,"공격력의 200% 데미지, 흙 +4"
+1017,해염폭,225,wqq,WQQMix_Eff,WQQMix_Img,burn,4,0,"공격력의 225% 데미지, 화상 +4"
+1018,해염파,200,wqw,WQWMix_Eff,WQWMix_Img,wet,6,0,"공격력의 200% 데미지, 젖음 +6"
+1019,해염격,150,wqe,WQEMix_Eff,WQEMix_Img,launcher,4,0,"공격력의 150% 데미지, 사출기 +4"
+1020,해염쇄,150,wqr,WQRMix_Eff,WQRMix_Img,spend,0,2,"공격력의 150% 데미지, 흙 1당 방어도 2를 획득한다."
+1021,해류폭,200,wwq,WWQMix_Eff,WWQMix_Img,detonate,0,0,"공격력의 200% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
+1022,해류파,250,www,WSignatureMv_Eff,WSignatureMv_Img,wet,8,0,"공격력의 250% 데미지, 젖음 +8"
+1023,해류격,175,wwe,WWEMix_Eff,WWEMix_Img,launcher,2,0,"공격력의 175% 데미지, 사출기 +2"
+1024,해류쇄,175,wwr,WWRMix_Eff,WWRMix_Img,spend,0,2,"공격력의 175% 데미지, 흙 1당 방어도 2를 획득한다."
+1025,해참폭,175,weq,WEQMix_Eff,WEQMix_Img,detonate,0,0,"공격력의 175% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
+1026,해참파,175,wew,WEWMix_Eff,WEWMix_Img,wet,7,0,"공격력의 175% 데미지, 젖음 +7"
+1027,해참격,175,wee,WEEMix_Eff,WEEMix_Img,charge,3,0,"공격력의 175% 데미지, 사출기를 전부 사용한다."
+1028,해참쇄,125,wer,WERMix_Eff,WERMix_Img,spend,0,2,"공격력의 125% 데미지, 흙 1당 방어도 2를 획득한다."
+1029,해벽폭,175,wrq,WRQMix_Eff,WRQMix_Img,detonate,0,0,"공격력의 175% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
+1030,해벽파,175,wrw,WRWMix_Eff,WRWMix_Img,wet,7,0,"공격력의 175% 데미지, 젖음 +7"
+1031,해벽격,125,wre,WREMix_Eff,WREMix_Img,launcher,3,0,"공격력의 125% 데미지, 사출기 +3"
+1032,해벽쇄,175,wrr,WRRMix_Eff,WRRMix_Img,fortify,4,0,"공격력의 175% 데미지, 흙 +4"
+1033,풍염폭,225,eqq,EQQMix_Eff,EQQMix_Img,burn,4,0,"공격력의 225% 데미지, 화상 +4"
+1034,풍염파,150,eqw,EQWMix_Eff,EQWMix_Img,freeze,0,0,"공격력의 150% 데미지, 젖음을 빙결로 전환한다."
+1035,풍염격,200,eqe,EQEMix_Eff,EQEMix_Img,charge,4,0,"공격력의 200% 데미지, 사출기를 전부 사용한다."
+1036,풍염쇄,125,eqr,EQRMix_Eff,EQRMix_Img,spend,0,2,"공격력의 125% 데미지, 흙 1당 방어도 2를 획득한다."
+1037,풍류폭,175,ewq,EWQMix_Eff,EWQMix_Img,detonate,0,0,"공격력의 175% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
+1038,풍류파,175,eww,EWWMix_Eff,EWWMix_Img,wet,7,0,"공격력의 175% 데미지, 젖음 +7"
+1039,풍류격,175,ewe,EWEMix_Eff,EWEMix_Img,charge,4,0,"공격력의 175% 데미지, 사출기를 전부 사용한다."
+1040,풍류쇄,125,ewr,EWRMix_Eff,EWRMix_Img,spend,0,2,"공격력의 125% 데미지, 흙 1당 방어도 2를 획득한다."
+1041,풍참폭,200,eeq,EEQMix_Eff,EEQMix_Img,detonate,0,0,"공격력의 200% 데미지, 화상을 전부 소비해 추가 피해를 준다."
+1042,풍참파,175,eew,EEWMix_Eff,EEWMix_Img,freeze,0,0,"공격력의 175% 데미지, 젖음을 빙결로 전환한다."
+1043,풍참격,250,eee,ESignatureMv_Eff,ESignatureMv_Img,charge,4,0,"공격력의 250% 데미지, 사출기를 전부 사용한다."
+1044,풍참쇄,175,eer,EERMix_Eff,EERMix_Img,spend,0,2,"공격력의 175% 데미지, 흙 1당 방어도 2를 획득한다."
+1045,풍벽폭,175,erq,ERQMix_Eff,ERQMix_Img,detonate,0,0,"공격력의 175% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
+1046,풍벽파,125,erw,ERWMix_Eff,ERWMix_Img,freeze,0,0,"공격력의 125% 데미지, 젖음을 빙결로 전환한다."
+1047,풍벽격,175,ere,EREMix_Eff,EREMix_Img,charge,4,0,"공격력의 175% 데미지, 사출기를 전부 사용한다."
+1048,풍벽쇄,175,err,ERRMix_Eff,ERRMix_Img,fortify,4,0,"공격력의 175% 데미지, 흙 +4"
+1049,지염폭,225,rqq,RQQMix_Eff,RQQMix_Img,burn,3,0,"공격력의 225% 데미지, 화상 +3"
+1050,지염파,150,rqw,RQWMix_Eff,RQWMix_Img,freeze,0,0,"공격력의 150% 데미지, 젖음을 빙결로 전환한다."
+1051,지염격,125,rqe,RQEMix_Eff,RQEMix_Img,launcher,4,0,"공격력의 125% 데미지, 사출기 +4"
+1052,지염쇄,200,rqr,RQRMix_Eff,RQRMix_Img,fortify,3,0,"공격력의 200% 데미지, 흙 +3"
+1053,지류폭,175,rwq,RWQMix_Eff,RWQMix_Img,detonate,0,0,"공격력의 175% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
+1054,지류파,175,rww,RWWMix_Eff,RWWMix_Img,wet,7,0,"공격력의 175% 데미지, 젖음 +7"
+1055,지류격,125,rwe,RWEMix_Eff,RWEMix_Img,launcher,3,0,"공격력의 125% 데미지, 사출기 +3"
+1056,지류쇄,175,rwr,RWRMix_Eff,RWRMix_Img,fortify,3,0,"공격력의 175% 데미지, 흙 +3"
+1057,지참폭,175,req,REQMix_Eff,REQMix_Img,detonate,0,0,"공격력의 175% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
+1058,지참파,125,rew,REWMix_Eff,REWMix_Img,freeze,0,0,"공격력의 125% 데미지, 젖음을 빙결로 전환한다."
+1059,지참격,175,ree,REEMix_Eff,REEMix_Img,charge,3,0,"공격력의 175% 데미지, 사출기를 전부 사용한다."
+1060,지참쇄,175,rer,RERMix_Eff,RERMix_Img,fortify,3,0,"공격력의 175% 데미지, 흙 +3"
+1061,지벽폭,200,rrq,RRQMix_Eff,RRQMix_Img,detonate,0,0,"공격력의 200% 데미지, 화상 스택을 전부 소모하고 스택X2의 데미지를 준다."
+1062,지벽파,175,rrw,RRWMix_Eff,RRWMix_Img,freeze,0,0,"공격력의 175% 데미지, 젖음을 빙결로 전환한다."
+1063,지벽격,175,rre,RREMix_Eff,RREMix_Img,launcher,2,0,"공격력의 175% 데미지, 사출기 +2"
+1064,지벽쇄,250,rrr,RSignatureMv_Eff,RSignatureMv_Img,fortify,8,0,"공격력의 250% 데미지, 흙 +8"

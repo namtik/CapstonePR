@@ -1,7 +1,7 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// °ÔÀÓ »óÅÂ¸¦ °ü¸®ÇÏ°í Äµ¹ö½º ÀüÈ¯À» ´ã´ç
-//  ¾À ÀüÈ¯ ´ë½Å Äµ¹ö½º È°¼ºÈ­/ºñÈ°¼ºÈ­·Î »óÅÂ ÀüÈ¯
+// ê²Œì„ ìƒíƒœë¥¼ ê´€ë¦¬í•˜ê³  ìº”ë²„ìŠ¤ ì „í™˜ì„ ë‹´ë‹¹
+//  ì”¬ ì „í™˜ ëŒ€ì‹  ìº”ë²„ìŠ¤ í™œì„±í™”/ë¹„í™œì„±í™”ë¡œ ìƒíƒœ ì „í™˜
 public class GameStateController : MonoBehaviour
 {
     public static GameStateController Instance { get; private set; }
@@ -12,16 +12,16 @@ public class GameStateController : MonoBehaviour
     [Header("Stage GameObjects")]
     public GameObject mapStage;          // MapStage GameObject
     public GameObject combatStage;       // CombatStage GameObject
-    public GameObject eliteStage;        // EliteStage GameObject (ÀÖ´Ù¸é)
-    public GameObject bossStage;         // BossStage GameObject (ÀÖ´Ù¸é)
-    public GameObject shopStage;         // ShopStage GameObject (ÀÖ´Ù¸é)
-    public GameObject restStage;         // RestStage GameObject (ÀÖ´Ù¸é)
-    public GameObject eventStage;        // EventStage GameObject (ÀÌº¥Æ® ³ëµå)
+    public GameObject eliteStage;        // EliteStage GameObject (ìˆë‹¤ë©´)
+    public GameObject bossStage;         // BossStage GameObject (ìˆë‹¤ë©´)
+    public GameObject shopStage;         // ShopStage GameObject (ìˆë‹¤ë©´)
+    public GameObject restStage;         // RestStage GameObject (ìˆë‹¤ë©´)
+    public GameObject eventStage;        // EventStage GameObject (ì´ë²¤íŠ¸ ë…¸ë“œ)
 
     [Header("Managers")]
     public MapManager mapManager;
     public BattleManger battleManager;
-    public Roundmanager roundManager;  // ¶ó¿îµå °ü¸®ÀÚ Ãß°¡
+    public Roundmanager roundManager;  // ë¼ìš´ë“œ ê´€ë¦¬ì ì¶”ê°€
 
     [Header("Game State")]
     public int lastVisitedNodeIndex = -1;
@@ -42,21 +42,21 @@ public class GameStateController : MonoBehaviour
 
     void Start()
     {
-        // °ÔÀÓ ½ÃÀÛ ½Ã ÃÊ±âÈ­ ¹× ¸Ê È­¸é Ç¥½Ã
+        // ê²Œì„ ì‹œì‘ ì‹œ ì´ˆê¸°í™” ë° ë§µ í™”ë©´ í‘œì‹œ
         InitializeGameState();
         ShowMap();
     }
 
     void InitializeGameState()
     {
-        // GameManager¿Í µ¿±âÈ­
+        // GameManagerì™€ ë™ê¸°í™”
         if (GameManager.Instance != null)
         {
             lastVisitedNodeIndex = GameManager.Instance.lastVisitedNodeIndex;
             clearedNodes = new System.Collections.Generic.List<int>(GameManager.Instance.clearedNodes);
         }
         
-        // Panel raycastTarget ºñÈ°¼ºÈ­
+        // Panel raycastTarget ë¹„í™œì„±í™”
         EnsureGraphicRaycaster();
     }
     
@@ -70,7 +70,7 @@ public class GameStateController : MonoBehaviour
                 mapCanvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             }
             
-            // PanelÀÌ³ª background ÀÌ¹ÌÁö°¡ Å¬¸¯À» ¸·Áö ¾Êµµ·Ï ¼³Á¤
+            // Panelì´ë‚˜ background ì´ë¯¸ì§€ê°€ í´ë¦­ì„ ë§‰ì§€ ì•Šë„ë¡ ì„¤ì •
             DisablePanelRaycast();
         }
     }
@@ -79,7 +79,7 @@ public class GameStateController : MonoBehaviour
     {
         if (mapCanvas == null) return;
         
-        // Canvas ÇÏÀ§ÀÇ ¸ğµç Image Áß Panel, Background µîÀÇ raycastTarget ºñÈ°¼ºÈ­
+        // Canvas í•˜ìœ„ì˜ ëª¨ë“  Image ì¤‘ Panel, Background ë“±ì˜ raycastTarget ë¹„í™œì„±í™”
         var allImages = mapCanvas.GetComponentsInChildren<UnityEngine.UI.Image>(true);
         foreach (var img in allImages)
         {
@@ -91,72 +91,78 @@ public class GameStateController : MonoBehaviour
         }
     }
 
-    // ¸Ê È­¸éÀ¸·Î ÀüÈ¯
-    // ÀüÅõ Äµ¹ö½º ¼û±â°í ¸Ê Äµ¹ö½º Ç¥½Ã
+    // ë§µ í™”ë©´ìœ¼ë¡œ ì „í™˜
+    // ì „íˆ¬ ìº”ë²„ìŠ¤ ìˆ¨ê¸°ê³  ë§µ ìº”ë²„ìŠ¤ í‘œì‹œ
     public void ShowMap()
     {
-        //  ¸ğµç ½ºÅ×ÀÌÁö ºñÈ°¼ºÈ­
+        //  ëª¨ë“  ìŠ¤í…Œì´ì§€ ë¹„í™œì„±í™”
         HideAllStages();
 
-        //  ¸Ê ½ºÅ×ÀÌÁö¸¸ È°¼ºÈ­
+        //  ë§µ ìŠ¤í…Œì´ì§€ë§Œ í™œì„±í™”
         if (mapStage != null)
         {
             mapStage.SetActive(true);
         }
         else if (mapCanvas != null)
         {
-            // ÇÏÀ§ È£È¯: mapStage°¡ ¾øÀ¸¸é mapCanvas »ç¿ë
+            // í•˜ìœ„ í˜¸í™˜: mapStageê°€ ì—†ìœ¼ë©´ mapCanvas ì‚¬ìš©
             mapCanvas.gameObject.SetActive(true);
         }
         else
         {
-            Debug.LogError("mapStage¿Í mapCanvas µÑ ´Ù nullÀÔ´Ï´Ù!");
+            Debug.LogError("mapStageì™€ mapCanvas ë‘˜ ë‹¤ nullì…ë‹ˆë‹¤!");
         }
 
-        //  ¸ÊÀ» »õ·Î°íÄ§ (¾à°£ÀÇ Áö¿¬À¸·Î MapManager ÃÊ±âÈ­ ¿Ï·á ´ë±â)
+        // ë§µ UIê°€ ì¼œì§„ ë’¤ ì¦‰ì‹œ í”Œë ˆì´ì–´ HP UI ë™ê¸°í™”
+        if (roundManager != null)
+        {
+            roundManager.EnsurePlayerUiSync();
+        }
+
+        //  ë§µì„ ìƒˆë¡œê³ ì¹¨ (ì•½ê°„ì˜ ì§€ì—°ìœ¼ë¡œ MapManager ì´ˆê¸°í™” ì™„ë£Œ ëŒ€ê¸°)
         if (mapManager != null)
         {
             StartCoroutine(RefreshMapDelayed());
         }
         else
         {
-            Debug.LogError("mapManager°¡ nullÀÔ´Ï´Ù!");
+            Debug.LogError("mapManagerê°€ nullì…ë‹ˆë‹¤!");
         }
     }
 
     System.Collections.IEnumerator RefreshMapDelayed()
     {
-        // ÇÑ ÇÁ·¹ÀÓ ´ë±âÇÏ¿© MapManager.Start() ¿Ï·á º¸Àå
+        // í•œ í”„ë ˆì„ ëŒ€ê¸°í•˜ì—¬ MapManager.Start() ì™„ë£Œ ë³´ì¥
         yield return null;
         mapManager.RefreshMap();
+
+        // ë§µ ê°±ì‹  ì§í›„ í•œ ë²ˆ ë” ë™ê¸°í™”í•´ ì²« í”„ë ˆì„ ê°’ ê¹œë¹¡ì„ ë°©ì§€
+        if (roundManager != null)
+        {
+            roundManager.EnsurePlayerUiSync();
+        }
     }
 
-    // ³ëµå Å¸ÀÔ¿¡ µû¶ó ÀûÀıÇÑ ½ºÅ×ÀÌÁö Ç¥½Ã
-    // MapManager.OnNodeSelected()¿¡¼­ È£ÃâµÊ
+    // ë…¸ë“œ íƒ€ì…ì— ë”°ë¼ ì ì ˆí•œ ìŠ¤í…Œì´ì§€ í‘œì‹œ
+    // MapManager.OnNodeSelected()ì—ì„œ í˜¸ì¶œë¨
     public void ShowCanvasForNodeType(NodeType nodeType, bool isBossNode)
     {
-        //  ¸ğµç ½ºÅ×ÀÌÁö ºñÈ°¼ºÈ­
+        //  ëª¨ë“  ìŠ¤í…Œì´ì§€ ë¹„í™œì„±í™”
         HideAllStages();
 
-        //  ³ëµå Å¸ÀÔ¿¡ µû¶ó ½ºÅ×ÀÌÁö È°¼ºÈ­
+        //  ë…¸ë“œ íƒ€ì…ì— ë”°ë¼ ìŠ¤í…Œì´ì§€ í™œì„±í™”
         GameObject targetStage = null;
 
-        if (isBossNode && bossStage != null)
+        // ì „íˆ¬ ê³„ì—´(Combat/Elite/Boss)ì€ ëª¨ë‘ combatStage ì‚¬ìš©
+        // CombatStageControllerê°€ ë°°ê²½ ìŠ¤í”„ë¼ì´íŠ¸ë¥¼ íƒ€ì…ë³„ë¡œ ì „í™˜
+        if (isBossNode || nodeType == NodeType.Combat || nodeType == NodeType.Elite || nodeType == NodeType.Boss)
         {
-            //  º¸½º ³ëµå´Â bossStage »ç¿ë
-            targetStage = bossStage;
+            targetStage = combatStage;
         }
         else
         {
-            //  ÀÏ¹İ ³ëµå´Â Å¸ÀÔº° ½ºÅ×ÀÌÁö »ç¿ë
             switch (nodeType)
             {
-                case NodeType.Combat:
-                    targetStage = combatStage;
-                    break;
-                case NodeType.Elite:
-                    targetStage = eliteStage;
-                    break;
                 case NodeType.Shop:
                     targetStage = shopStage;
                     break;
@@ -175,11 +181,11 @@ public class GameStateController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"³ëµå Å¸ÀÔ {nodeType}¿¡ ÇØ´çÇÏ´Â ½ºÅ×ÀÌÁö°¡ ¾ø½À´Ï´Ù!");
+            Debug.LogWarning($"ë…¸ë“œ íƒ€ì… {nodeType}ì— í•´ë‹¹í•˜ëŠ” ìŠ¤í…Œì´ì§€ê°€ ì—†ìŠµë‹ˆë‹¤!");
         }
     }
 
-    // ¸ğµç ½ºÅ×ÀÌÁö ºñÈ°¼ºÈ­
+    // ëª¨ë“  ìŠ¤í…Œì´ì§€ ë¹„í™œì„±í™”
     void HideAllStages()
     {
         if (mapStage != null)
@@ -197,15 +203,15 @@ public class GameStateController : MonoBehaviour
         if (eventStage != null) eventStage.SetActive(false);
     }
 
-    // ÀüÅõ È­¸éÀ¸·Î ÀüÈ¯
+    // ì „íˆ¬ í™”ë©´ìœ¼ë¡œ ì „í™˜
     [System.Obsolete("Use ShowCanvasForNodeType instead")]
     public void ShowBattle()
     {
         ShowCanvasForNodeType(NodeType.Combat, false);
     }
 
-    // ³ëµå Å¬¸®¾î Ã³¸®
-    //GameManager ¿ªÇÒÀ» ´ë½ÅÇÔ
+    // ë…¸ë“œ í´ë¦¬ì–´ ì²˜ë¦¬
+    //GameManager ì—­í• ì„ ëŒ€ì‹ í•¨
     public void MarkNodeCleared(int index)
     {
         if (index < 0) return;
@@ -215,16 +221,16 @@ public class GameStateController : MonoBehaviour
         }
     }
 
-    // ³ëµå°¡ Å¬¸®¾îµÇ¾ú´ÂÁö È®ÀÎ
+    // ë…¸ë“œê°€ í´ë¦¬ì–´ë˜ì—ˆëŠ”ì§€ í™•ì¸
     public bool IsNodeCleared(int index)
     {
         return index >= 0 && clearedNodes.Contains(index);
     }
 
-    // ÀüÅõ Å¬¸®¾î ÈÄ ¸ÊÀ¸·Î º¹±Í
+    // ì „íˆ¬ í´ë¦¬ì–´ í›„ ë§µìœ¼ë¡œ ë³µê·€
     public void OnRoundClear()
     {
-        // ÇöÀç ³ëµå Å¬¸®¾î Ã³¸®
+        // í˜„ì¬ ë…¸ë“œ í´ë¦¬ì–´ ì²˜ë¦¬
         if (lastVisitedNodeIndex >= 0)
         {
             MarkNodeCleared(lastVisitedNodeIndex);

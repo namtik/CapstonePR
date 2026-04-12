@@ -365,13 +365,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Player
   maxHp: 100
   currentHp: 0
-  attackDamage: 10
+  attackDamage: 100
+  heartUI: {fileID: 0}
+  hpText: {fileID: 0}
   hpBar: {fileID: 5869335159558366859}
   cooldownBar: {fileID: 0}
   cooldownText: {fileID: 0}
   resultText: {fileID: 0}
-  defenseWindow: 0.5
-  defenseActionCooldown: 3
+  guard: 0
+  attackParticle: {fileID: 0}
 --- !u!222 &2419201082728661412
 CanvasRenderer:
   m_ObjectHideFlags: 0

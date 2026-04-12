@@ -1,28 +1,63 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using static SkillDataParser;
 
 public class SkillRewardUI : MonoBehaviour
 {
-    public GameObject rewardPanel;     // ÀüÃ¼ ÆĞ³Î
-    public Transform cardContainer;    // Ä«µå°¡ »ı¼ºµÉ ºÎ¸ğ
-    public GameObject cardPrefab;      // ¼±ÅÃÁö Ä«µå ÇÁ¸®ÆÕ (¹öÆ° Æ÷ÇÔ)
-    public Roundmanager roundManager;          // ¶ó¿îµå ¸Å´ÏÀú ÂüÁ¶
-    public MapNode currentNode;                      // ÇöÀç ³ëµå ÂüÁ¶
+    public GameObject rewardPanel;     // ì „ì²´ íŒ¨ë„
+    public Transform cardContainer;    // ì¹´ë“œê°€ ìƒì„±ë  ë¶€ëª¨
+    public GameObject cardPrefab;      // ì„ íƒì§€ ì¹´ë“œ í”„ë¦¬íŒ¹ (ë²„íŠ¼ í¬í•¨)
+    public Roundmanager roundManager;          // ë¼ìš´ë“œ ë§¤ë‹ˆì € ì°¸ì¡°
+    public MapNode currentNode;                      // í˜„ì¬ ë…¸ë“œ ì°¸ì¡°
 
     public int currentStage;
+    [SerializeField] private bool returnToMapAfterSelection = true;
+
+    public System.Action<SkillData> OnSkillSelected;
+
+    public void SetReturnToMapAfterSelection(bool enabled)
+    {
+        returnToMapAfterSelection = enabled;
+    }
+
+    private bool isStarterSelection = false;
 
     public void ShowRewardOptions()
     {
-        rewardPanel.SetActive(true);
-        Time.timeScale = 0f; // °ÔÀÓ ÀÏ½ÃÁ¤Áö
+        isStarterSelection = false;
+        ShowSkillSelection();
+    }
 
-        // ±âÁ¸ Ä«µå Á¦°Å
+    /// <summary>ê²Œì„ ì‹œì‘ ì‹œ ì´ˆê¸° ìŠ¤í‚¬ ì„ íƒ UI í‘œì‹œ</summary>
+    public void ShowStarterSkillSelection()
+    {
+        isStarterSelection = true;
+        ShowSkillSelection();
+    }
+
+    void ShowSkillSelection()
+    {
+        // SkillRewardUIContainerê°€ ë¹„í™œì„±ì´ë©´ í™œì„±í™” (ìƒìœ„ ê³„ì¸µì€ ê±´ë“œë¦¬ì§€ ì•ŠìŒ)
+        EnsureContainerActive(true);
+
+        rewardPanel.SetActive(true);
+        Time.timeScale = 0f; // ê²Œì„ ì¼ì‹œì •ì§€
+
+        // ê¸°ì¡´ ì¹´ë“œ ì œê±°
         foreach (Transform t in cardContainer) Destroy(t.gameObject);
 
-        // ·£´ı 3°³ °¡Á®¿À±â
-        List<SkillData> options = SkillDataParser.Instance.GetRandomSkills(3);
+        HashSet<int> learnedSkillIds = new HashSet<int>();
+        if (ComboSystem.Instance != null)
+        {
+            foreach (SkillData skill in ComboSystem.Instance.learnedSkills)
+            {
+                learnedSkillIds.Add(skill.id);
+            }
+        }
+
+        // ëœë¤ 3ê°œ ê°€ì ¸ì˜¤ê¸°
+        List<SkillData> options = SkillDataParser.Instance.GetRandomSkills(3, learnedSkillIds);
 
         foreach (SkillData skill in options)
         {
@@ -31,7 +66,6 @@ public class SkillRewardUI : MonoBehaviour
             SkillCardUI cardUI = card.GetComponent<SkillCardUI>();
             if (cardUI != null)
             {
-                // µ¥ÀÌÅÍ¿Í Å¬¸¯ÇßÀ» ¶§ ÇÒ Çàµ¿(OnSelectSkill)À» Àü´Ş
                 cardUI.Setup(skill, OnSelectSkill);
             }
         }
@@ -41,21 +75,38 @@ public class SkillRewardUI : MonoBehaviour
     {
         if (ComboSystem.Instance == null)
         {
-            Debug.LogError("[SkillRewardUI] ComboSystem.Instance°¡ nullÀÔ´Ï´Ù. ¾À¿¡ ComboSystemÀÌ ÀÖ´ÂÁö È®ÀÎÇÏ¼¼¿ä.");
+            Debug.LogError("[SkillRewardUI] ComboSystem.Instanceê°€ nullì…ë‹ˆë‹¤. ì”¬ì— ComboSystemì´ ìˆëŠ”ì§€ í™•ì¸í•˜ì„¸ìš”.");
             rewardPanel.SetActive(false);
             Time.timeScale = 1f;
             return;
         }
+
         rewardPanel.SetActive(false);
-        Time.timeScale = 1f;
         ComboSystem.Instance.LearnSkill(skill);
-        if (ComboSystem.Instance.learnedSkillCount == 1)
+        OnSkillSelected?.Invoke(skill);
+
+        // ì´ˆê¸° ìŠ¤í‚¬ ì„ íƒì´ë©´ ë§µ ë³µê·€ ì—†ì´ ì¢…ë£Œ
+        if (isStarterSelection)
         {
+            isStarterSelection = false;
+            Time.timeScale = 1f;
+            EnsureContainerActive(false);
             return;
         }
-        else
+
+        if (returnToMapAfterSelection)
         {
-            roundManager.ReturnToMap();
+            Time.timeScale = 1f;
+            if (roundManager != null)
+                roundManager.ReturnToMap();
+            else
+                Debug.LogWarning("[SkillRewardUI] roundManager reference is missing.");
         }
+    }
+
+    /// <summary>SkillRewardUIê°€ ë¶™ì€ ì˜¤ë¸Œì íŠ¸ë§Œ í™œì„±/ë¹„í™œì„± (ìƒìœ„ combatStage ë“±ì€ ê±´ë“œë¦¬ì§€ ì•ŠìŒ)</summary>
+    void EnsureContainerActive(bool active)
+    {
+        gameObject.SetActive(active);
     }
 }
