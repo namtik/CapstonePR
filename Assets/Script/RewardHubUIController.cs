@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class RewardHubUIController : MonoBehaviour
 {
@@ -11,6 +12,7 @@ public class RewardHubUIController : MonoBehaviour
     [SerializeField] private Roundmanager roundManager;
     [SerializeField] private SkillRewardUI skillRewardUI;
     [SerializeField] private CardUpgradeUIController cardUpgradeUIController;
+    [SerializeField] private Button comboSkillButton;
 
     [Header("Auto Find Names (Fallback)")]
     [SerializeField] private string rewardHubRootName = "RewardHubUI";
@@ -18,6 +20,7 @@ public class RewardHubUIController : MonoBehaviour
     [SerializeField] private string cardUpgradeRootName = "CardUpgradeUI";
 
     private bool rewardFlowActive;
+    private bool skillClaimedThisReward;
 
     void Awake()
     {
@@ -57,9 +60,12 @@ public class RewardHubUIController : MonoBehaviour
         }
 
         rewardFlowActive = true;
+        skillClaimedThisReward = false;
         Time.timeScale = 0f;
         if (cardUpgradeUIController != null)
             cardUpgradeUIController.SetUpgradeClaimed(false);
+        if (comboSkillButton != null)
+            comboSkillButton.interactable = true;
 
         Debug.Log($"[RewardHubUIController] OpenHub -> root={rewardHubRoot.name}, activeInHierarchy={rewardHubRoot.activeInHierarchy}");
         SetOnly(rewardHubRoot);
@@ -67,6 +73,7 @@ public class RewardHubUIController : MonoBehaviour
 
     public void OpenSkillReward()
     {
+        if (skillClaimedThisReward) return;
         if (!rewardFlowActive)
             OpenHub();
 
@@ -114,6 +121,9 @@ public class RewardHubUIController : MonoBehaviour
 
     void HandleSkillSelected(SkillDataParser.SkillData _)
     {
+        skillClaimedThisReward = true;
+        if (comboSkillButton != null)
+            comboSkillButton.interactable = false;
         if (rewardFlowActive)
             BackToHub();
     }
