@@ -757,9 +757,6 @@ public class ComboSystem : MonoBehaviour
     private readonly Dictionary<string, TMP_Text> nextHintTexts = new Dictionary<string, TMP_Text>();
     private static readonly string[] hintKeys = { "q", "w", "e", "r" };
 
-    private ElementSlotSpriteOverride[] cachedSlotOverrides = new ElementSlotSpriteOverride[4];
-    private bool slotOverridesCached = false;
-
     public static ComboSystem Instance;
 
     void Awake()
@@ -792,8 +789,6 @@ public class ComboSystem : MonoBehaviour
         else
             HideSkillActivationText();
 
-        CacheSlotOverrides();
-        SyncCardSpritesFromCache();
         UpdateNextComboHints();
     }
 
@@ -1176,8 +1171,6 @@ public class ComboSystem : MonoBehaviour
 
     void UpdateComboSlotUI()
     {
-        SyncCardSpritesFromCache();
-
         foreach (var card in comboSlotCards)
         {
             if (card != null) Destroy(card);
@@ -1209,54 +1202,6 @@ public class ComboSystem : MonoBehaviour
             }
             comboSlotCards.Add(newCard);
         }
-    }
-
-    void CacheSlotOverrides()
-    {
-        if (slotOverridesCached)
-            return;
-
-        GameObject slotRootObject = GameObject.Find(elementSlotRootName);
-        if (slotRootObject == null)
-        {
-            Debug.LogWarning($"[ComboSystem] '{elementSlotRootName}' 오브젝트를 찾을 수 없습니다.");
-            return;
-        }
-
-        Transform slotRoot = slotRootObject.transform;
-        for (int index = 0; index < cardTypes.Length; index++)
-        {
-            string slotName = slotObjectPrefix + cardTypes[index];
-            Transform slotTransform = slotRoot.Find(slotName);
-            if (slotTransform == null)
-                continue;
-
-            ElementSlotSpriteOverride spriteOverride = slotTransform.GetComponent<ElementSlotSpriteOverride>();
-            if (spriteOverride != null)
-                cachedSlotOverrides[index] = spriteOverride;
-        }
-
-        slotOverridesCached = true;
-        Debug.Log("[ComboSystem] 슬롯 오버라이드 레퍼런스 캐싱 완료");
-    }
-
-    void SyncCardSpritesFromCache()
-    {
-        if (cardSprites == null || cardSprites.Length < 4)
-            cardSprites = new Sprite[4];
-
-        for (int index = 0; index < cardTypes.Length; index++)
-        {
-            if (cachedSlotOverrides[index] != null && cachedSlotOverrides[index].slotSprite != null)
-                cardSprites[index] = cachedSlotOverrides[index].slotSprite;
-        }
-    }
-
-    public void RefreshSlotOverrideCache()
-    {
-        slotOverridesCached = false;
-        CacheSlotOverrides();
-        SyncCardSpritesFromCache();
     }
 
     void CheckAndActivateSkills()
