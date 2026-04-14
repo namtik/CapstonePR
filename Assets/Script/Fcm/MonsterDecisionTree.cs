@@ -2,8 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 의사결정 트리
-/// 
+/// BT
 /// 입력:
 ///   - FCM 소속도 3개 (플레이어 유형)
 ///   - f1~f3 (FCM에 사용된 특성)
