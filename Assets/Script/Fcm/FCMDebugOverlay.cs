@@ -77,7 +77,7 @@ public class FCMDebugOverlay : MonoBehaviour
         new Color(0.50f, 0.47f, 0.87f), // 무속성 보라
     };
 
-    private static readonly string[] FeatureNames = { "f1 긴급도", "f2 집중도", "f3 반복성", "f4 오염도" };
+    private static readonly string[] FeatureNames = { "f1 긴급도", "f2 집중도", "f3 반복성", "f4 오염도 (트리)" };
     private static readonly string[] TypeNames = { "콤보 러시형", "경로 의존형", "탐색/분산형" };
     private static readonly string[] SlotNames = { "Q(화)", "W(수)", "E(풍)", "R(지)" };
     private static readonly Color[] SlotColors = {
@@ -114,17 +114,17 @@ public class FCMDebugOverlay : MonoBehaviour
 
     /// <summary>
     /// FCM 분석 결과를 표시한다.
-    /// MonsterMidPattern.Execute() 후에 호출.
     /// </summary>
-    public void ShowAnalysis(float[] features, float[] membership, int dominant,
+    public void ShowAnalysis(float[] fcmFeatures, float f4, float[] membership, int dominant,
                               MonsterDecisionTree.Decision decision,
                               FeatureExtractor.RouteInfo[] routes)
     {
-        // 특성 바 갱신
+        // 특성 바 갱신 (f1~f3 + f4)
+        float[] allFeatures = new float[] { fcmFeatures[0], fcmFeatures[1], fcmFeatures[2], f4 };
         for (int i = 0; i < 4; i++)
         {
-            featureBars[i].fillAmount = features[i];
-            featureLabels[i].text = $"{FeatureNames[i]}  {features[i]:F2}";
+            featureBars[i].fillAmount = allFeatures[i];
+            featureLabels[i].text = $"{FeatureNames[i]}  {allFeatures[i]:F2}";
         }
 
         // 소속도 바 갱신
@@ -194,15 +194,15 @@ public class FCMDebugOverlay : MonoBehaviour
     /// </summary>
     public void RefreshAndShow()
     {
-        float[] features = FeatureExtractor.ExtractFeatures(out FeatureExtractor.RouteInfo[] routes);
-        float[] membership = FCMAnalyzer.CalcMembership(features);
+        float[] fcmFeatures = FeatureExtractor.ExtractFCMFeatures(out FeatureExtractor.RouteInfo[] routes);
+        float f4 = FeatureExtractor.CalcPollution(routes);
+        float[] membership = FCMAnalyzer.CalcMembership(fcmFeatures);
         int dominant = FCMAnalyzer.GetDominantType(membership);
 
-        // 임시 결정 (표시만 용도)
         var tree = new MonsterDecisionTree();
-        var decision = tree.Decide(membership, features, routes);
+        var decision = tree.Decide(membership, fcmFeatures, f4, routes);
 
-        ShowAnalysis(features, membership, dominant, decision, routes);
+        ShowAnalysis(fcmFeatures, f4, membership, dominant, decision, routes);
     }
 
     IEnumerator HideAfterDelay()
@@ -252,7 +252,7 @@ public class FCMDebugOverlay : MonoBehaviour
         y -= 24f;
 
         // ── 특성 벡터 ──
-        CreateLabel(panel.transform, "FeatHeader", "특성 벡터", 11, FontStyles.Bold,
+        CreateLabel(panel.transform, "FeatHeader", "특성 벡터 (f1~f3=FCM / f4=트리)", 11, FontStyles.Bold,
             new Color(0.7f, 0.7f, 0.7f), new Vector2(10f, y), new Vector2(320f, 16f));
         y -= 20f;
 

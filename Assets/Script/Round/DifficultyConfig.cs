@@ -12,7 +12,7 @@ public class DifficultyConfig : ScriptableObject
 
     [Header("타입별 추가 배율")]
     public float eliteMultiplier = 1.8f;  // 정예 배율
-    public float bossMultiplier = 3.0f;  // 보스 배율    
+    public float bossMultiplier = 2.0f;  // 보스 배율    
 
     // 컬럼 인덱스 → 배율 계산
     public float GetHpMultiplier(int column, NodeType type)

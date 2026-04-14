@@ -17,4 +17,4 @@ MonoBehaviour:
   maxHp: 60
   attackDamage: 10
   gaugeSpeed: 10
-  baseAttackCount: 5
+  baseAttackCount: 3

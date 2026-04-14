@@ -1,16 +1,16 @@
 using System.IO;
-using System.Collections.Generic;
 using UnityEngine;
-using System.Text;
 
 /// <summary>
 /// 몬스터 중간 패턴 컨트롤러
 /// 
-/// [데이터 수집]
-/// Inspector에서 collectData = true 설정 시,
-/// 매 트리거마다 특성 벡터를 CSV로 저장.
-/// 저장 경로: Application.persistentDataPath/fcm_logs/
-/// → Python fcm_retrain.py로 재학습 가능
+/// 파이프라인:
+///   1. f1~f3 추출 (FCM용, 플레이어 행동 패턴)
+///   2. f4 추출 (오염도, FCM 외부)
+///   3. 프로필 블렌딩 (f1~f3만)
+///   4. FCM 소속도 계산 (3차원)
+///   5. 의사결정 트리 (소속도 + f1~f3 + f4)
+///   6. 행동 실행
 /// </summary>
 public class MonsterMidPattern : MonoBehaviour
 {
@@ -26,13 +26,12 @@ public class MonsterMidPattern : MonoBehaviour
     [SerializeField] private FCMDebugOverlay debugOverlay;
 
     [Header("데이터 수집")]
-    [Tooltip("체크하면 매 트리거마다 특성 벡터를 CSV로 저장")]
     [SerializeField] private bool collectData = false;
     [SerializeField] private string logFolderName = "fcm_logs";
 
     private MonsterDecisionTree decisionTree;
     private int triggerCount = 0;
-    private float[] stageProfile = null;
+    private float[] stageProfile = null; // 3차원 (f1, f2, f3만)
 
     private string logFilePath;
     private bool headerWritten = false;
@@ -52,33 +51,46 @@ public class MonsterMidPattern : MonoBehaviour
     {
         triggerCount++;
 
-        float[] features = FeatureExtractor.ExtractFeatures(out FeatureExtractor.RouteInfo[] routes);
-        float[] blended = BlendWithProfile(features);
+        // 1. FCM용 특성 추출 (3차원: f1, f2, f3)
+        float[] fcmFeatures = FeatureExtractor.ExtractFCMFeatures(out FeatureExtractor.RouteInfo[] routes);
+
+        // 2. f4 별도 계산 (FCM 외부)
+        float f4 = FeatureExtractor.CalcPollution(routes);
+
+        // 3. 프로필 블렌딩 (f1~f3만)
+        float[] blended = BlendWithProfile(fcmFeatures);
+
+        // 4. FCM 소속도 (3차원)
         float[] membership = FCMAnalyzer.CalcMembership(blended);
         int dominant = FCMAnalyzer.GetDominantType(membership);
 
-        MonsterDecisionTree.Decision decision = decisionTree.Decide(membership, blended, routes);
+        // 5. 의사결정 트리 (소속도 + f1~f3 + f4)
+        MonsterDecisionTree.Decision decision = decisionTree.Decide(membership, blended, f4, routes);
+
+        // 6. 행동 실행
         string resultMessage = ExecuteAction(decision);
 
-        LogDecision(features, blended, membership, dominant, decision);
+        // 디버그
+        LogDecision(fcmFeatures, blended, f4, membership, dominant, decision);
 
         if (debugOverlay == null)
             debugOverlay = FindFirstObjectByType<FCMDebugOverlay>();
-        debugOverlay?.ShowAnalysis(blended, membership, dominant, decision, routes);
+        debugOverlay?.ShowAnalysis(blended, f4, membership, dominant, decision, routes);
 
         if (collectData)
-            WriteDataRow(features, blended, membership, dominant, decision, routes);
+            WriteDataRow(fcmFeatures, blended, f4, membership, dominant, decision, routes);
 
         return resultMessage;
     }
 
     public void OnBattleEnd()
     {
-        float[] features = FeatureExtractor.ExtractFeatures();
-        UpdateProfile(features);
+        // 프로필 저장 (f1~f3만)
+        float[] fcmFeatures = FeatureExtractor.ExtractFCMFeatures();
+        UpdateProfile(fcmFeatures);
     }
 
-    // ─── 행동 실행 ───
+    // --- 행동 실행 ---
 
     string ExecuteAction(MonsterDecisionTree.Decision decision)
     {
@@ -109,12 +121,12 @@ public class MonsterMidPattern : MonoBehaviour
         }
     }
 
-    // ─── 프로필 ───
+    // --- 프로필 (3차원) ---
 
     void UpdateProfile(float[] cur)
     {
         if (stageProfile == null) { stageProfile = (float[])cur.Clone(); return; }
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < FCMAnalyzer.FeatureDim; i++)
             stageProfile[i] = profileBeta * stageProfile[i] + (1f - profileBeta) * cur[i];
     }
 
@@ -123,12 +135,13 @@ public class MonsterMidPattern : MonoBehaviour
         if (stageProfile == null) return cur;
         float cw = Mathf.Min(0.9f, (1f - initialProfileWeight) + triggerCount * weightShiftPerTrigger);
         float pw = 1f - cw;
-        float[] b = new float[4];
-        for (int i = 0; i < 4; i++) b[i] = pw * stageProfile[i] + cw * cur[i];
+        float[] b = new float[FCMAnalyzer.FeatureDim];
+        for (int i = 0; i < FCMAnalyzer.FeatureDim; i++)
+            b[i] = pw * stageProfile[i] + cw * cur[i];
         return b;
     }
 
-    // ─── 데이터 수집 ───
+    // --- 데이터 수집 ---
 
     void InitLogFile()
     {
@@ -139,31 +152,30 @@ public class MonsterMidPattern : MonoBehaviour
         Debug.Log($"[MidPattern] 데이터 수집: {logFilePath}");
     }
 
-    void WriteDataRow(float[] raw, float[] blended, float[] mem, int dominant,
-                      MonsterDecisionTree.Decision dec, FeatureExtractor.RouteInfo[] routes)
+    void WriteDataRow(float[] raw, float[] blended, float f4,
+                      float[] mem, int dominant,
+                      MonsterDecisionTree.Decision dec,
+                      FeatureExtractor.RouteInfo[] routes)
     {
         if (string.IsNullOrEmpty(logFilePath)) return;
         try
         {
-            Encoding utf8WithBom = new UTF8Encoding(true);
             if (!headerWritten)
             {
                 File.AppendAllText(logFilePath,
-                    "trigger,f1,f2,f3,f4,f1_blend,f2_blend,f3_blend,f4_blend," +
+                    "trigger,f1,f2,f3,f4,f1_blend,f2_blend,f3_blend," +
                     "mem_rush,mem_path,mem_explorer,dominant,action,target," +
-                    "route_q,route_w,route_e,route_r\n", 
-                    utf8WithBom);
+                    "route_q,route_w,route_e,route_r\n");
                 headerWritten = true;
             }
 
             string action = MonsterDecisionTree.GetActionName(dec.ChosenAction);
             File.AppendAllText(logFilePath,
-                $"{triggerCount},{raw[0]:F3},{raw[1]:F3},{raw[2]:F3},{raw[3]:F3}," +
-                $"{blended[0]:F3},{blended[1]:F3},{blended[2]:F3},{blended[3]:F3}," +
+                $"{triggerCount},{raw[0]:F3},{raw[1]:F3},{raw[2]:F3},{f4:F3}," +
+                $"{blended[0]:F3},{blended[1]:F3},{blended[2]:F3}," +
                 $"{mem[0]:F3},{mem[1]:F3},{mem[2]:F3},{dominant},{action},{dec.TargetSlot}," +
                 $"{routes[0].BestProximity:F2},{routes[1].BestProximity:F2}," +
-                $"{routes[2].BestProximity:F2},{routes[3].BestProximity:F2}\n",
-                utf8WithBom);
+                $"{routes[2].BestProximity:F2},{routes[3].BestProximity:F2}\n");
         }
         catch (System.Exception e)
         {
@@ -171,14 +183,16 @@ public class MonsterMidPattern : MonoBehaviour
         }
     }
 
-    // ─── 디버그 ───
+    // --- 디버그 ---
 
-    void LogDecision(float[] raw, float[] blended, float[] mem, int dominant,
+    void LogDecision(float[] raw, float[] blended, float f4,
+                     float[] mem, int dominant,
                      MonsterDecisionTree.Decision dec)
     {
-        Debug.Log($"[MidPattern] ── 트리거 #{triggerCount} ──\n" +
-                  $"  특성: [{raw[0]:F2},{raw[1]:F2},{raw[2]:F2},{raw[3]:F2}] → 블렌딩 [{blended[0]:F2},{blended[1]:F2},{blended[2]:F2},{blended[3]:F2}]\n" +
-                  $"  FCM:  러시={mem[0]:P0} 의존={mem[1]:P0} 탐색={mem[2]:P0} → {FCMAnalyzer.GetTypeName(dominant)}\n" +
+        Debug.Log($"[MidPattern] -- 트리거 #{triggerCount} --\n" +
+                  $"  FCM특성: [{raw[0]:F2},{raw[1]:F2},{raw[2]:F2}] -> 블렌딩 [{blended[0]:F2},{blended[1]:F2},{blended[2]:F2}]\n" +
+                  $"  f4(오염): {f4:F2} (FCM 외부)\n" +
+                  $"  FCM:  러시={mem[0]:P0} 의존={mem[1]:P0} 탐색={mem[2]:P0} -> {FCMAnalyzer.GetTypeName(dominant)}\n" +
                   $"  행동: {MonsterDecisionTree.GetActionName(dec.ChosenAction)}" +
                   $" 슬롯={(dec.TargetSlot >= 0 ? ElementSlotSystem.SLOT_KEYS[dec.TargetSlot] : "-")} ({dec.Reason})");
     }

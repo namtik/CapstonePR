@@ -1,31 +1,25 @@
 using UnityEngine;
 
 /// <summary>
-/// FCM 플레이어 유형 분석기
-/// 4차원 특성 벡터를 받아 3개 클러스터에 대한 소속도를 계산한다.
+/// FCM 플레이어 유형 분석기 (3차원)
 /// 
-/// 클러스터:
-///   0 = 콤보 러시형 (긴급도·반복성 높음)
-///   1 = 경로 의존형 (집중도 높음)
-///   2 = 탐색/분산형 (전부 낮음)
+/// f1(긴급도), f2(집중도), f3(반복성)만으로 플레이어 유형을 판정한다.
+/// f4(오염도)는 플레이어 유형과 무관한 게임 상태이므로 FCM에서 제외하고
+/// 의사결정 트리에서 직접 참조한다.
 /// </summary>
 public static class FCMAnalyzer
 {
-    // ─── 학습된 중심점 (오프라인 FCM 학습 결과) ───
-    // 순서: [f1 긴급도, f2 집중도, f3 반복성, f4 오염도]
+    // 순서: [f1 긴급도, f2 집중도, f3 반복성]
     private static readonly float[,] Centroids = new float[,]
     {
-        { 0.7993f, 0.4005f, 0.7725f, 0.1395f },  // 콤보 러시형
-        { 0.5034f, 0.8088f, 0.4789f, 0.1753f },  // 경로 의존형
-        { 0.1681f, 0.2110f, 0.2148f, 0.1672f }   // 탐색/분산형
+        { 0.7993f, 0.4005f, 0.7725f },  // 콤보 러시형
+        { 0.5034f, 0.8088f, 0.4789f },  // 경로 의존형
+        { 0.1681f, 0.2110f, 0.2148f }   // 탐색/분산형
     };
 
     public const int ClusterCount = 3;
-    public const int FeatureDim = 4;
+    public const int FeatureDim = 3; // f1, f2, f3만
 
-    /// <summary>
-    /// 특성 벡터로부터 3개 클러스터 소속도를 계산한다.
-    /// </summary>
     public static float[] CalcMembership(float[] features)
     {
         float[] distances = new float[ClusterCount];
@@ -76,6 +70,9 @@ public static class FCMAnalyzer
 
     public static string GetTypeName(int idx) => idx switch
     {
-        0 => "콤보 러시형", 1 => "경로 의존형", 2 => "탐색/분산형", _ => "?"
+        0 => "콤보 러시형",
+        1 => "경로 의존형",
+        2 => "탐색/분산형",
+        _ => "?"
     };
 }

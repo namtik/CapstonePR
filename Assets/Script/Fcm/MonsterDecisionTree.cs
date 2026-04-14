@@ -3,8 +3,12 @@ using UnityEngine;
 
 /// <summary>
 /// 의사결정 트리
-/// FCM 소속도 + 원본 특성값 + Top-4 경로 분석을 받아
-/// 몬스터 행동과 대상 슬롯을 결정한다.
+/// 
+/// 입력:
+///   - FCM 소속도 3개 (플레이어 유형)
+///   - f1~f3 (FCM에 사용된 특성)
+///   - f4 (오염도, FCM 외부에서 별도 계산)
+///   - Top-4 경로 (타겟 슬롯 결정용)
 /// </summary>
 public class MonsterDecisionTree
 {
@@ -12,12 +16,11 @@ public class MonsterDecisionTree
 
     public struct Decision
     {
-        public Action  ChosenAction;
-        public string  Reason;
-        public int     TargetSlot; // 0~3, 또는 -1(슬롯 무관)
+        public Action ChosenAction;
+        public string Reason;
+        public int TargetSlot;
     }
 
-    // ─── 밸런스 임계값 ───
     [System.Serializable]
     public class Thresholds
     {
@@ -44,95 +47,112 @@ public class MonsterDecisionTree
     }
 
     /// <summary>
-    /// 행동 결정 메인 메서드
+    /// 행동 결정
     /// </summary>
-    public Decision Decide(float[] membership, float[] features, FeatureExtractor.RouteInfo[] routes)
+    /// <param name="membership">FCM 소속도 [러시, 의존, 탐색]</param>
+    /// <param name="fcmFeatures">FCM 특성 [f1, f2, f3]</param>
+    /// <param name="f4">오염도 (FCM 외부)</param>
+    /// <param name="routes">Top-4 경로 분석</param>
+    public Decision Decide(float[] membership, float[] fcmFeatures, float f4,
+                           FeatureExtractor.RouteInfo[] routes)
     {
-        float f1 = features[0], f2 = features[1], f3 = features[2], f4 = features[3];
+        float f1 = fcmFeatures[0], f2 = fcmFeatures[1], f3 = fcmFeatures[2];
         int dominant = FCMAnalyzer.GetDominantType(membership);
 
         switch (dominant)
         {
             case 0: // 콤보 러시형
                 if (f1 >= t.urgencyForShuffle)
-                    return MakeShuffle(f3 >= t.repeatForFastCycle
-                        ? "러시+긴급+빠른사이클→셔플" : "러시+긴급→셔플");
+                {
+                    if (f3 >= t.repeatForFastCycle)
+                        return MakeShuffle("러시+긴급+빠른사이클->셔플");
+                    return MakeCurse(routes, "러시+긴급+느린사이클->저주");
+                }
                 if (f4 >= t.pollutionThreshold)
-                    return MakeCurse(routes, "러시+아직멀고+오염→저주");
-                return MakeNullInsert(routes, "러시+아직멀고+깨끗→무속성");
+                    return MakeCurse(routes, "러시+아직멀고+오염->저주");
+                return MakeNullInsert(routes, "러시+아직멀고+깨끗->무속성");
 
             case 1: // 경로 의존형
                 if (f2 >= t.concentrationForCurse)
                 {
-                    if (f1 >= t.urgencyOverrideForShuffle)
-                        return MakeShuffle("의존+집중+긴급→셔플");
-                    return MakeCurse(routes, "의존+경로집중→저주");
+                    if (f1 >= t.urgencyOverrideForShuffle && f3 >= t.repeatForFastCycle)
+                        return MakeShuffle("의존+집중+긴급+빠른사이클->셔플");
+                    return MakeCurse(routes, "의존+경로집중->저주");
                 }
                 if (f4 >= t.pollutionThreshold)
-                    return MakeCurse(routes, "의존+약한의존+오염→저주");
-                return MakeNullInsert(routes, "의존+약한의존+깨끗→무속성");
+                    return MakeCurse(routes, "의존+약한의존+오염->저주");
+                return MakeNullInsert(routes, "의존+약한의존+깨끗->무속성");
 
             default: // 탐색/분산형
                 if (f4 >= t.pollutionThreshold)
                 {
-                    if (f1 >= t.explorerUrgency)
-                        return MakeShuffle("탐색+오염+콤보접근→셔플");
-                    return MakeCurse(routes, "탐색+오염→저주");
+                    if (f1 >= t.explorerUrgency && f3 >= t.repeatForFastCycle)
+                        return MakeShuffle("탐색+오염+콤보접근+빠른사이클->셔플");
+                    return MakeCurse(routes, "탐색+오염->저주");
                 }
-                return MakeNullInsert(routes, "탐색+깨끗→무속성");
+                return MakeNullInsert(routes, "탐색+깨끗->무속성");
         }
     }
 
-    // ─── 행동 생성 ───
+    // --- 행동 생성 ---
 
     Decision MakeShuffle(string reason) => new Decision
-    {
-        ChosenAction = Action.ComboShuffle,
-        Reason = reason,
-        TargetSlot = -1
-    };
+    { ChosenAction = Action.ComboShuffle, Reason = reason, TargetSlot = -1 };
 
     Decision MakeCurse(FeatureExtractor.RouteInfo[] routes, string reason) => new Decision
-    {
-        ChosenAction = Action.SlotCurse,
-        Reason = reason,
-        TargetSlot = FindCurseTarget(routes)
-    };
+    { ChosenAction = Action.SlotCurse, Reason = reason, TargetSlot = FindCurseTarget(routes) };
 
     Decision MakeNullInsert(FeatureExtractor.RouteInfo[] routes, string reason) => new Decision
-    {
-        ChosenAction = Action.NullInsert,
-        Reason = reason,
-        TargetSlot = FindNullInsertTarget(routes)
-    };
+    { ChosenAction = Action.NullInsert, Reason = reason, TargetSlot = FindNullInsertTarget(routes) };
 
-    // ─── 대상 슬롯 결정 ───
+    // --- 대상 슬롯 ---
 
-    /// <summary>저주: 위협 콤보에 가장 많이 등장하는 속성 슬롯</summary>
     int FindCurseTarget(FeatureExtractor.RouteInfo[] routes)
     {
         ComboSystem combo = ComboSystem.Instance;
-        if (combo == null) return Random.Range(0, 4);
+        ElementSlotSystem slotSys = ElementSlotSystem.Instance;
+        if (combo == null || slotSys == null) return Random.Range(0, 4);
 
         int[] elemCount = new int[4];
         foreach (var r in routes)
         {
-            if (r.BestProximity >= 0.33f && r.BestSkillIndex >= 0)
+            if (r.BestProximity >= FeatureExtractor.THREAT_THRESHOLD && r.BestSkillIndex >= 0)
             {
                 int[] seq = FeatureExtractor.ComboStringToIndices(
                     combo.learnedSkills[r.BestSkillIndex].combo);
-                if (seq != null)
-                    foreach (int e in seq) elemCount[e]++;
+                if (seq != null) foreach (int e in seq) elemCount[e]++;
             }
         }
 
-        int target = 0;
-        for (int i = 1; i < 4; i++)
-            if (elemCount[i] > elemCount[target]) target = i;
+        for (int i = 0; i < 4; i++)
+        {
+            var slot = slotSys.slots[i];
+            if (slot.RemainingCount <= 0 || slot.IsCursed)
+                elemCount[i] = -1;
+        }
+
+        int target = -1;
+        for (int i = 0; i < 4; i++)
+        {
+            if (elemCount[i] <= 0) continue;
+            if (target < 0 || elemCount[i] > elemCount[target]) target = i;
+        }
+
+        if (target < 0)
+        {
+            int maxCards = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                int remaining = slotSys.slots[i].RemainingCount;
+                if (remaining > maxCards && !slotSys.slots[i].IsCursed)
+                { maxCards = remaining; target = i; }
+            }
+            if (target < 0) target = Random.Range(0, 4);
+        }
+
         return target;
     }
 
-    /// <summary>무속성: 위협 콤보에 필요하면서 가장 덜 오염된 슬롯</summary>
     int FindNullInsertTarget(FeatureExtractor.RouteInfo[] routes)
     {
         ComboSystem combo = ComboSystem.Instance;
@@ -142,30 +162,35 @@ public class MonsterDecisionTree
         HashSet<int> needed = new HashSet<int>();
         foreach (var r in routes)
         {
-            if (r.BestProximity >= 0.33f && r.BestSkillIndex >= 0)
+            if (r.BestProximity >= FeatureExtractor.THREAT_THRESHOLD && r.BestSkillIndex >= 0)
             {
                 int[] seq = FeatureExtractor.ComboStringToIndices(
                     combo.learnedSkills[r.BestSkillIndex].combo);
                 if (seq != null) foreach (int e in seq) needed.Add(e);
             }
         }
+        if (needed.Count == 0) needed = new HashSet<int> { 0, 1, 2, 3 };
 
-        if (needed.Count == 0)
-            needed = new HashSet<int> { 0, 1, 2, 3 };
-
-        int bestSlot = 0;
+        int bestSlot = -1;
         int minNull = int.MaxValue;
-
         foreach (int e in needed)
         {
             if (e < 0 || e >= 4) continue;
             var slot = slotSys.slots[e];
+            if (slot.RemainingCount <= 0) continue;
             int nullCount = slot.neutralDeckCount + slot.neutralGraveCount
                           + (slot.hasNeutralCard ? 1 : 0);
-            if (nullCount < minNull)
+            if (nullCount < minNull) { minNull = nullCount; bestSlot = e; }
+        }
+
+        if (bestSlot < 0)
+        {
+            minNull = int.MaxValue;
+            for (int i = 0; i < 4; i++)
             {
-                minNull = nullCount;
-                bestSlot = e;
+                var slot = slotSys.slots[i];
+                int nc = slot.neutralDeckCount + slot.neutralGraveCount + (slot.hasNeutralCard ? 1 : 0);
+                if (nc < minNull) { minNull = nc; bestSlot = i; }
             }
         }
 
