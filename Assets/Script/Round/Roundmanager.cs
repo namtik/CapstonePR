@@ -350,6 +350,11 @@ public class Roundmanager : MonoBehaviour
         // 사망 이벤트 구독
         stat.OnDied += HandleEnemyDied;
         currentEnemy = stat;
+        MonsterMidPattern midPattern = go.GetComponent<MonsterMidPattern>();
+        if (midPattern != null)
+        {
+            midPattern.InitBattle();
+        }
     }
 
     public void HandleEnemyDied()

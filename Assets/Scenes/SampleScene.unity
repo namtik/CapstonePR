@@ -13213,6 +13213,7 @@ MonoBehaviour:
   toggleKey: 9
   displayDuration: 4
   alwaysVisible: 1
+  koreanFont: {fileID: 11400000, guid: 9963c0f83d2a95641a8a9fb171db72d1, type: 2}
 --- !u!4 &1958806591
 Transform:
   m_ObjectHideFlags: 0

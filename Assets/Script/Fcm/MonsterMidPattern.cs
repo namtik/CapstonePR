@@ -1,6 +1,7 @@
 using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Text;
 
 /// <summary>
 /// 몬스터 중간 패턴 컨트롤러
@@ -144,12 +145,14 @@ public class MonsterMidPattern : MonoBehaviour
         if (string.IsNullOrEmpty(logFilePath)) return;
         try
         {
+            Encoding utf8WithBom = new UTF8Encoding(true);
             if (!headerWritten)
             {
                 File.AppendAllText(logFilePath,
                     "trigger,f1,f2,f3,f4,f1_blend,f2_blend,f3_blend,f4_blend," +
                     "mem_rush,mem_path,mem_explorer,dominant,action,target," +
-                    "route_q,route_w,route_e,route_r\n");
+                    "route_q,route_w,route_e,route_r\n", 
+                    utf8WithBom);
                 headerWritten = true;
             }
 
@@ -159,7 +162,8 @@ public class MonsterMidPattern : MonoBehaviour
                 $"{blended[0]:F3},{blended[1]:F3},{blended[2]:F3},{blended[3]:F3}," +
                 $"{mem[0]:F3},{mem[1]:F3},{mem[2]:F3},{dominant},{action},{dec.TargetSlot}," +
                 $"{routes[0].BestProximity:F2},{routes[1].BestProximity:F2}," +
-                $"{routes[2].BestProximity:F2},{routes[3].BestProximity:F2}\n");
+                $"{routes[2].BestProximity:F2},{routes[3].BestProximity:F2}\n",
+                utf8WithBom);
         }
         catch (System.Exception e)
         {
