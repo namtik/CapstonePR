@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: Centipede
   enemySprite: {fileID: 21300000, guid: 106207e507a9ac643a34a6e49fe8764e, type: 3}
-  maxHp: 60
+  maxHp: 120
   attackDamage: 10
   gaugeSpeed: 10
   baseAttackCount: 3

@@ -12,9 +12,9 @@ public static class FCMAnalyzer
     // 순서: [f1 긴급도, f2 집중도, f3 반복성]
     private static readonly float[,] Centroids = new float[,]
     {
-        { 0.7993f, 0.4005f, 0.7725f },  // 콤보 러시형
-        { 0.5034f, 0.8088f, 0.4789f },  // 경로 의존형
-        { 0.1681f, 0.2110f, 0.2148f }   // 탐색/분산형
+        { 0.9524f, 0.1722f, 0.8546f },  // 콤보 러시형
+        { 0.9417f, 0.5522f, 0.3407f },  // 경로 의존형
+        { 0.4328f, 0.0961f, 0.0860f }   // 탐색/분산형
     };
 
     public const int ClusterCount = 3;

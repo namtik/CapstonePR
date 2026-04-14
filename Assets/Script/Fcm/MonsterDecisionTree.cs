@@ -25,17 +25,22 @@ public class MonsterDecisionTree
     public class Thresholds
     {
         [Header("셔플 판정")]
-        public float urgencyForShuffle = 0.6f;
+        [Tooltip("실제 데이터: 러시형 f1=0.95, 의존형 f1=0.92 → 0.85 이상만 셔플 고려")]
+        public float urgencyForShuffle = 0.85f;
+        [Tooltip("실제 데이터: 러시형 f3=0.86, 의존형 f3=0.34 → 0.5로 분리")]
         public float repeatForFastCycle = 0.5f;
 
         [Header("저주 판정")]
-        public float concentrationForCurse = 0.5f;
-        public float urgencyOverrideForShuffle = 0.7f;
+        [Tooltip("실제 데이터: 의존형 f2=0.58 → 0.4 이상이면 경로 집중")]
+        public float concentrationForCurse = 0.4f;
+        [Tooltip("의존형에서 셔플로 전환하려면 f1이 매우 높아야 함")]
+        public float urgencyOverrideForShuffle = 0.95f;
 
         [Header("무속성 전환점")]
         public float pollutionThreshold = 0.4f;
 
         [Header("탐색형 셔플")]
+        [Tooltip("실제 데이터: 탐색형 f1=0.43 → 0.5 이상이면 셔플")]
         public float explorerUrgency = 0.5f;
     }
 
