@@ -1259,4 +1259,26 @@ public class ComboSystem : MonoBehaviour
         if (string.IsNullOrWhiteSpace(combo)) return string.Empty;
         return combo.Trim().ToLowerInvariant();
     }
+
+    public List<string> GetComboInput()
+    {
+        return comboInput;
+    }
+    public void ShuffleComboInput()
+    {
+        if (comboInput.Count <= 1) return;
+
+        for (int i = comboInput.Count - 1; i > 0; i--)
+        {
+            int j = UnityEngine.Random.Range(0, i + 1);
+            (comboInput[i], comboInput[j]) = (comboInput[j], comboInput[i]);
+        }
+
+        // UI 갱신
+        UpdateComboSlotUI();
+        UpdateNextComboHints();
+
+        Debug.Log($"[ComboSystem] 콤보 셔플됨: {string.Join("-", comboInput)}");
+    }
+
 }

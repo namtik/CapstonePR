@@ -39,6 +39,7 @@ public class SkillDataParser : MonoBehaviour
         else Destroy(gameObject);
 
         LoadSkillData();
+        Debug.Log(Application.persistentDataPath);
     }
 
     void LoadSkillData()

@@ -329,6 +329,7 @@ GameObject:
   - component: {fileID: 5858952286309725067}
   - component: {fileID: 530138338892471730}
   - component: {fileID: 4977364918079308769}
+  - component: {fileID: 6565592369561984746}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -433,6 +434,31 @@ MonoBehaviour:
   eEffect: {fileID: 8692929278469968464}
   rEffect: {fileID: 6238317005164205120}
   LEffect: {fileID: 4471725691487156464}
+--- !u!114 &6565592369561984746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1989961882650650664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c61bdb019524624bb58f8f3f77e8283, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterMidPattern
+  thresholds:
+    urgencyForShuffle: 0.6
+    repeatForFastCycle: 0.5
+    concentrationForCurse: 0.5
+    urgencyOverrideForShuffle: 0.7
+    pollutionThreshold: 0.4
+    explorerUrgency: 0.5
+  profileBeta: 0.6
+  initialProfileWeight: 0.7
+  weightShiftPerTrigger: 0.15
+  debugOverlay: {fileID: 0}
+  collectData: 1
+  logFolderName: fcm_logs
 --- !u!1 &2583469928775841079
 GameObject:
   m_ObjectHideFlags: 0

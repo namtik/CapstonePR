@@ -558,4 +558,31 @@ public class ElementSlotSystem : MonoBehaviour
             (list[i], list[j]) = (list[j], list[i]);
         }
     }
+
+    public void ApplyCurse(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= 4) return;
+        slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
+        Debug.Log($"[ElementSlotSystem] {SLOT_KEYS[slotIndex]} 슬롯 저주 {SLOT_CURSE_TURNS}회");
+    }
+
+    public void InsertNullCard(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= 4) return;
+
+        slots[slotIndex].neutralDeckCount++;
+
+        // 슬롯이 비어있으면 즉시 올림
+        if (!slots[slotIndex].hasNeutralCard && slots[slotIndex].currentCard == null)
+        {
+            slots[slotIndex].hasNeutralCard = true;
+            slots[slotIndex].neutralDeckCount = Mathf.Max(0, slots[slotIndex].neutralDeckCount - 1);
+        }
+
+        if (!slots[slotIndex].HasCard)
+            DrawCardForSlot(slotIndex);
+
+        Debug.Log($"[ElementSlotSystem] {SLOT_KEYS[slotIndex]} 슬롯 무속성 카드 삽입");
+    }
+
 }

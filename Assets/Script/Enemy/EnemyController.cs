@@ -13,6 +13,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private Player player;
     private Roundmanager roundmanager;
     private bool isDead = false;
+    private MonsterMidPattern midPattern;
 
     private void Awake()
     {
@@ -29,6 +30,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnMidPattern  += HandleMidPattern;
         stat.OnGaugeFull   += HandleGaugeFull;
         stat.OnGaugeStepChanged += view.UpdateActionGauge;
+        midPattern = GetComponent<MonsterMidPattern>();
     }
 
     void OnDestroy()
@@ -113,7 +115,18 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
     void HandleMidPattern()
     {
-        string patternMessage = ElementSlotSystem.Instance?.TriggerDisruptionPattern();
+        string patternMessage;
+
+        // FCM 시스템이 있으면 사용, 없으면 기존 랜덤 폴백
+        if (midPattern != null)
+        {
+            patternMessage = midPattern.Execute();
+        }
+        else
+        {
+            patternMessage = ElementSlotSystem.Instance?.TriggerDisruptionPattern();
+        }
+
         if (string.IsNullOrEmpty(patternMessage))
             patternMessage = "패턴 발동";
 
@@ -159,10 +172,10 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     {
         if (isDead) return;
         isDead = true;
-
+        midPattern?.OnBattleEnd();
         // OnDied 이벤트로 인해 Roundmanager.HandleEnemyDied가 호출됨
         // 여기서 직접 호출하지 않음 (중복 호출 방지)
-        
+
         Destroy(gameObject);
     }
 
