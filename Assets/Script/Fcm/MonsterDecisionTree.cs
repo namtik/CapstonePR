@@ -204,4 +204,13 @@ public class MonsterDecisionTree
         Action.NullInsert => "무속성 삽입",
         _ => "?"
     };
+
+    /// <summary>CSV 저장용 영문 코드 (인코딩 문제 방지)</summary>
+    public static string GetActionCode(Action a) => a switch
+    {
+        Action.ComboShuffle => "shuffle",
+        Action.SlotCurse => "curse",
+        Action.NullInsert => "null_insert",
+        _ => "unknown"
+    };
 }

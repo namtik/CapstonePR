@@ -169,7 +169,7 @@ public class MonsterMidPattern : MonoBehaviour
                 headerWritten = true;
             }
 
-            string action = MonsterDecisionTree.GetActionName(dec.ChosenAction);
+            string action = MonsterDecisionTree.GetActionCode(dec.ChosenAction);
             File.AppendAllText(logFilePath,
                 $"{triggerCount},{raw[0]:F3},{raw[1]:F3},{raw[2]:F3},{f4:F3}," +
                 $"{blended[0]:F3},{blended[1]:F3},{blended[2]:F3}," +
