@@ -6,13 +6,6 @@ using System.Collections.Generic;
 
 /// <summary>
 /// FCM 디버그 오버레이
-/// 
-/// 게이지 5 도달 시 FCM 분석 과정을 화면에 시각적으로 표시한다.
-/// - 특성 벡터 (f1~f4) 바 차트
-/// - FCM 소속도 (3개 유형) 비율
-/// - 의사결정 트리 결과
-/// - Top-4 경로 분석
-/// 
 /// 사용법:
 ///   1. 빈 오브젝트에 이 컴포넌트를 추가
 ///   2. Play 모드에서 Tab 키로 표시/숨김 토글
@@ -26,7 +19,6 @@ public class FCMDebugOverlay : MonoBehaviour
     [SerializeField] private bool alwaysVisible = false;
 
     [Header("폰트 설정")]
-    [Tooltip("한글 지원 TMP 폰트 에셋을 연결하세요. 비우면 기본 폰트 사용 (한글 깨짐)")]
     [SerializeField] private TMP_FontAsset koreanFont;
 
     // ─── UI 참조 ───
@@ -77,7 +69,7 @@ public class FCMDebugOverlay : MonoBehaviour
         new Color(0.50f, 0.47f, 0.87f), // 무속성 보라
     };
 
-    private static readonly string[] FeatureNames = { "f1 긴급도", "f2 집중도", "f3 반복성", "f4 오염도 (트리)" };
+    private static readonly string[] FeatureNames = { "f1 긴급도", "f2 집중도", "f3 반복성", "f4 오염도" };
     private static readonly string[] TypeNames = { "콤보 러시형", "경로 의존형", "탐색/분산형" };
     private static readonly string[] SlotNames = { "Q(화)", "W(수)", "E(풍)", "R(지)" };
     private static readonly Color[] SlotColors = {
@@ -108,13 +100,8 @@ public class FCMDebugOverlay : MonoBehaviour
         }
     }
 
-    // ═══════════════════════════════════════════
-    // 외부 호출 (MonsterMidPattern에서 사용)
-    // ═══════════════════════════════════════════
 
-    /// <summary>
-    /// FCM 분석 결과를 표시한다.
-    /// </summary>
+    // FCM 분석 결과를 표시한다.
     public void ShowAnalysis(float[] fcmFeatures, float f4, float[] membership, int dominant,
                               MonsterDecisionTree.Decision decision,
                               FeatureExtractor.RouteInfo[] routes)
@@ -189,9 +176,8 @@ public class FCMDebugOverlay : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 현재 게임 상태에서 즉시 분석하고 표시
-    /// </summary>
+
+    // 현재 게임 상태에서 즉시 분석하고 표시
     public void RefreshAndShow()
     {
         float[] fcmFeatures = FeatureExtractor.ExtractFCMFeatures(out FeatureExtractor.RouteInfo[] routes);
@@ -217,10 +203,7 @@ public class FCMDebugOverlay : MonoBehaviour
         if (panel != null) panel.SetActive(visible);
     }
 
-    // ═══════════════════════════════════════════
     // UI 빌드 (코드로 생성)
-    // ═══════════════════════════════════════════
-
     void BuildUI()
     {
         // 캔버스

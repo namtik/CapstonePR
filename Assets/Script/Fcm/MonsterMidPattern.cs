@@ -3,18 +3,16 @@ using UnityEngine;
 
 /// <summary>
 /// 몬스터 중간 패턴 컨트롤러
-/// 
-/// 파이프라인:
 ///   1. f1~f3 추출 (FCM용, 플레이어 행동 패턴)
-///   2. f4 추출 (오염도, FCM 외부)
-///   3. 프로필 블렌딩 (f1~f3만)
-///   4. FCM 소속도 계산 (3차원)
+///   2. f4 추출 (오염도, 행동 트리)
+///   3. 프로필 계산 (f1~f3만)
+///   4. FCM 소속도 계산
 ///   5. 의사결정 트리 (소속도 + f1~f3 + f4)
-///   6. 행동 실행
+///   6. 패턴 실행
 /// </summary>
 public class MonsterMidPattern : MonoBehaviour
 {
-    [Header("의사결정 트리 임계값")]
+    [Header("행동 트리 임계값")]
     [SerializeField] private MonsterDecisionTree.Thresholds thresholds;
 
     [Header("스테이지 프로필 설정")]
@@ -22,7 +20,7 @@ public class MonsterMidPattern : MonoBehaviour
     [SerializeField] private float initialProfileWeight = 0.7f;
     [SerializeField] private float weightShiftPerTrigger = 0.15f;
 
-    [Header("디버그 오버레이 (선택)")]
+    [Header("디버그 오버레이")]
     [SerializeField] private FCMDebugOverlay debugOverlay;
 
     [Header("데이터 수집")]
@@ -51,23 +49,22 @@ public class MonsterMidPattern : MonoBehaviour
     {
         triggerCount++;
 
-        // 1. FCM용 특성 추출 (3차원: f1, f2, f3)
+        // FCM용 특성 추출 (f1, f2, f3)
         float[] fcmFeatures = FeatureExtractor.ExtractFCMFeatures(out FeatureExtractor.RouteInfo[] routes);
 
-        // 2. f4 별도 계산 (FCM 외부)
         float f4 = FeatureExtractor.CalcPollution(routes);
 
-        // 3. 프로필 블렌딩 (f1~f3만)
+        //프로필 블렌딩
         float[] blended = BlendWithProfile(fcmFeatures);
 
-        // 4. FCM 소속도 (3차원)
+        // FCM 소속도
         float[] membership = FCMAnalyzer.CalcMembership(blended);
         int dominant = FCMAnalyzer.GetDominantType(membership);
 
-        // 5. 의사결정 트리 (소속도 + f1~f3 + f4)
+        // 행동 트리 (소속도 + f1~f3 + f4)
         MonsterDecisionTree.Decision decision = decisionTree.Decide(membership, blended, f4, routes);
 
-        // 6. 행동 실행
+        // 패턴 실행
         string resultMessage = ExecuteAction(decision);
 
         // 디버그
@@ -85,13 +82,12 @@ public class MonsterMidPattern : MonoBehaviour
 
     public void OnBattleEnd()
     {
-        // 프로필 저장 (f1~f3만)
+        // 프로필 저장
         float[] fcmFeatures = FeatureExtractor.ExtractFCMFeatures();
         UpdateProfile(fcmFeatures);
     }
 
-    // --- 행동 실행 ---
-
+    // 패턴 실행 
     string ExecuteAction(MonsterDecisionTree.Decision decision)
     {
         switch (decision.ChosenAction)
@@ -121,7 +117,7 @@ public class MonsterMidPattern : MonoBehaviour
         }
     }
 
-    // --- 프로필 (3차원) ---
+    // 프로필
 
     void UpdateProfile(float[] cur)
     {
@@ -141,7 +137,7 @@ public class MonsterMidPattern : MonoBehaviour
         return b;
     }
 
-    // --- 데이터 수집 ---
+    // 데이터 수집 
 
     void InitLogFile()
     {
@@ -185,9 +181,7 @@ public class MonsterMidPattern : MonoBehaviour
 
     // --- 디버그 ---
 
-    void LogDecision(float[] raw, float[] blended, float f4,
-                     float[] mem, int dominant,
-                     MonsterDecisionTree.Decision dec)
+    void LogDecision(float[] raw, float[] blended, float f4, float[] mem, int dominant, MonsterDecisionTree.Decision dec)
     {
         Debug.Log($"[MidPattern] -- 트리거 #{triggerCount} --\n" +
                   $"  FCM특성: [{raw[0]:F2},{raw[1]:F2},{raw[2]:F2}] -> 블렌딩 [{blended[0]:F2},{blended[1]:F2},{blended[2]:F2}]\n" +

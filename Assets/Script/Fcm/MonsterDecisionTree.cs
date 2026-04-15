@@ -6,7 +6,7 @@ using UnityEngine;
 /// 입력:
 ///   - FCM 소속도 3개 (플레이어 유형)
 ///   - f1~f3 (FCM에 사용된 특성)
-///   - f4 (오염도, FCM 외부에서 별도 계산)
+///   - f4 (오염도)
 ///   - Top-4 경로 (타겟 슬롯 결정용)
 /// </summary>
 public class MonsterDecisionTree
@@ -98,7 +98,7 @@ public class MonsterDecisionTree
         }
     }
 
-    // --- 행동 생성 ---
+    //행동 생성
 
     Decision MakeShuffle(string reason) => new Decision
     { ChosenAction = Action.ComboShuffle, Reason = reason, TargetSlot = -1 };
@@ -109,8 +109,7 @@ public class MonsterDecisionTree
     Decision MakeNullInsert(FeatureExtractor.RouteInfo[] routes, string reason) => new Decision
     { ChosenAction = Action.NullInsert, Reason = reason, TargetSlot = FindNullInsertTarget(routes) };
 
-    // --- 대상 슬롯 ---
-
+    // 대상 슬롯
     int FindCurseTarget(FeatureExtractor.RouteInfo[] routes)
     {
         ComboSystem combo = ComboSystem.Instance;
@@ -209,7 +208,6 @@ public class MonsterDecisionTree
         _ => "?"
     };
 
-    /// <summary>CSV 저장용 영문 코드 (인코딩 문제 방지)</summary>
     public static string GetActionCode(Action a) => a switch
     {
         Action.ComboShuffle => "shuffle",

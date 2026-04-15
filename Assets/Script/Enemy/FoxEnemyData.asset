@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: FoxEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: fox
-  enemySprite: {fileID: 21300000, guid: 5e6f9d62cc4170c48bbf581f86e9dc5c, type: 3}
+  enemySprite: {fileID: 21300000, guid: 4724dfd9e9792144ab2b8b772c7b40fd, type: 3}
   maxHp: 120
   attackDamage: 5
   gaugeSpeed: 10

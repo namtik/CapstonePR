@@ -1,15 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// FCM 플레이어 유형 분석기 (3차원)
-/// 
+/// FCM 플레이어 유형 분석
 /// f1(긴급도), f2(집중도), f3(반복성)만으로 플레이어 유형을 판정한다.
-/// f4(오염도)는 플레이어 유형과 무관한 게임 상태이므로 FCM에서 제외하고
-/// 의사결정 트리에서 직접 참조한다.
 /// </summary>
 public static class FCMAnalyzer
 {
-    // 순서: [f1 긴급도, f2 집중도, f3 반복성]
+    // [f1 긴급도, f2 집중도, f3 반복성]
     private static readonly float[,] Centroids = new float[,]
     {
         { 0.9524f, 0.1722f, 0.8546f },  // 콤보 러시형
