@@ -38,6 +38,7 @@ public class ElementSlotHUD : MonoBehaviour
     private readonly Image[] statusBoxes = new Image[4];
     private readonly Text[] statusTexts = new Text[4];
     private readonly Text[] upgradeTexts = new Text[4];
+    private readonly ElementSlotSpriteOverride[] slotSpriteOverrides = new ElementSlotSpriteOverride[4];
 
     void Awake()
     {
@@ -169,6 +170,8 @@ public class ElementSlotHUD : MonoBehaviour
             if (slotRect != null)
                 slotRect.sizeDelta = slotSize;
 
+            EnsureSlotSpriteOverride(index, slotTransform);
+
             EnsureStatusBox(index, slotTransform);
             EnsureUpgradeText(index, slotTransform);
         }
@@ -197,9 +200,19 @@ public class ElementSlotHUD : MonoBehaviour
         iconImage.preserveAspect = true;
 
         slotIcons[index] = iconImage;
+        EnsureSlotSpriteOverride(index, slotObject.transform);
 
         EnsureStatusBox(index, slotObject.transform);
         EnsureUpgradeText(index, slotObject.transform);
+    }
+
+    void EnsureSlotSpriteOverride(int index, Transform slotTransform)
+    {
+        ElementSlotSpriteOverride spriteOverride = slotTransform.GetComponent<ElementSlotSpriteOverride>();
+        if (spriteOverride == null)
+            spriteOverride = slotTransform.gameObject.AddComponent<ElementSlotSpriteOverride>();
+
+        slotSpriteOverrides[index] = spriteOverride;
     }
 
     void EnsureUpgradeText(int index, Transform slotTransform)
@@ -404,6 +417,13 @@ public class ElementSlotHUD : MonoBehaviour
 
     Sprite GetSlotSprite(int index)
     {
+        if (index >= 0 && index < slotSpriteOverrides.Length)
+        {
+            ElementSlotSpriteOverride spriteOverride = slotSpriteOverrides[index];
+            if (spriteOverride != null && spriteOverride.slotSprite != null)
+                return spriteOverride.slotSprite;
+        }
+
         if (comboSystem == null || comboSystem.cardSprites == null)
             return null;
 
