@@ -1,28 +1,39 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// °ÔÀÓ Àü¿ª »óÅÂ¸¦ ´ã´çÇÏ´Â ½Ì±ÛÅÏ
-// (¾À ÀüÈ¯ ±â´ÉÀº GameStateController·Î ÀÌ°üµÊ)
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½Ì±ï¿½ï¿½ï¿½
+// (ï¿½ï¿½ ï¿½ï¿½È¯ ï¿½ï¿½ï¿½ï¿½ï¿½ GameStateControllerï¿½ï¿½ ï¿½Ì°ï¿½ï¿½ï¿½)
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    // ¼±ÅÃÇÑ/¹æ¹®ÇÑ ³ëµå ÀÎµ¦½º ÀúÀå¿ë
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½æ¹®ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Îµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
     public int lastVisitedNodeIndex = -1;
     // Cleared node indices (persisted in this singleton during play)
     public System.Collections.Generic.List<int> clearedNodes = new System.Collections.Generic.List<int>();
+
+    // ìŠ¤í…Œì´ì§€ ê°„ HP ìœ ì§€ë¥¼ ìœ„í•œ ì˜êµ¬ ì €ì¥ê°’
+    // -1ì´ë©´ ì•„ì§ ì´ˆê¸°í™” ì „(ì²˜ìŒ ì‹œì‘)ì„ ì˜ë¯¸
+    public int persistedCurrentHp = -1;
+    public int persistedMaxHp = 100;
+
+    public void SavePlayerHp(int currentHp, int maxHp)
+    {
+        persistedCurrentHp = currentHp;
+        persistedMaxHp = maxHp;
+    }
 
     public void MarkNodeCleared(int index)
     {
         if (index < 0) return;
         if (!clearedNodes.Contains(index)) clearedNodes.Add(index);
         
-        // GameStateController¿Í µ¿±âÈ­
+        // GameStateControllerï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È­
         if (GameStateController.Instance != null)
         {
             GameStateController.Instance.MarkNodeCleared(index);
         }
         
-        Debug.Log($"GameManager: ³ëµå {index} Å¬¸®¾î ¸¶Å·");
+        Debug.Log($"GameManager: ï¿½ï¿½ï¿½ {index} Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Å·");
     }
 
     public bool IsNodeCleared(int index)
@@ -43,3 +54,4 @@ public class GameManager : MonoBehaviour
         }
     }
 }
+

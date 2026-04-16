@@ -628,6 +628,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: menubar
       objectReference: {fileID: 0}
+    - target: {fileID: 113969877568408591, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 696245774759462229, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 1250
@@ -2632,7 +2636,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 113969877568408591, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 696245774759462229, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -7137,10 +7141,10 @@ MonoBehaviour:
   cardPrefab: {fileID: 4591304844329940127, guid: 950031a739a749944bd5a164190c0a56, type: 3}
   EleslotPrefab: {fileID: 4254492374061022992, guid: a1dae014dd773b2428cdaea5d05ceee4, type: 3}
   cardSprites:
-  - {fileID: 21300000, guid: 8ddec850c6f63844ba5c3ed088c1562a, type: 3}
-  - {fileID: 21300000, guid: 61b6a5b059cfc924782b56acdd6a29e4, type: 3}
-  - {fileID: 21300000, guid: 2e6bfe16f25a9b849af5c0397b7af0d8, type: 3}
-  - {fileID: 21300000, guid: d252295a260726949ba25aa3f5f1d4fb, type: 3}
+  - {fileID: 21300000, guid: 19b4d247def24f747957dc5853a8d020, type: 3}
+  - {fileID: 21300000, guid: aa96727855b5cf84ba79c92714900bf2, type: 3}
+  - {fileID: 21300000, guid: 633d5e10883da454897c82ded7e720e3, type: 3}
+  - {fileID: 21300000, guid: b0c0fe372cc36584fa743f93ddf254d7, type: 3}
   skillListParent: {fileID: 0}
   skillListItemPrefab: {fileID: 3856369562249949566, guid: 9064903e50b48d74a8c5312089e6fada, type: 3}
   skillActivationText: {fileID: 1132707912}
@@ -7937,6 +7941,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   lastVisitedNodeIndex: -1
   clearedNodes: 
+  persistedCurrentHp: -1
+  persistedMaxHp: 100
 --- !u!4 &1073639113
 Transform:
   m_ObjectHideFlags: 0
@@ -8861,7 +8867,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35000107daf72484685e039d49fdc285, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementSlotSpriteOverride
-  slotSprite: {fileID: 21300000, guid: 19b4d247def24f747957dc5853a8d020, type: 3}
+  slotSprite: {fileID: 21300000, guid: 8ddec850c6f63844ba5c3ed088c1562a, type: 3}
 --- !u!1 &1211821935
 GameObject:
   m_ObjectHideFlags: 0
@@ -9304,7 +9310,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35000107daf72484685e039d49fdc285, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementSlotSpriteOverride
-  slotSprite: {fileID: 21300000, guid: b0c0fe372cc36584fa743f93ddf254d7, type: 3}
+  slotSprite: {fileID: 21300000, guid: d252295a260726949ba25aa3f5f1d4fb, type: 3}
 --- !u!1 &1304640645
 GameObject:
   m_ObjectHideFlags: 0
@@ -11026,7 +11032,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35000107daf72484685e039d49fdc285, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementSlotSpriteOverride
-  slotSprite: {fileID: 21300000, guid: 633d5e10883da454897c82ded7e720e3, type: 3}
+  slotSprite: {fileID: 21300000, guid: 2e6bfe16f25a9b849af5c0397b7af0d8, type: 3}
 --- !u!1 &1528637483
 GameObject:
   m_ObjectHideFlags: 0
@@ -12120,7 +12126,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35000107daf72484685e039d49fdc285, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ElementSlotSpriteOverride
-  slotSprite: {fileID: 21300000, guid: aa96727855b5cf84ba79c92714900bf2, type: 3}
+  slotSprite: {fileID: 21300000, guid: 61b6a5b059cfc924782b56acdd6a29e4, type: 3}
 --- !u!1 &1771368601
 GameObject:
   m_ObjectHideFlags: 0

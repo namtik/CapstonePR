@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
@@ -479,3 +479,6 @@ public class Player : MonoBehaviour, IBattleUnit
     
     }
 }
+
+
+
