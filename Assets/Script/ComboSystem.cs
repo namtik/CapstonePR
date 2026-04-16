@@ -1076,13 +1076,17 @@ public class ComboSystem : MonoBehaviour
     {
         if (comboSlotParent == null) return;
 
-        foreach (Transform child in comboSlotParent)
-        {
-            if (child != null && child.name.StartsWith("EmptySlot_"))
-                Destroy(child.gameObject);
-        }
         emptySlots.Clear();
 
+        // 씬에 미리 만들어둔 자식 슬롯이 있으면 그걸 그대로 사용
+        if (comboSlotParent.childCount >= 3)
+        {
+            for (int i = 0; i < comboSlotParent.childCount; i++)
+                emptySlots.Add(comboSlotParent.GetChild(i).gameObject);
+            return;
+        }
+
+        // 미리 만들어둔 슬롯이 없을 때만 런타임으로 생성
         for (int i = 0; i < 3; i++)
         {
             GameObject emptySlot = new GameObject($"EmptySlot_{i}");
@@ -1282,3 +1286,4 @@ public class ComboSystem : MonoBehaviour
     }
 
 }
+
