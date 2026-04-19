@@ -20,7 +20,6 @@ public class GameStateController : MonoBehaviour
 
     [Header("Managers")]
     public MapManager mapManager;
-    public BattleManger battleManager;
     public Roundmanager roundManager;  // 라운드 관리자 추가
 
     [Header("Game State")]

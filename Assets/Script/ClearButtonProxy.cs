@@ -29,15 +29,5 @@ public class ClearButtonProxy : MonoBehaviour
             return;
         }
 
-        // 하위 호환: BattleManger를 통해 처리 시도
-        var bm = FindFirstObjectByType<BattleManger>();
-        if (bm != null)
-        {
-            Debug.Log("BattleManger.OnBattleClear 호출");
-            bm.OnBattleClear();
-            return;
-        }
-
-        Debug.LogWarning("ClearButtonProxy: GameStateController와 BattleManger를 찾을 수 없습니다.");
     }
 }

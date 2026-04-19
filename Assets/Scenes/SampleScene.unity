@@ -11248,54 +11248,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!1 &1528849008
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1528849010}
-  - component: {fileID: 1528849009}
-  m_Layer: 0
-  m_Name: BattleManger
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &1528849009
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1528849008}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a85075112bba4c84fb9ab25c5ed4b58c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: '::'
-  playerPrefab: {fileID: 8316746568116685849, guid: 70e6ff5984c3c2c40b9ed8de4172fad6, type: 3}
-  enemyPrefab: {fileID: 3008924890174703138, guid: 00230d49001cfc7478aaabfe056d395e, type: 3}
-  playerParent: {fileID: 0}
-  enemyParent: {fileID: 1152657241}
---- !u!4 &1528849010
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1528849008}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 306.2398, y: 194.6034, z: -2.05719}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1529949742
 GameObject:
   m_ObjectHideFlags: 0
@@ -13030,7 +12982,6 @@ MonoBehaviour:
   restStage: {fileID: 895437396}
   eventStage: {fileID: 1879574928}
   mapManager: {fileID: 829038371}
-  battleManager: {fileID: 1528849009}
   roundManager: {fileID: 610804760}
   lastVisitedNodeIndex: -1
   clearedNodes: 
@@ -15028,7 +14979,6 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 1780902708}
-  - {fileID: 1528849010}
   - {fileID: 315290692}
   - {fileID: 921928112}
   - {fileID: 1073639113}
