@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 이 스크립트는 항상 활성화된 오브젝트(예: GameStateController)에 붙여야 합니다.
@@ -98,14 +97,29 @@ public class SettingPanel : MonoBehaviour
 
     public void RestartGame()
     {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        TryRestartRunToMap();
     }
 
     public void ReloadCurrentScene()
     {
+        TryRestartRunToMap();
+    }
+
+    void TryRestartRunToMap()
+    {
         Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+
+        if (settingCanvas != null)
+            settingCanvas.SetActive(false);
+
+        var stateController = GameStateController.Instance;
+        if (stateController == null)
+        {
+            Debug.LogError("GameStateController.Instance가 null이라 런 재시작을 수행할 수 없습니다.");
+            return;
+        }
+
+        stateController.RestartRunToMap();
     }
 
     public void QuitGame()

@@ -48,13 +48,6 @@ public class GameStateController : MonoBehaviour
 
     void InitializeGameState()
     {
-        // GameManager와 동기화
-        if (GameManager.Instance != null)
-        {
-            lastVisitedNodeIndex = GameManager.Instance.lastVisitedNodeIndex;
-            clearedNodes = new System.Collections.Generic.List<int>(GameManager.Instance.clearedNodes);
-        }
-        
         // Panel raycastTarget 비활성화
         EnsureGraphicRaycaster();
     }
@@ -210,7 +203,6 @@ public class GameStateController : MonoBehaviour
     }
 
     // 노드 클리어 처리
-    //GameManager 역할을 대신함
     public void MarkNodeCleared(int index)
     {
         if (index < 0) return;
@@ -234,6 +226,16 @@ public class GameStateController : MonoBehaviour
         {
             MarkNodeCleared(lastVisitedNodeIndex);
         }
+    }
+
+    public void RestartRunToMap()
+    {
+        Time.timeScale = 1f;
+
+        lastVisitedNodeIndex = -1;
+        clearedNodes.Clear();
+
+        ShowMap();
     }
 
 }
