@@ -1,21 +1,23 @@
 using UnityEngine;
 
 /// <summary>
-/// FCM 플레이어 유형 분석
-/// f1(긴급도), f2(집중도), f3(반복성)만으로 플레이어 유형을 판정한다.
+/// FCM 플레이어 유형 분석기 (5차원, 4유형)
+/// 입력: [f1 긴급도, f3 반복성, f5 보충진행, f7 위협밀도, f8 슬롯균형]
 /// </summary>
 public static class FCMAnalyzer
 {
-    // [f1 긴급도, f2 집중도, f3 반복성]
+    // [임시 중심점] collectData로 데이터 수집 후 fcm_retrain.py로 갱신할 것
+    // 순서: [f1, f3, f5, f7, f8]
     private static readonly float[,] Centroids = new float[,]
     {
-        { 0.9524f, 0.1722f, 0.8546f },  // 콤보 러시형
-        { 0.9417f, 0.5522f, 0.3407f },  // 경로 의존형
-        { 0.4328f, 0.0961f, 0.0860f }   // 탐색/분산형
+        { 0.76f, 0.76f, 0.40f, 0.77f, 0.80f },  // 콤보 러시형
+        { 0.67f, 0.22f, 0.41f, 0.48f, 0.90f },  // 경로 의존형
+        { 0.18f, 0.14f, 0.21f, 0.08f, 0.82f },  // 탐색/분산형
+        { 0.12f, 0.08f, 0.79f, 0.06f, 0.19f },  // 버스트형
     };
 
-    public const int ClusterCount = 3;
-    public const int FeatureDim = 3; // f1, f2, f3만
+    public const int ClusterCount = 4;
+    public const int FeatureDim = 5;
 
     public static float[] CalcMembership(float[] features)
     {
@@ -53,7 +55,6 @@ public static class FCMAnalyzer
             }
             membership[i] = 1f / sum;
         }
-
         return membership;
     }
 
@@ -70,6 +71,7 @@ public static class FCMAnalyzer
         0 => "콤보 러시형",
         1 => "경로 의존형",
         2 => "탐색/분산형",
+        3 => "버스트형",
         _ => "?"
     };
 }
