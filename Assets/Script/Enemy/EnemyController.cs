@@ -135,6 +135,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
     void HandleGaugeFull()
     {
+        midPattern?.OnGauge10();
         if (player == null)
             player = FindFirstObjectByType<Player>();
 

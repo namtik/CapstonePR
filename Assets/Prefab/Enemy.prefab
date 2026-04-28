@@ -446,19 +446,69 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c61bdb019524624bb58f8f3f77e8283, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterMidPattern
+  useRBFN: 1
+  stochastic: 1
+  deterministicThreshold: 0.8
+  rbfn:
+    centers:
+    - 0.9006
+    - 0.63
+    - 0.2852
+    - 0.4533
+    - 0.4917
+    - 0.8046
+    - 0.4385
+    - 0.4241
+    - 0.8153
+    - 0.4407
+    - 0.7454
+    - 0.4123
+    - 0.2149
+    - 0.4026
+    - 0.6215
+    - 0.0986
+    - 0.0142
+    - 0.5773
+    - 0.015
+    - 0.3609
+    sigmas:
+    - 0.4
+    - 0.4
+    - 0.4
+    - 0.4
+    weights:
+    - 1.7302
+    - -0.6265
+    - -1.1037
+    - -0.5709
+    - 0.3101
+    - 0.2609
+    - -0.8731
+    - -0.0484
+    - 0.9215
+    - -0.5787
+    - 0.5496
+    - 0.0294
+    biases:
+    - 0.3941
+    - 0.3545
+    - 0.2512
+    learningRate: 0.2
+  onlineLearning: 1
+  maxMemorySize: 30
   thresholds:
-    urgencyForShuffle: 0.6
+    urgencyForShuffle: 0.7
     repeatForFastCycle: 0.5
-    concentrationForCurse: 0.5
-    urgencyOverrideForShuffle: 0.7
+    densityForRush: 0.5
+    urgencyOverrideForShuffle: 0.9
     pollutionThreshold: 0.4
     explorerUrgency: 0.5
-  profileBeta: 0.6
-  initialProfileWeight: 0.7
-  weightShiftPerTrigger: 0.15
+    burstReplenishThreshold: 0.5
+    burstBalanceThreshold: 0.4
   debugOverlay: {fileID: 0}
   collectData: 1
   logFolderName: fcm_logs
+  playerId: 
 --- !u!1 &2583469928775841079
 GameObject:
   m_ObjectHideFlags: 0
