@@ -37,13 +37,13 @@ public class RBFNetwork
     [SerializeField]
     private float[] weights = new float[]
     {
-         1.7302f, -0.6265f, -1.1037f,  // 러시형
-        -0.5709f, 0.3101f, 0.2609f,  // 의존형
-        -0.8731f, -0.0484f, 0.9215f,  // 탐색형
-        -0.5787f, 0.5496f, 0.0294f,  // 버스트형
+        0.8789f, -0.9828f, 0.1040f,  // 러시형
+        -0.4298f, 0.4924f, -0.0625f,  // 의존형
+        0.0444f, 0.1719f, -0.2163f,  // 탐색형
+        -0.7558f, -0.1379f, 0.8939f,   // 버스트형
     };
 
-    [SerializeField] private float[] biases = new float[] { 0.3941f, 0.3545f, 0.2512f };
+    [SerializeField] private float[] biases = new float[] { 0.5022f, 0.4383f, 0.0593f };
 
     // ─── 온라인 학습 설정 ───
     [Header("온라인 학습")]
