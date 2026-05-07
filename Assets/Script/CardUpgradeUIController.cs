@@ -64,7 +64,7 @@ public class CardUpgradeUIController : MonoBehaviour
             return;
         }
 
-        Dictionary<string, List<ElementSlotSystem.RunDeckCard>> grouped = BuildGroupedCards(slotSystem.runDeck);
+        Dictionary<string, List<ElementSlotSystem.RunDeckCard>> grouped = BuildGroupedCards(slotSystem.RunDeck);
 
         foreach (KeyValuePair<string, Button> pair in cardButtons)
         {
@@ -126,7 +126,7 @@ public class CardUpgradeUIController : MonoBehaviour
         RefreshView();
     }
 
-    static Dictionary<string, List<ElementSlotSystem.RunDeckCard>> BuildGroupedCards(List<ElementSlotSystem.RunDeckCard> runDeck)
+    static Dictionary<string, List<ElementSlotSystem.RunDeckCard>> BuildGroupedCards(System.Collections.ObjectModel.ReadOnlyCollection<ElementSlotSystem.RunDeckCard> runDeck)
     {
         Dictionary<string, List<ElementSlotSystem.RunDeckCard>> grouped = new Dictionary<string, List<ElementSlotSystem.RunDeckCard>>
         {

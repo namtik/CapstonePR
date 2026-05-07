@@ -65,16 +65,18 @@ public class ElementSlotSystem : MonoBehaviour
     [Header("런 덱 상태 (디버그)")]
     [SerializeField] private int runDeckCount;
 
-    public List<RunDeckCard> runDeck = new List<RunDeckCard>();
+    private List<RunDeckCard> _runDeck = new List<RunDeckCard>();
+    public System.Collections.ObjectModel.ReadOnlyCollection<RunDeckCard> RunDeck => _runDeck.AsReadOnly();
 
     // ── 속성별 전체 강화 레벨 ─────────────────────────────────────────
-    public Dictionary<string, int> elementUpgradeLevels = new Dictionary<string, int>
+    private Dictionary<string, int> _elementUpgradeLevels = new Dictionary<string, int>
     {
         { "fire", 0 }, { "water", 0 }, { "wind", 0 }, { "earth", 0 }
     };
+    public System.Collections.Generic.IReadOnlyDictionary<string, int> ElementUpgradeLevels => _elementUpgradeLevels;
 
     // ── 슬롯 배열 ─────────────────────────────────────────────────────
-    public SlotState[] slots = new SlotState[4];
+    private SlotState[] _slots = new SlotState[4];
 
     [Header("슬롯 피해 계산")]
     [SerializeField] private float fallbackPlayerAttackDamage = 10f;
@@ -117,7 +119,7 @@ public class ElementSlotSystem : MonoBehaviour
 
     void Update()
     {
-        runDeckCount = runDeck.Count; // 인스펙터 디버그용
+        runDeckCount = _runDeck.Count; // 인스펙터 디버그용
 
         if (!inBattle) return;
         RefreshEnemyRef();
@@ -150,12 +152,12 @@ public class ElementSlotSystem : MonoBehaviour
     /// <summary>런 처음 시작 시 기본 런 덱 생성</summary>
     public void InitRunDeck()
     {
-        runDeck.Clear();
+        _runDeck.Clear();
         foreach (string elem in ELEMENT_KEYS)
             for (int i = 0; i < CARDS_PER_ELEMENT; i++)
-                runDeck.Add(new RunDeckCard(elem));
+                _runDeck.Add(new RunDeckCard(elem));
 
-        Debug.Log($"[ElementSlotSystem] 런 덱 초기화: {runDeck.Count}장");
+        Debug.Log($"[ElementSlotSystem] 런 덱 초기화: {_runDeck.Count}장");
     }
 
     /// <summary>전투 시작 시 호출 — 런 덱에서 속성별 덱 빌드 후 첫 카드 드로우</summary>
@@ -170,7 +172,7 @@ public class ElementSlotSystem : MonoBehaviour
         // 4개 슬롯 초기화
         for (int i = 0; i < 4; i++)
         {
-            slots[i] = new SlotState
+            _slots[i] = new SlotState
             {
                 slotKey       = SLOT_KEYS[i],
                 elementKey    = ELEMENT_KEYS[i],
@@ -200,7 +202,7 @@ public class ElementSlotSystem : MonoBehaviour
 
     void BuildElementDecksFromRunDeck()
     {
-        foreach (var slot in slots)
+        foreach (var slot in _slots)
         {
             slot.deck.Clear();
             slot.grave.Clear();
@@ -211,14 +213,14 @@ public class ElementSlotSystem : MonoBehaviour
         }
 
         // 런 덱을 셔플 후 속성별로 분류
-        List<RunDeckCard> shuffled = new List<RunDeckCard>(runDeck);
+        List<RunDeckCard> shuffled = new List<RunDeckCard>(_runDeck);
         ShuffleList(shuffled);
 
         foreach (var card in shuffled)
         {
             int slotIndex = System.Array.IndexOf(ELEMENT_KEYS, card.elementKey);
             if (slotIndex >= 0)
-                slots[slotIndex].deck.Add(card);
+                _slots[slotIndex].deck.Add(card);
         }
 
         Debug.Log("[ElementSlotSystem] 속성별 덱 빌드 완료");
@@ -229,7 +231,7 @@ public class ElementSlotSystem : MonoBehaviour
     {
         for (int i = 0; i < 4; i++)
         {
-            if (!slots[i].HasCard && (slots[i].deck.Count > 0 || slots[i].neutralDeckCount > 0))
+            if (!_slots[i].HasCard && (_slots[i].deck.Count > 0 || _slots[i].neutralDeckCount > 0))
                 DrawCardForSlot(i);
         }
 
@@ -239,7 +241,7 @@ public class ElementSlotSystem : MonoBehaviour
 
     void DrawCardForSlot(int index)
     {
-        var slot = slots[index];
+        var slot = _slots[index];
         if (slot.HasCard) return;
 
         int normalCount = slot.deck.Count;
@@ -261,7 +263,7 @@ public class ElementSlotSystem : MonoBehaviour
 
     bool AreAllElementResourcesSpent()
     {
-        foreach (var slot in slots)
+        foreach (var slot in _slots)
             if (slot.currentCard != null || slot.hasNeutralCard || slot.deck.Count > 0 || slot.neutralDeckCount > 0) return false;
         return true;
     }
@@ -269,12 +271,12 @@ public class ElementSlotSystem : MonoBehaviour
     void RebuildSpentElementDecks()
     {
         bool anyGrave = false;
-        foreach (var slot in slots)
+        foreach (var slot in _slots)
             if (slot.grave.Count > 0 || slot.neutralGraveCount > 0) { anyGrave = true; break; }
 
         if (!anyGrave) return;
 
-        foreach (var slot in slots)
+        foreach (var slot in _slots)
         {
             slot.deck.AddRange(slot.grave);
             slot.grave.Clear();
@@ -304,7 +306,7 @@ public class ElementSlotSystem : MonoBehaviour
     {
         if (!inBattle) return;
 
-        var slot = slots[index];
+        var slot = _slots[index];
         if (!slot.HasCard) return;
 
 
@@ -379,24 +381,24 @@ public class ElementSlotSystem : MonoBehaviour
 
         if (isCurse)
         {
-            slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
+            _slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
 
             resultMessage = $"패턴 발동: {SLOT_KEYS[slotIndex]} 카드 저주 {SLOT_CURSE_TURNS}회";
             Debug.Log($"[방해] {SLOT_KEYS[slotIndex]} 슬롯 저주 {SLOT_CURSE_TURNS}회");
         }
         else
         {
-            slots[slotIndex].neutralDeckCount++;
+            _slots[slotIndex].neutralDeckCount++;
 
             // 중립카드를 획득한 즉시 슬롯 최상단에 올려 즉시 사용 가능하게 한다.
-            if (!slots[slotIndex].hasNeutralCard)
+            if (!_slots[slotIndex].hasNeutralCard)
             {
-                slots[slotIndex].hasNeutralCard = true;
-                slots[slotIndex].neutralDeckCount = Mathf.Max(0, slots[slotIndex].neutralDeckCount - 1);
+                _slots[slotIndex].hasNeutralCard = true;
+                _slots[slotIndex].neutralDeckCount = Mathf.Max(0, _slots[slotIndex].neutralDeckCount - 1);
             }
 
             // Neutral is an extra card mixed into this slot's draw pool.
-            if (!slots[slotIndex].HasCard)
+            if (!_slots[slotIndex].HasCard)
                 DrawCardForSlot(slotIndex);
 
             resultMessage = $"패턴 발동: {SLOT_KEYS[slotIndex]}에 무속성 카드 추가";
@@ -413,33 +415,33 @@ public class ElementSlotSystem : MonoBehaviour
     /// <summary>특정 카드 인덱스 강화 +1 (전투 보상)</summary>
     public void UpgradeRunDeckCard(int cardIndex)
     {
-        if (cardIndex < 0 || cardIndex >= runDeck.Count) return;
-        runDeck[cardIndex].upgradeLevel++;
-        Debug.Log($"[카드 강화] {runDeck[cardIndex].elementKey} #{cardIndex} → +{runDeck[cardIndex].upgradeLevel}");
+        if (cardIndex < 0 || cardIndex >= _runDeck.Count) return;
+        _runDeck[cardIndex].upgradeLevel++;
+        Debug.Log($"[카드 강화] {_runDeck[cardIndex].elementKey} #{cardIndex} → +{_runDeck[cardIndex].upgradeLevel}");
     }
 
     /// <summary>속성 전체 강화 +1 (명상 보상)</summary>
     public void UpgradeElementGroup(string elementKey)
     {
-        if (!elementUpgradeLevels.ContainsKey(elementKey)) return;
-        elementUpgradeLevels[elementKey]++;
-        Debug.Log($"[속성 강화] {elementKey} Lv.{elementUpgradeLevels[elementKey]}");
+        if (!_elementUpgradeLevels.ContainsKey(elementKey)) return;
+        _elementUpgradeLevels[elementKey]++;
+        Debug.Log($"[속성 강화] {elementKey} Lv.{_elementUpgradeLevels[elementKey]}");
     }
 
     /// <summary>런 덱에 속성 카드 추가 (상점 구매)</summary>
     public void AddRunDeckCard(string elementKey)
     {
-        runDeck.Add(new RunDeckCard(elementKey));
-        Debug.Log($"[덱 추가] {elementKey} 추가 — 런 덱 총 {runDeck.Count}장");
+        _runDeck.Add(new RunDeckCard(elementKey));
+        Debug.Log($"[덱 추가] {elementKey} 추가 — 런 덱 총 {_runDeck.Count}장");
     }
 
     /// <summary>런 덱에서 속성 카드 1장 제거 (상점 정제)</summary>
     public bool RemoveRunDeckCard(string elementKey)
     {
-        int idx = runDeck.FindIndex(c => c.elementKey == elementKey);
+        int idx = _runDeck.FindIndex(c => c.elementKey == elementKey);
         if (idx < 0) return false;
-        runDeck.RemoveAt(idx);
-        Debug.Log($"[덱 제거] {elementKey} 제거 — 런 덱 총 {runDeck.Count}장");
+        _runDeck.RemoveAt(idx);
+        Debug.Log($"[덱 제거] {elementKey} 제거 — 런 덱 총 {_runDeck.Count}장");
         return true;
     }
 
@@ -451,9 +453,9 @@ public class ElementSlotSystem : MonoBehaviour
     {
         bool hadCurse = false;
 
-        for (int i = 0; i < slots.Length; i++)
+        for (int i = 0; i < _slots.Length; i++)
         {
-            if (slots[i] != null && slots[i].curseTurns > 0)
+            if (_slots[i] != null && _slots[i].curseTurns > 0)
             {
                 hadCurse = true;
                 break;
@@ -463,17 +465,17 @@ public class ElementSlotSystem : MonoBehaviour
         if (!hadCurse)
             return;
 
-        for (int i = 0; i < slots.Length; i++)
+        for (int i = 0; i < _slots.Length; i++)
         {
-            if (slots[i] != null && slots[i].curseTurns > 0)
-                slots[i].curseTurns = Mathf.Max(0, slots[i].curseTurns - 1);
+            if (_slots[i] != null && _slots[i].curseTurns > 0)
+                _slots[i].curseTurns = Mathf.Max(0, _slots[i].curseTurns - 1);
         }
     }
 
     public int       GetElementUpgradeLevel(string key)
-        => elementUpgradeLevels.TryGetValue(key, out int lv) ? lv : 0;
+        => _elementUpgradeLevels.TryGetValue(key, out int lv) ? lv : 0;
 
-    public SlotState GetSlot(int index) => slots[index];
+    public SlotState GetSlot(int index) => _slots[index];
 
     public string GetElementKeyBySlotKey(string slotKey)
     {
@@ -562,7 +564,7 @@ public class ElementSlotSystem : MonoBehaviour
     public void ApplyCurse(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= 4) return;
-        slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
+        _slots[slotIndex].curseTurns = SLOT_CURSE_TURNS;
         Debug.Log($"[ElementSlotSystem] {SLOT_KEYS[slotIndex]} 슬롯 저주 {SLOT_CURSE_TURNS}회");
     }
 
@@ -570,16 +572,16 @@ public class ElementSlotSystem : MonoBehaviour
     {
         if (slotIndex < 0 || slotIndex >= 4) return;
 
-        slots[slotIndex].neutralDeckCount++;
+        _slots[slotIndex].neutralDeckCount++;
 
         // 슬롯이 비어있으면 즉시 올림
-        if (!slots[slotIndex].hasNeutralCard && slots[slotIndex].currentCard == null)
+        if (!_slots[slotIndex].hasNeutralCard && _slots[slotIndex].currentCard == null)
         {
-            slots[slotIndex].hasNeutralCard = true;
-            slots[slotIndex].neutralDeckCount = Mathf.Max(0, slots[slotIndex].neutralDeckCount - 1);
+            _slots[slotIndex].hasNeutralCard = true;
+            _slots[slotIndex].neutralDeckCount = Mathf.Max(0, _slots[slotIndex].neutralDeckCount - 1);
         }
 
-        if (!slots[slotIndex].HasCard)
+        if (!_slots[slotIndex].HasCard)
             DrawCardForSlot(slotIndex);
 
         Debug.Log($"[ElementSlotSystem] {SLOT_KEYS[slotIndex]} 슬롯 무속성 카드 삽입");
