@@ -201,7 +201,7 @@ public class MonsterDecisionTree
         }
 
         for (int i = 0; i < 4; i++)
-            if (slotSys.slots[i].RemainingCount <= 0 || slotSys.slots[i].IsCursed)
+            if (slotSys.GetSlot(i).RemainingCount <= 0 || slotSys.GetSlot(i).IsCursed)
                 elemCount[i] = -1;
 
         int target = -1;
@@ -214,8 +214,8 @@ public class MonsterDecisionTree
             int mx = 0;
             for (int i = 0; i < 4; i++)
             {
-                int r = slotSys.slots[i].RemainingCount;
-                if (r > mx && !slotSys.slots[i].IsCursed) { mx = r; target = i; }
+                int r = slotSys.GetSlot(i).RemainingCount;
+                if (r > mx && !slotSys.GetSlot(i).IsCursed) { mx = r; target = i; }
             }
             if (target < 0) target = Random.Range(0, 4);
         }
@@ -242,7 +242,7 @@ public class MonsterDecisionTree
         foreach (int e in needed)
         {
             if (e < 0 || e >= 4) continue;
-            var slot = slotSys.slots[e];
+            var slot = slotSys.GetSlot(e);
             if (slot.RemainingCount <= 0) continue;
             int nc = slot.neutralDeckCount + slot.neutralGraveCount + (slot.hasNeutralCard ? 1 : 0);
             if (nc < minN) { minN = nc; best = e; }
@@ -252,7 +252,7 @@ public class MonsterDecisionTree
             minN = int.MaxValue;
             for (int i = 0; i < 4; i++)
             {
-                var slot = slotSys.slots[i];
+                var slot = slotSys.GetSlot(i);
                 int nc = slot.neutralDeckCount + slot.neutralGraveCount + (slot.hasNeutralCard ? 1 : 0);
                 if (nc < minN) { minN = nc; best = i; }
             }

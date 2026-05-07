@@ -195,7 +195,7 @@ public class MonsterMidPattern : MonoBehaviour
             }
         }
         for (int i = 0; i < 4; i++)
-            if (slotSys.slots[i].RemainingCount <= 0 || slotSys.slots[i].IsCursed)
+            if (slotSys.GetSlot(i).RemainingCount <= 0 || slotSys.GetSlot(i).IsCursed)
                 score[i] = -1;
 
         int best = -1;
@@ -210,7 +210,7 @@ public class MonsterMidPattern : MonoBehaviour
             for (int i = 0; i < 4; i++)
             {
                 if (score[i] < 0) continue;
-                var slot = slotSys.slots[i];
+                var slot = slotSys.GetSlot(i);
                 int nc = slot.neutralDeckCount + slot.neutralGraveCount + (slot.hasNeutralCard ? 1 : 0);
                 if (nc < minNull) { minNull = nc; best = i; }
             }

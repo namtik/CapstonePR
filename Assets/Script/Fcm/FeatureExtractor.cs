@@ -90,7 +90,7 @@ public static class FeatureExtractor
         foreach (int e in neededElements)
         {
             if (e < 0 || e >= 4) continue;
-            var slot = slotSys.slots[e];
+            var slot = slotSys.GetSlot(e);
             int nullCount = slot.neutralDeckCount + slot.neutralGraveCount
                           + (slot.hasNeutralCard ? 1 : 0);
             totalNull += nullCount;
@@ -187,7 +187,7 @@ public static class FeatureExtractor
         ElementSlotSystem slotSys = ElementSlotSystem.Instance;
         if (slotSys == null) return 0f;
         int rem = 0;
-        for (int i = 0; i < 4; i++) rem += slotSys.slots[i].RemainingCount;
+        for (int i = 0; i < 4; i++) rem += slotSys.GetSlot(i).RemainingCount;
         return Mathf.Clamp01((float)(TOTAL_CARDS - rem) / TOTAL_CARDS);
     }
 
@@ -211,7 +211,7 @@ public static class FeatureExtractor
         float[] rates = new float[4];
         for (int i = 0; i < 4; i++)
         {
-            int r = slotSys.slots[i].RemainingCount;
+            int r = slotSys.GetSlot(i).RemainingCount;
             totalRem += r;
             rates[i] = (float)r / ElementSlotSystem.CARDS_PER_ELEMENT;
         }
@@ -271,7 +271,7 @@ public static class FeatureExtractor
     {
         int[] rem = new int[4];
         if (slotSys != null)
-            for (int i = 0; i < 4; i++) rem[i] = slotSys.slots[i].RemainingCount;
+            for (int i = 0; i < 4; i++) rem[i] = slotSys.GetSlot(i).RemainingCount;
         else
             for (int i = 0; i < 4; i++) rem[i] = 99;
         foreach (int e in consumed)
@@ -292,7 +292,7 @@ public static class FeatureExtractor
         if (slotSys == null) return true;
         int[] n = new int[4];
         foreach (int e in elements) { if (e < 0 || e >= 4) return false; n[e]++; }
-        for (int i = 0; i < 4; i++) if (n[i] > 0 && slotSys.slots[i].RemainingCount < n[i]) return false;
+        for (int i = 0; i < 4; i++) if (n[i] > 0 && slotSys.GetSlot(i).RemainingCount < n[i]) return false;
         return true;
     }
 
