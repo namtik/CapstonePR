@@ -139,6 +139,13 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (player == null)
             player = FindFirstObjectByType<Player>();
 
+        // 새 전투 시스템: 적 공격 피격 처리 전 화상 발동 (PDF 명세)
+        if (Battle.NewBattleController.Instance != null)
+        {
+            ApplyBurnBeforeAttack();
+            if (!stat.IsAlive) return; // 화상으로 적이 사망하면 공격하지 않음
+        }
+
         int damagePerHit = Mathf.RoundToInt(stat.AttackDamage);
         if (damagePerHit <= 0)
             damagePerHit = fallbackGaugeFullDamage;
@@ -151,6 +158,32 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
 
         stat.RollNewAttackPlan();
+    }
+
+    /// <summary>
+    /// PDF [화상]: 적 공격 시 피격 처리 전 발동
+    /// 1. 화상 스택 N만큼 고정피해
+    /// 2. 화상 스택 n/2 (절반 감소)
+    /// </summary>
+    void ApplyBurnBeforeAttack()
+    {
+        if (stat == null) return;
+        if (!stat.statusEffects.TryGetValue("burn", out int burn)) return;
+        if (burn <= 0) return;
+
+        stat.TakeDamage(burn);
+
+        // 데미지 숫자 + 화상 알림 텍스트
+        if (view != null)
+        {
+            view.ShowDamage(burn);
+            view.ShowMidPatternNotice($"화상 {burn}!");
+        }
+
+        int after = burn / 2;
+        stat.statusEffects["burn"] = after;
+        OnStatusChanged?.Invoke("burn", after);
+        Debug.Log($"[화상] 적 {burn} 고정피해, 잔여 화상={after}");
     }
     IEnumerator ExecuteMultiHit(int count, int damage)
     {

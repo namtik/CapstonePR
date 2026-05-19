@@ -446,7 +446,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c61bdb019524624bb58f8f3f77e8283, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterMidPattern
-  useRBFN: 1
+  useRBFN: 0
   stochastic: 1
   deterministicThreshold: 0.8
   rbfn:
@@ -505,6 +505,9 @@ MonoBehaviour:
     explorerUrgency: 0.5
     burstReplenishThreshold: 0.5
     burstBalanceThreshold: 0.4
+    noThreatThreshold: 0.25
+    comboApproachThreshold: 0.5
+    depletionThreshold: 0.92
   debugOverlay: {fileID: 0}
   collectData: 1
   logFolderName: fcm_logs

@@ -1,0 +1,413 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
+using Battle.Card;
+using Battle.Deck;
+
+namespace Battle.UI
+{
+    /// <summary>
+    /// 5장 손패 HUD. NewSkillCard 프리팹을 인스턴스화해서 슬롯을 구성한다.
+    /// 콤보 슬롯/콤보 스킬 UI는 피버 모드 토글로 표시/숨김.
+    /// </summary>
+    public class CardHandHUD : MonoBehaviour
+    {
+        public const int SLOT_COUNT = CardDeckSystem.HAND_LIMIT;
+
+        [Header("프리팹 (필수)")]
+        [SerializeField] private NewCardView cardPrefab;
+
+        [Header("배치")]
+        [Tooltip("카드 슬롯들이 정렬될 부모. 비우면 본 트랜스폼 자식으로 자동 생성.")]
+        [SerializeField] private RectTransform handRoot;
+        [Tooltip("드래그 중 카드가 옮겨질 상위 캔버스 레이어. 비우면 같은 캔버스의 최상단을 자동 사용.")]
+        [SerializeField] private RectTransform dragLayer;
+        public RectTransform DragLayer => dragLayer != null ? dragLayer : handRoot;
+
+        [Header("레이아웃 — 슬롯 위치 자동 정렬")]
+        [Tooltip("슬롯 간 간격 (x). NewSkillCard 프리팹이 scale=2일 때 ~520 권장. 캔버스/스케일러에 맞춰 조정.")]
+        [SerializeField] private Vector2 slotSpacing = new Vector2(520f, 0f);
+        [SerializeField] private Vector2 handAnchoredPos = new Vector2(0f, 240f);
+        [Tooltip("드래그 종료 시 스크린 Y가 이 값 이상이면 카드 사용으로 간주.")]
+        [SerializeField] private float useThresholdY = 500f;
+
+        [Header("Fan Layout — 손패 부채꼴 연출")]
+        [Tooltip("ON이면 카드들이 호 형태로 회전·배치된다.")]
+        [SerializeField] private bool fanLayout = true;
+        [Tooltip("부채꼴 반지름. 클수록 호가 평평해짐.")]
+        [SerializeField] private float fanRadius = 1600f;
+        [Tooltip("부채꼴 전체 각도(도). 클수록 카드 사이 회전 차이가 커짐.")]
+        [SerializeField] private float fanArcAngle = 24f;
+        [Tooltip("호 위 가장자리에서 카드들이 떨어질 깊이. 작을수록 카드들이 살짝 아래로 호를 그림.")]
+        [SerializeField] private float fanVerticalDip = 50f;
+
+        [Header("콤보 UI — 피버 전용")]
+        [Tooltip("피버 발동 시 활성화될 콤보 슬롯 패널.")]
+        [SerializeField] private GameObject comboSlotPanel;
+        [Tooltip("피버 발동 시 활성화될 콤보 스킬 목록 패널.")]
+        [SerializeField] private GameObject comboSkillPanel;
+        [Tooltip("콤보 슬롯 3칸의 Image. 비워두면 comboSlotPanel 자식에서 자동 탐색.")]
+        [SerializeField] private Image[] comboSlotImages = new Image[3];
+        [SerializeField] private Color emptyComboSlotColor = new Color(0.25f, 0.25f, 0.25f, 0.4f);
+
+        [Header("콤보 스킬 목록 (SkillListItem 프리팹)")]
+        [Tooltip("콤보 스킬 한 항목을 표현할 프리팹. SkillListItem.prefab 사용.")]
+        [SerializeField] private SkillListItemUI comboSkillItemPrefab;
+        [Tooltip("콤보 스킬 항목들이 배치될 컨테이너. 비워두면 comboSkillPanel을 사용.")]
+        [SerializeField] private RectTransform comboSkillItemContainer;
+
+        [Header("정보 텍스트")]
+        [SerializeField] private TMP_Text drawCountText;
+        [SerializeField] private TMP_Text discardCountText;
+        [SerializeField] private TMP_Text feverCountText;
+
+        private readonly List<NewCardView> _cardViews = new List<NewCardView>();
+        private readonly List<RectTransform> _slotAnchors = new List<RectTransform>();
+        private CardDeckSystem _deck;
+        public System.Func<CardInstance, bool> UseCardCallback;
+
+        void Awake()
+        {
+            EnsureHandRoot();
+            EnsureDragLayer();
+            BuildSlotAnchors();
+            SetFeverMode(false); // 초기엔 콤보 UI 숨김
+        }
+
+        public void Bind(CardDeckSystem deck)
+        {
+            if (_deck != null) _deck.OnPileChanged -= Refresh;
+            _deck = deck;
+            if (_deck != null) _deck.OnPileChanged += Refresh;
+            Refresh();
+        }
+
+        void OnDestroy()
+        {
+            if (_deck != null) _deck.OnPileChanged -= Refresh;
+        }
+
+        public void SetFeverText(string text)
+        {
+            if (feverCountText != null) feverCountText.text = text;
+        }
+
+        /// <summary>피버 활성/비활성에 따라 콤보 슬롯/스킬 UI를 토글.</summary>
+        public void SetFeverMode(bool active)
+        {
+            if (comboSlotPanel != null) comboSlotPanel.SetActive(active);
+            if (comboSkillPanel != null) comboSkillPanel.SetActive(active);
+        }
+
+        /// <summary>콤보 슬롯 3칸을 현재 입력 시퀀스로 갱신. 빈 슬롯은 회색.</summary>
+        public void UpdateComboSlot(IList<CardElement> input)
+        {
+            EnsureComboSlotImagesBound();
+
+            if (comboSlotImages == null || comboSlotImages.Length == 0)
+            {
+                Debug.LogWarning("[CardHandHUD] UpdateComboSlot: comboSlotImages가 비어있고 자동 탐색도 실패. ComboSlotPanel의 자식 Image 3개를 인스펙터에 연결하세요.");
+                return;
+            }
+
+            for (int i = 0; i < comboSlotImages.Length; i++)
+            {
+                var img = comboSlotImages[i];
+                if (img == null) continue;
+
+                if (input != null && i < input.Count)
+                {
+                    Sprite s = cardPrefab != null ? cardPrefab.GetElementSprite(input[i]) : null;
+                    if (s != null)
+                    {
+                        img.sprite = s;
+                        img.color = Color.white;
+                    }
+                    else
+                    {
+                        img.sprite = null;
+                        img.color = ColorForElement(input[i]);
+                    }
+                    img.enabled = true;
+                }
+                else
+                {
+                    img.sprite = null;
+                    img.color = emptyComboSlotColor;
+                    img.enabled = true;
+                }
+            }
+        }
+
+        /// <summary>인스펙터에 콤보 슬롯 Image가 안 연결됐으면 comboSlotPanel 자식에서 Image 3개를 자동 탐색.</summary>
+        void EnsureComboSlotImagesBound()
+        {
+            bool needBind = comboSlotImages == null || comboSlotImages.Length < 3
+                || comboSlotImages[0] == null || comboSlotImages[1] == null || comboSlotImages[2] == null;
+            if (!needBind) return;
+            if (comboSlotPanel == null) return;
+
+            var collected = new List<Image>();
+            // 직계 자식 우선
+            for (int i = 0; i < comboSlotPanel.transform.childCount && collected.Count < 3; i++)
+            {
+                var img = comboSlotPanel.transform.GetChild(i).GetComponent<Image>();
+                if (img != null) collected.Add(img);
+            }
+            // 부족하면 모든 후손 검색
+            if (collected.Count < 3)
+            {
+                var all = comboSlotPanel.GetComponentsInChildren<Image>(true);
+                foreach (var img in all)
+                {
+                    if (img == null) continue;
+                    if (img.gameObject == comboSlotPanel) continue; // 패널 자체는 제외
+                    if (collected.Contains(img)) continue;
+                    collected.Add(img);
+                    if (collected.Count >= 3) break;
+                }
+            }
+
+            if (collected.Count >= 3)
+            {
+                comboSlotImages = new Image[3] { collected[0], collected[1], collected[2] };
+                Debug.Log("[CardHandHUD] 콤보 슬롯 Image 3개 자동 바인딩 완료.");
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 콤보 스킬 목록 — SkillListItem 프리팹 인스턴스화
+        // ─────────────────────────────────────────────────────────────
+
+        private readonly List<SkillListItemUI> _comboSkillItems = new List<SkillListItemUI>();
+
+        /// <summary>콤보 스킬 목록을 SkillListItem 프리팹으로 표시. 발동된 스킬은 반투명.</summary>
+        public void UpdateComboSkillList(IList<ComboSkillDef> skills, HashSet<int> activatedIndices)
+        {
+            if (comboSkillItemPrefab == null)
+            {
+                Debug.LogWarning("[CardHandHUD] comboSkillItemPrefab이 미연결 — 콤보 스킬 목록 표시 불가.");
+                return;
+            }
+
+            RectTransform container = comboSkillItemContainer != null
+                ? comboSkillItemContainer
+                : (comboSkillPanel != null ? comboSkillPanel.transform as RectTransform : null);
+
+            if (container == null)
+            {
+                Debug.LogWarning("[CardHandHUD] 콤보 스킬 컨테이너가 없음 — comboSkillItemContainer 또는 comboSkillPanel 연결 필요.");
+                return;
+            }
+
+            // 필요 만큼 인스턴스화
+            int needed = skills != null ? skills.Count : 0;
+            while (_comboSkillItems.Count < needed)
+            {
+                var item = Instantiate(comboSkillItemPrefab, container);
+                _comboSkillItems.Add(item);
+            }
+
+            // 속성 sprite는 NewSkillCard prefab의 매핑을 공유
+            Sprite fireSp  = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Fire)  : null;
+            Sprite waterSp = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Water) : null;
+            Sprite windSp  = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Wind)  : null;
+            Sprite earthSp = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Earth) : null;
+
+            // 표시 갱신
+            for (int i = 0; i < _comboSkillItems.Count; i++)
+            {
+                var item = _comboSkillItems[i];
+                if (item == null) continue;
+
+                if (i < needed && skills[i] != null)
+                {
+                    item.gameObject.SetActive(true);
+                    bool activated = activatedIndices != null && activatedIndices.Contains(i);
+                    item.SetupForCombo(skills[i], activated, fireSp, waterSp, windSp, earthSp);
+                }
+                else
+                {
+                    item.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        static Color ColorForElement(CardElement element) => element switch
+        {
+            CardElement.Fire    => new Color(0.95f, 0.55f, 0.40f, 1f),
+            CardElement.Water   => new Color(0.50f, 0.75f, 0.95f, 1f),
+            CardElement.Wind    => new Color(0.60f, 0.90f, 0.60f, 1f),
+            CardElement.Earth   => new Color(0.85f, 0.70f, 0.45f, 1f),
+            CardElement.Neutral => new Color(0.70f, 0.70f, 0.70f, 1f),
+            _ => new Color(0.5f, 0.5f, 0.5f, 1f)
+        };
+
+        // ─────────────────────────────────────────────────────────────
+        // 손패 갱신
+        // ─────────────────────────────────────────────────────────────
+
+        public void Refresh()
+        {
+            if (_deck == null) return;
+
+            var hand = _deck.Hand;
+            for (int i = 0; i < SLOT_COUNT; i++)
+            {
+                NewCardView view = i < _cardViews.Count ? _cardViews[i] : null;
+                if (view == null && cardPrefab != null && i < _slotAnchors.Count)
+                {
+                    view = Instantiate(cardPrefab, _slotAnchors[i]);
+                    view.Bind(this, i);
+                    _cardViews.Add(view);
+                }
+                if (view == null) continue;
+
+                // 사용된 카드 view가 DragLayer로 옮겨졌을 수 있으므로 매번 슬롯으로 복원
+                if (i < _slotAnchors.Count)
+                {
+                    RectTransform vrect = (RectTransform)view.transform;
+                    vrect.SetParent(_slotAnchors[i], false);
+                    vrect.anchorMin = new Vector2(0.5f, 0.5f);
+                    vrect.anchorMax = new Vector2(0.5f, 0.5f);
+                    vrect.pivot = new Vector2(0.5f, 0.5f);
+                    vrect.anchoredPosition = Vector2.zero;
+                    vrect.localRotation = Quaternion.identity; // 슬롯의 fan 회전을 그대로 따름
+                    view.ResetToHomeScale();
+                }
+
+                CardInstance card = i < hand.Count ? hand[i] : null;
+                view.SetCard(card);
+                view.CaptureHome();
+            }
+
+            if (drawCountText != null) drawCountText.text = $"{_deck.DrawCount}";
+            if (discardCountText != null) discardCountText.text = $"{_deck.DiscardCount}";
+        }
+
+        public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
+        {
+            if (view.Card == null) return false;
+            if (UseCardCallback == null) return false;
+            if (ev.position.y < useThresholdY) return false;
+            return UseCardCallback(view.Card);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 루트/슬롯 자동 셋업
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>UI 좌표계를 보장하기 위해 캔버스를 우선순위대로 탐색.</summary>
+        Canvas ResolveTargetCanvas()
+        {
+            // 1) CardHandHUD 자신의 부모 캔버스 (CardHandHUD가 캔버스 안일 때)
+            Canvas canvas = GetComponentInParent<Canvas>();
+            // 2) handRoot가 인스펙터로 연결되어 있으면 그 캔버스
+            if (canvas == null && handRoot != null) canvas = handRoot.GetComponentInParent<Canvas>();
+            // 3) dragLayer가 연결되어 있으면 그 캔버스
+            if (canvas == null && dragLayer != null) canvas = dragLayer.GetComponentInParent<Canvas>();
+            // 4) 씬 전체 캔버스 검색
+            if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
+            return canvas;
+        }
+
+        void EnsureHandRoot()
+        {
+            if (handRoot != null) return;
+
+            // CardHandHUD가 캔버스 밖에 있어도 슬롯이 보이도록 캔버스 안에 강제 생성
+            Canvas canvas = ResolveTargetCanvas();
+            Transform parent = canvas != null ? canvas.transform : transform;
+            if (canvas == null)
+                Debug.LogWarning("[CardHandHUD] 씬에 Canvas가 없어 handRoot가 캔버스 밖에 만들어집니다 — UI가 렌더되지 않을 수 있습니다.");
+
+            var go = new GameObject("HandRoot", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            handRoot = (RectTransform)go.transform;
+            handRoot.anchorMin = new Vector2(0.5f, 0f);
+            handRoot.anchorMax = new Vector2(0.5f, 0f);
+            handRoot.pivot = new Vector2(0.5f, 0f);
+            handRoot.anchoredPosition = handAnchoredPos;
+            handRoot.sizeDelta = new Vector2(slotSpacing.x * SLOT_COUNT, 400f);
+        }
+
+        void EnsureDragLayer()
+        {
+            if (dragLayer != null) return;
+
+            // CardHandHUD가 캔버스 밖에 있더라도 dragLayer는 반드시 캔버스 안에 만들어야
+            // ScreenPointToWorldPointInRectangle 좌표 변환이 정확하게 동작
+            Canvas canvas = ResolveTargetCanvas();
+            Transform parent = canvas != null ? canvas.transform : transform;
+            if (canvas == null)
+                Debug.LogWarning("[CardHandHUD] 씬에 Canvas가 없어 dragLayer가 캔버스 밖에 만들어집니다 — 드래그 좌표가 어긋날 수 있습니다.");
+
+            var go = new GameObject("DragLayer", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            dragLayer = (RectTransform)go.transform;
+            dragLayer.anchorMin = Vector2.zero;
+            dragLayer.anchorMax = Vector2.one;
+            dragLayer.offsetMin = Vector2.zero;
+            dragLayer.offsetMax = Vector2.zero;
+            dragLayer.SetAsLastSibling();
+        }
+
+        void BuildSlotAnchors()
+        {
+            _slotAnchors.Clear();
+            if (fanLayout) BuildFanSlotAnchors();
+            else BuildLinearSlotAnchors();
+        }
+
+        void BuildLinearSlotAnchors()
+        {
+            float totalWidth = slotSpacing.x * (SLOT_COUNT - 1);
+            float startX = -totalWidth * 0.5f;
+
+            for (int i = 0; i < SLOT_COUNT; i++)
+            {
+                var slotGo = new GameObject($"Slot_{i}", typeof(RectTransform));
+                slotGo.transform.SetParent(handRoot, false);
+                var rect = (RectTransform)slotGo.transform;
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = new Vector2(startX + i * slotSpacing.x, slotSpacing.y);
+                rect.sizeDelta = Vector2.zero;
+                _slotAnchors.Add(rect);
+            }
+        }
+
+        /// <summary>카드 게임 손패 연출 — 호(arc) 위에 카드들을 회전·배치.</summary>
+        void BuildFanSlotAnchors()
+        {
+            int n = SLOT_COUNT;
+            float startAngle = -fanArcAngle * 0.5f;
+            float angleStep = n > 1 ? fanArcAngle / (n - 1) : 0f;
+
+            // 호의 가장 위쪽 점이 (0, 0)이 되도록 — 원의 중심은 (0, -fanRadius)
+            for (int i = 0; i < n; i++)
+            {
+                float angleDeg = startAngle + i * angleStep;
+                float angleRad = angleDeg * Mathf.Deg2Rad;
+
+                // 원 위의 점: 중심에서 위로 fanRadius 떨어진 호
+                float x = Mathf.Sin(angleRad) * fanRadius;
+                float y = (Mathf.Cos(angleRad) - 1f) * fanRadius - fanVerticalDip;
+
+                var slotGo = new GameObject($"Slot_{i}", typeof(RectTransform));
+                slotGo.transform.SetParent(handRoot, false);
+                var rect = (RectTransform)slotGo.transform;
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = new Vector2(x, y);
+                rect.localRotation = Quaternion.Euler(0f, 0f, -angleDeg); // 호 방향으로 회전
+                rect.sizeDelta = Vector2.zero;
+                _slotAnchors.Add(rect);
+            }
+        }
+    }
+}

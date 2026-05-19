@@ -52,9 +52,19 @@ public class Roundmanager : MonoBehaviour
         EnsureRuntimePlayerExists();
     }
 
+    /// <summary>새 전투 시스템(NewBattleController) 사용 중이면 기존 ElementSlot/Combo 자동 셋업을 건너뛴다.</summary>
+    bool IsNewBattleSystemActive()
+    {
+        return Battle.NewBattleController.Instance != null;
+    }
+
     void EnsureElementCombatSystems()
     {
         EnsureRuntimePlayerExists();
+
+        // 새 전투 시스템 모드: 레거시 ElementSlot/HUD 자동 생성 차단
+        if (IsNewBattleSystemActive())
+            return;
 
         // Ensure slot system exists even when scene setup is missing.
         var slotSystem = ElementSlotSystem.Instance ?? FindFirstObjectByType<ElementSlotSystem>();
@@ -108,6 +118,13 @@ public class Roundmanager : MonoBehaviour
     {
         EnsureElementCombatSystems();
 
+        // 새 전투 시스템 모드에서는 starter 스킬 선택 UI를 건너뜀
+        if (IsNewBattleSystemActive())
+        {
+            ContinueStartRound(roundData);
+            return;
+        }
+
         // 첫 스테이지 진입 시 스킬이 없으면 초기 스킬 선택 후 라운드 시작
         if (ComboSystem.Instance != null && ComboSystem.Instance.learnedSkills.Count == 0)
         {
@@ -158,7 +175,8 @@ public class Roundmanager : MonoBehaviour
 
     public void EndRound()
     {
-        ElementSlotSystem.Instance?.EndBattle();
+        if (!IsNewBattleSystemActive())
+            ElementSlotSystem.Instance?.EndBattle();
 
         currentRoundHandler.OnExitRound(this);
         OnRoundClear?.Invoke();
@@ -170,7 +188,8 @@ public class Roundmanager : MonoBehaviour
     public void StartCombat(CombatRoundData data)
     {
         EnsureElementCombatSystems();
-        ElementSlotSystem.Instance?.StartBattle();
+        if (!IsNewBattleSystemActive())
+            ElementSlotSystem.Instance?.StartBattle();
 
         Player player = FindFirstObjectByType<Player>();
         if (player != null) player.ResetStatusForNewBattle();
@@ -185,7 +204,8 @@ public class Roundmanager : MonoBehaviour
     public void StartCombat(EliteRoundData data)
     {
         EnsureElementCombatSystems();
-        ElementSlotSystem.Instance?.StartBattle();
+        if (!IsNewBattleSystemActive())
+            ElementSlotSystem.Instance?.StartBattle();
 
         Player player = FindFirstObjectByType<Player>();
         if (player != null) player.ResetStatusForNewBattle();
@@ -200,7 +220,8 @@ public class Roundmanager : MonoBehaviour
     public void StartBoss(BossRoundData data)
     {
         EnsureElementCombatSystems();
-        ElementSlotSystem.Instance?.StartBattle();
+        if (!IsNewBattleSystemActive())
+            ElementSlotSystem.Instance?.StartBattle();
 
         Player player = FindFirstObjectByType<Player>();
         if (player != null) player.ResetStatusForNewBattle();
@@ -271,7 +292,8 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void ReturnToMap()
     {
-        ElementSlotSystem.Instance?.EndBattle();
+        if (!IsNewBattleSystemActive())
+            ElementSlotSystem.Instance?.EndBattle();
 
         var stateController = GameStateController.Instance;
         if (stateController == null)

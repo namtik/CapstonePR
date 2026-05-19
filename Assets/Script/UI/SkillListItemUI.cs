@@ -2,63 +2,126 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
+using Battle;
+using Battle.Card;
 using static SkillDataParser;
 
 public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
-    [Header("UI ¿¬°á")]
+    [Header("UI ì°¸ì¡°")]
     public TextMeshProUGUI nameText;
-    public Transform commandIconContainer; // ¿ø¼Ò ¾ÆÀÌÄÜµéÀÌ µé¾î°¥ ºÎ¸ğ °´Ã¼
+    public Transform commandIconContainer; // ì†ì„± ì•„ì´ì½˜ë“¤ì´ ë“¤ì–´ê°ˆ ë¶€ëª¨
 
-    [Header("Ä¿¸Çµå Àü¿ë ¾ÆÀÌÄÜ ¼³Á¤")]
+    [Header("ì»¤ë§¨ë“œ ì†ì„± ì•„ì´ì½˜ ë§¤í•‘ (Q/W/E/R)")]
     public Sprite iconQ; // Q
     public Sprite iconW; // W
     public Sprite iconE; // E
-    public Sprite iconR; // R 
+    public Sprite iconR; // R
 
-    private GameObject tooltipObj; // ÅøÆÁ ÀúÀå¿ë
+    private GameObject tooltipObj;
 
     public void Setup(SkillData skill)
     {
-        // ½ºÅ³ ÀÌ¸§ ¼¼ÆÃ
-        if (nameText != null)
-            nameText.text = skill.name;
-
-        //  Ä¿¸Çµå(¿¹: "qqw")¸¦ ÀĞ¾î¼­ ¿ø¼Ò ¾ÆÀÌÄÜ »ı¼º
+        if (nameText != null) nameText.text = skill.name;
         CreateCommandIcons(skill.combo);
-
-        // ÅøÆÁ »ı¼º
         CreateTooltip(skill);
     }
 
-    // Ä¿¸Çµå ¹®ÀÚ¿­À» ºĞ¼®ÇØ¼­ ¿ø¼Ò ¾ÆÀÌÄÜÀ» ¸¸µå´Â ÇÔ¼ö
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ìƒˆ ì „íˆ¬ ì‹œìŠ¤í…œ: ComboSkillDef ì „ìš© ì…‹ì—…
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    /// <summary>
+    /// ìƒˆ ì „íˆ¬ ì‹œìŠ¤í…œì˜ ComboSkillDef í‘œì‹œìš©. ì†ì„±ë³„ spriteëŠ” í˜¸ì¶œìê°€ ì „ë‹¬.
+    /// ë°œë™ëœ ì½¤ë³´ëŠ” ë°˜íˆ¬ëª…ìœ¼ë¡œ í‘œì‹œ.
+    /// </summary>
+    public void SetupForCombo(ComboSkillDef combo, bool activated,
+        Sprite fireSp, Sprite waterSp, Sprite windSp, Sprite earthSp)
+    {
+        if (combo == null) return;
+
+        if (nameText != null)
+            nameText.text = combo.displayName;
+
+        CreateComboElementIcons(combo, fireSp, waterSp, windSp, earthSp);
+
+        var canvasGroup = GetComponent<CanvasGroup>();
+        if (canvasGroup == null) canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        canvasGroup.alpha = activated ? 0.4f : 1f;
+    }
+
+    void CreateComboElementIcons(ComboSkillDef combo,
+        Sprite fireSp, Sprite waterSp, Sprite windSp, Sprite earthSp)
+    {
+        if (commandIconContainer == null) return;
+
+        foreach (Transform child in commandIconContainer)
+            Destroy(child.gameObject);
+
+        CardElement[] slots = { combo.slot1, combo.slot2, combo.slot3 };
+        foreach (var element in slots)
+        {
+            Sprite s = element switch
+            {
+                CardElement.Fire    => fireSp,
+                CardElement.Water   => waterSp,
+                CardElement.Wind    => windSp,
+                CardElement.Earth   => earthSp,
+                _ => null
+            };
+
+            GameObject iconObj = new GameObject($"Element_{element}");
+            iconObj.transform.SetParent(commandIconContainer, false);
+            RectTransform rect = iconObj.AddComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(50f, 50f);
+            Image img = iconObj.AddComponent<Image>();
+            img.raycastTarget = false;
+
+            if (s != null)
+            {
+                img.sprite = s;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.color = ColorForElement(element);
+            }
+        }
+    }
+
+    static Color ColorForElement(CardElement element) => element switch
+    {
+        CardElement.Fire    => new Color(0.95f, 0.55f, 0.40f, 1f),
+        CardElement.Water   => new Color(0.50f, 0.75f, 0.95f, 1f),
+        CardElement.Wind    => new Color(0.60f, 0.90f, 0.60f, 1f),
+        CardElement.Earth   => new Color(0.85f, 0.70f, 0.45f, 1f),
+        CardElement.Neutral => new Color(0.70f, 0.70f, 0.70f, 1f),
+        _ => new Color(0.5f, 0.5f, 0.5f, 1f)
+    };
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ê¸°ì¡´ ComboSystemìš© (Q/W/E/R ë¬¸ì ê¸°ë°˜)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
     private void CreateCommandIcons(string combo)
     {
         if (commandIconContainer == null || string.IsNullOrEmpty(combo)) return;
 
-        // ±âÁ¸¿¡ »ı¼ºµÈ °Ô ÀÖ´Ù¸é ½Ï Áö¿ì±â
         foreach (Transform child in commandIconContainer)
-        {
             Destroy(child.gameObject);
-        }
 
-        // ´ë¹®ÀÚ ÀÔ·Âµµ Ã³¸®ÇÏ±â À§ÇØ ¼Ò¹®ÀÚ·Î ÅëÀÏ
         combo = combo.ToLower();
 
-        // ¹®ÀÚ ÇÏ³ªÇÏ³ª(q, w, e, r)¸¦ È®ÀÎÇÏ¸ç ÀÌ¹ÌÁö »ı¼º
         foreach (char c in combo)
         {
             GameObject iconObj = new GameObject($"Element_{c}");
             iconObj.transform.SetParent(commandIconContainer, false);
 
-            // ¾ÆÀÌÄÜ Å©±â ¼³Á¤
             RectTransform rect = iconObj.AddComponent<RectTransform>();
             rect.sizeDelta = new Vector2(50f, 50f);
 
             Image img = iconObj.AddComponent<Image>();
 
-
-            // ComboSystem¿¡¼­ ¾ËÆÄºª¿¡ ¸Â´Â ½ºÇÁ¶óÀÌÆ®¸¦ °¡Á®¿È
             Sprite elementSprite = GetElementSprite(c);
             if (elementSprite != null)
             {
@@ -66,12 +129,11 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
             }
             else
             {
-                img.color = Color.gray; // ¸ÅÄªµÇ´Â °Ô ¾øÀ¸¸é È¸»ö ³×¸ğ
+                img.color = Color.gray;
             }
         }
     }
 
-    // Q, W, E, R ¾ËÆÄºª¿¡ ¸ÂÃç¼­ ComboSystemÀÇ ½ºÇÁ¶óÀÌÆ®¸¦ ¹İÈ¯
     private Sprite GetElementSprite(char c)
     {
         switch (c)
@@ -84,7 +146,6 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
     }
 
-    // ¸¶¿ì½º ÀÌº¥Æ® (ÅøÆÁ On/Off)
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (tooltipObj != null) tooltipObj.SetActive(true);
@@ -95,7 +156,6 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         if (tooltipObj != null) tooltipObj.SetActive(false);
     }
 
-    // ÅøÆÁ »ı¼º (ÀÌÀü°ú µ¿ÀÏ, ¿ìÃø Ç¥½Ã)
     private void CreateTooltip(SkillData skillData)
     {
         tooltipObj = new GameObject("Tooltip");
@@ -104,8 +164,8 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         RectTransform tooltipRect = tooltipObj.AddComponent<RectTransform>();
         tooltipRect.anchorMin = new Vector2(0f, 0.5f);
         tooltipRect.anchorMax = new Vector2(0f, 0.5f);
-        tooltipRect.pivot = new Vector2(1f, 0.5f); // ±âÁØÁ¡À» ÅøÆÁÀÇ ¿ìÃøÀ¸·Î
-        tooltipRect.anchoredPosition = new Vector2(-15f, 0f); // ÆĞ³Î ÁÂÃøÀ¸·Î 15¸¸Å­ ¶ç¿ò
+        tooltipRect.pivot = new Vector2(1f, 0.5f);
+        tooltipRect.anchoredPosition = new Vector2(-15f, 0f);
         tooltipRect.sizeDelta = new Vector2(200f, 150f);
 
         Image bgImage = tooltipObj.AddComponent<Image>();
@@ -115,7 +175,6 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         bgOutline.effectColor = Color.black;
         bgOutline.effectDistance = new Vector2(2, -2);
 
-        // Á¦¸ñ
         GameObject titleObj = new GameObject("Title");
         titleObj.transform.SetParent(tooltipObj.transform, false);
         RectTransform titleRect = titleObj.AddComponent<RectTransform>();
@@ -132,7 +191,6 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         titleText.fontStyle = FontStyle.Bold;
         titleText.text = skillData.name;
 
-        // ¼³¸í
         GameObject descObj = new GameObject("Description");
         descObj.transform.SetParent(tooltipObj.transform, false);
         RectTransform descRect = descObj.AddComponent<RectTransform>();
@@ -146,8 +204,8 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         descText.fontSize = 16;
         descText.alignment = TextAnchor.MiddleCenter;
         descText.color = Color.black;
-        descText.text = $"ÄŞº¸: {skillData.combo}\n\n{skillData.description}";
+        descText.text = $"ì½¤ë³´: {skillData.combo}\n\n{skillData.description}";
 
-        tooltipObj.SetActive(false); // ½ÃÀÛ ½Ã ²¨µÒ
+        tooltipObj.SetActive(false);
     }
 }

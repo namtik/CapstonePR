@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(stat -c '%Y' \"/c/Users/dusdn/Downloads/카드DB_n.xlsx\")"
+    ]
+  }
+}

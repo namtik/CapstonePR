@@ -15,6 +15,10 @@ public class CombatStageController : MonoBehaviour
     {
         SwitchBackground(roundData);
 
+        // 새 전투 시스템 사용 중이면 레거시 덱/콤보 초기화 스킵
+        if (Battle.NewBattleController.Instance != null)
+            return;
+
         // 덱/손패 초기화
         var cardSystem = FindFirstObjectByType<CardSystem>();
         if (cardSystem != null)
