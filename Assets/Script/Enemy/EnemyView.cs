@@ -225,6 +225,13 @@ public class EnemyView : MonoBehaviour
         attackPreviewText.text = $"{damagePerHit}x{hitCount}";
     }
 
+    /// <summary>새 전투 시스템: 다음 공격 데미지를 attackPreviewText에 표시.</summary>
+    public void SetAttackPreviewDamage(int damage)
+    {
+        if (attackPreviewText == null) return;
+        attackPreviewText.text = damage.ToString();
+    }
+
     // EnemyController가 TakeDamage 직후 호출
     public void ShowDamage(float damage)
     {

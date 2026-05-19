@@ -14,7 +14,8 @@ namespace Battle.UI
     /// </summary>
     public class NewCardView : MonoBehaviour,
         IBeginDragHandler, IDragHandler, IEndDragHandler,
-        IPointerEnterHandler, IPointerExitHandler
+        IPointerEnterHandler, IPointerExitHandler,
+        IPointerClickHandler
     {
         [System.Serializable]
         public struct CardIconEntry
@@ -155,6 +156,12 @@ namespace Battle.UI
                 return;
             }
             gameObject.SetActive(true);
+
+            // 새 전투 시스템: 글로벌 속성 저주 상태를 카드 인스턴스에 동기화 (시각 표시용)
+            if (Battle.NewBattleController.Instance != null)
+            {
+                Card.cursed = Battle.NewBattleController.Instance.IsElementCursed(Card.Element);
+            }
 
             if (nameText != null) nameText.text = Card.data.displayName;
             if (descText != null) descText.text = Card.data.description;
@@ -401,6 +408,18 @@ namespace Battle.UI
         {
             if (_rect == null) return;
             _rect.anchoredPosition = hovering ? _homeAnchoredPos + hoverPositionOffset : _homeAnchoredPos;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 클릭 (카드 선택 모드)
+        // ─────────────────────────────────────────────────────────────
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (Card == null || Hud == null) return;
+            if (_isDragging) return; // 드래그 중인 클릭은 무시
+            // 선택 모드면 Hud에 알림
+            Hud.OnCardClicked(this);
         }
 
         void ApplyScale(float multiplier)

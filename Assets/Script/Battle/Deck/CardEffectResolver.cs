@@ -34,9 +34,10 @@ namespace Battle.Deck
     {
         public struct ResolveResult
         {
-            public bool exile;          // 소멸 더미로
-            public bool keepOnField;    // 파워 — 필드 잔류
-            public int  totalDamage;    // 디버그/UI용
+            public bool exile;                       // 소멸 더미로
+            public bool keepOnField;                 // 파워 — 필드 잔류
+            public int  totalDamage;                 // 디버그/UI용
+            public bool requiresHandExileSelection;  // 패에서 카드 1장 선택해 소멸 (불3)
         }
 
         public CardEffectContext Ctx { get; private set; }
@@ -72,9 +73,9 @@ namespace Battle.Deck
                     if (burnAmt > 0) result.totalDamage += DealDamage(burnAmt, isAttackCard: true);
                     break;
 
-                case 112: // 불3 — 화상 15, 패에서 카드 1장 소멸
+                case 112: // 불3 — 화상 15, 패에서 카드 1장 사용자가 직접 선택해 소멸
                     AddEnemyStatus("burn", 15);
-                    ExileOneFromHandExcept(card);
+                    result.requiresHandExileSelection = true;
                     break;
 
                 case 115: // 불4 — 소멸, 화상 20

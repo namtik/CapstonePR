@@ -68,6 +68,16 @@ namespace Battle.UI
         private CardDeckSystem _deck;
         public System.Func<CardInstance, bool> UseCardCallback;
 
+        // ── 카드 선택 모드 (예: 불3 "패에서 카드 하나 선택해 소멸") ──
+        private System.Action<CardInstance> _selectionCallback;
+        private System.Func<CardInstance, bool> _selectionFilter;
+        private CardInstance _selectionExcludeCard;
+        public bool IsSelectionMode => _selectionCallback != null;
+
+        [Header("선택 모드 UI")]
+        [Tooltip("선택 모드 안내 텍스트. 비워두면 표시 안 함.")]
+        [SerializeField] private TMP_Text selectionPromptText;
+
         void Awake()
         {
             EnsureHandRoot();
@@ -254,6 +264,9 @@ namespace Battle.UI
             if (_deck == null) return;
 
             var hand = _deck.Hand;
+            // 손 패 갯수에 맞춰 슬롯 위치 재계산 — 카드가 적으면 가운데로 모임
+            PositionSlotAnchorsForCount(hand.Count);
+
             for (int i = 0; i < SLOT_COUNT; i++)
             {
                 NewCardView view = i < _cardViews.Count ? _cardViews[i] : null;
@@ -290,9 +303,55 @@ namespace Battle.UI
         public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
         {
             if (view.Card == null) return false;
+            // 선택 모드에서는 드래그 사용 금지
+            if (IsSelectionMode) return false;
             if (UseCardCallback == null) return false;
             if (ev.position.y < useThresholdY) return false;
             return UseCardCallback(view.Card);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 카드 선택 모드 (불3 등)
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 패에서 카드 1장 직접 선택을 받는다. filter가 null이면 모든 카드 허용.
+        /// excludeCard는 제외(예: 효과를 시전한 카드 자기 자신).
+        /// </summary>
+        public void EnterSelectionMode(string promptMessage, System.Action<CardInstance> callback,
+            System.Func<CardInstance, bool> filter = null, CardInstance excludeCard = null)
+        {
+            _selectionCallback = callback;
+            _selectionFilter = filter;
+            _selectionExcludeCard = excludeCard;
+            if (selectionPromptText != null)
+            {
+                selectionPromptText.text = promptMessage;
+                selectionPromptText.gameObject.SetActive(true);
+            }
+        }
+
+        public void ExitSelectionMode()
+        {
+            _selectionCallback = null;
+            _selectionFilter = null;
+            _selectionExcludeCard = null;
+            if (selectionPromptText != null)
+                selectionPromptText.gameObject.SetActive(false);
+        }
+
+        /// <summary>NewCardView가 클릭됐을 때 호출. 선택 모드면 콜백 발동.</summary>
+        public void OnCardClicked(NewCardView view)
+        {
+            if (!IsSelectionMode) return;
+            if (view == null || view.Card == null) return;
+            if (_selectionExcludeCard != null && view.Card == _selectionExcludeCard) return;
+            if (_selectionFilter != null && !_selectionFilter(view.Card)) return;
+
+            var cb = _selectionCallback;
+            CardInstance selected = view.Card;
+            ExitSelectionMode();
+            cb?.Invoke(selected);
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -359,6 +418,63 @@ namespace Battle.UI
             _slotAnchors.Clear();
             if (fanLayout) BuildFanSlotAnchors();
             else BuildLinearSlotAnchors();
+        }
+
+        /// <summary>활성 카드 갯수에 맞춰 슬롯 위치를 재계산. 카드가 적을 때 가운데 정렬.</summary>
+        void PositionSlotAnchorsForCount(int activeCount)
+        {
+            if (_slotAnchors == null || _slotAnchors.Count == 0) return;
+            if (fanLayout) PositionFanForCount(activeCount);
+            else PositionLinearForCount(activeCount);
+        }
+
+        void PositionFanForCount(int activeCount)
+        {
+            int total = _slotAnchors.Count;
+            // 활성 카드 사이 간격은 5장 기준 유지, 전체 호는 카드 수에 비례해서 줄어듦 → 자연스러운 중앙 정렬
+            float perStep = fanArcAngle / Mathf.Max(1, SLOT_COUNT - 1);
+            float effectiveArc = activeCount > 1 ? perStep * (activeCount - 1) : 0f;
+            float startAngle = -effectiveArc * 0.5f;
+            float angleStep = activeCount > 1 ? effectiveArc / (activeCount - 1) : 0f;
+
+            for (int i = 0; i < total; i++)
+            {
+                var rect = _slotAnchors[i];
+                if (rect == null) continue;
+
+                if (i < activeCount)
+                {
+                    float angleDeg = activeCount > 1 ? startAngle + i * angleStep : 0f;
+                    float angleRad = angleDeg * Mathf.Deg2Rad;
+                    float x = Mathf.Sin(angleRad) * fanRadius;
+                    float y = (Mathf.Cos(angleRad) - 1f) * fanRadius - fanVerticalDip;
+                    rect.anchoredPosition = new Vector2(x, y);
+                    rect.localRotation = Quaternion.Euler(0f, 0f, -angleDeg);
+                }
+                else
+                {
+                    // 비활성 슬롯 — 화면 밖으로 (카드 view가 같이 따라가지만 SetActive(false)되어 안 보임)
+                    rect.anchoredPosition = new Vector2(0f, -10000f);
+                    rect.localRotation = Quaternion.identity;
+                }
+            }
+        }
+
+        void PositionLinearForCount(int activeCount)
+        {
+            int total = _slotAnchors.Count;
+            float totalWidth = activeCount > 1 ? slotSpacing.x * (activeCount - 1) : 0f;
+            float startX = -totalWidth * 0.5f;
+
+            for (int i = 0; i < total; i++)
+            {
+                var rect = _slotAnchors[i];
+                if (rect == null) continue;
+                if (i < activeCount)
+                    rect.anchoredPosition = new Vector2(startX + i * slotSpacing.x, slotSpacing.y);
+                else
+                    rect.anchoredPosition = new Vector2(0f, -10000f);
+            }
         }
 
         void BuildLinearSlotAnchors()

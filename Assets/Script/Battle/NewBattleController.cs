@@ -53,6 +53,12 @@ namespace Battle
         // 이번 피버 사이클에서 발동된 콤보 스킬 인덱스(중복 발동 방지)
         private readonly HashSet<int> _activatedComboSkillIndices = new HashSet<int>();
 
+        // 방해 행동 — 속성 저주 (PDF: 한 속성 모든 카드, 플레이어 카드 사용 2회 동안 지속)
+        public const int CURSE_DURATION_USES = 2;
+        public const int CURSE_PLAYER_DAMAGE = 5;
+        private CardElement? _cursedElement;
+        private int _curseRemainingUses;
+
         public bool IsFeverArmed => _feverArmed;
         public bool IsFeverActive => _feverActive;
         public CardDeckSystem Deck => _deck;
@@ -236,6 +242,9 @@ namespace Battle
             }
 
             // 일반: 효과 실행
+            // 저주 처리(속성 저주가 활성이고 매칭 속성이면 플레이어 피해)
+            ApplyCurseOnCardUse(card);
+
             // 효과 처리 중 손패 조작 카드(예: 물3)가 자기 자신을 영향에 포함시키지 않도록
             // 패에서 먼저 분리한 뒤 효과 해결.
             _deck.PullFromHand(card);
@@ -246,6 +255,19 @@ namespace Battle
 
             if (result.exile)
                 _resolver.NotifyExile(card);
+
+            // 불3 등: 패에서 카드 1장 사용자가 직접 선택해 소멸
+            // (card는 이미 PullFromHand로 패에서 빠진 상태 — Hand에 다른 카드가 있어야 의미 있음)
+            if (result.requiresHandExileSelection && handHud != null && _deck.Hand.Count > 0)
+            {
+                handHud.EnterSelectionMode("패에서 소멸할 카드를 선택하세요",
+                    (selected) =>
+                    {
+                        if (selected == null) return;
+                        _deck.ExileFromHand(selected);
+                        _resolver.NotifyExile(selected);
+                    });
+            }
 
             // 적 행동 게이지 누적
             AccrueEnemyGauge(card.Gauge);
@@ -395,6 +417,72 @@ namespace Battle
             if (ownedComboSkills == null || ownedComboSkills.Count == 0) return false;
             return _activatedComboSkillIndices.Count >= ownedComboSkills.Count;
         }
+
+        // ─────────────────────────────────────────────────────────────
+        // 방해 행동 — EnemyController.HandleMidPattern이 호출
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// PDF [방해행동]: 적이 게이지 5에 도달하면 호출.
+        /// 콤보 셔플은 사용 X. 무속성 삽입 또는 속성 저주를 무작위로 발동.
+        /// </summary>
+        public string TriggerDisruption()
+        {
+            bool isCurse = Random.value < 0.5f;
+
+            if (isCurse)
+            {
+                CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
+                CardElement target = elements[Random.Range(0, elements.Length)];
+                _cursedElement = target;
+                _curseRemainingUses = CURSE_DURATION_USES;
+
+                handHud?.Refresh();
+                Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
+                return $"방해: {ElementName(target)} 저주!";
+            }
+            else
+            {
+                // 무속성 카드 1장을 뽑을 카드 더미에 섞어 넣음
+                var fragment = CardDatabase.CreateFragmentInstance();
+                _deck.AddToDrawShuffled(fragment);
+
+                handHud?.Refresh();
+                Log("[방해] 무속성 카드 1장 뽑을 더미에 삽입");
+                return "방해: 무속성 카드 삽입!";
+            }
+        }
+
+        /// <summary>외부(NewCardView)가 카드가 저주되었는지 확인용.</summary>
+        public bool IsElementCursed(CardElement element)
+        {
+            return _cursedElement.HasValue && _cursedElement.Value == element && _curseRemainingUses > 0;
+        }
+
+        /// <summary>저주된 속성 카드 사용 시 플레이어 피해. 카드 사용 2회 동안 지속(어떤 카드든 카운트).</summary>
+        void ApplyCurseOnCardUse(CardInstance card)
+        {
+            if (!_cursedElement.HasValue || _curseRemainingUses <= 0) return;
+
+            if (card.Element == _cursedElement.Value && _player != null)
+            {
+                _player.TakeDamage(CURSE_PLAYER_DAMAGE);
+                Log($"[저주] {_cursedElement.Value} 카드 사용 — 플레이어 {CURSE_PLAYER_DAMAGE} 피해");
+            }
+
+            _curseRemainingUses--;
+            if (_curseRemainingUses <= 0)
+            {
+                Log($"[저주] {_cursedElement.Value} 저주 종료");
+                _cursedElement = null;
+            }
+        }
+
+        static string ElementName(CardElement e) => e switch
+        {
+            CardElement.Fire => "불", CardElement.Water => "물",
+            CardElement.Wind => "바람", CardElement.Earth => "땅", _ => "?"
+        };
 
         void UpdateFeverText()
         {

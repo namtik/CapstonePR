@@ -8,12 +8,17 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [SerializeField] private int fallbackGaugeFullDamage = 10;
     [SerializeField] private ParticleSystem hitVFX;
 
+    [Header("새 전투 시스템 공격 시퀀스 (PDF: 16-18-40 순환)")]
+    [SerializeField] private int[] newSystemAttackSequence = { 16, 18, 40 };
+    private int _newSystemAttackIndex = 0;
+
     private EnemyStat stat;
     private EnemyView view;
     private Player player;
     private Roundmanager roundmanager;
     private bool isDead = false;
     private MonsterMidPattern midPattern;
+    private bool _attackPreviewInitialized;
 
     private void Awake()
     {
@@ -44,6 +49,24 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     void Update()
     {
         if (!stat.IsAlive) return;
+
+        // NewBattleController가 적 스폰 직후엔 아직 Instance가 없을 수 있어 한 번만 지연 갱신
+        if (!_attackPreviewInitialized && Battle.NewBattleController.Instance != null)
+        {
+            UpdateAttackPreviewForNewSystem();
+            _attackPreviewInitialized = true;
+        }
+    }
+
+    /// <summary>새 시스템 모드: 다음 공격 시퀀스 값을 EnemyView에 미리 표시.</summary>
+    void UpdateAttackPreviewForNewSystem()
+    {
+        if (Battle.NewBattleController.Instance == null) return;
+        if (newSystemAttackSequence == null || newSystemAttackSequence.Length == 0) return;
+        if (view == null) return;
+
+        int nextDamage = newSystemAttackSequence[_newSystemAttackIndex % newSystemAttackSequence.Length];
+        view.SetAttackPreviewDamage(nextDamage);
     }
 
     public void TakeDamage(float damage, string cardtype = "normal")
@@ -115,10 +138,15 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
     void HandleMidPattern()
     {
-        string patternMessage;
+        string patternMessage = null;
 
+        // 새 전투 시스템: NewBattleController가 방해 행동 처리
+        if (Battle.NewBattleController.Instance != null)
+        {
+            patternMessage = Battle.NewBattleController.Instance.TriggerDisruption();
+        }
         // FCM 시스템이 있으면 사용, 없으면 기존 랜덤 폴백
-        if (midPattern != null)
+        else if (midPattern != null)
         {
             patternMessage = midPattern.Execute();
         }
@@ -146,11 +174,24 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             if (!stat.IsAlive) return; // 화상으로 적이 사망하면 공격하지 않음
         }
 
-        int damagePerHit = Mathf.RoundToInt(stat.AttackDamage);
-        if (damagePerHit <= 0)
-            damagePerHit = fallbackGaugeFullDamage;
+        int damagePerHit;
+        int hitCount;
 
-        int hitCount = Mathf.Max(0, stat.CurrentAttackCount);
+        if (Battle.NewBattleController.Instance != null && newSystemAttackSequence != null && newSystemAttackSequence.Length > 0)
+        {
+            // PDF: 일반 16 → 일반 18 → 강 40 순차 반복
+            damagePerHit = newSystemAttackSequence[_newSystemAttackIndex % newSystemAttackSequence.Length];
+            hitCount = 1;
+            _newSystemAttackIndex++;
+            Debug.Log($"[적 공격] 시퀀스 인덱스={_newSystemAttackIndex - 1}, 피해={damagePerHit}");
+        }
+        else
+        {
+            damagePerHit = Mathf.RoundToInt(stat.AttackDamage);
+            if (damagePerHit <= 0) damagePerHit = fallbackGaugeFullDamage;
+            hitCount = Mathf.Max(0, stat.CurrentAttackCount);
+        }
+
         if (player != null)
         {
             // 연타 연출을 위해 코루틴으로 분리하여 호출
@@ -158,6 +199,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
 
         stat.RollNewAttackPlan();
+
+        // 새 시스템: 다음 공격 시퀀스 값을 미리 표시
+        UpdateAttackPreviewForNewSystem();
     }
 
     /// <summary>
