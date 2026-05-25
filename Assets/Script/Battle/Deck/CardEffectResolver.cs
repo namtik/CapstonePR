@@ -16,15 +16,22 @@ namespace Battle.Deck
         public CardEffectResolver resolver; // 자기 자신(파워 효과 트리거 전파용)
 
         // 파워 상태 (전투 동안 지속)
-        public bool bonusDamagePerCardActive;     // 바람3: 카드 사용 시 +3
+        public bool bonusDamagePerCardActive;     // 바람22(321): 카드 사용 시 +3
         public int  bonusDamagePerCard;
-        public bool attackHitCountBonusActive;    // 바람2: 공격 카드 타격 횟수 +1
+        public bool attackHitCountBonusActive;    // 바람21(320): 공격 카드 타격 횟수 +1
         public int  attackHitCountBonus;
-        public bool burnOnHitActive;              // 불6: 적에게 피해 줄 때마다 화상 1
+        public bool burnOnHitActive;              // 불19(118): 적에게 피해 줄 때마다 화상 1
         public int  burnOnHitAmount;
-        public bool burnOnExileActive;            // 불7: 카드 소멸 시 화상 5
+        public bool burnOnExileActive;            // 불22(121): 카드 소멸 시 화상 5
         public int  burnOnExileAmount;
-        public bool fragmentOnEarthUseActive;     // 땅4: 땅 카드 사용 시 파편 추가
+        public bool fragmentOnEarthUseActive;     // 땅21(420): 땅 카드 사용 시 파편 추가
+
+        public bool healToDrawActive;             // 물19(218): 회복될 때마다 드로우 1
+        public bool discardToDrawActive;          // 물21(220): 카드 버릴 때마다 드로우 1
+        public bool waterUseHealActive;           // 물22(221): 물 카드 사용 시 체력 1 회복
+        public bool chainGainOnHitActive;         // 바람19(318): 피해 시 연쇄 1 획득
+        public int  chainCount;                   // 연쇄 누적치
+        public int  chainBonusDamage;             // 바람18(317): 연쇄 1회 피해량 증가
     }
 
     /// <summary>
@@ -34,10 +41,13 @@ namespace Battle.Deck
     {
         public struct ResolveResult
         {
-            public bool exile;                       // 소멸 더미로
-            public bool keepOnField;                 // 파워 — 필드 잔류
-            public int  totalDamage;                 // 디버그/UI용
-            public bool requiresHandExileSelection;  // 패에서 카드 1장 선택해 소멸 (불3)
+            public bool exile;                        // 소멸 더미로
+            public bool keepOnField;                  // 파워 — 필드 잔류
+            public int  totalDamage;                  // 디버그/UI용
+            public bool requiresHandExileSelection;   // 패에서 카드 1장 선택해 소멸 (불13/112)
+            public bool requiresHandDiscardSelection; // 패에서 카드 1장 선택해 버리기 (물8/207)
+            public bool skipNextGaugeCost;            // 다음 카드 게이지 소모 스킵 (바람14/313)
+            public bool recastLastCard;               // 마지막 사용 카드 효과 재사용 (물12/211)
         }
 
         public CardEffectContext Ctx { get; private set; }
@@ -63,82 +73,168 @@ namespace Battle.Deck
             switch (card.Id)
             {
                 // ── 불 ─────────────────────────────────────────────
-                case 104: // 불1 — 소멸, 피해 10
+                case 104: // 불5 — 소멸, 피해 10
                     result.totalDamage += DealDamage(10, isAttackCard: true);
                     result.exile = true;
                     break;
 
-                case 107: // 불2 — 피해 = 화상 보유량
+                case 106: // 불7 — 피해 10, 적 화상 10 이상이면 한 번 더 발동
+                    result.totalDamage += DealDamage(10, isAttackCard: true);
+                    if (GetEnemyBurn() >= 10)
+                        result.totalDamage += DealDamage(10, isAttackCard: true);
+                    break;
+
+                case 107: // 불8 — 피해 = 화상 보유량
                     int burnAmt = GetEnemyBurn();
                     if (burnAmt > 0) result.totalDamage += DealDamage(burnAmt, isAttackCard: true);
                     break;
 
-                case 112: // 불3 — 화상 15, 패에서 카드 1장 사용자가 직접 선택해 소멸
+                case 112: // 불13 — 화상 15, 패에서 카드 1장 직접 선택해 소멸
                     AddEnemyStatus("burn", 15);
                     result.requiresHandExileSelection = true;
                     break;
 
-                case 115: // 불4 — 소멸, 화상 20
+                case 115: // 불16 — 소멸, 화상 20
                     AddEnemyStatus("burn", 20);
                     result.exile = true;
                     break;
 
-                case 116: // 불5 — 적 화상량만큼 화상 부여
+                case 116: // 불17 — 적 화상량만큼 화상 부여
                     {
                         int n = GetEnemyBurn();
                         if (n > 0) AddEnemyStatus("burn", n);
                     }
                     break;
 
-                case 118: // 불6 (파워) — 적에게 피해 줄 때마다 화상 1
+                case 118: // 불19 (파워) — 적에게 피해 줄 때마다 화상 1
                     Ctx.burnOnHitActive = true;
                     Ctx.burnOnHitAmount += 1;
                     result.keepOnField = true;
                     break;
 
-                case 121: // 불7 (파워) — 카드 소멸 시마다 화상 5
+                case 121: // 불22 (파워) — 카드 소멸 시마다 화상 5
                     Ctx.burnOnExileActive = true;
                     Ctx.burnOnExileAmount += 5;
                     result.keepOnField = true;
                     break;
 
                 // ── 물 ─────────────────────────────────────────────
-                case 201: // 물1 — 방어도 3
+                case 201: // 물2 — 방어도 3
                     AddPlayerGuard(3);
                     break;
 
-                case 208: // 물2 — 체력 4 회복
-                    Ctx.player?.Heal(4);
+                case 203: // 물4 — 피해 5, 플레이어 체력이 가득이면 드로우 2
+                    result.totalDamage += DealDamage(5, isAttackCard: true);
+                    if (Ctx.player != null && Ctx.player.currentHp >= Ctx.player.maxHp)
+                        Ctx.deck.Draw(2);
                     break;
 
-                case 216: // 물3 — 패 전부 버리고 그만큼 드로우
+                case 207: // 물8 — 드로우 1, 패에서 카드 1장 선택해 버리기
+                    Ctx.deck.Draw(1);
+                    result.requiresHandDiscardSelection = true;
+                    break;
+
+                case 208: // 물9 — 체력 4 회복
+                    HealPlayer(4);
+                    break;
+
+                case 211: // 물12 — 소멸, 마지막 사용 카드 효과 재사용
+                    result.recastLastCard = true;
+                    result.exile = true;
+                    break;
+
+                case 216: // 물17 — 패 전부 버리고 그만큼 드로우
                     {
                         int discarded = Ctx.deck.DiscardAllFromHand();
-                        // 자기 자신은 이미 패에서 빠진 상태(NewBattleController가 사용 시점에 분리)
+                        if (Ctx.discardToDrawActive && discarded > 0) Ctx.deck.Draw(discarded); // 220 트리거분
                         Ctx.deck.Draw(discarded);
                     }
                     break;
 
+                case 218: // 물19 (파워) — 플레이어 회복 시 드로우 1
+                    Ctx.healToDrawActive = true;
+                    result.keepOnField = true;
+                    break;
+
+                case 220: // 물21 (파워) — 카드 효과로 카드 버릴 때 드로우 1
+                    Ctx.discardToDrawActive = true;
+                    result.keepOnField = true;
+                    break;
+
+                case 221: // 물22 (파워) — 물 속성 카드 사용 시 체력 1 회복
+                    Ctx.waterUseHealActive = true;
+                    result.keepOnField = true;
+                    break;
+
                 // ── 바람 ───────────────────────────────────────────
-                case 312: // 바람1 — 카드 2장 드로우
+                case 306: // 바람7 — 피해 2 x3, 연쇄 10 획득
+                    result.totalDamage += DealDamage(2, isAttackCard: true, baseHits: 3);
+                    Ctx.chainCount += 10;
+                    break;
+
+                case 308: // 바람9 — 피해 1 x3, 드로우 2
+                    result.totalDamage += DealDamage(1, isAttackCard: true, baseHits: 3);
                     Ctx.deck.Draw(2);
                     break;
 
-                case 320: // 바람2 (파워) — 모든 공격 카드 타격 횟수 +1
+                case 309: // 바람10 — 소멸, 연쇄를 모두 소진할 때까지 피해 2 반복
+                    {
+                        int safety = 99; // 무한 루프 방지
+                        // 최초 1회 + 연쇄가 남아있는 동안 반복
+                        do
+                        {
+                            result.totalDamage += DealDamage(2, isAttackCard: true);
+                            safety--;
+                        } while (Ctx.chainCount > 0 && safety > 0);
+                        result.exile = true;
+                    }
+                    break;
+
+                case 312: // 바람13 — 카드 2장 드로우
+                    Ctx.deck.Draw(2);
+                    break;
+
+                case 313: // 바람14 — 다음에 사용하는 카드는 행동 게이지 소모 X
+                    result.skipNextGaugeCost = true;
+                    break;
+
+                case 314: // 바람15 — 연쇄 20 획득
+                    Ctx.chainCount += 20;
+                    break;
+
+                case 317: // 바람18 (파워) — 연쇄 1회 피해량 +1
+                    Ctx.chainBonusDamage += 1;
+                    result.keepOnField = true;
+                    break;
+
+                case 318: // 바람19 (파워) — 피해를 줄 때마다 연쇄 1 획득
+                    Ctx.chainGainOnHitActive = true;
+                    result.keepOnField = true;
+                    break;
+
+                case 320: // 바람21 (파워) — 모든 공격 카드 타격 횟수 +1
                     Ctx.attackHitCountBonusActive = true;
                     Ctx.attackHitCountBonus += 1;
                     result.keepOnField = true;
                     break;
 
-                case 321: // 바람3 (파워) — 카드 사용 시마다 적에게 피해 3
+                case 321: // 바람22 (파워) — 카드 사용 시마다 적에게 피해 3
                     Ctx.bonusDamagePerCardActive = true;
                     Ctx.bonusDamagePerCard += 3;
                     result.keepOnField = true;
                     break;
 
                 // ── 땅 ─────────────────────────────────────────────
-                case 400: // 땅1 — 방어도 3
+                case 400: // 땅1 — 피해 5 (새 DB)
+                    result.totalDamage += DealDamage(5, isAttackCard: true);
+                    break;
+
+                case 401: // 땅2 — 방어도 3
                     AddPlayerGuard(3);
+                    break;
+
+                case 407: // 땅8 — 방어도 5
+                    AddPlayerGuard(5);
                     break;
 
                 case 411: // 땅2 — 방어도 5, 파편 1장을 뽑을 더미에 섞음
@@ -195,10 +291,16 @@ namespace Battle.Deck
                 result.totalDamage += DealDamage(Ctx.bonusDamagePerCard, isAttackCard: false);
             }
 
-            // ── 파워 효과: 땅4 (땅 카드 사용 시 파편을 버린 더미에 추가) ──
+            // ── 파워 효과: 땅21(420) (땅 카드 사용 시 파편을 버린 더미에 추가) ──
             if (applyPowerEffects && Ctx.fragmentOnEarthUseActive && card.Element == CardElement.Earth)
             {
                 Ctx.deck.AddToDiscard(CardDatabase.CreateFragmentInstance());
+            }
+
+            // ── 파워 효과: 물22(221) (물 속성 카드 사용 시 체력 1 회복) ──
+            if (applyPowerEffects && Ctx.waterUseHealActive && card.Element == CardElement.Water)
+            {
+                HealPlayer(1);
             }
 
             return result;
@@ -208,24 +310,56 @@ namespace Battle.Deck
         // 효과 헬퍼
         // ─────────────────────────────────────────────────────────────
 
-        int DealDamage(int amount, bool isAttackCard)
+        int DealDamage(int amount, bool isAttackCard, int baseHits = 1)
         {
             if (Ctx.enemy == null || amount <= 0) return 0;
 
-            int hits = 1;
+            int hits = baseHits;
             if (isAttackCard && Ctx.attackHitCountBonusActive)
                 hits += Ctx.attackHitCountBonus;
 
             int total = 0;
             for (int i = 0; i < hits; i++)
             {
+                // 본 피해
                 Ctx.enemy.TakeDamage(amount);
                 total += amount;
 
                 if (Ctx.burnOnHitActive && Ctx.burnOnHitAmount > 0)
                     AddEnemyStatus("burn", Ctx.burnOnHitAmount);
+
+                // (1) 연쇄 발동 먼저 — 이전에 쌓여 있던 연쇄만 소비/발동
+                if (isAttackCard)
+                    total += TriggerChain();
+
+                // (2) 그 다음 연쇄 획득 — 318로 이번에 얻은 연쇄는 다음 공격부터 발동 가능
+                if (Ctx.chainGainOnHitActive)  // 바람19(318): 피해 시 연쇄 1 획득
+                    Ctx.chainCount++;
             }
             return total;
+        }
+
+        /// <summary>
+        /// 연쇄 발동: 연쇄가 남아있으면 1 소비하고 추가 피해(1 + 317 보너스)를 준다.
+        /// 연쇄 추가 피해는 318(피해 시 연쇄 획득)을 다시 트리거하지 않는다(무한 연쇄 방지).
+        /// </summary>
+        int TriggerChain()
+        {
+            if (Ctx.chainCount <= 0) return 0;
+            Ctx.chainCount--;
+            int chainDmg = 1 + Ctx.chainBonusDamage;
+            Ctx.enemy.TakeDamage(chainDmg);
+            Debug.Log($"[연쇄] 발동 — 추가 피해 {chainDmg}, 남은 연쇄 {Ctx.chainCount}");
+            return chainDmg;
+        }
+
+        /// <summary>플레이어 회복. 물19(218) 활성 시 회복할 때마다 드로우 1.</summary>
+        void HealPlayer(int amount)
+        {
+            if (Ctx.player == null || amount <= 0) return;
+            Ctx.player.Heal(amount);
+            if (Ctx.healToDrawActive)  // 물19(218)
+                Ctx.deck.Draw(1);
         }
 
         void AddEnemyStatus(string key, int amount)

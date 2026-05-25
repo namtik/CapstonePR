@@ -59,6 +59,11 @@ namespace Battle
         private CardElement? _cursedElement;
         private int _curseRemainingUses;
 
+        // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
+        private int _skipNextGaugeCount;
+        // 물12(211): 마지막으로 사용한 카드 (재사용 대상)
+        private CardInstance _lastResolvedCard;
+
         public bool IsFeverArmed => _feverArmed;
         public bool IsFeverActive => _feverActive;
         public CardDeckSystem Deck => _deck;
@@ -159,6 +164,16 @@ namespace Battle
             _ctx.burnOnExileActive = false;
             _ctx.burnOnExileAmount = 0;
             _ctx.fragmentOnEarthUseActive = false;
+            _ctx.healToDrawActive = false;
+            _ctx.discardToDrawActive = false;
+            _ctx.waterUseHealActive = false;
+            _ctx.chainGainOnHitActive = false;
+            _ctx.chainCount = 0;
+            _ctx.chainBonusDamage = 0;
+
+            // 런타임 상태
+            _skipNextGaugeCount = 0;
+            _lastResolvedCard = null;
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -256,8 +271,14 @@ namespace Battle
             if (result.exile)
                 _resolver.NotifyExile(card);
 
-            // 불3 등: 패에서 카드 1장 사용자가 직접 선택해 소멸
-            // (card는 이미 PullFromHand로 패에서 빠진 상태 — Hand에 다른 카드가 있어야 의미 있음)
+            // 물12(211): 마지막 사용 카드 효과 재사용
+            if (result.recastLastCard && _lastResolvedCard != null)
+            {
+                Log($"[재사용] {_lastResolvedCard.data.displayName} 효과 한 번 더");
+                _resolver.Resolve(_lastResolvedCard);
+            }
+
+            // 불13(112): 패에서 카드 1장 선택해 소멸
             if (result.requiresHandExileSelection && handHud != null && _deck.Hand.Count > 0)
             {
                 handHud.EnterSelectionMode("패에서 소멸할 카드를 선택하세요",
@@ -269,14 +290,31 @@ namespace Battle
                     });
             }
 
-            // 적 행동 게이지 누적
+            // 물8(207): 패에서 카드 1장 선택해 버리기 (+ 220 트리거 시 드로우)
+            if (result.requiresHandDiscardSelection && handHud != null && _deck.Hand.Count > 0)
+            {
+                handHud.EnterSelectionMode("패에서 버릴 카드를 선택하세요",
+                    (selected) =>
+                    {
+                        if (selected == null) return;
+                        _deck.DiscardCardFromHand(selected);
+                        if (_ctx.discardToDrawActive) _deck.Draw(1); // 물21(220)
+                    });
+            }
+
+            // 적 행동 게이지 누적 (바람14(313) 효과로 스킵 가능)
             AccrueEnemyGauge(card.Gauge);
+            if (result.skipNextGaugeCost) _skipNextGaugeCount++;
 
             // 속성 카드 입력 카운팅(피버 게이지)
             if (card.Element != CardElement.Neutral)
                 AccumulateFeverInput();
 
-            Log($"{card.data.displayName} 사용 — 게이지+{card.Gauge}");
+            // 마지막 사용 카드 기록 (211 자신은 제외 — 재사용 대상이 되지 않도록)
+            if (card.Id != 211)
+                _lastResolvedCard = card;
+
+            Log($"{card.data.displayName} 사용 — 게이지+{card.Gauge}, 연쇄={_ctx.chainCount}");
             return true;
         }
 
@@ -287,8 +325,16 @@ namespace Battle
         void AccrueEnemyGauge(int amount)
         {
             if (_feverActive) return; // 피버 중에는 적 게이지 증가 X
-            if (_enemyStat == null) return;
 
+            // 바람14(313): 다음 카드는 게이지 소모 스킵
+            if (_skipNextGaugeCount > 0)
+            {
+                _skipNextGaugeCount--;
+                Log("[게이지] 다음 카드 게이지 소모 스킵 (바람14)");
+                return;
+            }
+
+            if (_enemyStat == null) return;
             for (int i = 0; i < amount; i++) _enemyStat.ConsumeGaugeStep();
         }
 

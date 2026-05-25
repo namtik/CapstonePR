@@ -108,6 +108,18 @@ namespace Battle.Deck
             OnPileChanged?.Invoke();
         }
 
+        /// <summary>카드 인스턴스를 패에서 버린 더미로 이동.</summary>
+        public bool DiscardCardFromHand(CardInstance card)
+        {
+            if (_hand.Remove(card))
+            {
+                _discardPile.Add(card);
+                OnPileChanged?.Invoke();
+                return true;
+            }
+            return false;
+        }
+
         public int DiscardAllFromHand()
         {
             int count = _hand.Count;

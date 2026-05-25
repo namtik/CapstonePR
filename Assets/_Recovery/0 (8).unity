@@ -4216,39 +4216,39 @@ MonoBehaviour:
   useNewBattleSystem: 1
   newBattleController: {fileID: 461109440}
   startingDeck:
-  - cardId: 106
+  - cardId: 104
     count: 1
   - cardId: 107
     count: 1
-  - cardId: 115
+  - cardId: 112
     count: 1
+  - cardId: 115
+    count: 2
   - cardId: 116
     count: 1
   - cardId: 118
     count: 1
-  - cardId: 203
-    count: 2
-  - cardId: 207
+  - cardId: 121
     count: 1
-  - cardId: 211
+  - cardId: 201
+    count: 1
+  - cardId: 208
     count: 1
   - cardId: 216
     count: 1
-  - cardId: 218
-    count: 1
-  - cardId: 220
-    count: 1
-  - cardId: 221
-    count: 1
-  - cardId: 308
-    count: 2
   - cardId: 312
-    count: 1
-  - cardId: 313
     count: 2
-  - cardId: 318
-    count: 1
   - cardId: 320
+    count: 1
+  - cardId: 321
+    count: 1
+  - cardId: 400
+    count: 1
+  - cardId: 411
+    count: 2
+  - cardId: 414
+    count: 1
+  - cardId: 420
     count: 1
   autoFillDefaultDeckInEditor: 1
   combatStage: {fileID: 1780698868}
@@ -7635,7 +7635,7 @@ MonoBehaviour:
   useThresholdY: 360
   fanLayout: 1
   fanRadius: 1600
-  fanArcAngle: 30
+  fanArcAngle: 24
   fanVerticalDip: 50
   comboSlotPanel: {fileID: 1211821935}
   comboSkillPanel: {fileID: 1528637483}
@@ -10502,63 +10502,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2138468950}
   m_CullTransparentMesh: 1
---- !u!1001 &6254819293269276542
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 272727137235244066, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8547228470413300828, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
-      propertyPath: m_Name
-      value: fireAtk1
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 3eb1c041bdfe4f34aa2222fae6dc5071, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -10579,4 +10522,3 @@ SceneRoots:
   - {fileID: 692353468}
   - {fileID: 1552390622}
   - {fileID: 461109441}
-  - {fileID: 6254819293269276542}

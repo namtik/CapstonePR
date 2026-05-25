@@ -31,6 +31,10 @@ namespace Battle.UI
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private TMP_Text descText;
         [SerializeField] private TMP_Text gaugeText;
+        [Tooltip("카드 타입(공격/스킬/파워) 텍스트. 프리팹 자식 이름 'cardType'.")]
+        [SerializeField] private TMP_Text cardTypeText;
+        [Tooltip("카드 타입 배경 Image. 프리팹 자식 이름 'baseCardType'.")]
+        [SerializeField] private Image cardTypeBackground;
 
         [Header("자동 바인딩 옵션")]
         [Tooltip("Awake 시 자식 이름으로 누락된 참조를 채운다.")]
@@ -42,6 +46,15 @@ namespace Battle.UI
         [SerializeField] private Sprite windElementSprite;
         [SerializeField] private Sprite earthElementSprite;
         [SerializeField] private Sprite neutralElementSprite;
+
+        [Header("배경 이미지 매핑 (Background sprite — 속성별)")]
+        [Tooltip("ON이면 속성에 따라 Background sprite를 바꾼다.")]
+        [SerializeField] private bool useElementBackgroundSprite = true;
+        [SerializeField] private Sprite fireBackgroundSprite;
+        [SerializeField] private Sprite waterBackgroundSprite;
+        [SerializeField] private Sprite windBackgroundSprite;
+        [SerializeField] private Sprite earthBackgroundSprite;
+        [SerializeField] private Sprite neutralBackgroundSprite;
 
         [Header("카드 아이콘 매핑 (IconImage sprite — cardId 기준)")]
         [SerializeField] private List<CardIconEntry> cardIcons = new List<CardIconEntry>();
@@ -62,6 +75,8 @@ namespace Battle.UI
         [SerializeField] private bool tintBackgroundByElement = true;
         [Range(0f, 1f)]
         [SerializeField] private float backgroundTintAlpha = 0.35f;
+        [Tooltip("ON이면 카드 타입 배경(baseCardType)을 타입별 색으로 칠한다.")]
+        [SerializeField] private bool tintCardTypeBackground = false;
 
         public CardInstance Card { get; private set; }
         public int SlotIndex { get; set; }
@@ -115,6 +130,8 @@ namespace Battle.UI
             if (nameText == null) nameText = FindChildComponent<TMP_Text>("Nametxt");
             if (descText == null) descText = FindChildComponent<TMP_Text>("Desctxt");
             if (gaugeText == null) gaugeText = FindChildComponent<TMP_Text>("guageCost");
+            if (cardTypeText == null) cardTypeText = FindChildComponent<TMP_Text>("cardType");
+            if (cardTypeBackground == null) cardTypeBackground = FindChildComponent<Image>("baseCardType");
         }
 
         T FindChildComponent<T>(string childName) where T : Component
@@ -167,20 +184,58 @@ namespace Battle.UI
             if (descText != null) descText.text = Card.data.description;
             if (gaugeText != null) gaugeText.text = Card.data.gauge.ToString();
 
+            // 카드 타입 (공격/스킬/파워)
+            if (cardTypeText != null) cardTypeText.text = CardTypeName(Card.Type);
+            if (tintCardTypeBackground && cardTypeBackground != null)
+                cardTypeBackground.color = ColorForCardType(Card.Type);
+
             // 속성 이미지
             ApplyAttributeSprite(Card.Element);
 
             // 카드 아이콘
             ApplyCardIcon(Card.Id);
 
-            // 배경 색조 (sprite 매핑이 없거나 옵션 ON이면)
-            if (backgroundImage != null && tintBackgroundByElement)
+            // 배경 이미지(속성별 sprite 우선, 없으면 색 틴트)
+            ApplyBackgroundSprite(Card.Element);
+        }
+
+        void ApplyBackgroundSprite(CardElement element)
+        {
+            if (backgroundImage == null) return;
+
+            bool cursed = Card != null && Card.cursed;
+
+            // 속성별 배경 sprite 우선
+            if (useElementBackgroundSprite)
+            {
+                Sprite s = GetBackgroundSprite(element);
+                if (s != null)
+                {
+                    backgroundImage.sprite = s;
+                    // 저주 시 보라 틴트로 구분, 평소엔 원본 색(흰색)
+                    backgroundImage.color = cursed ? new Color(0.7f, 0.45f, 0.75f, 1f) : Color.white;
+                    return;
+                }
+            }
+
+            // sprite 매핑이 없으면 색 틴트 fallback
+            if (tintBackgroundByElement)
             {
                 Color baseColor = _capturedOriginalBgColor ? _originalBackgroundColor : Color.white;
-                Color elementColor = ColorForElement(Card.Element, Card.cursed);
+                Color elementColor = ColorForElement(element, Card != null && Card.cursed);
                 backgroundImage.color = Color.Lerp(baseColor, elementColor, backgroundTintAlpha);
             }
         }
+
+        Sprite GetBackgroundSprite(CardElement element) => element switch
+        {
+            CardElement.Fire    => fireBackgroundSprite,
+            CardElement.Water   => waterBackgroundSprite,
+            CardElement.Wind    => windBackgroundSprite,
+            CardElement.Earth   => earthBackgroundSprite,
+            CardElement.Neutral => neutralBackgroundSprite,
+            _ => null
+        };
 
         void ApplyAttributeSprite(CardElement element)
         {
@@ -295,6 +350,22 @@ namespace Battle.UI
                 _ => new Color(0.5f, 0.5f, 0.5f, 1f)
             };
         }
+
+        static string CardTypeName(CardType type) => type switch
+        {
+            CardType.Attack => "공격",
+            CardType.Skill  => "스킬",
+            CardType.Power  => "파워",
+            _ => ""
+        };
+
+        static Color ColorForCardType(CardType type) => type switch
+        {
+            CardType.Attack => new Color(0.90f, 0.40f, 0.35f, 1f), // 빨강
+            CardType.Skill  => new Color(0.40f, 0.65f, 0.90f, 1f), // 파랑
+            CardType.Power  => new Color(0.75f, 0.55f, 0.90f, 1f), // 보라
+            _ => Color.white
+        };
 
         // ─────────────────────────────────────────────────────────────
         // 드래그
