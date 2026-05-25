@@ -17,8 +17,8 @@ public class EnemyStat : MonoBehaviour
     private int currentAttackCount;
     private bool hasDied = false; // ��� �÷��� �߰�
 
-    // Player-action-driven 10-step gauge
-    public const int GAUGE_MAX_STEPS = 10;
+    // Player-action-driven gauge (full = 20, mid pattern = 10)
+    public const int GAUGE_MAX_STEPS = 20;
     private int gaugeStep = 0;
     private bool midPatternTriggered = false;
     public int GaugeStep => gaugeStep;
