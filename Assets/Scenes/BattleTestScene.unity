@@ -4340,39 +4340,15 @@ MonoBehaviour:
   useNewBattleSystem: 1
   newBattleController: {fileID: 461109440}
   startingDeck:
-  - cardId: 106
+  - cardId: 414
     count: 1
-  - cardId: 107
+  - cardId: 409
     count: 1
-  - cardId: 115
+  - cardId: 210
     count: 1
-  - cardId: 116
+  - cardId: 209
     count: 1
-  - cardId: 118
-    count: 1
-  - cardId: 203
-    count: 2
-  - cardId: 207
-    count: 1
-  - cardId: 211
-    count: 1
-  - cardId: 216
-    count: 1
-  - cardId: 218
-    count: 1
-  - cardId: 220
-    count: 1
-  - cardId: 221
-    count: 1
-  - cardId: 308
-    count: 2
-  - cardId: 312
-    count: 1
-  - cardId: 313
-    count: 2
-  - cardId: 318
-    count: 1
-  - cardId: 320
+  - cardId: 310
     count: 1
   autoFillDefaultDeckInEditor: 1
   combatStage: {fileID: 1780698868}

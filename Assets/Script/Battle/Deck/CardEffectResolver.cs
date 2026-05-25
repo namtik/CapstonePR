@@ -84,6 +84,13 @@ namespace Battle.Deck
             public bool recastLastCard;               // 물12(211)
             public bool currentCardFreeThisUse;       // 바람11(310) — 이 카드 자체가 게이지 무료
             public bool poweredField;                 // 명시적 keepOnField와 동의어 (구버전 호환)
+
+            /// <summary>패 선택 모드의 카드 필터(예: "NEUTRAL_CARD", "ANY_CARD"). 비우면 모든 카드.</summary>
+            public string handSelectionCardFilter;
+            /// <summary>파편 풀 선택 후 결과 보낼 곳 ("HAND" / "DISCARD_PILE_SHUFFLE" / "DISCARD_PILE").</summary>
+            public string fragmentPickerTargetZone;
+            /// <summary>파편 풀 선택 시 같은 ID로 N장 복제할 양 (414 = 10).</summary>
+            public int fragmentPickerCopyCount;
         }
 
         public CardEffectContext Ctx { get; private set; }
@@ -367,10 +374,11 @@ namespace Battle.Deck
                 else if (statKey == "CHAIN_DAMAGE_BONUS") Ctx.chainBonusDamage += amount;
             }
 
-            // MODIFY_HAND_LIMIT (땅19 418)
+            // MODIFY_HAND_LIMIT (땅19 418) — 즉시 deck에 적용
             if (verb == "MODIFY_HAND_LIMIT")
             {
                 Ctx.handLimitBonus += amount;
+                Ctx.deck?.IncreaseHandLimit(amount);
             }
         }
 
@@ -447,7 +455,7 @@ namespace Battle.Deck
                 return Ctx.firstCardAfterEnemyAttack;
 
             if (up == "USED_IMMEDIATELY_AFTER_DRAW")
-                return card != null && card.gaugeSinceDrawn == 0;
+                return card != null && card.justDrawn;
 
             if (up == "LAST_USED_CARD_EXISTS_EXCLUDING_SELF")
                 return Battle.NewBattleController.Instance != null
@@ -672,8 +680,10 @@ namespace Battle.Deck
                     {
                         string sel = (eff.select ?? "").Trim().ToUpperInvariant();
                         if (sel == "SELECT_ONE_FROM_HAND")
+                        {
                             result.requiresHandDiscardSelection = true;
-                        // 그 외 케이스(현재 없음)는 무시
+                            result.handSelectionCardFilter = eff.cardFilter ?? "";
+                        }
                     }
                     break;
 
@@ -681,7 +691,10 @@ namespace Battle.Deck
                     {
                         string sel = (eff.select ?? "").Trim().ToUpperInvariant();
                         if (sel == "SELECT_ONE_FROM_HAND")
+                        {
                             result.requiresHandExileSelection = true;
+                            result.handSelectionCardFilter = eff.cardFilter ?? "";
+                        }
                     }
                     break;
 
@@ -740,7 +753,8 @@ namespace Battle.Deck
                     break;
 
                 case "MODIFY_HAND_LIMIT":
-                    Ctx.handLimitBonus += amount; // 즉시 적용형(현재 캐스트 시점)
+                    Ctx.handLimitBonus += amount;
+                    Ctx.deck?.IncreaseHandLimit(amount);
                     break;
 
                 case "ADD_CARD":
@@ -815,10 +829,13 @@ namespace Battle.Deck
                     PlaceCardInZone(c, toZone);
                 }
             }
-            else if (filter == "FRAGMENT_CARD" && sel == "SELECT_ONE_FROM_FRAGMENT_POOL")
+            else if (sel == "SELECT_ONE_FROM_FRAGMENT_POOL")
             {
-                // 플레이어 선택 — 외부에 위임
+                // 플레이어가 파편을 선택. (409: 1장 패로, 414: 같은 ID 10장 버린 더미로)
                 result.requiresFragmentPoolSelection = true;
+                result.fragmentPickerTargetZone = string.IsNullOrEmpty(toZone) ? "DISCARD_PILE" : toZone;
+                bool copy = ExtraSubstring(eff.extra, "CopySelectedSameName").ToLowerInvariant() == "true";
+                result.fragmentPickerCopyCount = copy ? amount : 1;
             }
             else
             {
@@ -876,6 +893,7 @@ namespace Battle.Deck
             if (sel == "SELECT_ONE_FROM_HAND")
             {
                 result.requiresHandCopySelection = true;
+                result.handSelectionCardFilter = eff.cardFilter ?? "";
                 return;
             }
             Debug.LogWarning($"[CardEffect] COPY_CARD 미지원 (sel={sel}, from={from}, cardId={eff.cardId})");

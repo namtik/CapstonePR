@@ -16,7 +16,10 @@ namespace Battle
     public class NewBattleController : MonoBehaviour
     {
         public const int FEVER_ACTIVATION_INPUT = 15;
-        public const int FEVER_END_INPUT = 5;
+        /// <summary>피버 발동 시 기본 지속 시간(초).</summary>
+        public const float FEVER_DURATION_SECONDS = 10f;
+        /// <summary>콤보 1회 성공 시 추가되는 시간(초).</summary>
+        public const float COMBO_BONUS_SECONDS = 0.5f;
         public const int START_DRAW = 5;
 
         public static NewBattleController Instance { get; private set; }
@@ -45,7 +48,7 @@ namespace Battle
         private int _elementInputCount;   // 피버 활성화용 누적
         private bool _feverArmed;         // 15회 도달 후 F 대기 중
         private bool _feverActive;
-        private int _feverInputRemaining; // 활성화 시 5회 남으면 종료
+        private float _feverTimeRemaining; // 활성화 시 남은 시간(초). 0 이하가 되면 종료
         private List<CardInstance> _feverStoredNeutralCards = new List<CardInstance>();
 
         // 콤보 슬롯 (피버 동안 입력된 속성, sliding window 3장)
@@ -104,6 +107,7 @@ namespace Battle
         {
             if (card == null) return;
             card.gaugeSinceDrawn = 0;
+            card.justDrawn = true;
             _ctx.currentCardJustDrawn = true;
         }
 
@@ -121,7 +125,20 @@ namespace Battle
             }
 
             HandleInput();
+            TickFeverTimer();
             UpdateFeverText();
+        }
+
+        /// <summary>피버 지속 시간 카운트다운 (Update에서 매 프레임 호출).</summary>
+        void TickFeverTimer()
+        {
+            if (!_feverActive) return;
+            _feverTimeRemaining -= Time.deltaTime;
+            if (_feverTimeRemaining <= 0f)
+            {
+                _feverTimeRemaining = 0f;
+                EndFever();
+            }
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -176,7 +193,7 @@ namespace Battle
             _elementInputCount = 0;
             _feverArmed = false;
             _feverActive = false;
-            _feverInputRemaining = 0;
+            _feverTimeRemaining = 0f;
 
             _deck.Draw(START_DRAW);
             UpdateFeverText();
@@ -288,6 +305,56 @@ namespace Battle
             _ctx.firstCardAfterEnemyAttack = true;
         }
 
+        /// <summary>필터에 매칭되는 카드가 패에 있는지 확인.</summary>
+        bool HandHasMatch(System.Func<CardInstance, bool> filter)
+        {
+            if (filter == null) return _deck.Hand.Count > 0;
+            for (int i = 0; i < _deck.Hand.Count; i++)
+                if (filter(_deck.Hand[i])) return true;
+            return false;
+        }
+
+        /// <summary>CardEffects의 cardFilter 문자열을 EnterSelectionMode용 delegate로.</summary>
+        static System.Func<CardInstance, bool> BuildHandCardFilter(string filter)
+        {
+            if (string.IsNullOrEmpty(filter)) return null;
+            switch (filter.Trim().ToUpperInvariant())
+            {
+                case "":
+                case "ANY_CARD":
+                    return null;
+                case "NEUTRAL_CARD":
+                    return c => c != null && c.Element == CardElement.Neutral;
+                case "FRAGMENT_CARD":
+                    return c => c != null && c.Element == CardElement.Fragment;
+                case "ATTACK_CARD":
+                    return c => c != null && c.Type == CardType.Attack;
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>파편 인스턴스를 지정 존(HAND/DRAW_PILE_SHUFFLE/DISCARD_PILE_SHUFFLE)에 배치.</summary>
+        void PlaceFragmentInZone(CardInstance frag, string zone)
+        {
+            if (frag == null) return;
+            switch ((zone ?? "").Trim().ToUpperInvariant())
+            {
+                case "HAND":
+                    if (!_deck.AddToHand(frag)) _deck.AddToDiscard(frag);
+                    break;
+                case "DRAW_PILE":
+                case "DRAW_PILE_SHUFFLE":
+                    _deck.AddToDrawShuffled(frag);
+                    break;
+                case "DISCARD_PILE":
+                case "DISCARD_PILE_SHUFFLE":
+                default:
+                    _deck.AddToDiscard(frag);
+                    break;
+            }
+        }
+
         // ─────────────────────────────────────────────────────────────
         // 입력
         // ─────────────────────────────────────────────────────────────
@@ -350,11 +417,11 @@ namespace Battle
                     comboTriggered = TryActivateCombo();
                 }
 
-                // 콤보 발동 시 속성 카드 입력 제한 차감 X (PDF 명세)
-                if (!comboTriggered)
-                    _feverInputRemaining--;
+                // 콤보 성공 시 지속 시간 +0.5초
+                if (comboTriggered)
+                    _feverTimeRemaining += COMBO_BONUS_SECONDS;
 
-                Log($"[피버] {card.data.displayName} → 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은입력={_feverInputRemaining}");
+                Log($"[피버] {card.data.displayName} → 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은시간={_feverTimeRemaining:F2}s");
 
                 if (handHud != null)
                 {
@@ -362,8 +429,8 @@ namespace Battle
                     handHud.UpdateComboSkillList(ownedComboSkills, _activatedComboSkillIndices);
                 }
 
-                // 모든 콤보 스킬 발동 또는 입력 한도 소진 → 강제 종료
-                if (AllComboSkillsActivated() || _feverInputRemaining <= 0)
+                // 모든 콤보 스킬 발동 시 즉시 종료 (시간 종료는 Update의 TickFeverTimer가 담당)
+                if (AllComboSkillsActivated())
                     EndFever();
                 return true;
             }
@@ -386,70 +453,96 @@ namespace Battle
                 _resolver.Resolve(_lastResolvedCard);
             }
 
-            // 패에서 카드 선택 → 소멸 (불4/103, 불13/112)
+            // 패에서 카드 선택 → 소멸 (불4/103, 불13/112, 물10/209)
             if (result.requiresHandExileSelection && handHud != null && _deck.Hand.Count > 0)
             {
-                handHud.EnterSelectionMode("패에서 소멸할 카드를 선택하세요",
-                    (selected) =>
-                    {
-                        if (selected == null) return;
-                        _deck.ExileFromHand(selected);
-                        _resolver.NotifyExile(selected);
-                    });
+                var filter = BuildHandCardFilter(result.handSelectionCardFilter);
+                if (HandHasMatch(filter))
+                {
+                    handHud.EnterSelectionMode("패에서 소멸할 카드를 선택하세요",
+                        (selected) =>
+                        {
+                            if (selected == null) return;
+                            _deck.ExileFromHand(selected);
+                            _resolver.NotifyExile(selected);
+                        }, filter: filter);
+                }
+                else Log("[효과] 소멸 가능한 카드 없음 — 건너뜀");
             }
 
             // 패에서 카드 선택 → 버리기 (물8/207)
             if (result.requiresHandDiscardSelection && handHud != null && _deck.Hand.Count > 0)
             {
-                handHud.EnterSelectionMode("패에서 버릴 카드를 선택하세요",
-                    (selected) =>
-                    {
-                        if (selected == null) return;
-                        _deck.DiscardCardFromHand(selected);
-                        if (_ctx.discardToDrawActive) _deck.Draw(1); // 물21(220)
-                    });
+                var filter = BuildHandCardFilter(result.handSelectionCardFilter);
+                if (HandHasMatch(filter))
+                {
+                    handHud.EnterSelectionMode("패에서 버릴 카드를 선택하세요",
+                        (selected) =>
+                        {
+                            if (selected == null) return;
+                            _deck.DiscardCardFromHand(selected);
+                            if (_ctx.discardToDrawActive) _deck.Draw(1); // 물21(220)
+                        }, filter: filter);
+                }
+                else Log("[효과] 버릴 카드 없음 — 건너뜀");
             }
 
             // 패에서 카드 선택 → 복사하여 패에 추가 (물14/213)
             if (result.requiresHandCopySelection && handHud != null && _deck.Hand.Count > 0)
             {
-                handHud.EnterSelectionMode("복사할 카드를 선택하세요",
-                    (selected) =>
-                    {
-                        if (selected == null) return;
-                        var copy = new CardInstance(selected.data, transient: true);
-                        if (!_deck.AddToHand(copy)) _deck.AddToDiscard(copy);
-                    });
+                var filter = BuildHandCardFilter(result.handSelectionCardFilter);
+                if (HandHasMatch(filter))
+                {
+                    handHud.EnterSelectionMode("복사할 카드를 선택하세요",
+                        (selected) =>
+                        {
+                            if (selected == null) return;
+                            var copy = new CardInstance(selected.data, transient: true);
+                            if (!_deck.AddToHand(copy)) _deck.AddToDiscard(copy);
+                        }, filter: filter);
+                }
+                else Log("[효과] 복사 가능한 카드 없음 — 건너뜀");
             }
 
             // 뽑을 더미에서 카드 선택 → 패로 (물7/206)
-            if (result.requiresDrawPileMoveSelection)
+            if (result.requiresDrawPileMoveSelection && handHud != null)
             {
-                // 현재 UI 없음 — 자동: 무작위 1장 패로
-                if (_deck.DrawPile.Count > 0)
-                {
-                    var pick = _deck.DrawPile[Random.Range(0, _deck.DrawPile.Count)];
-                    _deck.MoveFromDrawPileToHand(pick);
-                }
+                handHud.EnterCardPickerMode("뽑을 더미에서 카드를 선택하세요",
+                    new List<CardInstance>(_deck.DrawPile),
+                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); });
             }
 
             // 버린 더미에서 카드 선택 → 뽑을 더미 맨 위 (물11/210)
-            if (result.requiresDiscardMoveSelection)
+            if (result.requiresDiscardMoveSelection && handHud != null)
             {
-                if (_deck.DiscardPile.Count > 0)
-                {
-                    var pick = _deck.DiscardPile[Random.Range(0, _deck.DiscardPile.Count)];
-                    _deck.MoveFromDiscardToDrawPileTop(pick);
-                }
+                handHud.EnterCardPickerMode("버린 더미에서 카드를 선택하세요",
+                    new List<CardInstance>(_deck.DiscardPile),
+                    (picked) => { if (picked != null) _deck.MoveFromDiscardToDrawPileTop(picked); });
             }
 
-            // 파편 풀에서 선택 (땅10/409)
-            if (result.requiresFragmentPoolSelection)
+            // 파편 풀에서 선택 (땅10/409, 땅15/414)
+            if (result.requiresFragmentPoolSelection && handHud != null)
             {
-                int rid = CardDatabase.FragmentIds[Random.Range(0, CardDatabase.FragmentIds.Length)];
-                var frag = CardDatabase.CreateFragmentInstance(rid);
-                if (frag != null && !_deck.AddToHand(frag))
-                    _deck.AddToDiscard(frag);
+                var pool = new List<CardInstance>();
+                foreach (var fid in CardDatabase.FragmentIds)
+                {
+                    var preview = CardDatabase.CreateFragmentInstance(fid);
+                    if (preview != null) pool.Add(preview);
+                }
+                string zone = result.fragmentPickerTargetZone;
+                int copies = Mathf.Max(1, result.fragmentPickerCopyCount);
+                handHud.EnterCardPickerMode("파편 카드를 선택하세요",
+                    pool,
+                    (picked) =>
+                    {
+                        if (picked == null) return;
+                        for (int i = 0; i < copies; i++)
+                        {
+                            var inst = CardDatabase.CreateFragmentInstance(picked.Id);
+                            if (inst == null) continue;
+                            PlaceFragmentInZone(inst, zone);
+                        }
+                    });
             }
 
             // 게이지 누적
@@ -471,6 +564,11 @@ namespace Battle
             _ctx.previousCardType = card.Type;
             _ctx.firstCardAfterEnemyAttack = false; // 카드 사용 후 리셋
             _ctx.currentCardJustDrawn = false;
+
+            // "방금 뽑은" 표시는 한 번이라도 카드를 쓰면 만료 (310의 USED_IMMEDIATELY_AFTER_DRAW용)
+            for (int i = 0; i < _deck.Hand.Count; i++)
+                _deck.Hand[i].justDrawn = false;
+            if (card != null) card.justDrawn = false;
 
             Log($"{card.data.displayName} 사용 — 게이지+{gaugeCost}, 연쇄={_ctx.chainCount}");
             return true;
@@ -523,7 +621,7 @@ namespace Battle
             _feverActive = true;
             _feverArmed = false;
             _elementInputCount = 0;
-            _feverInputRemaining = FEVER_END_INPUT;
+            _feverTimeRemaining = FEVER_DURATION_SECONDS;
 
             // 패/드로우/버린 더미의 무속성 카드 임시 격리
             _feverStoredNeutralCards = _deck.ExtractAllNeutralCards();
@@ -540,12 +638,13 @@ namespace Battle
                 handHud.UpdateComboSkillList(ownedComboSkills, _activatedComboSkillIndices);
             }
 
-            Log($"[피버] 발동! 격리된 무속성={_feverStoredNeutralCards.Count}, {FEVER_END_INPUT}회 입력 시 종료");
+            Log($"[피버] 발동! 격리된 무속성={_feverStoredNeutralCards.Count}, 지속 시간={FEVER_DURATION_SECONDS}s (콤보 성공 시 +{COMBO_BONUS_SECONDS}s)");
         }
 
         void EndFever()
         {
             _feverActive = false;
+            _feverTimeRemaining = 0f;
 
             _deck.ReturnNeutralCardsToDiscard(_feverStoredNeutralCards);
             _feverStoredNeutralCards.Clear();
@@ -698,7 +797,7 @@ namespace Battle
         {
             if (handHud == null) return;
             string label;
-            if (_feverActive) label = $"FEVER {_feverInputRemaining}";
+            if (_feverActive) label = $"FEVER {_feverTimeRemaining:F1}s";
             else if (_feverArmed) label = "FEVER READY (F)";
             else label = $"{_elementInputCount}/{FEVER_ACTIVATION_INPUT}";
             handHud.SetFeverText(label);

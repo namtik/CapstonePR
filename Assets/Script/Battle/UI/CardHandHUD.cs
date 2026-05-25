@@ -14,7 +14,10 @@ namespace Battle.UI
     /// </summary>
     public class CardHandHUD : MonoBehaviour
     {
-        public const int SLOT_COUNT = CardDeckSystem.HAND_LIMIT;
+        /// <summary>UI 슬롯 사전 생성 수 — 동적 패 한도(최대 MAX_HAND_LIMIT) 대응을 위해 상한 기준.</summary>
+        public const int SLOT_COUNT = CardDeckSystem.MAX_HAND_LIMIT;
+        /// <summary>레이아웃 기준 카드 수 — 이 값 기준으로 한 칸 간격이 정해진다(과거 SLOT_COUNT=5 호환).</summary>
+        public const int LAYOUT_REFERENCE_COUNT = CardDeckSystem.HAND_LIMIT;
 
         [Header("프리팹 (필수)")]
         [SerializeField] private NewCardView cardPrefab;
@@ -27,8 +30,8 @@ namespace Battle.UI
         public RectTransform DragLayer => dragLayer != null ? dragLayer : handRoot;
 
         [Header("레이아웃 — 슬롯 위치 자동 정렬")]
-        [Tooltip("슬롯 간 간격 (x). NewSkillCard 프리팹이 scale=2일 때 ~520 권장. 캔버스/스케일러에 맞춰 조정.")]
-        [SerializeField] private Vector2 slotSpacing = new Vector2(520f, 0f);
+        [Tooltip("슬롯 간 간격 (x). NewSkillCard 프리팹이 scale=1, 300×400일 때 650~750 권장.")]
+        [SerializeField] private Vector2 slotSpacing = new Vector2(700f, 0f);
         [SerializeField] private Vector2 handAnchoredPos = new Vector2(0f, 240f);
         [Tooltip("드래그 종료 시 스크린 Y가 이 값 이상이면 카드 사용으로 간주.")]
         [SerializeField] private float useThresholdY = 500f;
@@ -37,9 +40,9 @@ namespace Battle.UI
         [Tooltip("ON이면 카드들이 호 형태로 회전·배치된다.")]
         [SerializeField] private bool fanLayout = true;
         [Tooltip("부채꼴 반지름. 클수록 호가 평평해짐.")]
-        [SerializeField] private float fanRadius = 1600f;
-        [Tooltip("부채꼴 전체 각도(도). 클수록 카드 사이 회전 차이가 커짐.")]
-        [SerializeField] private float fanArcAngle = 24f;
+        [SerializeField] private float fanRadius = 1800f;
+        [Tooltip("부채꼴 전체 각도(도). 클수록 카드 사이 간격이 넓어짐. 5장 기준 36~44 권장.")]
+        [SerializeField] private float fanArcAngle = 40f;
         [Tooltip("호 위 가장자리에서 카드들이 떨어질 깊이. 작을수록 카드들이 살짝 아래로 호를 그림.")]
         [SerializeField] private float fanVerticalDip = 50f;
 
@@ -307,8 +310,8 @@ namespace Battle.UI
         public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
         {
             if (view.Card == null) return false;
-            // 선택 모드에서는 드래그 사용 금지
-            if (IsSelectionMode) return false;
+            // 선택/픽커 모드에서는 드래그 사용 금지
+            if (IsSelectionMode || IsPickerMode) return false;
             if (UseCardCallback == null) return false;
             if (ev.position.y < useThresholdY) return false;
             return UseCardCallback(view.Card);
@@ -358,6 +361,137 @@ namespace Battle.UI
                 selectionPromptText.gameObject.SetActive(false);
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // 카드 픽커 모드 (버린 더미/뽑을 더미/파편 풀 등에서 1장 선택)
+        // ─────────────────────────────────────────────────────────────
+
+        private RectTransform _pickerRoot;
+        private readonly List<NewCardView> _pickerViews = new List<NewCardView>();
+        private System.Action<CardInstance> _pickerCallback;
+        public bool IsPickerMode => _pickerCallback != null;
+
+        /// <summary>
+        /// 임의의 카드 목록에서 1장을 선택받는다. 임시 카드 뷰를 그리드로 깔고 클릭 시 콜백 발화.
+        /// </summary>
+        public void EnterCardPickerMode(string promptMessage, IList<CardInstance> cards,
+            System.Action<CardInstance> callback)
+        {
+            if (cards == null || cards.Count == 0)
+            {
+                callback?.Invoke(null);
+                return;
+            }
+            if (cardPrefab == null)
+            {
+                Debug.LogWarning("[CardHandHUD] EnterCardPickerMode — cardPrefab 미설정. 무작위 자동 선택 폴백.");
+                callback?.Invoke(cards[Random.Range(0, cards.Count)]);
+                return;
+            }
+
+            _pickerCallback = callback;
+
+            EnsureDimOverlay();
+            EnsurePickerRoot();
+
+            // 순서: handRoot(맨 뒤) → dim → 안내문 → pickerRoot(최상단)
+            if (handRoot != null) handRoot.SetAsFirstSibling();
+            if (dimOverlay != null)
+            {
+                dimOverlay.gameObject.SetActive(true);
+                dimOverlay.SetAsLastSibling();
+            }
+            if (selectionPromptText != null)
+            {
+                selectionPromptText.text = promptMessage;
+                selectionPromptText.gameObject.SetActive(true);
+                selectionPromptText.transform.SetAsLastSibling();
+            }
+            _pickerRoot.gameObject.SetActive(true);
+            _pickerRoot.SetAsLastSibling();
+            BuildPickerCards(cards);
+        }
+
+        public void ExitPickerMode()
+        {
+            _pickerCallback = null;
+            ClearPickerViews();
+            if (_pickerRoot != null) _pickerRoot.gameObject.SetActive(false);
+            if (dimOverlay != null) dimOverlay.gameObject.SetActive(false);
+            if (selectionPromptText != null) selectionPromptText.gameObject.SetActive(false);
+            // 손패가 SetAsFirstSibling 됐던 것 복원 — 최상단으로 다시 올림
+            if (handRoot != null) handRoot.SetAsLastSibling();
+        }
+
+        void EnsurePickerRoot()
+        {
+            if (_pickerRoot != null) return;
+            Canvas canvas = ResolveTargetCanvas();
+            Transform parent = canvas != null ? canvas.transform : transform;
+
+            var go = new GameObject("CardPickerRoot", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            _pickerRoot = (RectTransform)go.transform;
+            _pickerRoot.anchorMin = new Vector2(0.5f, 0.5f);
+            _pickerRoot.anchorMax = new Vector2(0.5f, 0.5f);
+            _pickerRoot.pivot = new Vector2(0.5f, 0.5f);
+            _pickerRoot.anchoredPosition = Vector2.zero;
+            _pickerRoot.sizeDelta = new Vector2(1600f, 600f);
+        }
+
+        void ClearPickerViews()
+        {
+            for (int i = 0; i < _pickerViews.Count; i++)
+            {
+                if (_pickerViews[i] != null) Destroy(_pickerViews[i].gameObject);
+            }
+            _pickerViews.Clear();
+        }
+
+        void BuildPickerCards(IList<CardInstance> cards)
+        {
+            ClearPickerViews();
+            const int maxPerRow = 6;
+            const float colSpacing = 350f;
+            const float rowSpacing = 440f;
+
+            int total = cards.Count;
+            int rows = Mathf.CeilToInt(total / (float)maxPerRow);
+            for (int i = 0; i < total; i++)
+            {
+                int row = i / maxPerRow;
+                int col = i % maxPerRow;
+                int cardsInRow = (row == rows - 1) ? (total - row * maxPerRow) : maxPerRow;
+                float rowWidth = colSpacing * (cardsInRow - 1);
+                float x = -rowWidth * 0.5f + col * colSpacing;
+                float y = (rows - 1) * rowSpacing * 0.5f - row * rowSpacing;
+
+                var view = Instantiate(cardPrefab, _pickerRoot);
+                view.Bind(this, -1); // 슬롯 인덱스 -1 = 픽커 뷰
+                var vrect = (RectTransform)view.transform;
+                vrect.anchorMin = new Vector2(0.5f, 0.5f);
+                vrect.anchorMax = new Vector2(0.5f, 0.5f);
+                vrect.pivot = new Vector2(0.5f, 0.5f);
+                vrect.anchoredPosition = new Vector2(x, y);
+                vrect.localRotation = Quaternion.identity;
+                view.SetCard(cards[i]);
+                view.CaptureHome();
+                _pickerViews.Add(view);
+            }
+        }
+
+        bool TryHandlePickerClick(NewCardView view)
+        {
+            if (_pickerCallback == null) return false;
+            if (view == null || view.Card == null) return true;
+            if (!_pickerViews.Contains(view)) return true; // 픽커 뷰만 유효
+
+            var cb = _pickerCallback;
+            CardInstance picked = view.Card;
+            ExitPickerMode();
+            cb?.Invoke(picked);
+            return true;
+        }
+
         /// <summary>선택 모드용 전체 화면 어둡게 처리 오버레이 생성(캔버스 안에).</summary>
         void EnsureDimOverlay()
         {
@@ -382,9 +516,12 @@ namespace Battle.UI
             dimOverlay.gameObject.SetActive(false);
         }
 
-        /// <summary>NewCardView가 클릭됐을 때 호출. 선택 모드면 콜백 발동.</summary>
+        /// <summary>NewCardView가 클릭됐을 때 호출. 픽커/선택 모드면 콜백 발동.</summary>
         public void OnCardClicked(NewCardView view)
         {
+            // 픽커 모드 우선
+            if (TryHandlePickerClick(view)) return;
+
             if (!IsSelectionMode) return;
             if (view == null || view.Card == null) return;
             if (_selectionExcludeCard != null && view.Card == _selectionExcludeCard) return;
@@ -473,8 +610,9 @@ namespace Battle.UI
         void PositionFanForCount(int activeCount)
         {
             int total = _slotAnchors.Count;
-            // 활성 카드 사이 간격은 5장 기준 유지, 전체 호는 카드 수에 비례해서 줄어듦 → 자연스러운 중앙 정렬
-            float perStep = fanArcAngle / Mathf.Max(1, SLOT_COUNT - 1);
+            // 활성 카드 사이 간격은 기준 카드 수(=HAND_LIMIT=5) 기준 유지.
+            // 전체 호는 카드 수에 비례해서 줄어듦 → 자연스러운 중앙 정렬.
+            float perStep = fanArcAngle / Mathf.Max(1, LAYOUT_REFERENCE_COUNT - 1);
             float effectiveArc = activeCount > 1 ? perStep * (activeCount - 1) : 0f;
             float startAngle = -effectiveArc * 0.5f;
             float angleStep = activeCount > 1 ? effectiveArc / (activeCount - 1) : 0f;

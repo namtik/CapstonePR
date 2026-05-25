@@ -75,11 +75,15 @@ namespace Battle.Card
         /// <summary>이 카드가 패로 들어온 이후 진행된 게이지 수(땅6/땅16 등의 공식 GAUGE_SINCE_DRAWN).</summary>
         public int gaugeSinceDrawn;
 
+        /// <summary>드로우 직후 아직 어떤 카드도 사용되지 않은 상태(바람11/310 USED_IMMEDIATELY_AFTER_DRAW용).</summary>
+        public bool justDrawn;
+
         public CardInstance(CardData data, bool transient = false)
         {
             this.data = data;
             this.transient = transient;
             this.gaugeSinceDrawn = 0;
+            this.justDrawn = false;
         }
 
         public int Id => data.id;

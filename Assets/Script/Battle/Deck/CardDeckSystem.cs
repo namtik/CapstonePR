@@ -11,7 +11,12 @@ namespace Battle.Deck
     /// </summary>
     public class CardDeckSystem
     {
+        /// <summary>기본 손패 한도(PDF 사양). 땅19(418) 등으로 동적 증가 가능.</summary>
         public const int HAND_LIMIT = 5;
+        /// <summary>UI 슬롯 사전 생성용 절대 상한(Excel Extra: MaxHandLimit=10 기준).</summary>
+        public const int MAX_HAND_LIMIT = 10;
+        /// <summary>현재 손패 한도(런타임 변경 가능 — 땅19/418).</summary>
+        public int HandLimit { get; private set; } = HAND_LIMIT;
 
         private readonly List<CardInstance> _drawPile = new List<CardInstance>();
         private readonly List<CardInstance> _hand = new List<CardInstance>();
@@ -26,7 +31,17 @@ namespace Battle.Deck
         public int HandCount => _hand.Count;
         public int DrawCount => _drawPile.Count;
         public int DiscardCount => _discardPile.Count;
-        public bool IsHandFull => _hand.Count >= HAND_LIMIT;
+        public bool IsHandFull => _hand.Count >= HandLimit;
+
+        /// <summary>땅19(418) 등 — HandLimit를 delta만큼 증가(MAX_HAND_LIMIT 상한).</summary>
+        public void IncreaseHandLimit(int delta)
+        {
+            HandLimit = Mathf.Clamp(HandLimit + delta, HAND_LIMIT, MAX_HAND_LIMIT);
+            OnPileChanged?.Invoke();
+        }
+
+        /// <summary>전투 시작 시 HandLimit 초기화.</summary>
+        public void ResetHandLimit() => HandLimit = HAND_LIMIT;
 
         public event System.Action OnPileChanged;
         /// <summary>패로 새로 들어온 카드. gaugeSinceDrawn 리셋 등에 사용.</summary>
@@ -43,6 +58,7 @@ namespace Battle.Deck
             _hand.Clear();
             _discardPile.Clear();
             _exilePile.Clear();
+            ResetHandLimit();
 
             foreach (var card in startingDeck) _drawPile.Add(card);
             Shuffle(_drawPile);
@@ -69,7 +85,7 @@ namespace Battle.Deck
             int drawn = 0;
             for (int i = 0; i < count; i++)
             {
-                if (_hand.Count >= HAND_LIMIT) break;
+                if (_hand.Count >= HandLimit) break;
                 if (!TryDrawOne()) break;
                 drawn++;
             }
@@ -106,7 +122,7 @@ namespace Battle.Deck
         public bool AddToHand(CardInstance card)
         {
             if (card == null) return false;
-            if (_hand.Count >= HAND_LIMIT) return false;
+            if (_hand.Count >= HandLimit) return false;
             _hand.Add(card);
             OnCardDrawn?.Invoke(card);
             OnPileChanged?.Invoke();
@@ -283,7 +299,7 @@ namespace Battle.Deck
         public int TrimHandOverflowToDiscard()
         {
             int trimmed = 0;
-            while (_hand.Count > HAND_LIMIT)
+            while (_hand.Count > HandLimit)
             {
                 var card = _hand[_hand.Count - 1];
                 _hand.RemoveAt(_hand.Count - 1);
