@@ -6,7 +6,8 @@ namespace Battle.Card
         Water,
         Wind,
         Earth,
-        Neutral
+        Neutral,
+        Fragment
     }
 
     public enum CardType

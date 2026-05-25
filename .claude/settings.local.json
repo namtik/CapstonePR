@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(python -c ' *)",
-      "Bash(stat -c '%Y' \"/c/Users/dusdn/Downloads/카드DB_n.xlsx\")"
+      "Bash(stat -c '%Y' \"/c/Users/dusdn/Downloads/카드DB_n.xlsx\")",
+      "Skill(anthropic-skills:xlsx)",
+      "Skill(anthropic-skills:xlsx:*)",
+      "Bash(python \"C:\\\\Users\\\\dusdn\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\2539d5af-c761-4af1-a865-5aa21ff50a92\\\\849da21b-33ca-4fd1-8b2a-55247e947846\\\\skills\\\\xlsx\\\\scripts\\\\extract-text.py\" \"C:\\\\Users\\\\dusdn\\\\Downloads\\\\Card_DB.xlsx\")",
+      "Bash(ls \"C:\\\\Users\\\\dusdn\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\2539d5af-c761-4af1-a865-5aa21ff50a92\\\\849da21b-33ca-4fd1-8b2a-55247e947846\\\\skills\\\\xlsx\\\\scripts\\\\\")",
+      "Bash(pip install *)",
+      "Bash(python Tools/ConvertCardDB.py)"
     ]
   }
 }

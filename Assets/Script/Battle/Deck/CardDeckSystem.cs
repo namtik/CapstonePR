@@ -29,6 +29,8 @@ namespace Battle.Deck
         public bool IsHandFull => _hand.Count >= HAND_LIMIT;
 
         public event System.Action OnPileChanged;
+        /// <summary>패로 새로 들어온 카드. gaugeSinceDrawn 리셋 등에 사용.</summary>
+        public event System.Action<CardInstance> OnCardDrawn;
 
         // ─────────────────────────────────────────────────────────────
         // 초기화
@@ -83,6 +85,43 @@ namespace Battle.Deck
             var card = _drawPile[_drawPile.Count - 1];
             _drawPile.RemoveAt(_drawPile.Count - 1);
             _hand.Add(card);
+            OnCardDrawn?.Invoke(card);
+            return true;
+        }
+
+        /// <summary>지정 카드를 뽑을 더미에서 패로 이동(데이터 드리븐 효과용).</summary>
+        public bool MoveFromDrawPileToHand(CardInstance card)
+        {
+            if (card == null) return false;
+            int idx = _drawPile.IndexOf(card);
+            if (idx < 0) return false;
+            _drawPile.RemoveAt(idx);
+            _hand.Add(card);
+            OnCardDrawn?.Invoke(card);
+            OnPileChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>카드를 패에 직접 추가 (한도 초과 시 false).</summary>
+        public bool AddToHand(CardInstance card)
+        {
+            if (card == null) return false;
+            if (_hand.Count >= HAND_LIMIT) return false;
+            _hand.Add(card);
+            OnCardDrawn?.Invoke(card);
+            OnPileChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>지정 카드를 버린 더미에서 뽑을 더미 맨 위로 이동.</summary>
+        public bool MoveFromDiscardToDrawPileTop(CardInstance card)
+        {
+            if (card == null) return false;
+            int idx = _discardPile.IndexOf(card);
+            if (idx < 0) return false;
+            _discardPile.RemoveAt(idx);
+            _drawPile.Add(card); // 맨 위 = 다음 뽑힐 위치
+            OnPileChanged?.Invoke();
             return true;
         }
 
@@ -222,9 +261,10 @@ namespace Battle.Deck
 
         static void ExtractNeutral(List<CardInstance> source, List<CardInstance> dest)
         {
+            // 피버 중 콤보 슬롯에 들어가지 않는 카드(무속성 500 + 파편 501~503) 모두 격리.
             for (int i = source.Count - 1; i >= 0; i--)
             {
-                if (source[i].data.IsFragment)
+                if (source[i].data.BypassComboSlot)
                 {
                     dest.Add(source[i]);
                     source.RemoveAt(i);

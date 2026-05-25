@@ -67,6 +67,8 @@ namespace Battle
         public bool IsFeverArmed => _feverArmed;
         public bool IsFeverActive => _feverActive;
         public CardDeckSystem Deck => _deck;
+        public CardInstance LastResolvedCard => _lastResolvedCard;
+        public CardElement? CursedElement => _cursedElement;
 
         /// <summary>BattleTestController가 라운드 시작 전에 주입하는 사용자 정의 시작 덱.</summary>
         private List<CardInstance> _customStartingDeck;
@@ -81,6 +83,28 @@ namespace Battle
             if (Instance == null) Instance = this;
             else if (Instance != this) { Destroy(gameObject); return; }
             _resolver.Bind(_ctx);
+
+            // 카드가 패로 들어올 때 gaugeSinceDrawn 리셋 + USED_IMMEDIATELY_AFTER_DRAW 플래그
+            _deck.OnCardDrawn += OnCardDrawnHandler;
+        }
+
+        void OnDestroy()
+        {
+            _deck.OnCardDrawn -= OnCardDrawnHandler;
+            if (_player != null)
+            {
+                _player.OnPlayerHit -= OnPlayerHitHandler;
+                _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
+            }
+            if (_enemyStat != null) _enemyStat.OnGaugeFull -= OnEnemyAttackFiredHandler;
+            if (Instance == this) Instance = null;
+        }
+
+        void OnCardDrawnHandler(CardInstance card)
+        {
+            if (card == null) return;
+            card.gaugeSinceDrawn = 0;
+            _ctx.currentCardJustDrawn = true;
         }
 
         void Update()
@@ -115,6 +139,22 @@ namespace Battle
             _ctx.enemyStat = _enemyStat;
             _ctx.deck = _deck;
             ResetContextFlags();
+
+            // 플레이어 피격/방어도 소모 이벤트 구독 (전투마다 갱신)
+            if (_player != null)
+            {
+                _player.OnPlayerHit -= OnPlayerHitHandler;
+                _player.OnPlayerHit += OnPlayerHitHandler;
+                _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
+                _player.OnBlockConsumedByAttack += OnBlockConsumedHandler;
+            }
+
+            // 적 공격 직후 첫 카드 무료 트리거(바람20/319)용
+            if (_enemyStat != null)
+            {
+                _enemyStat.OnGaugeFull -= OnEnemyAttackFiredHandler;
+                _enemyStat.OnGaugeFull += OnEnemyAttackFiredHandler;
+            }
 
             var startingDeck = _customStartingDeck ?? CardDatabase.BuildDefaultPrototypeDeck();
             _deck.StartBattle(startingDeck);
@@ -164,16 +204,88 @@ namespace Battle
             _ctx.burnOnExileActive = false;
             _ctx.burnOnExileAmount = 0;
             _ctx.fragmentOnEarthUseActive = false;
+            _ctx.fragmentOnFragmentUseActive = false;
+            _ctx.blockOnCardUseActive = false;
+            _ctx.blockOnCardUseAmount = 0;
+            _ctx.burnOnByCardActive = false;
+            _ctx.burnOnByCardAmount = 0;
+            _ctx.fragmentOnBlockConsumeActive = false;
             _ctx.healToDrawActive = false;
             _ctx.discardToDrawActive = false;
             _ctx.waterUseHealActive = false;
+            _ctx.healOnCurseCleanseActive = false;
+            _ctx.healOnCurseCleanseAmount = 0;
+            _ctx.healOnPlayerHitActive = false;
             _ctx.chainGainOnHitActive = false;
             _ctx.chainCount = 0;
             _ctx.chainBonusDamage = 0;
+            _ctx.attackPowerBonus = 0;
+            _ctx.damageMultiplierActive = 0;
+            _ctx.damageMultiplierThresholdHp = 25;
 
-            // 런타임 상태
+            _ctx.lastHpLost = 0;
+            _ctx.lastDiscardedCount = 0;
+            _ctx.usedAttackCardCount = 0;
+            _ctx.usedFragmentCardCount = 0;
+            _ctx.previousCardType = null;
+            _ctx.firstCardAfterEnemyAttack = false;
+            _ctx.nextCardIsFree = false;
+            _ctx.currentCardJustDrawn = false;
+            _ctx.usedCardNameCounts.Clear();
+            _ctx.handLimitBonus = 0;
+            _ctx.firstCardAfterAttackFreeActive = false;
+
             _skipNextGaugeCount = 0;
             _lastResolvedCard = null;
+        }
+
+        void UpdateUsageStats(CardInstance card)
+        {
+            if (card == null) return;
+            if (card.Type == CardType.Attack) _ctx.usedAttackCardCount++;
+            if (card.Element == CardElement.Fragment) _ctx.usedFragmentCardCount++;
+
+            string name = card.data.displayName ?? "";
+            if (!string.IsNullOrEmpty(name))
+            {
+                _ctx.usedCardNameCounts.TryGetValue(name, out int cur);
+                _ctx.usedCardNameCounts[name] = cur + 1;
+            }
+        }
+
+        /// <summary>물15(214) — 플레이어에게 적용된 모든 저주 해제.</summary>
+        public void ClearAllCurses()
+        {
+            bool hadCurse = _cursedElement.HasValue;
+            _cursedElement = null;
+            _curseRemainingUses = 0;
+            handHud?.Refresh();
+            if (hadCurse) Log("[저주] 해제됨");
+        }
+
+        /// <summary>EnemyController가 공격 종료 시 호출 — 다음 카드에 FIRST_CARD_AFTER_ENEMY_ATTACK 적용.</summary>
+        public void NotifyEnemyAttackFinished()
+        {
+            _ctx.firstCardAfterEnemyAttack = true;
+        }
+
+        void OnPlayerHitHandler()
+        {
+            // 물18(217): 피격 시 회복 1
+            if (_ctx.healOnPlayerHitActive && _ctx.player != null)
+                _ctx.player.Heal(1);
+        }
+
+        void OnBlockConsumedHandler()
+        {
+            // 땅18(417): 방어도 소모 시 무작위 파편 1장 버린 더미에
+            if (_ctx.fragmentOnBlockConsumeActive && _deck != null)
+                _deck.AddToDiscard(CardDatabase.CreateFragmentInstance());
+        }
+
+        void OnEnemyAttackFiredHandler()
+        {
+            _ctx.firstCardAfterEnemyAttack = true;
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -232,7 +344,7 @@ namespace Battle
                 _deck.Draw(1);
 
                 bool comboTriggered = false;
-                if (card.Element != CardElement.Neutral)
+                if (card.data.comboSlot)
                 {
                     AddToComboSlot(card.Element);
                     comboTriggered = TryActivateCombo();
@@ -257,19 +369,15 @@ namespace Battle
             }
 
             // 일반: 효과 실행
-            // 저주 처리(속성 저주가 활성이고 매칭 속성이면 플레이어 피해)
             ApplyCurseOnCardUse(card);
 
-            // 효과 처리 중 손패 조작 카드(예: 물3)가 자기 자신을 영향에 포함시키지 않도록
-            // 패에서 먼저 분리한 뒤 효과 해결.
             _deck.PullFromHand(card);
 
             var result = _resolver.Resolve(card);
 
             _deck.PlaceCardAfterUse(card, result.exile, result.keepOnField);
 
-            if (result.exile)
-                _resolver.NotifyExile(card);
+            if (result.exile) _resolver.NotifyExile(card);
 
             // 물12(211): 마지막 사용 카드 효과 재사용
             if (result.recastLastCard && _lastResolvedCard != null)
@@ -278,7 +386,7 @@ namespace Battle
                 _resolver.Resolve(_lastResolvedCard);
             }
 
-            // 불13(112): 패에서 카드 1장 선택해 소멸
+            // 패에서 카드 선택 → 소멸 (불4/103, 불13/112)
             if (result.requiresHandExileSelection && handHud != null && _deck.Hand.Count > 0)
             {
                 handHud.EnterSelectionMode("패에서 소멸할 카드를 선택하세요",
@@ -290,7 +398,7 @@ namespace Battle
                     });
             }
 
-            // 물8(207): 패에서 카드 1장 선택해 버리기 (+ 220 트리거 시 드로우)
+            // 패에서 카드 선택 → 버리기 (물8/207)
             if (result.requiresHandDiscardSelection && handHud != null && _deck.Hand.Count > 0)
             {
                 handHud.EnterSelectionMode("패에서 버릴 카드를 선택하세요",
@@ -302,19 +410,69 @@ namespace Battle
                     });
             }
 
-            // 적 행동 게이지 누적 (바람14(313) 효과로 스킵 가능)
-            AccrueEnemyGauge(card.Gauge);
+            // 패에서 카드 선택 → 복사하여 패에 추가 (물14/213)
+            if (result.requiresHandCopySelection && handHud != null && _deck.Hand.Count > 0)
+            {
+                handHud.EnterSelectionMode("복사할 카드를 선택하세요",
+                    (selected) =>
+                    {
+                        if (selected == null) return;
+                        var copy = new CardInstance(selected.data, transient: true);
+                        if (!_deck.AddToHand(copy)) _deck.AddToDiscard(copy);
+                    });
+            }
+
+            // 뽑을 더미에서 카드 선택 → 패로 (물7/206)
+            if (result.requiresDrawPileMoveSelection)
+            {
+                // 현재 UI 없음 — 자동: 무작위 1장 패로
+                if (_deck.DrawPile.Count > 0)
+                {
+                    var pick = _deck.DrawPile[Random.Range(0, _deck.DrawPile.Count)];
+                    _deck.MoveFromDrawPileToHand(pick);
+                }
+            }
+
+            // 버린 더미에서 카드 선택 → 뽑을 더미 맨 위 (물11/210)
+            if (result.requiresDiscardMoveSelection)
+            {
+                if (_deck.DiscardPile.Count > 0)
+                {
+                    var pick = _deck.DiscardPile[Random.Range(0, _deck.DiscardPile.Count)];
+                    _deck.MoveFromDiscardToDrawPileTop(pick);
+                }
+            }
+
+            // 파편 풀에서 선택 (땅10/409)
+            if (result.requiresFragmentPoolSelection)
+            {
+                int rid = CardDatabase.FragmentIds[Random.Range(0, CardDatabase.FragmentIds.Length)];
+                var frag = CardDatabase.CreateFragmentInstance(rid);
+                if (frag != null && !_deck.AddToHand(frag))
+                    _deck.AddToDiscard(frag);
+            }
+
+            // 게이지 누적
+            int gaugeCost = card.Gauge;
+            if (result.currentCardFreeThisUse) gaugeCost = 0; // 바람11(310)
+            if (_ctx.firstCardAfterAttackFreeActive && _ctx.firstCardAfterEnemyAttack)
+                gaugeCost = 0; // 바람20(319)
+            AccrueEnemyGauge(gaugeCost);
             if (result.skipNextGaugeCost) _skipNextGaugeCount++;
 
-            // 속성 카드 입력 카운팅(피버 게이지)
-            if (card.Element != CardElement.Neutral)
-                AccumulateFeverInput();
+            // 통계 갱신
+            UpdateUsageStats(card);
 
-            // 마지막 사용 카드 기록 (211 자신은 제외 — 재사용 대상이 되지 않도록)
-            if (card.Id != 211)
-                _lastResolvedCard = card;
+            // 피버 입력 카운팅
+            if (card.data.comboSlot) AccumulateFeverInput();
 
-            Log($"{card.data.displayName} 사용 — 게이지+{card.Gauge}, 연쇄={_ctx.chainCount}");
+            // 마지막 카드 기록 (자기 복사 방지)
+            if (card.Id != 211) _lastResolvedCard = card;
+            _ctx.previousCardType = card.Type;
+            _ctx.firstCardAfterEnemyAttack = false; // 카드 사용 후 리셋
+            _ctx.currentCardJustDrawn = false;
+
+            Log($"{card.data.displayName} 사용 — 게이지+{gaugeCost}, 연쇄={_ctx.chainCount}");
             return true;
         }
 
@@ -335,7 +493,13 @@ namespace Battle
             }
 
             if (_enemyStat == null) return;
-            for (int i = 0; i < amount; i++) _enemyStat.ConsumeGaugeStep();
+            for (int i = 0; i < amount; i++)
+            {
+                _enemyStat.ConsumeGaugeStep();
+                // 패의 모든 카드 gaugeSinceDrawn 누적 (땅6/405, 땅16/415 공식용)
+                for (int h = 0; h < _deck.Hand.Count; h++)
+                    _deck.Hand[h].gaugeSinceDrawn++;
+            }
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -489,9 +653,9 @@ namespace Battle
             }
             else
             {
-                // 무속성 카드 1장을 뽑을 카드 더미에 섞어 넣음
-                var fragment = CardDatabase.CreateFragmentInstance();
-                _deck.AddToDrawShuffled(fragment);
+                // 무속성 카드(500) 1장을 뽑을 카드 더미에 섞어 넣음 — 사용해도 효과 없는 더미.
+                var dummy = CardDatabase.CreateNeutralFillerInstance();
+                if (dummy != null) _deck.AddToDrawShuffled(dummy);
 
                 handHud?.Refresh();
                 Log("[방해] 무속성 카드 1장 뽑을 더미에 삽입");

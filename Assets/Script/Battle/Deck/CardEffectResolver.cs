@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Battle.Card;
 
@@ -13,41 +15,75 @@ namespace Battle.Deck
         public EnemyController enemy;
         public EnemyStat enemyStat;
         public CardDeckSystem deck;
-        public CardEffectResolver resolver; // 자기 자신(파워 효과 트리거 전파용)
+        public CardEffectResolver resolver;
 
-        // 파워 상태 (전투 동안 지속)
-        public bool bonusDamagePerCardActive;     // 바람22(321): 카드 사용 시 +3
+        // ── 파워 효과(Ctx 캐시 — 데이터 드리븐 파워 등록 시 채워짐) ──
+        public bool bonusDamagePerCardActive;     // 바람22(321): 카드 사용 시 +N
         public int  bonusDamagePerCard;
-        public bool attackHitCountBonusActive;    // 바람21(320): 공격 카드 타격 횟수 +1
+        public bool attackHitCountBonusActive;    // 바람21(320): 공격 카드 타격 +N
         public int  attackHitCountBonus;
-        public bool burnOnHitActive;              // 불19(118): 적에게 피해 줄 때마다 화상 1
+        public bool burnOnHitActive;              // 불19(118): 피해 줄 때마다 화상 N
         public int  burnOnHitAmount;
-        public bool burnOnExileActive;            // 불22(121): 카드 소멸 시 화상 5
+        public bool burnOnExileActive;            // 불22(121): 카드 소멸 시 화상 N
         public int  burnOnExileAmount;
         public bool fragmentOnEarthUseActive;     // 땅21(420): 땅 카드 사용 시 파편 추가
+        public bool fragmentOnFragmentUseActive;  // 땅22(421): 파편 카드 사용 시 파편 추가
+        public bool blockOnCardUseActive;         // 땅20(419): 카드 사용 시 방어도 N
+        public int  blockOnCardUseAmount;
+        public bool burnOnByCardActive;           // 불20(119): 카드 효과로 화상 부여 시 N 피해
+        public int  burnOnByCardAmount;
+        public bool fragmentOnBlockConsumeActive; // 땅18(417): 방어도 소모 시 파편 추가
+        public bool fragmentOnFragmentUse2Active; // 땅22(421) 중복 — 위와 통합 사용
 
-        public bool healToDrawActive;             // 물19(218): 회복될 때마다 드로우 1
+        public bool healToDrawActive;             // 물19(218): 회복 시 드로우 1
         public bool discardToDrawActive;          // 물21(220): 카드 버릴 때마다 드로우 1
-        public bool waterUseHealActive;           // 물22(221): 물 카드 사용 시 체력 1 회복
-        public bool chainGainOnHitActive;         // 바람19(318): 피해 시 연쇄 1 획득
-        public int  chainCount;                   // 연쇄 누적치
-        public int  chainBonusDamage;             // 바람18(317): 연쇄 1회 피해량 증가
+        public bool waterUseHealActive;           // 물22(221): 물 카드 사용 시 회복 1
+        public bool healOnCurseCleanseActive;     // 물20(219): 저주 해제 시 회복 N
+        public int  healOnCurseCleanseAmount;
+        public bool healOnPlayerHitActive;        // 물18(217): 피격 시 회복 1
+        public bool chainGainOnHitActive;         // 바람19(318): 피해 시 연쇄 +1
+        public int  chainCount;                   // 연쇄 누적
+        public int  chainBonusDamage;             // 바람18(317): 연쇄 피해 +N
+        public int  attackPowerBonus;             // 불18(117): 공격력 +N (DAMAGE에 더해짐)
+        public int  damageMultiplierActive;       // 불21(120): 체력 25% 이하 시 2배 (값=배율)
+        public int  damageMultiplierThresholdHp;  // 임계 체력%
+
+        // ── 런타임 통계 ──
+        public int lastHpLost;
+        public int lastDiscardedCount;
+        public int usedAttackCardCount;
+        public int usedFragmentCardCount;
+        public CardType? previousCardType;
+        public bool firstCardAfterEnemyAttack;    // 적 공격 직후 다음 카드 무료 판정용
+        public bool nextCardIsFree;               // 바람14(313)
+        public bool currentCardJustDrawn;         // 바람11(310) USED_IMMEDIATELY_AFTER_DRAW용
+        public Dictionary<string, int> usedCardNameCounts = new Dictionary<string, int>();
+
+        public int handLimitBonus;                // 땅19(418)
+        public bool firstCardAfterAttackFreeActive; // 바람20(319) 등록 여부
     }
 
     /// <summary>
-    /// 카드 ID별 효과 실행. 결과(소멸 여부, 파워 보존 여부)를 반환한다.
+    /// 카드 효과 엔진. Resources/CardDB/CardEffects.json 기반으로 카드 효과를 해석/실행.
+    /// 특수 동작(선택 모드, 효과 재사용 등)은 ResolveResult 플래그로 외부에 위임.
     /// </summary>
     public class CardEffectResolver
     {
         public struct ResolveResult
         {
-            public bool exile;                        // 소멸 더미로
-            public bool keepOnField;                  // 파워 — 필드 잔류
-            public int  totalDamage;                  // 디버그/UI용
-            public bool requiresHandExileSelection;   // 패에서 카드 1장 선택해 소멸 (불13/112)
-            public bool requiresHandDiscardSelection; // 패에서 카드 1장 선택해 버리기 (물8/207)
-            public bool skipNextGaugeCost;            // 다음 카드 게이지 소모 스킵 (바람14/313)
-            public bool recastLastCard;               // 마지막 사용 카드 효과 재사용 (물12/211)
+            public bool exile;
+            public bool keepOnField;                  // 파워 카드 — 필드 잔류
+            public int  totalDamage;
+            public bool requiresHandExileSelection;   // SELECT_ONE_FROM_HAND + EXHAUST
+            public bool requiresHandDiscardSelection; // SELECT_ONE_FROM_HAND + DISCARD
+            public bool requiresHandCopySelection;    // SELECT_ONE_FROM_HAND + COPY
+            public bool requiresDrawPileMoveSelection;// SELECT_ONE_FROM_DRAW_PILE + MOVE
+            public bool requiresDiscardMoveSelection; // SELECT_ONE_FROM_DISCARD + MOVE
+            public bool requiresFragmentPoolSelection;// SELECT_ONE_FROM_FRAGMENT_POOL
+            public bool skipNextGaugeCost;            // 바람14(313)
+            public bool recastLastCard;               // 물12(211)
+            public bool currentCardFreeThisUse;       // 바람11(310) — 이 카드 자체가 게이지 무료
+            public bool poweredField;                 // 명시적 keepOnField와 동의어 (구버전 호환)
         }
 
         public CardEffectContext Ctx { get; private set; }
@@ -58,11 +94,15 @@ namespace Battle.Deck
             ctx.resolver = this;
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // Resolve — 메인 진입점
+        // ─────────────────────────────────────────────────────────────
+
         public ResolveResult Resolve(CardInstance card)
         {
             var result = new ResolveResult();
 
-            // ── 저주된 카드면 사용 시 플레이어가 피해를 본다 ──
+            // 1. 저주 처리
             if (card.cursed && Ctx.player != null)
             {
                 Ctx.player.TakeDamage(5);
@@ -70,240 +110,775 @@ namespace Battle.Deck
                 card.cursed = false;
             }
 
-            switch (card.Id)
+            // 2. 효과 실행
+            bool isPower = card.Type == CardType.Power || card.data.HasTag("POWER");
+            var effects = CardDatabase.GetEffects(card.Id);
+            if (effects != null && effects.Count > 0)
             {
-                // ── 불 ─────────────────────────────────────────────
-                case 104: // 불5 — 소멸, 피해 10
-                    result.totalDamage += DealDamage(10, isAttackCard: true);
-                    result.exile = true;
-                    break;
-
-                case 106: // 불7 — 피해 10, 적 화상 10 이상이면 한 번 더 발동
-                    result.totalDamage += DealDamage(10, isAttackCard: true);
-                    if (GetEnemyBurn() >= 10)
-                        result.totalDamage += DealDamage(10, isAttackCard: true);
-                    break;
-
-                case 107: // 불8 — 피해 = 화상 보유량
-                    int burnAmt = GetEnemyBurn();
-                    if (burnAmt > 0) result.totalDamage += DealDamage(burnAmt, isAttackCard: true);
-                    break;
-
-                case 112: // 불13 — 화상 15, 패에서 카드 1장 직접 선택해 소멸
-                    AddEnemyStatus("burn", 15);
-                    result.requiresHandExileSelection = true;
-                    break;
-
-                case 115: // 불16 — 소멸, 화상 20
-                    AddEnemyStatus("burn", 20);
-                    result.exile = true;
-                    break;
-
-                case 116: // 불17 — 적 화상량만큼 화상 부여
+                foreach (var eff in effects)
+                {
+                    if (isPower && !IsImmediateTrigger(eff.when))
                     {
-                        int n = GetEnemyBurn();
-                        if (n > 0) AddEnemyStatus("burn", n);
+                        RegisterPowerTrigger(eff, card);
+                        continue;
+                    }
+                    if (!IsImmediateTrigger(eff.when)) continue;
+                    if (!EvaluateCondition(eff.ifCond, card, ref result)) continue;
+                    ApplyAction(eff, card, ref result);
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[CardEffect] 효과 정의 없음 id={card.Id} ({card.data.displayName})");
+            }
+
+            // 3. EXHAUST 태그 → 소멸
+            if (card.data.HasTag("EXHAUST")) result.exile = true;
+
+            // 4. POWER → 필드 잔류
+            if (isPower)
+            {
+                result.keepOnField = true;
+                result.poweredField = true;
+            }
+
+            // 5. 공통 파워 트리거 (자기 자신 제외)
+            bool applyPowerEffects = !result.keepOnField;
+
+            // 바람22(321) — 카드 사용 시마다 추가 피해
+            if (applyPowerEffects && Ctx.bonusDamagePerCardActive && Ctx.bonusDamagePerCard > 0)
+                result.totalDamage += DealDamage(Ctx.bonusDamagePerCard, isAttackCard: false);
+
+            // 땅20(419) — 카드 사용 시마다 방어도
+            if (applyPowerEffects && Ctx.blockOnCardUseActive && Ctx.blockOnCardUseAmount > 0)
+                AddPlayerGuard(Ctx.blockOnCardUseAmount);
+
+            // 땅21(420) — 땅 속성 카드 사용 시 파편을 버린 더미에 추가
+            if (applyPowerEffects && Ctx.fragmentOnEarthUseActive && card.Element == CardElement.Earth)
+                Ctx.deck?.AddToDiscard(CardDatabase.CreateFragmentInstance());
+
+            // 땅22(421) — 파편 카드 사용 시 파편 1장 추가
+            if (applyPowerEffects && Ctx.fragmentOnFragmentUseActive && card.Element == CardElement.Fragment)
+                Ctx.deck?.AddToDiscard(CardDatabase.CreateFragmentInstance());
+
+            // 물22(221) — 물 카드 사용 시 회복 1
+            if (applyPowerEffects && Ctx.waterUseHealActive && card.Element == CardElement.Water)
+                HealPlayer(1);
+
+            return result;
+        }
+
+        public void NotifyExile(CardInstance card)
+        {
+            // 파워(불22/121) — 카드 소멸 시마다 화상
+            if (Ctx.burnOnExileActive && Ctx.burnOnExileAmount > 0)
+                AddEnemyStatus("burn", Ctx.burnOnExileAmount, isCardEffect: true);
+
+            // 카드 자신의 ON_SELF_EXHAUST 트리거 (불10/109)
+            if (card == null) return;
+            var effects = CardDatabase.GetEffects(card.Id);
+            if (effects == null) return;
+            for (int i = 0; i < effects.Count; i++)
+            {
+                var eff = effects[i];
+                string when = (eff.when ?? "").Trim().ToUpperInvariant();
+                if (when != "ON_SELF_EXHAUST") continue;
+                var dummyResult = new ResolveResult();
+                if (!EvaluateCondition(eff.ifCond, card, ref dummyResult)) continue;
+                ApplyAction(eff, card, ref dummyResult);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Extra 키=값;키=값 파싱
+        // ─────────────────────────────────────────────────────────────
+
+        static string ExtraSubstring(string extra, string key)
+        {
+            if (string.IsNullOrEmpty(extra) || string.IsNullOrEmpty(key)) return "";
+            var parts = extra.Split(';');
+            foreach (var p in parts)
+            {
+                int eq = p.IndexOf('=');
+                if (eq <= 0) continue;
+                string k = p.Substring(0, eq).Trim();
+                if (string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
+                    return p.Substring(eq + 1).Trim();
+            }
+            return "";
+        }
+
+        static int ExtraIntOrDefault(string extra, string key, int def)
+        {
+            string s = ExtraSubstring(extra, key);
+            if (string.IsNullOrEmpty(s)) return def;
+            return int.TryParse(s, out int v) ? v : def;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Trigger 분류
+        // ─────────────────────────────────────────────────────────────
+
+        static bool IsImmediateTrigger(string when)
+        {
+            if (string.IsNullOrEmpty(when)) return true;
+            switch (when.Trim().ToUpperInvariant())
+            {
+                case "ON_USE":
+                case "ON_USE_BEFORE_GAUGE":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 파워 카드 등록
+        // ─────────────────────────────────────────────────────────────
+
+        void RegisterPowerTrigger(CardEffectData eff, CardInstance card)
+        {
+            string when = (eff.when ?? "").Trim().ToUpperInvariant();
+            string verb = (eff.doAction ?? "").Trim().ToUpperInvariant();
+            string status = (eff.status ?? "").Trim().ToUpperInvariant();
+            int amount = eff.amount;
+
+            // 카드 ID별 매핑이 더 안정적이지만, 데이터의 When/Do로 추론.
+            switch (when)
+            {
+                case "ON_CARD_DAMAGE_HIT_DEALT":
+                    // 불19(118): 피해 줄 때 화상 N
+                    if (verb == "APPLY_STATUS" && status == "BURN")
+                    {
+                        Ctx.burnOnHitActive = true;
+                        Ctx.burnOnHitAmount += amount;
+                    }
+                    // 바람19(318): 피해 시 연쇄 1
+                    else if (verb == "GAIN_STATUS" && status == "CHAIN")
+                    {
+                        Ctx.chainGainOnHitActive = true;
                     }
                     break;
 
-                case 118: // 불19 (파워) — 적에게 피해 줄 때마다 화상 1
-                    Ctx.burnOnHitActive = true;
-                    Ctx.burnOnHitAmount += 1;
-                    result.keepOnField = true;
-                    break;
-
-                case 121: // 불22 (파워) — 카드 소멸 시마다 화상 5
-                    Ctx.burnOnExileActive = true;
-                    Ctx.burnOnExileAmount += 5;
-                    result.keepOnField = true;
-                    break;
-
-                // ── 물 ─────────────────────────────────────────────
-                case 201: // 물2 — 방어도 3
-                    AddPlayerGuard(3);
-                    break;
-
-                case 203: // 물4 — 피해 5, 플레이어 체력이 가득이면 드로우 2
-                    result.totalDamage += DealDamage(5, isAttackCard: true);
-                    if (Ctx.player != null && Ctx.player.currentHp >= Ctx.player.maxHp)
-                        Ctx.deck.Draw(2);
-                    break;
-
-                case 207: // 물8 — 드로우 1, 패에서 카드 1장 선택해 버리기
-                    Ctx.deck.Draw(1);
-                    result.requiresHandDiscardSelection = true;
-                    break;
-
-                case 208: // 물9 — 체력 4 회복
-                    HealPlayer(4);
-                    break;
-
-                case 211: // 물12 — 소멸, 마지막 사용 카드 효과 재사용
-                    result.recastLastCard = true;
-                    result.exile = true;
-                    break;
-
-                case 216: // 물17 — 패 전부 버리고 그만큼 드로우
+                case "ON_BURN_APPLIED_BY_CARD_EFFECT":
+                    // 불20(119): 화상 부여 시 적에게 피해
+                    if (verb == "DAMAGE")
                     {
-                        int discarded = Ctx.deck.DiscardAllFromHand();
-                        if (Ctx.discardToDrawActive && discarded > 0) Ctx.deck.Draw(discarded); // 220 트리거분
-                        Ctx.deck.Draw(discarded);
+                        Ctx.burnOnByCardActive = true;
+                        Ctx.burnOnByCardAmount += amount;
                     }
                     break;
 
-                case 218: // 물19 (파워) — 플레이어 회복 시 드로우 1
-                    Ctx.healToDrawActive = true;
-                    result.keepOnField = true;
-                    break;
-
-                case 220: // 물21 (파워) — 카드 효과로 카드 버릴 때 드로우 1
-                    Ctx.discardToDrawActive = true;
-                    result.keepOnField = true;
-                    break;
-
-                case 221: // 물22 (파워) — 물 속성 카드 사용 시 체력 1 회복
-                    Ctx.waterUseHealActive = true;
-                    result.keepOnField = true;
-                    break;
-
-                // ── 바람 ───────────────────────────────────────────
-                case 306: // 바람7 — 피해 2 x3, 연쇄 10 획득
-                    result.totalDamage += DealDamage(2, isAttackCard: true, baseHits: 3);
-                    Ctx.chainCount += 10;
-                    break;
-
-                case 308: // 바람9 — 피해 1 x3, 드로우 2
-                    result.totalDamage += DealDamage(1, isAttackCard: true, baseHits: 3);
-                    Ctx.deck.Draw(2);
-                    break;
-
-                case 309: // 바람10 — 소멸, 연쇄를 모두 소진할 때까지 피해 2 반복
+                case "ON_ATTACK_CARD_DAMAGE_CALC":
+                    // 바람21(320): 타격 횟수 +N
+                    if (verb == "MODIFY_HIT_COUNT")
                     {
-                        int safety = 99; // 무한 루프 방지
-                        // 최초 1회 + 연쇄가 남아있는 동안 반복
-                        do
+                        Ctx.attackHitCountBonusActive = true;
+                        Ctx.attackHitCountBonus += amount;
+                    }
+                    // 불21(120): 체력 25% 이하 시 피해 배율 N
+                    else if (verb == "MODIFY_DAMAGE_MULTIPLIER")
+                    {
+                        Ctx.damageMultiplierActive = amount;
+                        // 조건 ENEMY/PLAYER_HP_RATE_LTE:25 등을 ifCond로 받음
+                        int hp = ParseRatioFromIfCond(eff.ifCond);
+                        Ctx.damageMultiplierThresholdHp = hp > 0 ? hp : 25;
+                    }
+                    break;
+
+                case "ON_CARD_USED":
+                    // 바람22(321): 피해
+                    if (verb == "DAMAGE")
+                    {
+                        Ctx.bonusDamagePerCardActive = true;
+                        Ctx.bonusDamagePerCard += amount;
+                    }
+                    // 땅20(419): 방어도
+                    else if (verb == "GAIN_BLOCK")
+                    {
+                        Ctx.blockOnCardUseActive = true;
+                        Ctx.blockOnCardUseAmount += amount;
+                    }
+                    break;
+
+                case "ON_ELEMENT_CARD_USED":
+                    {
+                        var elem = (ParseEnumValueFromCond(eff.ifCond, "CARD_ELEMENT_EQ") ?? "").ToUpperInvariant();
+                        if (verb == "HEAL" && elem == "WATER")
                         {
-                            result.totalDamage += DealDamage(2, isAttackCard: true);
-                            safety--;
-                        } while (Ctx.chainCount > 0 && safety > 0);
-                        result.exile = true;
+                            Ctx.waterUseHealActive = true; // 물22(221)
+                        }
+                        else if (verb == "ADD_CARD" && elem == "EARTH")
+                        {
+                            Ctx.fragmentOnEarthUseActive = true; // 땅21(420)
+                        }
                     }
                     break;
 
-                case 312: // 바람13 — 카드 2장 드로우
-                    Ctx.deck.Draw(2);
+                case "ON_FRAGMENT_CARD_USED":
+                    if (verb == "ADD_CARD")
+                        Ctx.fragmentOnFragmentUseActive = true; // 땅22(421)
                     break;
 
-                case 313: // 바람14 — 다음에 사용하는 카드는 행동 게이지 소모 X
-                    result.skipNextGaugeCost = true;
-                    break;
-
-                case 314: // 바람15 — 연쇄 20 획득
-                    Ctx.chainCount += 20;
-                    break;
-
-                case 317: // 바람18 (파워) — 연쇄 1회 피해량 +1
-                    Ctx.chainBonusDamage += 1;
-                    result.keepOnField = true;
-                    break;
-
-                case 318: // 바람19 (파워) — 피해를 줄 때마다 연쇄 1 획득
-                    Ctx.chainGainOnHitActive = true;
-                    result.keepOnField = true;
-                    break;
-
-                case 320: // 바람21 (파워) — 모든 공격 카드 타격 횟수 +1
-                    Ctx.attackHitCountBonusActive = true;
-                    Ctx.attackHitCountBonus += 1;
-                    result.keepOnField = true;
-                    break;
-
-                case 321: // 바람22 (파워) — 카드 사용 시마다 적에게 피해 3
-                    Ctx.bonusDamagePerCardActive = true;
-                    Ctx.bonusDamagePerCard += 3;
-                    result.keepOnField = true;
-                    break;
-
-                // ── 땅 ─────────────────────────────────────────────
-                case 400: // 땅1 — 피해 5 (새 DB)
-                    result.totalDamage += DealDamage(5, isAttackCard: true);
-                    break;
-
-                case 401: // 땅2 — 방어도 3
-                    AddPlayerGuard(3);
-                    break;
-
-                case 407: // 땅8 — 방어도 5
-                    AddPlayerGuard(5);
-                    break;
-
-                case 411: // 땅2 — 방어도 5, 파편 1장을 뽑을 더미에 섞음
-                    AddPlayerGuard(5);
-                    Ctx.deck.AddToDrawShuffled(CardDatabase.CreateFragmentInstance());
-                    break;
-
-                case 414: // 땅3 — 소멸, 파편 선택해 같은 이름 카드를 버린 더미에 10장 섞음
+                case "ON_CARD_EXHAUSTED":
+                    if (verb == "APPLY_STATUS" && status == "BURN")
                     {
-                        // 프로토타입: 무작위 파편 ID 선택
-                        int pick = CardDatabase.FragmentIds[Random.Range(0, CardDatabase.FragmentIds.Length)];
-                        for (int i = 0; i < 10; i++)
-                            Ctx.deck.AddToDiscard(CardDatabase.CreateFragmentInstance(pick));
-                        result.exile = true;
+                        Ctx.burnOnExileActive = true; // 불22(121)
+                        Ctx.burnOnExileAmount += amount;
                     }
                     break;
 
-                case 420: // 땅4 (파워) — 땅 속성 카드 사용 시마다 파편 버린 더미에 추가
-                    Ctx.fragmentOnEarthUseActive = true;
-                    result.keepOnField = true;
+                case "ON_PLAYER_HEALED_ACTUAL":
+                    if (verb == "DRAW_CARD") Ctx.healToDrawActive = true; // 물19(218)
                     break;
 
-                // ── 파편 ───────────────────────────────────────────
-                case 422: // 파편1 — 소멸, 방어도 3, 드로우 1
-                    AddPlayerGuard(3);
-                    Ctx.deck.Draw(1);
-                    result.exile = true;
+                case "ON_PLAYER_HIT_INCLUDING_BLOCK":
+                    if (verb == "HEAL") Ctx.healOnPlayerHitActive = true; // 물18(217)
                     break;
 
-                case 423: // 파편2 — 소멸, 피해 5, 드로우 1
-                    result.totalDamage += DealDamage(5, isAttackCard: true);
-                    Ctx.deck.Draw(1);
-                    result.exile = true;
+                case "ON_CURSE_CLEANSED":
+                    if (verb == "HEAL")
+                    {
+                        Ctx.healOnCurseCleanseActive = true; // 물20(219)
+                        Ctx.healOnCurseCleanseAmount += amount;
+                    }
                     break;
 
-                case 424: // 파편3 — 소멸, 피해 8, 방어도 5
-                    result.totalDamage += DealDamage(8, isAttackCard: true);
-                    AddPlayerGuard(5);
-                    result.exile = true;
+                case "ON_CARD_DISCARDED_BY_CARD_EFFECT":
+                    if (verb == "DRAW_CARD") Ctx.discardToDrawActive = true; // 물21(220)
+                    break;
+
+                case "ON_BLOCK_CONSUMED_BY_ATTACK":
+                    if (verb == "ADD_CARD") Ctx.fragmentOnBlockConsumeActive = true; // 땅18(417)
+                    break;
+
+                case "ON_CARD_USED_BEFORE_GAUGE":
+                    // 바람20(319): 적 공격 후 첫 카드 무료
+                    if (verb == "SET_GAUGE_COST" && amount == 0)
+                        Ctx.firstCardAfterAttackFreeActive = true;
+                    break;
+            }
+
+            // GAIN_STAT (불18 117): 공격력 +N
+            if (verb == "GAIN_STAT")
+            {
+                string statKey = (eff.status ?? "").Trim().ToUpperInvariant();
+                if (statKey == "ATTACK_POWER") Ctx.attackPowerBonus += amount;
+                else if (statKey == "CHAIN_DAMAGE_BONUS") Ctx.chainBonusDamage += amount;
+            }
+
+            // MODIFY_HAND_LIMIT (땅19 418)
+            if (verb == "MODIFY_HAND_LIMIT")
+            {
+                Ctx.handLimitBonus += amount;
+            }
+        }
+
+        static int ParseRatioFromIfCond(string ifCond)
+        {
+            if (string.IsNullOrEmpty(ifCond)) return -1;
+            int idx = ifCond.IndexOf(':');
+            if (idx < 0) return -1;
+            int.TryParse(ifCond.Substring(idx + 1), out int v);
+            return v;
+        }
+
+        static string ParseEnumValueFromCond(string ifCond, string prefix)
+        {
+            if (string.IsNullOrEmpty(ifCond)) return null;
+            if (!ifCond.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
+            int idx = ifCond.IndexOf(':');
+            return idx < 0 ? null : ifCond.Substring(idx + 1).Trim();
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 조건 평가
+        // ─────────────────────────────────────────────────────────────
+
+        bool EvaluateCondition(string ifCond, CardInstance card, ref ResolveResult result)
+        {
+            if (string.IsNullOrEmpty(ifCond)) return true;
+            string c = ifCond.Trim();
+            string up = c.ToUpperInvariant();
+
+            if (up == "PLAYER_HP_FULL")
+                return Ctx.player != null && Ctx.player.currentHp >= Ctx.player.maxHp;
+
+            if (up.StartsWith("PLAYER_HP_RATE_LTE:"))
+            {
+                int.TryParse(up.Substring("PLAYER_HP_RATE_LTE:".Length), out int pct);
+                if (Ctx.player == null) return false;
+                float rate = (float)Ctx.player.currentHp / Mathf.Max(1, Ctx.player.maxHp) * 100f;
+                return rate <= pct;
+            }
+
+            if (up.StartsWith("ENEMY_STATUS_GTE:"))
+            {
+                // ENEMY_STATUS_GTE:BURN:10
+                var rest = c.Substring("ENEMY_STATUS_GTE:".Length);
+                int colon = rest.IndexOf(':');
+                if (colon < 0) return false;
+                string key = rest.Substring(0, colon).Trim().ToLowerInvariant();
+                int.TryParse(rest.Substring(colon + 1), out int thresh);
+                return GetEnemyStatus(key) >= thresh;
+            }
+
+            if (up.StartsWith("PLAYER_BLOCK_EQ:"))
+            {
+                int.TryParse(up.Substring("PLAYER_BLOCK_EQ:".Length), out int v);
+                if (Ctx.player == null) return false;
+                return Mathf.RoundToInt(Ctx.player.guard) == v;
+            }
+
+            if (up.StartsWith("CARD_ELEMENT_EQ:"))
+            {
+                string el = up.Substring("CARD_ELEMENT_EQ:".Length).Trim();
+                return ElementMatches(card.Element, el);
+            }
+
+            if (up.StartsWith("PREVIOUS_CARD_TYPE_EQ:"))
+            {
+                string t = up.Substring("PREVIOUS_CARD_TYPE_EQ:".Length).Trim();
+                if (!Ctx.previousCardType.HasValue) return false;
+                return string.Equals(Ctx.previousCardType.Value.ToString(), t, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (up == "FIRST_CARD_AFTER_ENEMY_ATTACK")
+                return Ctx.firstCardAfterEnemyAttack;
+
+            if (up == "USED_IMMEDIATELY_AFTER_DRAW")
+                return card != null && card.gaugeSinceDrawn == 0;
+
+            if (up == "LAST_USED_CARD_EXISTS_EXCLUDING_SELF")
+                return Battle.NewBattleController.Instance != null
+                    && Battle.NewBattleController.Instance.LastResolvedCard != null
+                    && Battle.NewBattleController.Instance.LastResolvedCard != card;
+
+            if (up.StartsWith("EXCLUDE_TRIGGER_SOURCE:")) return true; // 무한 트리거 방지(데이터 흐름에서 처리)
+            if (up == "DAMAGE_SOURCE_IS_CARD_EFFECT") return true;     // 현재 모든 카드 효과 피해는 카드 출처
+
+            Debug.LogWarning($"[CardEffect] 알 수 없는 조건 '{ifCond}'");
+            return true; // 모르는 조건은 통과(보수적)
+        }
+
+        static bool ElementMatches(CardElement el, string s)
+        {
+            switch (s)
+            {
+                case "FIRE":     return el == CardElement.Fire;
+                case "WATER":    return el == CardElement.Water;
+                case "WIND":     return el == CardElement.Wind;
+                case "EARTH":    return el == CardElement.Earth;
+                case "FRAGMENT": return el == CardElement.Fragment;
+                case "NEUTRAL":  return el == CardElement.Neutral;
+                default: return false;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 공식 평가
+        // ─────────────────────────────────────────────────────────────
+
+        int EvalFormula(string formula, ref bool multiplyBy2)
+        {
+            multiplyBy2 = false;
+            if (string.IsNullOrEmpty(formula)) return 0;
+            string f = formula.Trim();
+            string up = f.ToUpperInvariant();
+
+            if (up.StartsWith("ENEMY_STATUS_VALUE:"))
+            {
+                string key = f.Substring("ENEMY_STATUS_VALUE:".Length).Trim().ToLowerInvariant();
+                return GetEnemyStatus(key);
+            }
+
+            if (up == "PLAYER_BLOCK")
+                return Ctx.player != null ? Mathf.RoundToInt(Ctx.player.guard) : 0;
+
+            if (up == "FLOOR(PLAYER_CURRENT_HP/2)")
+                return Ctx.player != null ? Ctx.player.currentHp / 2 : 0;
+
+            if (up.StartsWith("LAST_HP_LOST"))
+            {
+                // LAST_HP_LOST 또는 LAST_HP_LOST*2
+                int v = Ctx.lastHpLost;
+                int starIdx = up.IndexOf('*');
+                if (starIdx > 0)
+                {
+                    int.TryParse(up.Substring(starIdx + 1), out int mul);
+                    if (mul > 0) v *= mul;
+                }
+                return v;
+            }
+
+            if (up == "GAUGE_SINCE_DRAWN")
+            {
+                // 현재 카드 기준 (Resolve 인자가 필요하므로 별도 처리 — 호출자가 amount로 직접 넣어주는 게 깔끔)
+                // 여기서는 0 반환. 호출 측에서 card.gaugeSinceDrawn 사용.
+                return 0;
+            }
+
+            if (up == "USED_ATTACK_CARD_COUNT") return Ctx.usedAttackCardCount;
+            if (up == "USED_FRAGMENT_CARD_COUNT") return Ctx.usedFragmentCardCount;
+            if (up == "LAST_DISCARDED_COUNT") return Ctx.lastDiscardedCount;
+
+            if (up == "IF_PLAYER_HP_RATE_LT_50_MULTIPLY_2")
+            {
+                // 공식이라기보다 amount에 곱하는 modifier — 호출 측에서 다룬다.
+                if (Ctx.player != null)
+                {
+                    float rate = (float)Ctx.player.currentHp / Mathf.Max(1, Ctx.player.maxHp) * 100f;
+                    if (rate < 50f) multiplyBy2 = true;
+                }
+                return -1; // sentinel — amount × 2 적용 신호
+            }
+
+            Debug.LogWarning($"[CardEffect] 알 수 없는 Formula '{formula}'");
+            return 0;
+        }
+
+        int EvalHitFormula(string formula, CardInstance card)
+        {
+            if (string.IsNullOrEmpty(formula)) return 0;
+            string f = formula.Trim();
+            if (f.StartsWith("USED_CARD_NAME_COUNT:", StringComparison.OrdinalIgnoreCase))
+            {
+                string name = f.Substring("USED_CARD_NAME_COUNT:".Length).Trim();
+                Ctx.usedCardNameCounts.TryGetValue(name, out int cnt);
+                // 이 카드 자체 사용 후 카운트가 증가하는데, 우리는 사용 직전에 평가하므로 +1
+                if (card != null && card.data.displayName == name) cnt += 1;
+                return cnt;
+            }
+            Debug.LogWarning($"[CardEffect] 알 수 없는 HitFormula '{formula}'");
+            return 0;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Do 동사 실행
+        // ─────────────────────────────────────────────────────────────
+
+        void ApplyAction(CardEffectData eff, CardInstance card, ref ResolveResult result)
+        {
+            string verb = (eff.doAction ?? "").Trim().ToUpperInvariant();
+
+            // amount 계산 — Formula 우선
+            int amount = eff.amount;
+            bool multiplyBy2 = false;
+            if (!string.IsNullOrEmpty(eff.formula))
+            {
+                int formulaVal = EvalFormula(eff.formula, ref multiplyBy2);
+                if (formulaVal == -1 && multiplyBy2)
+                {
+                    amount = amount * 2;
+                }
+                else if (eff.formula.Trim().Equals("GAUGE_SINCE_DRAWN", StringComparison.OrdinalIgnoreCase))
+                {
+                    amount = card.gaugeSinceDrawn;
+                }
+                else
+                {
+                    amount = formulaVal;
+                }
+            }
+
+            // hits 계산 — HitFormula 우선
+            int hits = eff.hits > 0 ? eff.hits : 1;
+            if (!string.IsNullOrEmpty(eff.hitFormula))
+            {
+                int hf = EvalHitFormula(eff.hitFormula, card);
+                if (hf > 0) hits = hf;
+            }
+
+            switch (verb)
+            {
+                case "DAMAGE":
+                    if (amount > 0)
+                    {
+                        int actualHits = Mathf.Max(1, hits);
+                        // Repeat 처리(바람10/309): 자원을 모두 소모할 때까지 반복.
+                        if (!string.IsNullOrEmpty(eff.repeat))
+                        {
+                            string repeat = eff.repeat.Trim().ToUpperInvariant();
+                            if (repeat == "REPEAT_BY_RESOURCE_CONSUME_ALL"
+                                && ExtraSubstring(eff.extra, "Resource").ToUpperInvariant() == "CHAIN")
+                            {
+                                int consumePer = ExtraIntOrDefault(eff.extra, "ConsumePerRepeat", 1);
+                                int safety = 200;
+                                // 최초 1회 + 연쇄가 0이 될 때까지 반복
+                                do
+                                {
+                                    result.totalDamage += DealDamage(amount, isAttackCard: true, baseHits: actualHits);
+                                    if (Ctx.chainCount > 0) Ctx.chainCount -= consumePer;
+                                    safety--;
+                                } while (Ctx.chainCount > 0 && safety > 0);
+                                if (Ctx.chainCount < 0) Ctx.chainCount = 0;
+                            }
+                            else
+                            {
+                                result.totalDamage += DealDamage(amount, isAttackCard: true, baseHits: actualHits);
+                            }
+                        }
+                        else
+                        {
+                            result.totalDamage += DealDamage(amount, isAttackCard: true, baseHits: actualHits);
+                        }
+                    }
+                    break;
+
+                case "GAIN_BLOCK":
+                    if (amount > 0) AddPlayerGuard(amount);
+                    break;
+
+                case "HEAL":
+                    if (amount > 0) HealPlayer(amount);
+                    break;
+
+                case "LOSE_HP":
+                    if (amount > 0 && Ctx.player != null)
+                    {
+                        int before = Ctx.player.currentHp;
+                        Ctx.player.TakeDamage(amount, "self_loss");
+                        Ctx.lastHpLost = Mathf.Max(0, before - Ctx.player.currentHp);
+                    }
+                    break;
+
+                case "DRAW_CARD":
+                    if (amount > 0 && Ctx.deck != null) Ctx.deck.Draw(amount);
+                    break;
+
+                case "DISCARD_HAND":
+                    if (Ctx.deck != null)
+                    {
+                        int d = Ctx.deck.DiscardAllFromHand();
+                        Ctx.lastDiscardedCount = d;
+                        if (Ctx.discardToDrawActive && d > 0) Ctx.deck.Draw(d);
+                    }
+                    break;
+
+                case "EXHAUST_HAND":
+                    if (Ctx.deck != null)
+                    {
+                        // 패 전체를 소멸 더미로 (자기 자신은 이미 PullFromHand로 빠져 있음)
+                        var snapshot = new List<CardInstance>(Ctx.deck.Hand);
+                        foreach (var c in snapshot)
+                        {
+                            Ctx.deck.ExileFromHand(c);
+                            NotifyExile(c);
+                        }
+                    }
+                    break;
+
+                case "DISCARD_CARD":
+                    {
+                        string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+                        if (sel == "SELECT_ONE_FROM_HAND")
+                            result.requiresHandDiscardSelection = true;
+                        // 그 외 케이스(현재 없음)는 무시
+                    }
+                    break;
+
+                case "EXHAUST_CARD":
+                    {
+                        string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+                        if (sel == "SELECT_ONE_FROM_HAND")
+                            result.requiresHandExileSelection = true;
+                    }
+                    break;
+
+                case "APPLY_STATUS":
+                    {
+                        string st = (eff.status ?? "").Trim().ToLowerInvariant();
+                        if (amount > 0 && !string.IsNullOrEmpty(st))
+                            AddEnemyStatus(st, amount, isCardEffect: true);
+                    }
+                    break;
+
+                case "GAIN_STATUS":
+                    {
+                        string st = (eff.status ?? "").Trim().ToUpperInvariant();
+                        if (amount > 0)
+                        {
+                            if (st == "CHAIN") Ctx.chainCount += amount;
+                            else if (st == "ATTACK_POWER") Ctx.attackPowerBonus += amount;
+                            else if (st == "CHAIN_DAMAGE_BONUS") Ctx.chainBonusDamage += amount;
+                            // 그 외 GAIN_STATUS는 플레이어 상태이상으로
+                            else if (Ctx.player != null) Ctx.player.AddStatus(st.ToLowerInvariant(), amount);
+                        }
+                    }
+                    break;
+
+                case "GAIN_STAT":
+                    {
+                        string st = (eff.status ?? "").Trim().ToUpperInvariant();
+                        if (st == "ATTACK_POWER") Ctx.attackPowerBonus += amount;
+                        else if (st == "CHAIN_DAMAGE_BONUS") Ctx.chainBonusDamage += amount;
+                    }
+                    break;
+
+                case "CLEANSE_STATUS":
+                    {
+                        string st = (eff.status ?? "").Trim().ToUpperInvariant();
+                        if (st == "CURSE")
+                        {
+                            // 저주 해제 — NewBattleController가 관리
+                            if (Battle.NewBattleController.Instance != null)
+                                Battle.NewBattleController.Instance.ClearAllCurses();
+                            // 물20(219) 트리거
+                            if (Ctx.healOnCurseCleanseActive && Ctx.healOnCurseCleanseAmount > 0)
+                                HealPlayer(Ctx.healOnCurseCleanseAmount);
+                        }
+                    }
+                    break;
+
+                case "SET_NEXT_CARD_FREE":
+                    result.skipNextGaugeCost = true;
+                    Ctx.nextCardIsFree = true;
+                    break;
+
+                case "SET_GAUGE_COST":
+                    if (amount == 0) result.currentCardFreeThisUse = true;
+                    break;
+
+                case "MODIFY_HAND_LIMIT":
+                    Ctx.handLimitBonus += amount; // 즉시 적용형(현재 캐스트 시점)
+                    break;
+
+                case "ADD_CARD":
+                    HandleAddCard(eff, ref result);
+                    break;
+
+                case "MOVE_CARD":
+                    HandleMoveCard(eff, ref result);
+                    break;
+
+                case "COPY_CARD":
+                    HandleCopyCard(eff, card, ref result);
+                    break;
+
+                case "COPY_LAST_CARD_EFFECT":
+                    result.recastLastCard = true;
+                    break;
+
+                case "NO_EFFECT":
+                    // 명시적 효과 없음 (500 카드)
+                    break;
+
+                case "MODIFY_DAMAGE_MULTIPLIER":
+                case "MODIFY_HIT_COUNT":
+                    // 파워 카드용 — RegisterPowerTrigger에서 처리. ON_USE로 와도 무시.
                     break;
 
                 default:
-                    Debug.LogWarning($"[CardEffect] 알 수 없는 카드 id={card.Id}");
+                    if (!string.IsNullOrEmpty(verb))
+                        Debug.LogWarning($"[CardEffect] 미구현 동사 '{verb}' (cardId={eff.cardId})");
                     break;
             }
+        }
 
-            // PDF: "모든 파워 카드의 효과는 카드 효과 처리 이후 발동"
-            // → 파워 카드를 사용하는 그 시점에는 공통 파워 효과를 적용하지 않음(자기 자신 제외)
-            bool applyPowerEffects = !result.keepOnField;
+        // ─── ADD_CARD / MOVE_CARD / COPY_CARD ────────────────────
 
-            // ── 파워 효과: 바람3 (카드 사용 시마다 +3) ──
-            if (applyPowerEffects && Ctx.bonusDamagePerCardActive && Ctx.bonusDamagePerCard > 0)
+        void HandleAddCard(CardEffectData eff, ref ResolveResult result)
+        {
+            if (Ctx.deck == null) return;
+            string filter = (eff.cardFilter ?? "").Trim().ToUpperInvariant();
+            string toZone = (eff.toZone ?? "").Trim().ToUpperInvariant();
+            string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+            int amount = Mathf.Max(1, eff.amount);
+
+            if (filter == "RANDOM_FRAGMENT_CARD")
             {
-                result.totalDamage += DealDamage(Ctx.bonusDamagePerCard, isAttackCard: false);
+                for (int i = 0; i < amount; i++)
+                {
+                    var c = CardDatabase.CreateFragmentInstance();
+                    if (c == null) continue;
+                    PlaceCardInZone(c, toZone);
+                }
             }
-
-            // ── 파워 효과: 땅21(420) (땅 카드 사용 시 파편을 버린 더미에 추가) ──
-            if (applyPowerEffects && Ctx.fragmentOnEarthUseActive && card.Element == CardElement.Earth)
+            else if (filter == "DIFFERENT_FRAGMENT_CARDS" || sel == "ALL_DIFFERENT")
             {
-                Ctx.deck.AddToDiscard(CardDatabase.CreateFragmentInstance());
+                var ids = new List<int>(CardDatabase.FragmentIds);
+                ShuffleList(ids);
+                int n = Mathf.Min(amount, ids.Count);
+                for (int i = 0; i < n; i++)
+                {
+                    var c = CardDatabase.CreateFragmentInstance(ids[i]);
+                    if (c == null) continue;
+                    PlaceCardInZone(c, toZone);
+                }
             }
-
-            // ── 파워 효과: 물22(221) (물 속성 카드 사용 시 체력 1 회복) ──
-            if (applyPowerEffects && Ctx.waterUseHealActive && card.Element == CardElement.Water)
+            else if (filter == "EACH_FRAGMENT_TYPE" || sel == "EACH_TYPE_ONCE")
             {
-                HealPlayer(1);
+                foreach (var id in CardDatabase.FragmentIds)
+                {
+                    var c = CardDatabase.CreateFragmentInstance(id);
+                    if (c == null) continue;
+                    PlaceCardInZone(c, toZone);
+                }
             }
+            else if (filter == "FRAGMENT_CARD" && sel == "SELECT_ONE_FROM_FRAGMENT_POOL")
+            {
+                // 플레이어 선택 — 외부에 위임
+                result.requiresFragmentPoolSelection = true;
+            }
+            else
+            {
+                Debug.LogWarning($"[CardEffect] ADD_CARD 미지원 필터/선택 (filter={filter}, sel={sel}, cardId={eff.cardId})");
+            }
+        }
 
-            return result;
+        void PlaceCardInZone(CardInstance card, string zone)
+        {
+            if (card == null || Ctx.deck == null) return;
+            switch (zone)
+            {
+                case "DISCARD_PILE":
+                case "DISCARD_PILE_SHUFFLE":
+                    Ctx.deck.AddToDiscard(card);
+                    break;
+                case "DRAW_PILE":
+                case "DRAW_PILE_SHUFFLE":
+                    Ctx.deck.AddToDrawShuffled(card);
+                    break;
+                case "HAND":
+                    if (!Ctx.deck.AddToHand(card))
+                        Ctx.deck.AddToDiscard(card);
+                    break;
+                default:
+                    Ctx.deck.AddToDiscard(card);
+                    break;
+            }
+        }
+
+        void HandleMoveCard(CardEffectData eff, ref ResolveResult result)
+        {
+            string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+            if (sel == "SELECT_ONE_FROM_DRAW_PILE")
+                result.requiresDrawPileMoveSelection = true;
+            else if (sel == "SELECT_ONE_FROM_DISCARD")
+                result.requiresDiscardMoveSelection = true;
+            else
+                Debug.LogWarning($"[CardEffect] MOVE_CARD 미지원 (sel={sel}, cardId={eff.cardId})");
+        }
+
+        void HandleCopyCard(CardEffectData eff, CardInstance card, ref ResolveResult result)
+        {
+            string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+            string from = (eff.fromZone ?? "").Trim().ToUpperInvariant();
+            string to = (eff.toZone ?? "").Trim().ToUpperInvariant();
+
+            if (sel == "SELF" && from == "SELF_CARD")
+            {
+                // 물5(204): 자기 자신 복사를 버린 더미로
+                var copy = new CardInstance(card.data, transient: true);
+                Ctx.deck?.AddToDiscard(copy);
+                return;
+            }
+            if (sel == "SELECT_ONE_FROM_HAND")
+            {
+                result.requiresHandCopySelection = true;
+                return;
+            }
+            Debug.LogWarning($"[CardEffect] COPY_CARD 미지원 (sel={sel}, from={from}, cardId={eff.cardId})");
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -318,31 +893,34 @@ namespace Battle.Deck
             if (isAttackCard && Ctx.attackHitCountBonusActive)
                 hits += Ctx.attackHitCountBonus;
 
+            int dmg = amount + (isAttackCard ? Ctx.attackPowerBonus : 0);
+
+            // 불21(120): 체력 25% 이하 피해 배율
+            if (isAttackCard && Ctx.damageMultiplierActive > 1 && Ctx.player != null)
+            {
+                float rate = (float)Ctx.player.currentHp / Mathf.Max(1, Ctx.player.maxHp) * 100f;
+                if (rate <= Ctx.damageMultiplierThresholdHp)
+                    dmg *= Ctx.damageMultiplierActive;
+            }
+
             int total = 0;
             for (int i = 0; i < hits; i++)
             {
-                // 본 피해
-                Ctx.enemy.TakeDamage(amount);
-                total += amount;
+                Ctx.enemy.TakeDamage(dmg);
+                total += dmg;
 
                 if (Ctx.burnOnHitActive && Ctx.burnOnHitAmount > 0)
-                    AddEnemyStatus("burn", Ctx.burnOnHitAmount);
+                    AddEnemyStatus("burn", Ctx.burnOnHitAmount, isCardEffect: true);
 
-                // (1) 연쇄 발동 먼저 — 이전에 쌓여 있던 연쇄만 소비/발동
-                if (isAttackCard)
-                    total += TriggerChain();
+                // 연쇄 발동 (이전 누적분만)
+                if (isAttackCard) total += TriggerChain();
 
-                // (2) 그 다음 연쇄 획득 — 318로 이번에 얻은 연쇄는 다음 공격부터 발동 가능
-                if (Ctx.chainGainOnHitActive)  // 바람19(318): 피해 시 연쇄 1 획득
-                    Ctx.chainCount++;
+                // 연쇄 획득 (다음 공격부터)
+                if (Ctx.chainGainOnHitActive) Ctx.chainCount++;
             }
             return total;
         }
 
-        /// <summary>
-        /// 연쇄 발동: 연쇄가 남아있으면 1 소비하고 추가 피해(1 + 317 보너스)를 준다.
-        /// 연쇄 추가 피해는 318(피해 시 연쇄 획득)을 다시 트리거하지 않는다(무한 연쇄 방지).
-        /// </summary>
         int TriggerChain()
         {
             if (Ctx.chainCount <= 0) return 0;
@@ -353,25 +931,30 @@ namespace Battle.Deck
             return chainDmg;
         }
 
-        /// <summary>플레이어 회복. 물19(218) 활성 시 회복할 때마다 드로우 1.</summary>
         void HealPlayer(int amount)
         {
             if (Ctx.player == null || amount <= 0) return;
+            int before = Ctx.player.currentHp;
             Ctx.player.Heal(amount);
-            if (Ctx.healToDrawActive)  // 물19(218)
+            int healed = Ctx.player.currentHp - before;
+            if (healed > 0 && Ctx.healToDrawActive && Ctx.deck != null)
                 Ctx.deck.Draw(1);
         }
 
-        void AddEnemyStatus(string key, int amount)
+        void AddEnemyStatus(string key, int amount, bool isCardEffect)
         {
             if (Ctx.enemy == null || amount == 0) return;
             Ctx.enemy.AddStatus(key, amount);
+
+            // 불20(119): 카드 효과로 화상 부여 시 추가 피해
+            if (isCardEffect && key == "burn" && Ctx.burnOnByCardActive && Ctx.burnOnByCardAmount > 0)
+                Ctx.enemy.TakeDamage(Ctx.burnOnByCardAmount);
         }
 
-        int GetEnemyBurn()
+        int GetEnemyStatus(string key)
         {
-            if (Ctx.enemyStat == null) return 0;
-            return Ctx.enemyStat.statusEffects.TryGetValue("burn", out int v) ? v : 0;
+            if (Ctx.enemyStat == null || string.IsNullOrEmpty(key)) return 0;
+            return Ctx.enemyStat.statusEffects.TryGetValue(key, out int v) ? v : 0;
         }
 
         void AddPlayerGuard(int amount)
@@ -380,27 +963,13 @@ namespace Battle.Deck
             Ctx.player.AddGuard(amount);
         }
 
-        void ExileOneFromHandExcept(CardInstance self)
+        static void ShuffleList<T>(IList<T> list)
         {
-            // 프로토타입: 패에서 자기 자신 외 첫 번째 카드 소멸
-            var hand = Ctx.deck.Hand;
-            for (int i = 0; i < hand.Count; i++)
+            for (int i = list.Count - 1; i > 0; i--)
             {
-                if (hand[i] != self)
-                {
-                    var target = hand[i];
-                    Ctx.deck.ExileFromHand(target);
-                    NotifyExile(target);
-                    return;
-                }
+                int j = UnityEngine.Random.Range(0, i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
             }
-        }
-
-        /// <summary>외부에서 카드가 소멸될 때 파워 효과 트리거(불7)를 발동시키기 위한 알림.</summary>
-        public void NotifyExile(CardInstance card)
-        {
-            if (Ctx.burnOnExileActive && Ctx.burnOnExileAmount > 0)
-                AddEnemyStatus("burn", Ctx.burnOnExileAmount);
         }
     }
 }

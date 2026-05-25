@@ -317,8 +317,10 @@ public class Player : MonoBehaviour, IBattleUnit
 
     public void TakeDamage(float damage, string cardtype = "normal")
     {
+        bool blockConsumed = false;
         if (guard > 0)
         {
+            blockConsumed = true;
             if (guard >= damage)
             {
                 guard -= damage;
@@ -342,7 +344,19 @@ public class Player : MonoBehaviour, IBattleUnit
                 Die();
             }
         }
+
+        // 새 전투 시스템 피격/방어도 트리거 (자기손실은 트리거 X)
+        if (cardtype != "self_loss")
+        {
+            OnPlayerHit?.Invoke();
+            if (blockConsumed) OnBlockConsumedByAttack?.Invoke();
+        }
     }
+
+    /// <summary>피격(방어도로 막힘 포함). 물18(217) 등 트리거용.</summary>
+    public event Action OnPlayerHit;
+    /// <summary>적 공격으로 방어도가 소모됐을 때. 땅18(417) 등 트리거용.</summary>
+    public event Action OnBlockConsumedByAttack;
 
     public event Action<string, int> OnStatusChanged;
 
