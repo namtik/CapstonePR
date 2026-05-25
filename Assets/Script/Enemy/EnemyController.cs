@@ -9,7 +9,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [SerializeField] private ParticleSystem hitVFX;
 
     [Header("새 전투 시스템 공격 시퀀스 (PDF: 16-18-40 순환)")]
-    [SerializeField] private int[] newSystemAttackSequence = { 16, 18, 40 };
+    [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 };
     private int _newSystemAttackIndex = 0;
 
     private EnemyStat stat;

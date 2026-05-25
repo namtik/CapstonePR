@@ -77,6 +77,10 @@ namespace Battle.UI
         [Header("선택 모드 UI")]
         [Tooltip("선택 모드 안내 텍스트. 비워두면 표시 안 함.")]
         [SerializeField] private TMP_Text selectionPromptText;
+        [Tooltip("선택 모드 시 화면을 덮는 어둡게 처리 오버레이. 비우면 자동 생성.")]
+        [SerializeField] private RectTransform dimOverlay;
+        [Tooltip("dim 오버레이 색(알파로 어둡기 조절).")]
+        [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f);
 
         void Awake()
         {
@@ -324,10 +328,21 @@ namespace Battle.UI
             _selectionCallback = callback;
             _selectionFilter = filter;
             _selectionExcludeCard = excludeCard;
+
+            // 화면 어둡게 + 손패를 오버레이 위로 올려 강조
+            EnsureDimOverlay();
+            if (dimOverlay != null)
+            {
+                dimOverlay.gameObject.SetActive(true);
+                dimOverlay.SetAsLastSibling();           // 오버레이를 다른 UI 위로
+            }
+            if (handRoot != null) handRoot.SetAsLastSibling(); // 손패를 오버레이보다 더 위로
+
             if (selectionPromptText != null)
             {
                 selectionPromptText.text = promptMessage;
                 selectionPromptText.gameObject.SetActive(true);
+                selectionPromptText.transform.SetAsLastSibling(); // 안내문도 오버레이 위로
             }
         }
 
@@ -336,8 +351,35 @@ namespace Battle.UI
             _selectionCallback = null;
             _selectionFilter = null;
             _selectionExcludeCard = null;
+
+            if (dimOverlay != null) dimOverlay.gameObject.SetActive(false);
+
             if (selectionPromptText != null)
                 selectionPromptText.gameObject.SetActive(false);
+        }
+
+        /// <summary>선택 모드용 전체 화면 어둡게 처리 오버레이 생성(캔버스 안에).</summary>
+        void EnsureDimOverlay()
+        {
+            if (dimOverlay != null) return;
+
+            Canvas canvas = ResolveTargetCanvas();
+            Transform parent = canvas != null ? canvas.transform : transform;
+
+            var go = new GameObject("SelectionDimOverlay", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var img = go.GetComponent<Image>();
+            img.color = dimColor;
+            img.raycastTarget = true; // 오버레이 뒤쪽 UI 클릭 차단
+
+            dimOverlay = rect;
+            dimOverlay.gameObject.SetActive(false);
         }
 
         /// <summary>NewCardView가 클릭됐을 때 호출. 선택 모드면 콜백 발동.</summary>
