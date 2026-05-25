@@ -59,6 +59,12 @@ Play → BattleTestController.Awake (레거시 ElementSlot/Combo/HUD/CardSystem 
 - 카드별 게이지 → `EnemyStat.ConsumeGaugeStep()`로 적 행동 게이지 누적
 - 효과는 `CardEffectResolver.Resolve(card)` → `ResolveResult`(소멸/파워잔류/선택요구/게이지스킵/재사용 등)
 
+### 카드 선택 모드 (불13/112 소멸, 물8/207 버리기)
+- 효과가 패에서 카드 선택을 요구하면 `CardHandHUD.EnterSelectionMode`
+- **화면 dim 오버레이**(`dimColor`)로 어둡게 + 손패를 오버레이 위로 올려 강조, 안내 텍스트 표시
+- 카드 클릭(`NewCardView.OnPointerClick` → `Hud.OnCardClicked`) → 콜백 발동 → `ExitSelectionMode`(오버레이 해제)
+- 오버레이 `raycastTarget=true`로 선택 중 다른 UI 오클릭 차단
+
 ### 키 입력
 - **D**: 1장 드로우 + 적 게이지 +1 (손패 가득이면 불가)
 - **F**: 피버 발동 (충전됐을 때만)
@@ -70,17 +76,23 @@ Play → BattleTestController.Awake (레거시 ElementSlot/Combo/HUD/CardSystem 
 - 종료 → 무속성 복원, 콤보 UI 숨김
 - 콤보: 피버 중 사용한 속성을 3칸 슬롯에 누적 → `ownedComboSkills`와 매칭되면 발동(이번 사이클 1회). 모든 콤보 발동 시 강제 종료
 
-### 방해 행동 (게이지 5 도달, `EnemyController.HandleMidPattern` → `NewBattleController.TriggerDisruption`)
+### 행동 게이지 (EnemyStat)
+- `GAUGE_MAX_STEPS = 20` (const). 카드 게이지가 누적되어 **20** 도달 시 적 공격
+- **중간 패턴(방해 행동)은 10**(= `GAUGE_MAX_STEPS / 2`)에서 발동
+- 이 const는 본 게임 적에도 공통 적용됨(새 시스템 전용 아님)
+
+### 방해 행동 (게이지 10 = 중간 도달, `EnemyController.HandleMidPattern` → `NewBattleController.TriggerDisruption`)
 - 50% 무속성 카드 1장 뽑을 더미에 삽입 / 50% 무작위 속성 **저주**
 - 저주: 해당 속성 카드 사용 시 플레이어 -5, **카드 사용 2회 동안** 지속. 저주된 카드는 보라 틴트
 
 ### 적 공격 (`EnemyController`, 새 시스템 모드)
-- 게이지 10 도달 → **화상 먼저 발동**(적이 화상 스택만큼 자해 + 스택 절반) → 공격
-- 공격 피해: `newSystemAttackSequence = {16, 18, 40}` 순환, `EnemyView.attackPreviewText`에 다음 피해 예고
+- 행동 게이지 **20** 도달 → **화상 먼저 발동**(적이 화상 스택만큼 자해 + 스택 절반) → 공격
+- 공격 피해: `newSystemAttackSequence`(인스펙터, 현재 `{8, 9, 20}`) 순환, `EnemyView.attackPreviewText`에 다음 피해 예고
 
 ### 연쇄 (Chain)
-- 공격 카드로 피해를 줄 때: **(1) 이전에 쌓인 연쇄 발동**(1 소비 + 추가 피해 `1 + chainBonusDamage`) → **(2) 318이 깔려있으면 연쇄 +1**
-- 순서가 발동→획득이라 **방금 얻은 연쇄는 다음 공격부터** 발동 (사용자 요청 반영)
+- 공격 카드로 피해를 줄 때 **각 타격마다**: **(1) 이전에 쌓인 연쇄 발동**(1 소비 + 추가 피해 `1 + chainBonusDamage`) → **(2) 318이 깔려있으면 연쇄 +1**
+- 순서가 발동→획득이라 **방금 얻은 연쇄는 다음 타격/공격부터** 발동
+- 멀티히트 카드(2x3 등)는 `DealDamage(amount, baseHits:N)` → **각 타격마다 연쇄 발동**(연쇄 보유량만큼)
 - 무한 연쇄 방지: 연쇄 추가 피해는 318을 재트리거하지 않음
 
 ### 손패 Fan Layout (`CardHandHUD`)
@@ -136,22 +148,28 @@ Play → BattleTestController.Awake (레거시 ElementSlot/Combo/HUD/CardSystem 
 - **Combo Skill Item Prefab → `SkillListItem.prefab`**, Combo Skill Item Container
 - Fan Radius / Arc / Dip (카드 scale=1이라 간격 조정 필요할 수 있음)
 - Selection Prompt Text (카드 선택 안내, 옵션)
+- **Dim Overlay / Dim Color** (선택 모드 화면 어둡게 — 비우면 자동 생성, 알파로 어둡기 조절)
+
+### EnemyController (적 프리팹)
+- **New System Attack Sequence** — 공격 피해 순환값(현재 `{8, 9, 20}`). 적별로 조정 가능
 
 ### NewSkillCard 프리팹의 NewCardView
 - 속성 sprite 5종(attributeImg), 배경 sprite 5종(Background) 매핑
 - Use Element Sprite As Icon ✅ (카드 아이콘 미완성 임시)
 - Use Element Background Sprite ✅
 - Drag/Hover Scale, Hover Position Offset
+- 카드 타입 텍스트(cardType) / 배경(baseCardType) 자동 바인딩
 
 ---
 
 ## 6. 다음 작업 후보 (우선순위 순)
 1. **Play 검증**: 기본 덱으로 한 전투 — 카드 표시/드래그/효과/피버/연쇄/방해/적 공격 시퀀스 확인
-2. 콤보 스킬 데이터(`ownedComboSkills`) 실제 밸런스로 채우기
-3. 나머지 카드 효과 구현 (덱 확장 시 필요한 것부터)
-4. 연쇄 UI 표시 (현재 로그만 — `_ctx.chainCount`)
-5. 더미 카운트/상태 UI 폴리싱
-6. 검증 끝나면 본 게임 씬(SampleScene)에 마이그레이션 전략 결정
+2. **게이지 20 밸런스**: 한 사이클에 카드를 더 써야 적이 공격하므로, 카드 게이지값·D드로우 비중·공격 시퀀스(`{8,9,20}`) 재조정 검토
+3. 콤보 스킬 데이터(`ownedComboSkills`) 실제 밸런스로 채우기
+4. 나머지 카드 효과 구현 (덱 확장 시 필요한 것부터)
+5. 연쇄 UI 표시 (현재 로그만 — `_ctx.chainCount`)
+6. 더미 카운트/상태 UI 폴리싱
+7. 검증 끝나면 본 게임 씬(SampleScene)에 마이그레이션 전략 결정
 
 ---
 
