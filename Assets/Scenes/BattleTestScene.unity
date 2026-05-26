@@ -7951,6 +7951,12 @@ MonoBehaviour:
   dimOverlay: {fileID: 0}
   dimColor: {r: 0, g: 0, b: 0, a: 0.6}
   feverDimColor: {r: 0.02, g: 0, b: 0.08, a: 0.8666667}
+  pickerColumns: 4
+  pickerColumnSpacing: 480
+  pickerRowSpacing: 620
+  pickerViewportSize: {x: 1800, y: 900}
+  pickerContentPadding: {x: 0, y: 240}
+  pickerScrollSensitivity: 60
 --- !u!4 &1552390622
 Transform:
   m_ObjectHideFlags: 0

@@ -750,10 +750,26 @@ namespace Battle.UI
         // 카드 픽커 모드 (버린 더미/뽑을 더미/파편 풀 등에서 1장 선택)
         // ─────────────────────────────────────────────────────────────
 
-        private RectTransform _pickerRoot;
+        private RectTransform _pickerRoot;       // 화면 중앙 컨테이너 (ScrollRect 부착)
+        private RectTransform _pickerViewport;   // 마스크 영역 (잘림 처리)
+        private RectTransform _pickerContent;    // 실제 카드들이 들어가는 가변 높이 컨테이너
         private readonly List<NewCardView> _pickerViews = new List<NewCardView>();
         private System.Action<CardInstance> _pickerCallback;
         public bool IsPickerMode => _pickerCallback != null;
+
+        [Header("카드 픽커 — 그리드/스크롤")]
+        [Tooltip("픽커 한 행에 표시할 최대 카드 수.")]
+        [SerializeField] private int pickerColumns = 4;
+        [Tooltip("픽커 카드 가로 간격(중심→중심, 픽셀). 카드 폭 300 기준 360~520 권장.")]
+        [SerializeField] private float pickerColumnSpacing = 480f;
+        [Tooltip("픽커 카드 세로 간격(중심→중심, 픽셀). 카드 높이 400 기준 480~640 권장.")]
+        [SerializeField] private float pickerRowSpacing = 620f;
+        [Tooltip("픽커 viewport(보이는 영역) 크기. 가로는 columns × columnSpacing 이상 + 좌우 패딩 권장.")]
+        [SerializeField] private Vector2 pickerViewportSize = new Vector2(1800f, 900f);
+        [Tooltip("컨텐츠 위쪽/아래쪽 패딩 — 첫/마지막 행이 viewport 가장자리에 붙지 않도록.")]
+        [SerializeField] private Vector2 pickerContentPadding = new Vector2(0f, 240f);
+        [Tooltip("마우스 휠 스크롤 감도.")]
+        [SerializeField] private float pickerScrollSensitivity = 60f;
 
         /// <summary>
         /// 임의의 카드 목록에서 1장을 선택받는다. 임시 카드 뷰를 그리드로 깔고 클릭 시 콜백 발화.
@@ -813,14 +829,51 @@ namespace Battle.UI
             Canvas canvas = ResolveTargetCanvas();
             Transform parent = canvas != null ? canvas.transform : transform;
 
-            var go = new GameObject("CardPickerRoot", typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-            _pickerRoot = (RectTransform)go.transform;
+            // 루트 (ScrollRect 부착)
+            var rootGo = new GameObject("CardPickerRoot", typeof(RectTransform), typeof(ScrollRect));
+            rootGo.transform.SetParent(parent, false);
+            _pickerRoot = (RectTransform)rootGo.transform;
             _pickerRoot.anchorMin = new Vector2(0.5f, 0.5f);
             _pickerRoot.anchorMax = new Vector2(0.5f, 0.5f);
             _pickerRoot.pivot = new Vector2(0.5f, 0.5f);
             _pickerRoot.anchoredPosition = Vector2.zero;
-            _pickerRoot.sizeDelta = new Vector2(1600f, 600f);
+            _pickerRoot.sizeDelta = pickerViewportSize;
+
+            // Viewport (RectMask2D로 RectTransform 영역만 잘림)
+            // RectMask2D는 Image 알파에 의존하지 않으므로 자식이 안 잘림.
+            // Image는 휠/드래그 raycast 수신용 (raycastTarget=true 필요).
+            var viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
+            viewportGo.transform.SetParent(_pickerRoot, false);
+            _pickerViewport = (RectTransform)viewportGo.transform;
+            _pickerViewport.anchorMin = Vector2.zero;
+            _pickerViewport.anchorMax = Vector2.one;
+            _pickerViewport.offsetMin = Vector2.zero;
+            _pickerViewport.offsetMax = Vector2.zero;
+            var viewportImg = viewportGo.GetComponent<Image>();
+            viewportImg.color = new Color(0f, 0f, 0f, 0f); // 완전 투명 — 알파는 마스크에 영향 X
+            viewportImg.raycastTarget = true;
+
+            // Content (위에서 아래로 가변 높이)
+            var contentGo = new GameObject("Content", typeof(RectTransform));
+            contentGo.transform.SetParent(_pickerViewport, false);
+            _pickerContent = (RectTransform)contentGo.transform;
+            _pickerContent.anchorMin = new Vector2(0f, 1f);
+            _pickerContent.anchorMax = new Vector2(1f, 1f);
+            _pickerContent.pivot = new Vector2(0.5f, 1f);
+            _pickerContent.anchoredPosition = Vector2.zero;
+            _pickerContent.sizeDelta = new Vector2(0f, 0f); // BuildPickerCards에서 행 수에 따라 갱신
+
+            // ScrollRect 결선
+            var scroll = rootGo.GetComponent<ScrollRect>();
+            scroll.content = _pickerContent;
+            scroll.viewport = _pickerViewport;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Elastic;
+            scroll.elasticity = 0.1f;
+            scroll.inertia = true;
+            scroll.decelerationRate = 0.135f;
+            scroll.scrollSensitivity = pickerScrollSensitivity;
         }
 
         void ClearPickerViews()
@@ -835,12 +888,20 @@ namespace Battle.UI
         void BuildPickerCards(IList<CardInstance> cards)
         {
             ClearPickerViews();
-            const int maxPerRow = 6;
-            const float colSpacing = 350f;
-            const float rowSpacing = 440f;
+            int maxPerRow = Mathf.Max(1, pickerColumns);
+            float colSpacing = pickerColumnSpacing;
+            float rowSpacing = pickerRowSpacing;
 
             int total = cards.Count;
             int rows = Mathf.CeilToInt(total / (float)maxPerRow);
+
+            // Content 높이 = (행 수 × rowSpacing) + 위아래 패딩. 가변.
+            // 한 행의 카드 중심 Y = -(padding.y/2) - (row + 0.5) * rowSpacing  (top-center 좌표계, 아래로 음)
+            float contentHeight = rows * rowSpacing + pickerContentPadding.y;
+            _pickerContent.sizeDelta = new Vector2(0f, contentHeight);
+            // 스크롤 위치는 항상 맨 위에서 시작
+            _pickerContent.anchoredPosition = Vector2.zero;
+
             for (int i = 0; i < total; i++)
             {
                 int row = i / maxPerRow;
@@ -848,13 +909,14 @@ namespace Battle.UI
                 int cardsInRow = (row == rows - 1) ? (total - row * maxPerRow) : maxPerRow;
                 float rowWidth = colSpacing * (cardsInRow - 1);
                 float x = -rowWidth * 0.5f + col * colSpacing;
-                float y = (rows - 1) * rowSpacing * 0.5f - row * rowSpacing;
+                // top-center 기준: 첫 행이 viewport 상단에서 padding/2 + rowSpacing/2 아래에 위치
+                float y = -(pickerContentPadding.y * 0.5f) - (row * rowSpacing) - (rowSpacing * 0.5f);
 
-                var view = Instantiate(cardPrefab, _pickerRoot);
+                var view = Instantiate(cardPrefab, _pickerContent);
                 view.Bind(this, -1); // 슬롯 인덱스 -1 = 픽커 뷰
                 var vrect = (RectTransform)view.transform;
-                vrect.anchorMin = new Vector2(0.5f, 0.5f);
-                vrect.anchorMax = new Vector2(0.5f, 0.5f);
+                vrect.anchorMin = new Vector2(0.5f, 1f);
+                vrect.anchorMax = new Vector2(0.5f, 1f);
                 vrect.pivot = new Vector2(0.5f, 0.5f);
                 vrect.anchoredPosition = new Vector2(x, y);
                 vrect.localRotation = Quaternion.identity;
