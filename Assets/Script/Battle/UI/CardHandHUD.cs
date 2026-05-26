@@ -73,10 +73,14 @@ namespace Battle.UI
         [SerializeField] private Vector2 feverHistoryItemSize = new Vector2(60f, 60f);
         [Tooltip("히스토리 칸 간 세로 간격.")]
         [SerializeField] private float feverHistoryItemSpacing = 8f;
+        [Tooltip("한 열에 표시할 최대 항목 수 — 이 이상이면 오른쪽 새 열로 이동.")]
+        [SerializeField] private int feverHistoryItemsPerColumn = 8;
+        [Tooltip("열과 열 사이 가로 간격.")]
+        [SerializeField] private float feverHistoryColumnSpacing = 8f;
         [Tooltip("히스토리 컨테이너 위치(앵커 기준). 좌측 가운데 추천.")]
         [SerializeField] private Vector2 feverHistoryAnchoredPos = new Vector2(80f, 0f);
         [Tooltip("표시할 최대 항목 수 — 초과 시 가장 오래된 것부터 숨김.")]
-        [SerializeField] private int feverHistoryMaxItems = 20;
+        [SerializeField] private int feverHistoryMaxItems = 64;
 
         private readonly List<NewCardView> _cardViews = new List<NewCardView>();
         private readonly List<RectTransform> _slotAnchors = new List<RectTransform>();
@@ -94,8 +98,10 @@ namespace Battle.UI
         [SerializeField] private TMP_Text selectionPromptText;
         [Tooltip("선택 모드 시 화면을 덮는 어둡게 처리 오버레이. 비우면 자동 생성.")]
         [SerializeField] private RectTransform dimOverlay;
-        [Tooltip("dim 오버레이 색(알파로 어둡기 조절).")]
+        [Tooltip("dim 오버레이 색(알파로 어둡기 조절) — 선택/픽커 모드.")]
         [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f);
+        [Tooltip("피버 모드 dim 색 — 일반 선택 모드와 다른 톤으로 구분 가능.")]
+        [SerializeField] private Color feverDimColor = new Color(0.05f, 0.02f, 0.15f, 0.55f);
 
         void Awake()
         {
@@ -123,12 +129,47 @@ namespace Battle.UI
             if (feverCountText != null) feverCountText.text = text;
         }
 
-        /// <summary>피버 활성/비활성에 따라 콤보 슬롯/스킬 UI를 토글.</summary>
+        /// <summary>피버 활성/비활성에 따라 콤보 슬롯/스킬 UI를 토글 + dim 오버레이 처리.</summary>
         public void SetFeverMode(bool active)
         {
             if (comboSlotPanel != null) comboSlotPanel.SetActive(active);
             if (comboSkillPanel != null) comboSkillPanel.SetActive(active);
             if (feverHistoryContainer != null) feverHistoryContainer.gameObject.SetActive(active);
+
+            if (active) ShowFeverDim();
+            else HideFeverDim();
+        }
+
+        void ShowFeverDim()
+        {
+            EnsureDimOverlay();
+            if (dimOverlay != null)
+            {
+                // 피버 전용 색으로 변경
+                var img = dimOverlay.GetComponent<Image>();
+                if (img != null) img.color = feverDimColor;
+                dimOverlay.gameObject.SetActive(true);
+                dimOverlay.SetAsLastSibling();
+            }
+            // 손패/콤보 UI를 dim 위로 — dim 위에 있어야 어두워지지 않음
+            if (handRoot != null) handRoot.SetAsLastSibling();
+            if (comboSlotPanel != null) comboSlotPanel.transform.SetAsLastSibling();
+            if (comboSkillPanel != null) comboSkillPanel.transform.SetAsLastSibling();
+            if (feverHistoryContainer != null) feverHistoryContainer.SetAsLastSibling();
+            if (feverCountText != null) feverCountText.transform.SetAsLastSibling();
+        }
+
+        void HideFeverDim()
+        {
+            if (dimOverlay != null)
+            {
+                dimOverlay.gameObject.SetActive(false);
+                // 다음 선택/픽커 모드를 위해 색을 원래 dimColor로 복구
+                var img = dimOverlay.GetComponent<Image>();
+                if (img != null) img.color = dimColor;
+            }
+            // handRoot 시블링 위치 복원 (다른 UI보다 너무 위에 있지 않도록)
+            if (handRoot != null) handRoot.SetAsLastSibling();
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -163,7 +204,10 @@ namespace Battle.UI
                 _feverHistoryViews.Add(img);
             }
 
-            // 활성/비활성/내용 갱신
+            // 활성/비활성/내용 갱신 — 한 열에 itemsPerColumn개씩, 초과 시 오른쪽 새 열로 wrap
+            int itemsPerCol = Mathf.Max(1, feverHistoryItemsPerColumn);
+            float colW = feverHistoryItemSize.x + feverHistoryColumnSpacing;
+            float rowH = feverHistoryItemSize.y + feverHistoryItemSpacing;
             for (int i = 0; i < _feverHistoryViews.Count; i++)
             {
                 var img = _feverHistoryViews[i];
@@ -171,9 +215,9 @@ namespace Battle.UI
                 {
                     img.gameObject.SetActive(true);
                     var rect = (RectTransform)img.transform;
-                    // 위→아래 순서 배치 (인덱스 0이 가장 위)
-                    float y = -i * (feverHistoryItemSize.y + feverHistoryItemSpacing);
-                    rect.anchoredPosition = new Vector2(0f, y);
+                    int col = i / itemsPerCol;
+                    int row = i % itemsPerCol;
+                    rect.anchoredPosition = new Vector2(col * colW, -row * rowH);
 
                     var element = history[start + i];
                     var sp = cardPrefab != null ? cardPrefab.GetElementSprite(element) : null;

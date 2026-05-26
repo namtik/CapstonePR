@@ -377,6 +377,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   fallbackGaugeFullDamage: 10
   hitVFX: {fileID: 8616831555898945098}
+  newSystemAttackSequence: 080000000900000014000000
 --- !u!114 &5858952286309725067
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -429,6 +430,15 @@ MonoBehaviour:
   patternNoticeText: {fileID: 3916117236185399372}
   fadeTime: 1
   floatSpeed: 0.5
+  baseScale: 2
+  burstScale: 1.6
+  burstDuration: 0.15
+  overrideColor: 1
+  damageColor: {r: 1, g: 0.92, b: 0.3, a: 1}
+  burnDamageColor: {r: 1, g: 0.35, b: 0.2, a: 1}
+  randomXOffset: 150
+  randomYOffset: 80
+  damagePrefix: '-'
   qEffect: {fileID: 6138876535732345546}
   wEffect: {fileID: 6298287703458635002}
   eEffect: {fileID: 8692929278469968464}
@@ -895,8 +905,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: -285.8, y: -207.5}
-  m_SizeDelta: {x: 200, y: 50}
+  m_AnchoredPosition: {x: 42, y: -207.5}
+  m_SizeDelta: {x: 300, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2462160858183521987
 CanvasRenderer:
@@ -953,15 +963,15 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 60
+  m_fontSizeBase: 60
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 1
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_characterHorizontalScale: 1

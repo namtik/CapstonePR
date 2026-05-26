@@ -21,8 +21,9 @@ namespace Battle.UI
         /// <summary>
         /// 프레임 배열 + FPS로 애니메이션 시작.
         /// loop=false이면 끝까지 재생 후 자기 자신 파괴.
+        /// preserveAspect=false이면 RectTransform 폭에 맞춰 늘림(풀폭 띠 같은 형태).
         /// </summary>
-        public void Play(Sprite[] frames, float fps = 12f, bool loop = false)
+        public void Play(Sprite[] frames, float fps = 12f, bool loop = false, bool preserveAspect = true)
         {
             _image = GetComponent<Image>();
             if (frames == null || frames.Length == 0)
@@ -39,7 +40,7 @@ namespace Battle.UI
 
             _image.sprite = _frames[0];
             _image.color = Color.white;
-            _image.preserveAspect = true;
+            _image.preserveAspect = preserveAspect;
             _image.raycastTarget = false;
         }
 

@@ -217,10 +217,10 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
         stat.TakeDamage(burn);
 
-        // 데미지 숫자 + 화상 알림 텍스트
+        // 데미지 숫자(화상 색) + 화상 알림 텍스트
         if (view != null)
         {
-            view.ShowDamage(burn);
+            view.ShowDamage(burn, isBurn: true);
             view.ShowMidPatternNotice($"화상 {burn}!");
         }
 

@@ -30,6 +30,8 @@ namespace Battle
         [Tooltip("카드 사용 시 EffectName(예: Fire_ATK)에 해당하는 스프라이트 시트 애니메이션을 재생. " +
                  "비우면 자동으로 캔버스에 생성. 시트가 없으면 조용히 스킵.")]
         [SerializeField] private CardEffectOverlay effectOverlay;
+        [Tooltip("플레이어 피격 시 화면 빨간 플래시. 비우면 자동 생성.")]
+        [SerializeField] private PlayerDamageOverlay damageOverlay;
 
         [Header("보유 콤보 스킬 (피버 전용 / Inspector 편집)")]
         [SerializeField] private List<ComboSkillDef> ownedComboSkills = new List<ComboSkillDef>();
@@ -198,6 +200,7 @@ namespace Battle
 
             // 카드 효과 이펙트 오버레이 — 비어 있으면 자동 생성
             if (effectOverlay == null) effectOverlay = ResolveOrCreateEffectOverlay();
+            if (damageOverlay == null) damageOverlay = ResolveOrCreateDamageOverlay();
 
             EnsureEventSystem();
 
@@ -944,6 +947,26 @@ namespace Battle
                 rect.SetAsLastSibling();
             }
             return go.AddComponent<CardEffectOverlay>();
+        }
+
+        PlayerDamageOverlay ResolveOrCreateDamageOverlay()
+        {
+            var existing = FindFirstObjectByType<PlayerDamageOverlay>(FindObjectsInactive.Include);
+            if (existing != null) return existing;
+
+            Canvas combatCanvas = ResolveCombatCanvas();
+            var go = new GameObject("PlayerDamageOverlay", typeof(RectTransform));
+            if (combatCanvas != null)
+            {
+                go.transform.SetParent(combatCanvas.transform, false);
+                var rect = (RectTransform)go.transform;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                rect.SetAsLastSibling();
+            }
+            return go.AddComponent<PlayerDamageOverlay>();
         }
     }
 }

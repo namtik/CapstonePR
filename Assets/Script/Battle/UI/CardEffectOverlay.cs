@@ -20,19 +20,33 @@ namespace Battle.UI
         [SerializeField] private Vector2 playerAnchoredPos = new Vector2(0f, 100f);
         [Tooltip("Earth_ATK 전용 위치 — 땅 공격은 좀 더 아래쪽에서 표시.")]
         [SerializeField] private Vector2 earthAtkAnchoredPos = new Vector2(0f, 100f);
-        [Tooltip("효과 이미지 크기.")]
+        [Tooltip("효과 이미지 기본 크기.")]
         [SerializeField] private Vector2 effectSize = new Vector2(1024f, 1024f);
+        [Tooltip("Heal_EFF 전용 — 화면 하단 풀폭 띠 모드. 가로는 자동 stretch, Y만 사용(높이).")]
+        [SerializeField] private Vector2 healEffSize = new Vector2(0f, 800f);
+        [Tooltip("Heal_EFF 전용 — 화면 바닥에서 위쪽 Y 오프셋.")]
+        [SerializeField] private float healEffBottomY = 0f;
         [Tooltip("재생 FPS — 시트 프레임 수에 맞춰 조정. 보통 12~24.")]
         [SerializeField] private float defaultFps = 24f;
 
         [Header("개별 효과 위치 오버라이드 (Inspector에서 effectName 매핑)")]
         [SerializeField] private List<EffectPositionOverride> positionOverrides = new List<EffectPositionOverride>();
 
+        [Header("개별 효과 크기 오버라이드 (Inspector에서 effectName 매핑)")]
+        [SerializeField] private List<EffectSizeOverride> sizeOverrides = new List<EffectSizeOverride>();
+
         [System.Serializable]
         public struct EffectPositionOverride
         {
             public string effectName;
             public Vector2 anchoredPos;
+        }
+
+        [System.Serializable]
+        public struct EffectSizeOverride
+        {
+            public string effectName;
+            public Vector2 size;
         }
 
         [Header("디버그")]
@@ -64,7 +78,8 @@ namespace Battle.UI
             }
 
             Vector2 pos = ResolvePositionFor(effectName);
-            SpawnEffect(frames, pos);
+            Vector2 size = ResolveSizeFor(effectName);
+            SpawnEffect(frames, pos, size, effectName);
         }
 
         Sprite[] LoadFrames(string effectName)
@@ -96,22 +111,56 @@ namespace Battle.UI
             return playerAnchoredPos;
         }
 
-        void SpawnEffect(Sprite[] frames, Vector2 anchoredPos)
+        Vector2 ResolveSizeFor(string effectName)
+        {
+            // 1순위 — Inspector 오버라이드 리스트
+            for (int i = 0; i < sizeOverrides.Count; i++)
+            {
+                if (string.Equals(sizeOverrides[i].effectName, effectName, System.StringComparison.OrdinalIgnoreCase))
+                    return sizeOverrides[i].size;
+            }
+
+            // 2순위 — Heal_EFF 전용 크기 (회복은 옆으로 늘림)
+            if (string.Equals(effectName, "Heal_EFF", System.StringComparison.OrdinalIgnoreCase))
+                return healEffSize;
+
+            // 3순위 — 기본 크기
+            return effectSize;
+        }
+
+        void SpawnEffect(Sprite[] frames, Vector2 anchoredPos, Vector2 size, string effectName)
         {
             var go = new GameObject($"FX_{frames[0].name}", typeof(RectTransform), typeof(Image), typeof(CardEffectAnimator));
             var rt = (RectTransform)go.transform;
             rt.SetParent(Rect, false);
-            rt.anchorMin = new Vector2(0.5f, 0.5f);
-            rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = anchoredPos;
+
+            bool bottomStretch = string.Equals(effectName, "Heal_EFF", System.StringComparison.OrdinalIgnoreCase);
+
+            if (bottomStretch)
+            {
+                // 화면 하단 풀폭 띠 — 회복 이펙트가 아래에서 전체적으로 올라오는 느낌
+                rt.anchorMin = new Vector2(0f, 0f);
+                rt.anchorMax = new Vector2(1f, 0f);
+                rt.pivot = new Vector2(0.5f, 0f);
+                rt.anchoredPosition = new Vector2(0f, healEffBottomY);
+                // sizeDelta.x=0 이면 anchor stretch로 화면 폭에 자동 맞춤. y는 띠 높이.
+                rt.sizeDelta = new Vector2(0f, size.y);
+            }
+            else
+            {
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = anchoredPos;
+                rt.sizeDelta = size;
+            }
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one;
-            rt.sizeDelta = effectSize;
             rt.SetAsLastSibling();
 
             var anim = go.GetComponent<CardEffectAnimator>();
-            anim.Play(frames, defaultFps);
+            // 풀폭 띠 모드에선 sprite를 RectTransform에 맞게 늘려야 함 (aspect 보존 X)
+            anim.Play(frames, defaultFps, loop: false, preserveAspect: !bottomStretch);
         }
     }
 }

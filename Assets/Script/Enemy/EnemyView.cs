@@ -28,6 +28,24 @@ public class EnemyView : MonoBehaviour
     [Header("데미지 연출 설정")]
     [SerializeField] private float fadeTime = 1f;
     [SerializeField] private float floatSpeed = 0.5f;
+    [Tooltip("기본 크기 배율 — 텍스트 원본 폰트 크기에 곱해짐. 1.0=원본, 2.0=두 배.")]
+    [SerializeField] private float baseScale = 2.0f;
+    [Tooltip("출현 직후 임팩트 — baseScale에 곱하는 추가 배율. 1.5 = 50% 더 커졌다가 줄어듦.")]
+    [SerializeField] private float burstScale = 1.6f;
+    [Tooltip("burstScale에서 baseScale로 줄어드는 시간(초).")]
+    [SerializeField] private float burstDuration = 0.15f;
+    [Tooltip("연출 색 강조 사용 여부.")]
+    [SerializeField] private bool overrideColor = true;
+    [Tooltip("일반 데미지 강조 색.")]
+    [SerializeField] private Color damageColor = new Color(1f, 0.92f, 0.3f, 1f);
+    [Tooltip("화상 등 상태이상 피해 색.")]
+    [SerializeField] private Color burnDamageColor = new Color(1f, 0.35f, 0.2f, 1f);
+    [Tooltip("연속 타격 시 겹침 방지 — 임의 X 오프셋(±). 0이면 비활성.")]
+    [SerializeField] private float randomXOffset = 60f;
+    [Tooltip("연속 타격 시 겹침 방지 — 임의 Y 오프셋(±). 0이면 비활성.")]
+    [SerializeField] private float randomYOffset = 40f;
+    [Tooltip("연출 텍스트 앞에 표시할 접두어(예: '-').")]
+    [SerializeField] private string damagePrefix = "-";
 
     [Header("피격 이펙트 (파티클)")]
     public ParticleSystem qEffect;
@@ -232,15 +250,31 @@ public class EnemyView : MonoBehaviour
         attackPreviewText.text = damage.ToString();
     }
 
-    // EnemyController가 TakeDamage 직후 호출
-    public void ShowDamage(float damage)
+    // EnemyController가 TakeDamage 직후 호출 — 히트마다 별개 텍스트 인스턴스 생성 (5x5 등 멀티히트 동시 표시)
+    public void ShowDamage(float damage) => ShowDamage(damage, isBurn: false);
+
+    /// <summary>isBurn=true이면 화상 색 사용.</summary>
+    public void ShowDamage(float damage, bool isBurn)
     {
         if (damageText == null) return;
+        if (damage <= 0) return;
 
-        // 이전 연출 중단 후 재시작
-        if (damageCoroutine != null) StopCoroutine(damageCoroutine);
-        damageText.text = ((int)damage).ToString();
-        damageCoroutine = StartCoroutine(FloatingDamageEffect());
+        int dmg = Mathf.Max(0, (int)damage);
+        string content = string.IsNullOrEmpty(damagePrefix) ? dmg.ToString() : $"{damagePrefix}{dmg}";
+
+        // 색은 리치텍스트 태그로 직접 박아넣음 — TMP의 머티리얼/그래디언트가 .color를 가리는 케이스를 우회.
+        Color baseColor = isBurn ? burnDamageColor : (overrideColor ? damageColor : damageTextOriginColor);
+        string hex = ColorUtility.ToHtmlStringRGB(baseColor);
+        string textValue = $"<color=#{hex}>{content}</color>";
+
+        // 템플릿(damageText) 복제 — 원본은 빈 상태 유지, 클론이 각자 떠오르고 사라짐
+        var clone = Instantiate(damageText, damageText.transform.parent);
+        clone.name = isBurn ? "DamageText_Burn" : "DamageText_Clone";
+        clone.richText = true;
+        clone.text = textValue;
+        clone.gameObject.SetActive(true);
+        Debug.Log($"[ShowDamage] dmg={dmg} isBurn={isBurn} → 색={baseColor} (richText)");
+        StartCoroutine(FloatingDamageEffectFor(clone, isBurn));
     }
 
     public void SetSprite(Sprite sprite)
@@ -250,28 +284,51 @@ public class EnemyView : MonoBehaviour
     }
 
 
-    IEnumerator FloatingDamageEffect()
+    /// <summary>각 히트마다 복제된 텍스트 인스턴스를 띄우는 코루틴 — 끝나면 자기 자신 파괴.</summary>
+    IEnumerator FloatingDamageEffectFor(TMP_Text textInstance, bool isBurn = false)
     {
+        if (textInstance == null) yield break;
+
         float timer = 0f;
 
-        // 위치/색상 초기화
-        damageText.transform.localPosition = damageTextOriginLocalPos;
-        damageText.color = damageTextOriginColor;
+        // 위치 (템플릿 원점 + 임의 X/Y 오프셋)
+        Vector3 startPos = damageTextOriginLocalPos;
+        if (randomXOffset > 0f) startPos.x += Random.Range(-randomXOffset, randomXOffset);
+        if (randomYOffset > 0f) startPos.y += Random.Range(-randomYOffset, randomYOffset);
+        textInstance.transform.localPosition = startPos;
+
+        // 색은 ShowDamage에서 리치텍스트(<color>)로 박았으니 여기선 알파만 다룸.
+        // CanvasGroup으로 알파 페이드 — TMP 색 설정을 건드리지 않고 깔끔하게 처리.
+        var cg = textInstance.GetComponent<CanvasGroup>();
+        if (cg == null) cg = textInstance.gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = 1f;
+
+        Vector3 baseSize = Vector3.one * Mathf.Max(0.01f, baseScale);
+        Vector3 burstSize = baseSize * Mathf.Max(1f, burstScale);
+        textInstance.transform.localScale = burstSize;
 
         while (timer < fadeTime)
         {
+            if (textInstance == null) yield break;
             timer += Time.deltaTime;
-            damageText.transform.localPosition += Vector3.up * floatSpeed * Time.deltaTime;
-            damageText.color = new Color(
-                damageTextOriginColor.r,
-                damageTextOriginColor.g,
-                damageTextOriginColor.b,
-                Mathf.Lerp(1f, 0f, timer / fadeTime)
-            );
+            textInstance.transform.localPosition += Vector3.up * floatSpeed * Time.deltaTime;
+
+            if (timer < burstDuration && burstDuration > 0f)
+            {
+                float t = timer / burstDuration;
+                float eased = 1f - (1f - t) * (1f - t); // ease-out
+                textInstance.transform.localScale = Vector3.Lerp(burstSize, baseSize, eased);
+            }
+            else
+            {
+                textInstance.transform.localScale = baseSize;
+            }
+
+            cg.alpha = Mathf.Lerp(1f, 0f, timer / fadeTime);
             yield return null;
         }
 
-        delDamageText();
+        if (textInstance != null) Destroy(textInstance.gameObject);
     }
 
     void delDamageText()
@@ -279,6 +336,7 @@ public class EnemyView : MonoBehaviour
         if (damageText == null) return;
         damageText.text = "";
         damageText.transform.localPosition = damageTextOriginLocalPos;
+        damageText.transform.localScale = Vector3.one;
         damageText.color = damageTextOriginColor;
     }
 

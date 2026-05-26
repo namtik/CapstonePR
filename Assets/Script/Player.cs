@@ -338,6 +338,7 @@ public class Player : MonoBehaviour, IBattleUnit
         {
             currentHp -= finalDamage;
             UpdateUI();
+            OnHpDecreased?.Invoke(finalDamage); // 피격 화면 효과용
 
             if (currentHp <= 0)
             {
@@ -355,6 +356,9 @@ public class Player : MonoBehaviour, IBattleUnit
 
     /// <summary>피격(방어도로 막힘 포함). 물18(217) 등 트리거용.</summary>
     public event Action OnPlayerHit;
+
+    /// <summary>HP가 실제로 줄어들 때 호출 — 피격 화면 효과용. amount = 줄어든 HP량.</summary>
+    public event Action<int> OnHpDecreased;
     /// <summary>적 공격으로 방어도가 소모됐을 때. 땅18(417) 등 트리거용.</summary>
     public event Action OnBlockConsumedByAttack;
 
