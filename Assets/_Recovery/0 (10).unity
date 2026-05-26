@@ -3018,40 +3018,25 @@ MonoBehaviour:
   effectOverlay: {fileID: 0}
   damageOverlay: {fileID: 0}
   ownedComboSkills:
-  - displayName: "\uC9C0\uD654\uBCBD"
-    slot1: 3
-    slot2: 0
-    slot3: 3
-    effect: 0
-    amount: 70
-  - displayName: "\uD654\uBCBD\uD654"
-    slot1: 0
-    slot2: 3
-    slot3: 0
-    effect: 0
-    amount: 70
-  - displayName: "\uC9C0\uD654\uC218"
-    slot1: 3
-    slot2: 0
-    slot3: 1
-    effect: 3
-    amount: 70
-  - displayName: "\uD654\uC218\uBCBD"
+  - displayName: test2
     slot1: 0
     slot2: 1
     slot3: 3
+    effect: 0
+    amount: 100
+  - displayName: test1
+    slot1: 2
+    slot2: 1
+    slot3: 3
+    effect: 0
+    amount: 100
+  - displayName: test1
+    slot1: 2
+    slot2: 1
+    slot3: 3
     effect: 3
-    amount: 70
-  - displayName: "\uC218\uBCBD"
-    slot1: 1
-    slot2: 3
-    slot3: 2
-    effect: 3
-    amount: 70
+    amount: 10
   feverDamageEffectName: Fever_ATK
-  feverDamageEffectSpread: {x: 220, y: 80}
-  feverShakeIntensityPerHit: 0.6
-  feverShakeIntensityMax: 2
   logVerbose: 1
 --- !u!4 &461109441
 Transform:
@@ -4365,33 +4350,25 @@ MonoBehaviour:
   useNewBattleSystem: 1
   newBattleController: {fileID: 461109440}
   startingDeck:
-  - cardId: 109
-    count: 2
-  - cardId: 112
+  - cardId: 100
     count: 1
-  - cardId: 115
-    count: 2
-  - cardId: 116
+  - cardId: 200
     count: 1
-  - cardId: 121
+  - cardId: 311
     count: 1
-  - cardId: 216
-    count: 2
-  - cardId: 312
-    count: 2
-  - cardId: 320
+  - cardId: 400
     count: 1
-  - cardId: 406
+  - cardId: 409
     count: 1
-  - cardId: 408
+  - cardId: 101
     count: 1
-  - cardId: 411
-    count: 2
-  - cardId: 412
+  - cardId: 201
     count: 1
-  - cardId: 414
-    count: 2
-  - cardId: 417
+  - cardId: 301
+    count: 1
+  - cardId: 401
+    count: 1
+  - cardId: 215
     count: 1
   autoFillDefaultDeckInEditor: 1
   combatStage: {fileID: 1780698868}
@@ -6756,7 +6733,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 490}
+  m_AnchoredPosition: {x: 0, y: 361}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1211821937
@@ -7917,7 +7894,7 @@ MonoBehaviour:
   fanLayout: 1
   fanRadius: 1600
   fanArcAngle: 30
-  fanVerticalDip: 0
+  fanVerticalDip: 100
   comboSlotPanel: {fileID: 1211821935}
   comboSkillPanel: {fileID: 1528637483}
   comboSlotImages:
@@ -7950,7 +7927,7 @@ MonoBehaviour:
   selectionPromptText: {fileID: 0}
   dimOverlay: {fileID: 0}
   dimColor: {r: 0, g: 0, b: 0, a: 0.6}
-  feverDimColor: {r: 0.02, g: 0, b: 0.08, a: 0.8666667}
+  feverDimColor: {r: 0.05, g: 0.02, b: 0.15, a: 0.55}
 --- !u!4 &1552390622
 Transform:
   m_ObjectHideFlags: 0

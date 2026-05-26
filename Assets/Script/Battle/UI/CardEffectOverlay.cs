@@ -66,7 +66,24 @@ namespace Battle.UI
         public void Play(CardData card)
         {
             if (card == null) return;
-            string effectName = card.effectName;
+            PlayByName(card.effectName);
+        }
+
+        /// <summary>
+        /// 임의 effectName(예: "Fever_ATK")을 직접 재생. CardData 없이 콤보 스킬/전용 이펙트 등에 사용.
+        /// 위치/크기 결정 규칙은 Play(CardData)와 동일 — 이름이 *_ATK / BURN* / CHAIN* 이면 적, 그 외엔 플레이어.
+        /// </summary>
+        public void PlayByName(string effectName)
+        {
+            PlayByNameAtOffset(effectName, Vector2.zero);
+        }
+
+        /// <summary>
+        /// 같은 이펙트를 여러 번 분산해서 띄울 때 사용. 기본 위치(ResolvePositionFor 결과)에 offset을 더한 위치에서 재생.
+        /// 콤보가 여러 건 발동될 때 위치를 어긋나게 해서 시각적으로 횟수를 구분할 수 있음.
+        /// </summary>
+        public void PlayByNameAtOffset(string effectName, Vector2 offsetFromDefault)
+        {
             if (string.IsNullOrEmpty(effectName)) return;
 
             Sprite[] frames = LoadFrames(effectName);
@@ -77,7 +94,7 @@ namespace Battle.UI
                 return;
             }
 
-            Vector2 pos = ResolvePositionFor(effectName);
+            Vector2 pos = ResolvePositionFor(effectName) + offsetFromDefault;
             Vector2 size = ResolveSizeFor(effectName);
             SpawnEffect(frames, pos, size, effectName);
         }

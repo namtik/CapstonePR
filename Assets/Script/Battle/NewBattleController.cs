@@ -37,6 +37,20 @@ namespace Battle
         [SerializeField] private List<ComboSkillDef> ownedComboSkills = new List<ComboSkillDef>();
         public IReadOnlyList<ComboSkillDef> OwnedComboSkills => ownedComboSkills;
 
+        [Header("피버 콤보 이펙트")]
+        [Tooltip("피버 종료 시 Damage 콤보가 적에게 들어갈 때 재생할 이펙트 이름. " +
+                 "Resources/CardEffects/{이름}.png 시트를 찾아 적 위치에서 재생. " +
+                 "비우거나 시트가 없으면 조용히 스킵.")]
+        [SerializeField] private string feverDamageEffectName = "Fever_ATK";
+        [Tooltip("Damage 콤보가 N개 동시에 발동될 때 이펙트가 한 곳에 겹쳐 보이지 않도록 좌우/상하로 분산.\n" +
+                 "X = 콤보 간 가로 간격, Y = zigzag 세로 진폭. 0으로 두면 분산 없이 한 곳.")]
+        [SerializeField] private Vector2 feverDamageEffectSpread = new Vector2(220f, 80f);
+        [Tooltip("피버 종료 시 데미지 콤보 1건당 더해질 셰이크 강도 배율. 콤보가 많을수록 더 세게 흔들림.\n" +
+                 "0이면 셰이크 비활성.")]
+        [SerializeField] private float feverShakeIntensityPerHit = 0.6f;
+        [Tooltip("피버 셰이크 강도 상한 — 콤보가 너무 많아도 이 값을 넘지 않음.")]
+        [SerializeField] private float feverShakeIntensityMax = 2.0f;
+
         [Header("디버그")]
         [SerializeField] private bool logVerbose = true;
 
@@ -55,6 +69,7 @@ namespace Battle
         private bool _feverArmed;         // 15회 도달 후 F 대기 중
         private bool _feverActive;
         private float _feverTimeRemaining; // 활성화 시 남은 시간(초). 0 이하가 되면 종료
+        private float _feverMaxTime;       // 콤보 보너스로 늘어나는 동적 최대치 (게이지 fill 계산용)
         private List<CardInstance> _feverStoredNeutralCards = new List<CardInstance>();
 
         // 콤보 슬롯 (피버 동안 입력된 속성, sliding window 3장)
@@ -209,6 +224,11 @@ namespace Battle
             _feverArmed = false;
             _feverActive = false;
             _feverTimeRemaining = 0f;
+            _feverMaxTime = 0f;
+
+            // 피버 게이지를 Player.hpBar 아래에 자동 배치
+            if (handHud != null && _player != null && _player.hpBar != null)
+                handHud.SetFeverGaugeAnchor(_player.hpBar.GetComponent<RectTransform>());
 
             _deck.Draw(START_DRAW);
             UpdateFeverText();
@@ -457,11 +477,13 @@ namespace Battle
                 }
 
                 // 콤보 매칭 시 지속 시간 +0.5초 — 매칭이 일어났을 때만 보너스
+                // 게이지가 줄어들지 않도록 max도 함께 증가시킨다 (시각적으로 끝부분이 살짝 차오르는 효과)
                 if (comboTriggered)
                 {
                     float before = _feverTimeRemaining;
                     _feverTimeRemaining += COMBO_BONUS_SECONDS;
-                    Log($"[피버] ⏱ 콤보 매칭 → 시간 +{COMBO_BONUS_SECONDS:F1}s ({before:F2}s → {_feverTimeRemaining:F2}s)");
+                    _feverMaxTime += COMBO_BONUS_SECONDS;
+                    Log($"[피버] ⏱ 콤보 매칭 → 시간 +{COMBO_BONUS_SECONDS:F1}s ({before:F2}s → {_feverTimeRemaining:F2}s, max={_feverMaxTime:F2}s)");
                 }
 
                 Log($"[피버] {card.data.displayName} → 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은시간={_feverTimeRemaining:F2}s");
@@ -669,6 +691,7 @@ namespace Battle
             _feverArmed = false;
             _elementInputCount = 0;
             _feverTimeRemaining = FEVER_DURATION_SECONDS;
+            _feverMaxTime = FEVER_DURATION_SECONDS;
 
             // 패/드로우/버린 더미의 무속성 카드 임시 격리
             _feverStoredNeutralCards = _deck.ExtractAllNeutralCards();
@@ -695,6 +718,7 @@ namespace Battle
         {
             _feverActive = false;
             _feverTimeRemaining = 0f;
+            _feverMaxTime = 0f;
 
             _deck.ReturnNeutralCardsToDiscard(_feverStoredNeutralCards);
             _feverStoredNeutralCards.Clear();
@@ -704,12 +728,39 @@ namespace Battle
             // 큐에 쌓인 콤보 스킬 일괄 발동 (매칭 순서대로)
             if (_queuedComboSkills.Count > 0)
             {
-                Log($"[피버] 종료 — 콤보 {_queuedComboSkills.Count}건 일괄 발동");
+                // Damage 콤보를 먼저 세어두면, 이펙트 분산 시 i번째/총N개로 좌우 정렬 가능
+                int damageCount = 0;
+                for (int i = 0; i < _queuedComboSkills.Count; i++)
+                    if (_queuedComboSkills[i] != null && _queuedComboSkills[i].effect == ComboEffectType.Damage)
+                        damageCount++;
+
+                Log($"[피버] 종료 — 콤보 {_queuedComboSkills.Count}건 일괄 발동 (Damage {damageCount}건)");
+
+                int damageIndex = 0;
                 for (int i = 0; i < _queuedComboSkills.Count; i++)
                 {
                     var skill = _queuedComboSkills[i];
-                    if (skill != null) ActivateComboSkill(skill);
+                    if (skill == null) continue;
+                    ActivateComboSkill(skill);
+
+                    if (skill.effect == ComboEffectType.Damage)
+                    {
+                        if (effectOverlay != null && !string.IsNullOrEmpty(feverDamageEffectName))
+                        {
+                            Vector2 offset = ComputeFeverDamageOffset(damageIndex, damageCount);
+                            effectOverlay.PlayByNameAtOffset(feverDamageEffectName, offset);
+                        }
+                        damageIndex++;
+                    }
                 }
+
+                // Damage 콤보가 1건 이상이면 데미지 임팩트 강조용 셰이크 (콤보 수에 비례, 상한 있음)
+                if (damageCount > 0 && damageOverlay != null && feverShakeIntensityPerHit > 0f)
+                {
+                    float intensity = Mathf.Min(damageCount * feverShakeIntensityPerHit, feverShakeIntensityMax);
+                    damageOverlay.TriggerShake(intensity);
+                }
+
                 _queuedComboSkills.Clear();
             }
             else
@@ -778,6 +829,7 @@ namespace Battle
             {
                 case ComboEffectType.Damage:
                     if (_enemy != null) _enemy.TakeDamage(skill.amount);
+                    // 데미지 이펙트는 EndFever가 위치 분산+셰이크와 함께 일괄 처리하므로 여기선 띄우지 않음.
                     break;
                 case ComboEffectType.Burn:
                     if (_enemy != null) _enemy.AddStatus("burn", skill.amount);
@@ -874,11 +926,35 @@ namespace Battle
             else if (_feverArmed) label = "FEVER READY (F)";
             else label = $"{_elementInputCount}/{FEVER_ACTIVATION_INPUT}";
             handHud.SetFeverText(label);
+            handHud.UpdateFeverGauge(
+                _elementInputCount,
+                FEVER_ACTIVATION_INPUT,
+                _feverArmed,
+                _feverActive,
+                _feverTimeRemaining,
+                _feverMaxTime
+            );
         }
 
         void Log(string msg)
         {
             if (logVerbose) Debug.Log($"[NewBattle] {msg}");
+        }
+
+        /// <summary>
+        /// 피버 종료 시 데미지 콤보 N건을 좌우/상하로 분산시키기 위한 오프셋 계산.
+        /// index 0..total-1 → 중심에서 좌우로 펼침, Y는 짝/홀로 zigzag.
+        /// total<=1 이면 분산 없음(원점).
+        /// </summary>
+        Vector2 ComputeFeverDamageOffset(int index, int total)
+        {
+            if (total <= 1) return Vector2.zero;
+            // -(total-1)/2 ~ +(total-1)/2 로 정규화 → 가운데 기준 좌우 균등 배치
+            float lane = index - (total - 1) * 0.5f;
+            float x = lane * feverDamageEffectSpread.x;
+            // Y: 짝수 인덱스 -dip, 홀수 +dip (작은 zigzag로 단조로움 회피)
+            float y = ((index % 2 == 0) ? -1f : 1f) * feverDamageEffectSpread.y;
+            return new Vector2(x, y);
         }
 
         // ─────────────────────────────────────────────────────────────

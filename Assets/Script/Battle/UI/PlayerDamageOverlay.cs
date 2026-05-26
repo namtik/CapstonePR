@@ -155,15 +155,7 @@ namespace Battle.UI
             }
 
             // 2) 화면 흔들기
-            if (enableCameraShake && shakeTargets != null && shakeTargets.Count > 0)
-            {
-                if (_activeShake != null)
-                {
-                    StopCoroutine(_activeShake);
-                    RestoreShakeOrigins(); // 새 셰이크 전에 원위치 복구
-                }
-                _activeShake = StartCoroutine(ShakeRoutine(intensity));
-            }
+            TriggerShake(intensity);
 
             // 3) HP 바 깜빡임
             if (enableHpBarFlash && hpBarFillImage != null)
@@ -171,6 +163,24 @@ namespace Battle.UI
                 if (_activeHpFlash != null) StopCoroutine(_activeHpFlash);
                 _activeHpFlash = StartCoroutine(HpBarFlashRoutine());
             }
+        }
+
+        /// <summary>
+        /// 외부에서 임의 강도(0~∞)로 화면 셰이크 요청. 진행 중인 셰이크가 있으면 중단 후 새로 시작.
+        /// 피버 종료의 콤보 데미지 같은 "플레이어 피격이 아닌" 시각 임팩트에 사용.
+        /// </summary>
+        public void TriggerShake(float intensityMul)
+        {
+            if (!enableCameraShake) return;
+            if (shakeTargets == null || shakeTargets.Count == 0) return;
+            if (intensityMul <= 0f) return;
+
+            if (_activeShake != null)
+            {
+                StopCoroutine(_activeShake);
+                RestoreShakeOrigins(); // 새 셰이크 전에 원위치 복구
+            }
+            _activeShake = StartCoroutine(ShakeRoutine(intensityMul));
         }
 
         IEnumerator ShakeRoutine(float intensityMul)
