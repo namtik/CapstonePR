@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: cf86f8b578eb8de41852b1dc1d7f3cfc
+guid: a2589301927984a43ac8d81567b0bea5
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -48,7 +48,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 25
+  spritePixelsToUnits: 24
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -97,13 +97,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: spritesheet_0
+      name: Burn_EFF_0
       rect:
         serializedVersion: 2
         x: 0
-        y: 0
-        width: 128
-        height: 128
+        y: 984
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -112,20 +112,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4c7f04cf19a888043a60ae884f3fb83a
-      internalID: -1442384146
+      spriteID: 1ec1d03ed69f3e54ab4a143018696cac
+      internalID: -2002156941
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_1
+      name: Burn_EFF_1
       rect:
         serializedVersion: 2
-        x: 128
-        y: 0
-        width: 128
-        height: 128
+        x: 521
+        y: 984
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -134,20 +134,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 544a114e4268eb84d933e10657f35fcd
-      internalID: 1514008761
+      spriteID: c3988d84afae3a04fa34d4d2fadceafc
+      internalID: 709865394
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_2
+      name: Burn_EFF_2
       rect:
         serializedVersion: 2
-        x: 256
-        y: 0
-        width: 128
-        height: 128
+        x: 1034
+        y: 984
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -156,20 +156,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: db9b81b0b9729f4459fbb875be0cbf1c
-      internalID: -425320280
+      spriteID: 51bb5d7658f95c54c8debfa3248c2c42
+      internalID: 1088836778
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_3
+      name: Burn_EFF_3
       rect:
         serializedVersion: 2
-        x: 384
-        y: 0
-        width: 128
-        height: 128
+        x: 1551
+        y: 984
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -178,20 +178,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: c873e4439ad83ce4e819cc6f7b234fca
-      internalID: 1032183556
+      spriteID: b43c8d07ba951194d9a7cca9a9246778
+      internalID: 691755119
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_4
+      name: Burn_EFF_4
       rect:
         serializedVersion: 2
-        x: 512
-        y: 0
-        width: 128
-        height: 128
+        x: 2068
+        y: 984
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -200,20 +200,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 46b9a97641cc0964ab81a2d579e76a4f
-      internalID: -2125729563
+      spriteID: 3d29cda243fc4564780b1aa4c5200590
+      internalID: -2023144964
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_5
+      name: Burn_EFF_5
       rect:
         serializedVersion: 2
-        x: 640
-        y: 0
-        width: 128
-        height: 128
+        x: 2585
+        y: 984
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -222,20 +222,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ebcc3f6aacb1bff4dadfe7380e0b01c9
-      internalID: 1713443325
+      spriteID: 336a3aa7f883b3a46a403fefcf3b7fa4
+      internalID: 1392018810
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_6
+      name: Burn_EFF_6
       rect:
         serializedVersion: 2
-        x: 768
-        y: 0
-        width: 128
-        height: 128
+        x: 0
+        y: 738
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -244,20 +244,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: f604a33a295403c4682c9a206c0fe2ef
-      internalID: -1461758215
+      spriteID: f11312aa245587048a2549fd8294c488
+      internalID: 740795417
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_7
+      name: Burn_EFF_7
       rect:
         serializedVersion: 2
-        x: 896
-        y: 0
-        width: 128
-        height: 128
+        x: 517
+        y: 738
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -266,20 +266,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 5da7c3d8577466c49a2d1da40eeb928a
-      internalID: 645950265
+      spriteID: 26196cde3ea919e469c44aa18fa1fe08
+      internalID: 938093135
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_8
+      name: Burn_EFF_11
       rect:
         serializedVersion: 2
-        x: 1024
-        y: 0
-        width: 128
-        height: 128
+        x: 2585
+        y: 738
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -288,20 +288,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 5bc2a244492b4644d80a932d0d6a6692
-      internalID: -2086719956
+      spriteID: c4ca878a67f052340a1d5fee5a4f6dad
+      internalID: 315505599
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_9
+      name: Burn_EFF_12
       rect:
         serializedVersion: 2
-        x: 1152
-        y: 0
-        width: 128
-        height: 128
+        x: 0
+        y: 492
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -310,20 +310,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 7b76db41afdf06d47925e7ad32bd96f8
-      internalID: 1250162497
+      spriteID: 39efe983c786aa94f8ee810e13a13e7f
+      internalID: -1142196175
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_10
+      name: Burn_EFF_16
       rect:
         serializedVersion: 2
-        x: 1280
-        y: 0
-        width: 128
-        height: 128
+        x: 2068
+        y: 492
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -332,20 +332,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: edf7cad68aa4cae4b84ebf2c57bd0d5b
-      internalID: 1847631372
+      spriteID: c5a8b5af490045d4a88a58474b059bc5
+      internalID: -1565366882
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_11
+      name: Burn_EFF_17
       rect:
         serializedVersion: 2
-        x: 1408
-        y: 0
-        width: 128
-        height: 128
+        x: 2585
+        y: 492
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -354,20 +354,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 729fe38406e4e394783a29890d4e1e74
-      internalID: -513732696
+      spriteID: 23f8bd73168bd8f4898305f0923998d0
+      internalID: 307709986
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_12
+      name: Burn_EFF_21
       rect:
         serializedVersion: 2
-        x: 1536
-        y: 0
-        width: 128
-        height: 128
+        x: 1551
+        y: 246
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -376,20 +376,20 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 3bb30992386abe540908e4954d0d868d
-      internalID: 491170384
+      spriteID: 3588626d03e110b4dbea79f21bafe4d0
+      internalID: 398011167
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: spritesheet_13
+      name: Burn_EFF_22
       rect:
         serializedVersion: 2
-        x: 1664
-        y: 0
-        width: 128
-        height: 128
+        x: 2068
+        y: 246
+        width: 517
+        height: 246
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -398,8 +398,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 26cd3e28582188d458df377b23537513
-      internalID: 1086068684
+      spriteID: f3091cb03761450478d03bf126862c6e
+      internalID: 1449225081
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Burn_EFF_23
+      rect:
+        serializedVersion: 2
+        x: 2585
+        y: 246
+        width: 517
+        height: 246
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 523b71de44840914e86789ce22cb0a72
+      internalID: 972648833
       vertices: []
       indices: 
       edges: []
@@ -408,7 +430,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 8432ddb8bd14b434f829f37963874199
+    spriteID: 91af1d1449af6854dbd3e2e7185a411e
     internalID: 0
     vertices: []
     indices: 
@@ -418,26 +440,38 @@ TextureImporter:
     spriteCustomMetadata:
       entries:
       - key: SpriteEditor.SliceSettings
-        value: '{"sliceOnImport":false,"gridCellCount":{"x":1.0,"y":1.0},"gridSpriteSize":{"x":128.0,"y":128.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":1,"keepEmptyRects":false,"isAlternate":false}'
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":6.0,"y":5.0},"gridSpriteSize":{"x":517.0,"y":246.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
-      spritesheet_0: -1442384146
-      spritesheet_1: 1514008761
-      spritesheet_10: 1847631372
-      spritesheet_11: -513732696
-      spritesheet_12: 491170384
-      spritesheet_13: 1086068684
-      spritesheet_14: 1475550258
-      spritesheet_15: 101519266
-      spritesheet_16: 637003871
-      spritesheet_17: 388146154
-      spritesheet_2: -425320280
-      spritesheet_3: 1032183556
-      spritesheet_4: -2125729563
-      spritesheet_5: 1713443325
-      spritesheet_6: -1461758215
-      spritesheet_7: 645950265
-      spritesheet_8: -2086719956
-      spritesheet_9: 1250162497
+      Burn_EFF_0: -2002156941
+      Burn_EFF_1: 709865394
+      Burn_EFF_10: 2118235194
+      Burn_EFF_11: 315505599
+      Burn_EFF_12: -1142196175
+      Burn_EFF_13: 501242042
+      Burn_EFF_14: 273098732
+      Burn_EFF_15: -1892937929
+      Burn_EFF_16: -1565366882
+      Burn_EFF_17: 307709986
+      Burn_EFF_18: -1265711051
+      Burn_EFF_19: -644206806
+      Burn_EFF_2: 1088836778
+      Burn_EFF_20: 442894657
+      Burn_EFF_21: 398011167
+      Burn_EFF_22: 1449225081
+      Burn_EFF_23: 972648833
+      Burn_EFF_24: -1118374243
+      Burn_EFF_25: 1564563321
+      Burn_EFF_26: -1216723595
+      Burn_EFF_27: -519631978
+      Burn_EFF_28: -71776400
+      Burn_EFF_29: -501595728
+      Burn_EFF_3: 691755119
+      Burn_EFF_4: -2023144964
+      Burn_EFF_5: 1392018810
+      Burn_EFF_6: 740795417
+      Burn_EFF_7: 938093135
+      Burn_EFF_8: -470906806
+      Burn_EFF_9: 1887633845
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

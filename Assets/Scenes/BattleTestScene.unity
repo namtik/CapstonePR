@@ -914,6 +914,7 @@ RectTransform:
   - {fileID: 1132707911}
   - {fileID: 384392342}
   - {fileID: 734949238}
+  - {fileID: 1183282257}
   - {fileID: 429421629}
   - {fileID: 818459576}
   - {fileID: 1771368602}
@@ -3014,6 +3015,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.NewBattleController
   handHud: {fileID: 1552390621}
+  effectOverlay: {fileID: 0}
   ownedComboSkills:
   - displayName: test2
     slot1: 0
@@ -4340,15 +4342,25 @@ MonoBehaviour:
   useNewBattleSystem: 1
   newBattleController: {fileID: 461109440}
   startingDeck:
-  - cardId: 414
+  - cardId: 100
+    count: 1
+  - cardId: 200
+    count: 1
+  - cardId: 300
+    count: 1
+  - cardId: 400
     count: 1
   - cardId: 409
     count: 1
-  - cardId: 210
+  - cardId: 101
     count: 1
-  - cardId: 209
+  - cardId: 201
     count: 1
-  - cardId: 310
+  - cardId: 301
+    count: 1
+  - cardId: 401
+    count: 1
+  - cardId: 112
     count: 1
   autoFillDefaultDeckInEditor: 1
   combatStage: {fileID: 1780698868}
@@ -6612,6 +6624,63 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1155555643}
   m_CullTransparentMesh: 1
+--- !u!1 &1183282256
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1183282257}
+  - component: {fileID: 1183282258}
+  m_Layer: 0
+  m_Name: CardEffectOverlay
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1183282257
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1183282256}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1.0000799, y: 1.0000799, z: 1.0000799}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 307618035}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1183282258
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1183282256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49ab72b338cbf114c93705885777d9f2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Battle.UI.CardEffectOverlay
+  enemyAnchoredPos: {x: 0, y: 300}
+  playerAnchoredPos: {x: 0, y: 100}
+  earthAtkAnchoredPos: {x: 0, y: 100}
+  effectSize: {x: 1024, y: 1024}
+  defaultFps: 24
+  positionOverrides:
+  - effectName: Burn_EFF
+    anchoredPos: {x: 0, y: 150}
+  logMissing: 0
 --- !u!1 &1211821935
 GameObject:
   m_ObjectHideFlags: 0

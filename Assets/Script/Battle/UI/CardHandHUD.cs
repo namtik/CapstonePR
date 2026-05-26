@@ -66,6 +66,18 @@ namespace Battle.UI
         [SerializeField] private TMP_Text discardCountText;
         [SerializeField] private TMP_Text feverCountText;
 
+        [Header("피버 입력 히스토리 (왼쪽 표시)")]
+        [Tooltip("피버 동안 입력된 속성 카드 전체 히스토리가 표시될 부모. 비우면 자동 생성.")]
+        [SerializeField] private RectTransform feverHistoryContainer;
+        [Tooltip("히스토리 한 칸 크기.")]
+        [SerializeField] private Vector2 feverHistoryItemSize = new Vector2(60f, 60f);
+        [Tooltip("히스토리 칸 간 세로 간격.")]
+        [SerializeField] private float feverHistoryItemSpacing = 8f;
+        [Tooltip("히스토리 컨테이너 위치(앵커 기준). 좌측 가운데 추천.")]
+        [SerializeField] private Vector2 feverHistoryAnchoredPos = new Vector2(80f, 0f);
+        [Tooltip("표시할 최대 항목 수 — 초과 시 가장 오래된 것부터 숨김.")]
+        [SerializeField] private int feverHistoryMaxItems = 20;
+
         private readonly List<NewCardView> _cardViews = new List<NewCardView>();
         private readonly List<RectTransform> _slotAnchors = new List<RectTransform>();
         private CardDeckSystem _deck;
@@ -116,6 +128,90 @@ namespace Battle.UI
         {
             if (comboSlotPanel != null) comboSlotPanel.SetActive(active);
             if (comboSkillPanel != null) comboSkillPanel.SetActive(active);
+            if (feverHistoryContainer != null) feverHistoryContainer.gameObject.SetActive(active);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 피버 입력 히스토리 (왼쪽 세로 표시)
+        // ─────────────────────────────────────────────────────────────
+
+        private readonly List<Image> _feverHistoryViews = new List<Image>();
+
+        public void UpdateFeverInputHistory(IList<CardElement> history)
+        {
+            EnsureFeverHistoryContainer();
+            if (feverHistoryContainer == null) return;
+
+            int total = history != null ? history.Count : 0;
+            int max = Mathf.Max(1, feverHistoryMaxItems);
+            // 표시 슬라이스: 최근 max개만(오래된 게 잘림)
+            int start = Mathf.Max(0, total - max);
+            int visible = total - start;
+
+            // 풀 확장
+            while (_feverHistoryViews.Count < visible)
+            {
+                var go = new GameObject($"FevHist_{_feverHistoryViews.Count}", typeof(RectTransform), typeof(Image));
+                go.transform.SetParent(feverHistoryContainer, false);
+                var rect = (RectTransform)go.transform;
+                rect.anchorMin = new Vector2(0.5f, 1f);
+                rect.anchorMax = new Vector2(0.5f, 1f);
+                rect.pivot = new Vector2(0.5f, 1f);
+                rect.sizeDelta = feverHistoryItemSize;
+                var img = go.GetComponent<Image>();
+                img.raycastTarget = false;
+                _feverHistoryViews.Add(img);
+            }
+
+            // 활성/비활성/내용 갱신
+            for (int i = 0; i < _feverHistoryViews.Count; i++)
+            {
+                var img = _feverHistoryViews[i];
+                if (i < visible)
+                {
+                    img.gameObject.SetActive(true);
+                    var rect = (RectTransform)img.transform;
+                    // 위→아래 순서 배치 (인덱스 0이 가장 위)
+                    float y = -i * (feverHistoryItemSize.y + feverHistoryItemSpacing);
+                    rect.anchoredPosition = new Vector2(0f, y);
+
+                    var element = history[start + i];
+                    var sp = cardPrefab != null ? cardPrefab.GetElementSprite(element) : null;
+                    if (sp != null)
+                    {
+                        img.sprite = sp;
+                        img.color = Color.white;
+                    }
+                    else
+                    {
+                        img.sprite = null;
+                        img.color = ColorForElement(element);
+                    }
+                }
+                else
+                {
+                    img.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        void EnsureFeverHistoryContainer()
+        {
+            if (feverHistoryContainer != null) return;
+            Canvas canvas = ResolveTargetCanvas();
+            Transform parent = canvas != null ? canvas.transform : transform;
+
+            var go = new GameObject("FeverHistoryContainer", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            feverHistoryContainer = (RectTransform)go.transform;
+            // 좌측 중앙 정렬 (anchor를 좌측에, pivot도 좌측에)
+            feverHistoryContainer.anchorMin = new Vector2(0f, 0.5f);
+            feverHistoryContainer.anchorMax = new Vector2(0f, 0.5f);
+            feverHistoryContainer.pivot = new Vector2(0f, 0.5f);
+            feverHistoryContainer.anchoredPosition = feverHistoryAnchoredPos;
+            feverHistoryContainer.sizeDelta = new Vector2(feverHistoryItemSize.x, 600f);
+            // 기본적으로 active로 생성 — SetFeverMode가 visibility 제어
+            // (자동 생성 타이밍이 ActivateFever 안의 UpdateFeverInputHistory 호출이라 active 상태가 맞음)
         }
 
         /// <summary>콤보 슬롯 3칸을 현재 입력 시퀀스로 갱신. 빈 슬롯은 회색.</summary>
@@ -314,6 +410,15 @@ namespace Battle.UI
             if (IsSelectionMode || IsPickerMode) return false;
             if (UseCardCallback == null) return false;
             if (ev.position.y < useThresholdY) return false;
+            return UseCardCallback(view.Card);
+        }
+
+        /// <summary>더블클릭으로 카드 사용 (드래그 없이도 사용 가능).</summary>
+        public bool TryUseFromClick(NewCardView view)
+        {
+            if (view == null || view.Card == null) return false;
+            if (IsSelectionMode || IsPickerMode) return false;
+            if (UseCardCallback == null) return false;
             return UseCardCallback(view.Card);
         }
 

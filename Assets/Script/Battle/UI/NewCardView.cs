@@ -161,6 +161,18 @@ namespace Battle.UI
 
         public void SetCard(CardInstance card)
         {
+            // 카드가 바뀌면 hover/drag 같은 transient 상태 리셋 — 카드 사용 후 잔여 상태로
+            // 인한 손패 정렬 어긋남 방지(특히 더블클릭 사용 직후 마우스가 같은 위치에 있을 때).
+            if (Card != card)
+            {
+                _isHovering = false;
+                _isDragging = false;
+                if (_hoverSlotOriginalSibling >= 0 && transform.parent != null)
+                {
+                    transform.parent.SetSiblingIndex(_hoverSlotOriginalSibling);
+                    _hoverSlotOriginalSibling = -1;
+                }
+            }
             Card = card;
             Refresh();
         }
@@ -266,20 +278,20 @@ namespace Battle.UI
         {
             if (iconImage == null) return;
 
-            // 임시: 카드 아이콘 미완성 → 속성 sprite로 대체
-            if (useElementSpriteAsIcon && Card != null)
+            // 1순위: DB의 SkillImg 컬럼 기반 (Resources/CardIcons/{skillImg})
+            if (Card != null && !string.IsNullOrEmpty(Card.data.skillImg))
             {
-                Sprite elementSprite = GetElementSprite(Card.Element);
-                if (elementSprite != null)
+                Sprite sp = Resources.Load<Sprite>($"CardIcons/{Card.data.skillImg}");
+                if (sp != null)
                 {
-                    iconImage.sprite = elementSprite;
+                    iconImage.sprite = sp;
                     iconImage.color = Color.white;
                     iconImage.enabled = true;
                     return;
                 }
             }
 
-            // Inspector 매핑 우선
+            // 2순위: Inspector 매핑
             for (int i = 0; i < cardIcons.Count; i++)
             {
                 if (cardIcons[i].cardId == cardId && cardIcons[i].sprite != null)
@@ -291,7 +303,7 @@ namespace Battle.UI
                 }
             }
 
-            // Resources fallback
+            // 3순위: Resources/CardIcons/{cardId} (구버전 호환)
             if (resourcesFallback)
             {
                 Sprite resourceSprite = Resources.Load<Sprite>($"CardIcons/{cardId}");
@@ -304,7 +316,20 @@ namespace Battle.UI
                 }
             }
 
-            // 매핑이 전혀 없으면 색만 표시
+            // 4순위(임시): 카드 아이콘 미완성 → 속성 sprite로 대체
+            if (useElementSpriteAsIcon && Card != null)
+            {
+                Sprite elementSprite = GetElementSprite(Card.Element);
+                if (elementSprite != null)
+                {
+                    iconImage.sprite = elementSprite;
+                    iconImage.color = Color.white;
+                    iconImage.enabled = true;
+                    return;
+                }
+            }
+
+            // 마지막 fallback: 속성 색만 표시
             iconImage.sprite = null;
             iconImage.color = ColorForElement(Card != null ? Card.Element : CardElement.Neutral, false);
         }
@@ -489,8 +514,19 @@ namespace Battle.UI
         {
             if (Card == null || Hud == null) return;
             if (_isDragging) return; // 드래그 중인 클릭은 무시
-            // 선택 모드면 Hud에 알림
-            Hud.OnCardClicked(this);
+
+            // 선택/픽커 모드: 단일 클릭으로 선택 처리
+            if (Hud.IsSelectionMode || Hud.IsPickerMode)
+            {
+                Hud.OnCardClicked(this);
+                return;
+            }
+
+            // 일반 모드: 더블클릭(clickCount>=2)으로 카드 사용
+            if (eventData.clickCount >= 2)
+            {
+                Hud.TryUseFromClick(this);
+            }
         }
 
         void ApplyScale(float multiplier)

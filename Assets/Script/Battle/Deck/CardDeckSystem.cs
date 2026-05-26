@@ -90,6 +90,15 @@ namespace Battle.Deck
                 drawn++;
             }
             if (drawn > 0) OnPileChanged?.Invoke();
+
+            // 손패가 한도에 안 찼는데 못 뽑은 경우 — 더미 고갈 진단 로그
+            if (drawn < count && _hand.Count < HandLimit
+                && _drawPile.Count == 0 && _discardPile.Count == 0)
+            {
+                Debug.LogWarning($"[DeckSystem] 드로우 실패 — 뽑을·버린 더미가 모두 비어있음 " +
+                                 $"(요청={count}, 실제={drawn}, 패={_hand.Count}/{HandLimit}, " +
+                                 $"소멸 더미={_exilePile.Count})");
+            }
             return drawn;
         }
 

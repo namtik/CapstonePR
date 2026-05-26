@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Battle.Card;
@@ -26,6 +27,9 @@ namespace Battle
 
         [Header("UI")]
         [SerializeField] private CardHandHUD handHud;
+        [Tooltip("카드 사용 시 EffectName(예: Fire_ATK)에 해당하는 스프라이트 시트 애니메이션을 재생. " +
+                 "비우면 자동으로 캔버스에 생성. 시트가 없으면 조용히 스킵.")]
+        [SerializeField] private CardEffectOverlay effectOverlay;
 
         [Header("보유 콤보 스킬 (피버 전용 / Inspector 편집)")]
         [SerializeField] private List<ComboSkillDef> ownedComboSkills = new List<ComboSkillDef>();
@@ -53,8 +57,12 @@ namespace Battle
 
         // 콤보 슬롯 (피버 동안 입력된 속성, sliding window 3장)
         private readonly List<CardElement> _comboInput = new List<CardElement>();
-        // 이번 피버 사이클에서 발동된 콤보 스킬 인덱스(중복 발동 방지)
+        // 이번 피버 사이클에서 매칭된 콤보 스킬 인덱스(중복 매칭 방지 + UI 표시)
         private readonly HashSet<int> _activatedComboSkillIndices = new HashSet<int>();
+        // 피버 종료 시 일괄 발동할 콤보 스킬 큐 (매칭 순서대로 적재)
+        private readonly List<ComboSkillDef> _queuedComboSkills = new List<ComboSkillDef>();
+        // 피버 동안 입력된 속성 전체 기록(왼쪽 UI 표시용)
+        private readonly List<CardElement> _feverInputHistory = new List<CardElement>();
 
         // 방해 행동 — 속성 저주 (PDF: 한 속성 모든 카드, 플레이어 카드 사용 2회 동안 지속)
         public const int CURSE_DURATION_USES = 2;
@@ -187,6 +195,10 @@ namespace Battle
             {
                 Debug.LogWarning("[NewBattleController] handHud가 미연결입니다.");
             }
+
+            // 카드 효과 이펙트 오버레이 — 비어 있으면 자동 생성
+            if (effectOverlay == null) effectOverlay = ResolveOrCreateEffectOverlay();
+
             EnsureEventSystem();
 
             _inBattle = true;
@@ -305,6 +317,25 @@ namespace Battle
             _ctx.firstCardAfterEnemyAttack = true;
         }
 
+        /// <summary>
+        /// 직전 효과(예: 207의 DRAW)의 시각 갱신이 먼저 반영되도록
+        /// 다음 프레임에 선택 모드 진입. 동일 프레임 내 다중 OnPileChanged → 한꺼번에 렌더되는 문제 회피.
+        /// </summary>
+        IEnumerator DeferredSelection(string prompt,
+            System.Action<CardInstance> callback,
+            System.Func<CardInstance, bool> filter)
+        {
+            yield return null; // 1프레임 대기 — 드로우/배치 변화가 화면에 먼저 반영됨
+            if (handHud != null) handHud.EnterSelectionMode(prompt, callback, filter: filter);
+        }
+
+        IEnumerator DeferredPicker(string prompt, IList<CardInstance> cards,
+            System.Action<CardInstance> callback)
+        {
+            yield return null;
+            if (handHud != null) handHud.EnterCardPickerMode(prompt, cards, callback);
+        }
+
         /// <summary>필터에 매칭되는 카드가 패에 있는지 확인.</summary>
         bool HandHasMatch(System.Func<CardInstance, bool> filter)
         {
@@ -378,6 +409,11 @@ namespace Battle
                 AccrueEnemyGauge(1);
                 Log("D 드로우 — 적 게이지 +1");
             }
+            else
+            {
+                Log($"D 드로우 실패 — 뽑을 더미({_deck.DrawCount})·버린 더미({_deck.DiscardCount}) 카드 없음 " +
+                    $"(소멸 더미={_deck.ExilePile.Count})");
+            }
         }
 
         void TryActivateFever()
@@ -417,9 +453,13 @@ namespace Battle
                     comboTriggered = TryActivateCombo();
                 }
 
-                // 콤보 성공 시 지속 시간 +0.5초
+                // 콤보 매칭 시 지속 시간 +0.5초 — 매칭이 일어났을 때만 보너스
                 if (comboTriggered)
+                {
+                    float before = _feverTimeRemaining;
                     _feverTimeRemaining += COMBO_BONUS_SECONDS;
+                    Log($"[피버] ⏱ 콤보 매칭 → 시간 +{COMBO_BONUS_SECONDS:F1}s ({before:F2}s → {_feverTimeRemaining:F2}s)");
+                }
 
                 Log($"[피버] {card.data.displayName} → 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은시간={_feverTimeRemaining:F2}s");
 
@@ -427,6 +467,7 @@ namespace Battle
                 {
                     handHud.UpdateComboSlot(_comboInput);
                     handHud.UpdateComboSkillList(ownedComboSkills, _activatedComboSkillIndices);
+                    handHud.UpdateFeverInputHistory(_feverInputHistory);
                 }
 
                 // 모든 콤보 스킬 발동 시 즉시 종료 (시간 종료는 Update의 TickFeverTimer가 담당)
@@ -444,6 +485,9 @@ namespace Battle
 
             _deck.PlaceCardAfterUse(card, result.exile, result.keepOnField);
 
+            // 카드 사용 효과 애니메이션 (EffectName 기반 스프라이트 시트)
+            if (effectOverlay != null) effectOverlay.Play(card.data);
+
             if (result.exile) _resolver.NotifyExile(card);
 
             // 물12(211): 마지막 사용 카드 효과 재사용
@@ -459,13 +503,13 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    handHud.EnterSelectionMode("패에서 소멸할 카드를 선택하세요",
+                    StartCoroutine(DeferredSelection("패에서 소멸할 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
                             _deck.ExileFromHand(selected);
                             _resolver.NotifyExile(selected);
-                        }, filter: filter);
+                        }, filter));
                 }
                 else Log("[효과] 소멸 가능한 카드 없음 — 건너뜀");
             }
@@ -476,13 +520,13 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    handHud.EnterSelectionMode("패에서 버릴 카드를 선택하세요",
+                    StartCoroutine(DeferredSelection("패에서 버릴 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
                             _deck.DiscardCardFromHand(selected);
                             if (_ctx.discardToDrawActive) _deck.Draw(1); // 물21(220)
-                        }, filter: filter);
+                        }, filter));
                 }
                 else Log("[효과] 버릴 카드 없음 — 건너뜀");
             }
@@ -493,13 +537,13 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    handHud.EnterSelectionMode("복사할 카드를 선택하세요",
+                    StartCoroutine(DeferredSelection("복사할 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
                             var copy = new CardInstance(selected.data, transient: true);
                             if (!_deck.AddToHand(copy)) _deck.AddToDiscard(copy);
-                        }, filter: filter);
+                        }, filter));
                 }
                 else Log("[효과] 복사 가능한 카드 없음 — 건너뜀");
             }
@@ -507,17 +551,17 @@ namespace Battle
             // 뽑을 더미에서 카드 선택 → 패로 (물7/206)
             if (result.requiresDrawPileMoveSelection && handHud != null)
             {
-                handHud.EnterCardPickerMode("뽑을 더미에서 카드를 선택하세요",
+                StartCoroutine(DeferredPicker("뽑을 더미에서 카드를 선택하세요",
                     new List<CardInstance>(_deck.DrawPile),
-                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); });
+                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); }));
             }
 
             // 버린 더미에서 카드 선택 → 뽑을 더미 맨 위 (물11/210)
             if (result.requiresDiscardMoveSelection && handHud != null)
             {
-                handHud.EnterCardPickerMode("버린 더미에서 카드를 선택하세요",
+                StartCoroutine(DeferredPicker("버린 더미에서 카드를 선택하세요",
                     new List<CardInstance>(_deck.DiscardPile),
-                    (picked) => { if (picked != null) _deck.MoveFromDiscardToDrawPileTop(picked); });
+                    (picked) => { if (picked != null) _deck.MoveFromDiscardToDrawPileTop(picked); }));
             }
 
             // 파편 풀에서 선택 (땅10/409, 땅15/414)
@@ -531,7 +575,7 @@ namespace Battle
                 }
                 string zone = result.fragmentPickerTargetZone;
                 int copies = Mathf.Max(1, result.fragmentPickerCopyCount);
-                handHud.EnterCardPickerMode("파편 카드를 선택하세요",
+                StartCoroutine(DeferredPicker("파편 카드를 선택하세요",
                     pool,
                     (picked) =>
                     {
@@ -542,7 +586,7 @@ namespace Battle
                             if (inst == null) continue;
                             PlaceFragmentInZone(inst, zone);
                         }
-                    });
+                    }));
             }
 
             // 게이지 누적
@@ -626,9 +670,11 @@ namespace Battle
             // 패/드로우/버린 더미의 무속성 카드 임시 격리
             _feverStoredNeutralCards = _deck.ExtractAllNeutralCards();
 
-            // 콤보 입력/발동 기록 초기화
+            // 콤보 입력/매칭/큐/히스토리 초기화
             _comboInput.Clear();
             _activatedComboSkillIndices.Clear();
+            _queuedComboSkills.Clear();
+            _feverInputHistory.Clear();
 
             // 콤보 슬롯/스킬 UI 활성화 및 갱신
             if (handHud != null)
@@ -636,9 +682,10 @@ namespace Battle
                 handHud.SetFeverMode(true);
                 handHud.UpdateComboSlot(_comboInput);
                 handHud.UpdateComboSkillList(ownedComboSkills, _activatedComboSkillIndices);
+                handHud.UpdateFeverInputHistory(_feverInputHistory);
             }
 
-            Log($"[피버] 발동! 격리된 무속성={_feverStoredNeutralCards.Count}, 지속 시간={FEVER_DURATION_SECONDS}s (콤보 성공 시 +{COMBO_BONUS_SECONDS}s)");
+            Log($"[피버] 발동! 격리된 무속성={_feverStoredNeutralCards.Count}, 지속 시간={FEVER_DURATION_SECONDS}s (콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
         }
 
         void EndFever()
@@ -651,9 +698,26 @@ namespace Battle
 
             _deck.TrimHandOverflowToDiscard();
 
-            // 콤보 슬롯/입력 초기화
+            // 큐에 쌓인 콤보 스킬 일괄 발동 (매칭 순서대로)
+            if (_queuedComboSkills.Count > 0)
+            {
+                Log($"[피버] 종료 — 콤보 {_queuedComboSkills.Count}건 일괄 발동");
+                for (int i = 0; i < _queuedComboSkills.Count; i++)
+                {
+                    var skill = _queuedComboSkills[i];
+                    if (skill != null) ActivateComboSkill(skill);
+                }
+                _queuedComboSkills.Clear();
+            }
+            else
+            {
+                Log("[피버] 종료 — 발동된 콤보 없음");
+            }
+
+            // 콤보 슬롯/입력/히스토리 초기화
             _comboInput.Clear();
             _activatedComboSkillIndices.Clear();
+            _feverInputHistory.Clear();
 
             // 콤보 슬롯/스킬 UI 비활성화
             if (handHud != null)
@@ -661,9 +725,8 @@ namespace Battle
                 handHud.SetFeverMode(false);
                 handHud.UpdateComboSlot(_comboInput);
                 handHud.UpdateComboSkillList(ownedComboSkills, _activatedComboSkillIndices);
+                handHud.UpdateFeverInputHistory(_feverInputHistory);
             }
-
-            Log("[피버] 종료");
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -674,8 +737,14 @@ namespace Battle
         {
             _comboInput.Add(element);
             if (_comboInput.Count > 3) _comboInput.RemoveAt(0);
+            // 전체 히스토리(왼쪽 표시용)에도 누적
+            _feverInputHistory.Add(element);
         }
 
+        /// <summary>
+        /// 콤보 매칭. 매칭되면 큐에 적재(즉시 발동 X). 피버 종료 시 일괄 발동.
+        /// 반환값=true는 "이번에 매칭됐다" — 호출자가 시간 보너스(+0.5s) 부여용.
+        /// </summary>
         bool TryActivateCombo()
         {
             if (_comboInput.Count < 3) return false;
@@ -688,9 +757,10 @@ namespace Battle
                 if (skill == null) continue;
                 if (skill.Matches(_comboInput))
                 {
-                    ActivateComboSkill(skill);
+                    _queuedComboSkills.Add(skill);
                     _activatedComboSkillIndices.Add(i);
-                    _comboInput.Clear();
+                    // 슬롯은 클리어하지 않음 — 슬라이딩 윈도우 그대로 유지
+                    Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 피버 종료 시 발동 ({_queuedComboSkills.Count}건 대기)");
                     return true;
                 }
             }
@@ -854,6 +924,26 @@ namespace Battle
             var go = new GameObject("EventSystem");
             go.AddComponent<UnityEngine.EventSystems.EventSystem>();
             go.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        }
+
+        CardEffectOverlay ResolveOrCreateEffectOverlay()
+        {
+            var existing = FindFirstObjectByType<CardEffectOverlay>(FindObjectsInactive.Include);
+            if (existing != null) return existing;
+
+            Canvas combatCanvas = ResolveCombatCanvas();
+            var go = new GameObject("CardEffectOverlay", typeof(RectTransform));
+            if (combatCanvas != null)
+            {
+                go.transform.SetParent(combatCanvas.transform, false);
+                var rect = (RectTransform)go.transform;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                rect.SetAsLastSibling();
+            }
+            return go.AddComponent<CardEffectOverlay>();
         }
     }
 }
