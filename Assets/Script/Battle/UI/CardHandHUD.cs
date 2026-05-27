@@ -159,10 +159,12 @@ namespace Battle.UI
         /// <summary>
         /// 피버 게이지를 부착할 기준 RectTransform을 외부에서 지정 (보통 Player.hpBar).
         /// 이미 게이지가 자동 생성됐다면 부모를 재배치한다.
+        /// 매 프레임 호출되어도 안전 — 같은 anchor면 즉시 return.
         /// </summary>
         public void SetFeverGaugeAnchor(RectTransform anchor)
         {
             if (anchor == null) return;
+            if (feverGaugeAnchor == anchor && feverGauge != null) return; // 이미 잡혀 있으면 스킵
             feverGaugeAnchor = anchor;
             EnsureFeverGauge();
             RefitFeverGaugeToAnchor();
@@ -256,6 +258,7 @@ namespace Battle.UI
                 Canvas canvas = ResolveTargetCanvas();
                 parent = canvas != null ? canvas.transform : transform;
             }
+            Debug.Log($"[CardHandHUD] FeverGauge 자동 생성 — parent='{(parent != null ? parent.name : "(null)")}', anchor='{(feverGaugeAnchor != null ? feverGaugeAnchor.name : "(없음, 캔버스 중앙 fallback)")}'");
 
             // 루트
             var go = new GameObject("FeverGauge", typeof(RectTransform), typeof(Slider));
@@ -334,6 +337,10 @@ namespace Battle.UI
             }
 
             RefitFeverGaugeToAnchor();
+
+            // anchor가 없는 fallback의 경우에도 게이지를 캔버스 최상단으로 (다른 UI에 가려지지 않게)
+            if (feverGaugeAnchor == null && feverGauge != null)
+                ((RectTransform)feverGauge.transform).SetAsLastSibling();
         }
 
         void RefitFeverGaugeToAnchor()
@@ -345,6 +352,12 @@ namespace Battle.UI
                 : (Transform)feverGaugeAnchor;
             if (rect.parent != anchorParent) rect.SetParent(anchorParent, false);
 
+            // 부모에 LayoutGroup(예: HorizontalLayoutGroup)이 있으면 자식의 위치/크기를 강제로 덮어쓰므로,
+            // 게이지는 LayoutElement.ignoreLayout=true로 layout 그룹에서 분리해야 우리가 지정한 좌표 유지됨.
+            var le = feverGauge.gameObject.GetComponent<LayoutElement>();
+            if (le == null) le = feverGauge.gameObject.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
+
             // anchor와 같은 정렬 기준으로 맞춘 후 오프셋 적용
             rect.anchorMin = feverGaugeAnchor.anchorMin;
             rect.anchorMax = feverGaugeAnchor.anchorMax;
@@ -352,6 +365,13 @@ namespace Battle.UI
             rect.anchoredPosition = feverGaugeAnchor.anchoredPosition + feverGaugeOffset;
             rect.sizeDelta = feverGaugeSize;
             rect.SetAsLastSibling();
+        }
+
+        /// <summary>외부에서 게이지를 강제로 캔버스 최상단으로 — 다른 오버레이가 게이지를 가렸을 때 사용.</summary>
+        public void BringFeverGaugeToFront()
+        {
+            if (feverGauge != null)
+                ((RectTransform)feverGauge.transform).SetAsLastSibling();
         }
 
         static Image ResolveGaugeFill(Slider slider)
@@ -393,6 +413,8 @@ namespace Battle.UI
             if (comboSkillPanel != null) comboSkillPanel.transform.SetAsLastSibling();
             if (feverHistoryContainer != null) feverHistoryContainer.SetAsLastSibling();
             if (feverCountText != null) feverCountText.transform.SetAsLastSibling();
+            // 피버 게이지가 hpBar 부모와 같은 캔버스에 있다면 dim에 가려지지 않도록
+            BringFeverGaugeToFront();
         }
 
         void HideFeverDim()
@@ -810,6 +832,8 @@ namespace Battle.UI
             _pickerRoot.gameObject.SetActive(true);
             _pickerRoot.SetAsLastSibling();
             BuildPickerCards(cards);
+            // 게이지가 다른 캔버스라도 항상 위로 — 픽커 dim에 가려지지 않도록
+            BringFeverGaugeToFront();
         }
 
         public void ExitPickerMode()
@@ -821,6 +845,7 @@ namespace Battle.UI
             if (selectionPromptText != null) selectionPromptText.gameObject.SetActive(false);
             // 손패가 SetAsFirstSibling 됐던 것 복원 — 최상단으로 다시 올림
             if (handRoot != null) handRoot.SetAsLastSibling();
+            BringFeverGaugeToFront();
         }
 
         void EnsurePickerRoot()

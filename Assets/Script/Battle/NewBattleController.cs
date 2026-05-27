@@ -921,6 +921,14 @@ namespace Battle
         void UpdateFeverText()
         {
             if (handHud == null) return;
+
+            // Player.hpBar가 늦게 잡힐 수 있으므로 매 프레임 anchor 재시도 (이미 잡혔으면 CardHandHUD가 무시)
+            if (_player != null && _player.hpBar != null)
+            {
+                var hpRect = _player.hpBar.GetComponent<RectTransform>();
+                if (hpRect != null) handHud.SetFeverGaugeAnchor(hpRect);
+            }
+
             string label;
             if (_feverActive) label = $"FEVER {_feverTimeRemaining:F1}s";
             else if (_feverArmed) label = "FEVER READY (F)";
