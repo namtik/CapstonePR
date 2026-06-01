@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 using TMPro;
 using Battle.Card;
 using Battle.Deck;
@@ -10,7 +11,7 @@ namespace Battle.UI
 {
     /// <summary>
     /// 5장 손패 HUD. NewSkillCard 프리팹을 인스턴스화해서 슬롯을 구성한다.
-    /// 콤보 슬롯/콤보 스킬 UI는 피버 모드 토글로 표시/숨김.
+    /// 콤보 슬롯/콤보 스킬 UI는 각성 모드 토글로 표시/숨김.
     /// </summary>
     public class CardHandHUD : MonoBehaviour
     {
@@ -46,10 +47,10 @@ namespace Battle.UI
         [Tooltip("호 위 가장자리에서 카드들이 떨어질 깊이. 작을수록 카드들이 살짝 아래로 호를 그림.")]
         [SerializeField] private float fanVerticalDip = 50f;
 
-        [Header("콤보 UI — 피버 전용")]
-        [Tooltip("피버 발동 시 활성화될 콤보 슬롯 패널.")]
+        [Header("콤보 UI — 각성 전용")]
+        [Tooltip("각성 발동 시 활성화될 콤보 슬롯 패널.")]
         [SerializeField] private GameObject comboSlotPanel;
-        [Tooltip("피버 발동 시 활성화될 콤보 스킬 목록 패널.")]
+        [Tooltip("각성 발동 시 활성화될 콤보 스킬 목록 패널.")]
         [SerializeField] private GameObject comboSkillPanel;
         [Tooltip("콤보 슬롯 3칸의 Image. 비워두면 comboSlotPanel 자식에서 자동 탐색.")]
         [SerializeField] private Image[] comboSlotImages = new Image[3];
@@ -64,55 +65,62 @@ namespace Battle.UI
         [Header("정보 텍스트")]
         [SerializeField] private TMP_Text drawCountText;
         [SerializeField] private TMP_Text discardCountText;
-        [SerializeField] private TMP_Text feverCountText;
+        [FormerlySerializedAs("feverCountText")]
+        [SerializeField] private TMP_Text awakenCountText;
 
-        [Header("피버 게이지 (HP바 아래)")]
-        [Tooltip("게이지 슬라이더 — 비우면 SetFeverGaugeAnchor 호출 또는 첫 갱신 시 자동 생성.")]
-        [SerializeField] private Slider feverGauge;
+        [Header("각성 게이지 (HP바 아래)")]
+        [Tooltip("게이지 슬라이더 — 비우면 SetAwakenGaugeAnchor 호출 또는 첫 갱신 시 자동 생성.")]
+        [FormerlySerializedAs("feverGauge")]
+        [SerializeField] private Slider awakenGauge;
         [Tooltip("게이지를 부착할 기준 RectTransform — 보통 Player.hpBar의 RectTransform. 비우면 NewBattleController가 런타임에 넣어줌.")]
-        [SerializeField] private RectTransform feverGaugeAnchor;
+        [FormerlySerializedAs("feverGaugeAnchor")]
+        [SerializeField] private RectTransform awakenGaugeAnchor;
         [Tooltip("게이지 자동 생성 시 크기.")]
-        [SerializeField] private Vector2 feverGaugeSize = new Vector2(300f, 22f);
+        [FormerlySerializedAs("feverGaugeSize")]
+        [SerializeField] private Vector2 awakenGaugeSize = new Vector2(300f, 22f);
         [Tooltip("anchor 기준 오프셋. y 음수 = 아래(HP바 아래).")]
-        [SerializeField] private Vector2 feverGaugeOffset = new Vector2(0f, -32f);
-        [Tooltip("게이지 위에 표시할 라벨 (예: 14/15, READY (F), 10.0s). 비우면 게이지 자동 생성 시 함께 생성.")]
-        [SerializeField] private TMP_Text feverGaugeLabel;
+        [FormerlySerializedAs("feverGaugeOffset")]
+        [SerializeField] private Vector2 awakenGaugeOffset = new Vector2(0f, -32f);
+        [Tooltip("게이지 위에 표시할 라벨 (예: 6/10, 10.0s). 비우면 게이지 자동 생성 시 함께 생성.")]
+        [FormerlySerializedAs("feverGaugeLabel")]
+        [SerializeField] private TMP_Text awakenGaugeLabel;
         [Tooltip("충전 진행 중 색.")]
-        [SerializeField] private Color feverChargeColor = new Color(1f, 0.55f, 0.15f, 1f);
-        [Tooltip("충전 완료(READY) 색.")]
-        [SerializeField] private Color feverArmedColor = new Color(1f, 0.85f, 0.2f, 1f);
+        [FormerlySerializedAs("feverChargeColor")]
+        [SerializeField] private Color awakenChargeColor = new Color(1f, 0.55f, 0.15f, 1f);
         [Tooltip("발동 중 색(카운트다운).")]
-        [SerializeField] private Color feverActiveColor = new Color(0.75f, 0.35f, 1f, 1f);
-        [Tooltip("READY 상태 펄스 속도(Hz). 0이면 펄스 없음.")]
-        [SerializeField] private float feverArmedPulseHz = 2.5f;
-        [Tooltip("READY 펄스 최소 알파(0~1).")]
-        [SerializeField] private float feverArmedPulseMinAlpha = 0.55f;
+        [FormerlySerializedAs("feverActiveColor")]
+        [SerializeField] private Color awakenActiveColor = new Color(0.75f, 0.35f, 1f, 1f);
 
-        [Header("피버 입력 히스토리 (왼쪽 표시)")]
-        [Tooltip("피버 동안 입력된 속성 카드 전체 히스토리가 표시될 부모. 비우면 자동 생성.")]
-        [SerializeField] private RectTransform feverHistoryContainer;
+        [Header("각성 입력 히스토리 (왼쪽 표시)")]
+        [Tooltip("각성 동안 입력된 속성 카드 전체 히스토리가 표시될 부모. 비우면 자동 생성.")]
+        [FormerlySerializedAs("feverHistoryContainer")]
+        [SerializeField] private RectTransform awakenHistoryContainer;
         [Tooltip("히스토리 한 칸 크기.")]
-        [SerializeField] private Vector2 feverHistoryItemSize = new Vector2(60f, 60f);
+        [FormerlySerializedAs("feverHistoryItemSize")]
+        [SerializeField] private Vector2 awakenHistoryItemSize = new Vector2(60f, 60f);
         [Tooltip("히스토리 칸 간 세로 간격.")]
-        [SerializeField] private float feverHistoryItemSpacing = 8f;
+        [FormerlySerializedAs("feverHistoryItemSpacing")]
+        [SerializeField] private float awakenHistoryItemSpacing = 8f;
         [Tooltip("한 열에 표시할 최대 항목 수 — 이 이상이면 오른쪽 새 열로 이동.")]
-        [SerializeField] private int feverHistoryItemsPerColumn = 8;
+        [FormerlySerializedAs("feverHistoryItemsPerColumn")]
+        [SerializeField] private int awakenHistoryItemsPerColumn = 8;
         [Tooltip("열과 열 사이 가로 간격.")]
-        [SerializeField] private float feverHistoryColumnSpacing = 8f;
+        [FormerlySerializedAs("feverHistoryColumnSpacing")]
+        [SerializeField] private float awakenHistoryColumnSpacing = 8f;
         [Tooltip("히스토리 컨테이너 위치(앵커 기준). 좌측 가운데 추천.")]
-        [SerializeField] private Vector2 feverHistoryAnchoredPos = new Vector2(80f, 0f);
+        [FormerlySerializedAs("feverHistoryAnchoredPos")]
+        [SerializeField] private Vector2 awakenHistoryAnchoredPos = new Vector2(80f, 0f);
         [Tooltip("표시할 최대 항목 수 — 초과 시 가장 오래된 것부터 숨김.")]
-        [SerializeField] private int feverHistoryMaxItems = 64;
+        [FormerlySerializedAs("feverHistoryMaxItems")]
+        [SerializeField] private int awakenHistoryMaxItems = 64;
 
         private readonly List<NewCardView> _cardViews = new List<NewCardView>();
         private readonly List<RectTransform> _slotAnchors = new List<RectTransform>();
         private CardDeckSystem _deck;
         public System.Func<CardInstance, bool> UseCardCallback;
 
-        // ── 피버 게이지 내부 상태 ──
-        private Image _feverGaugeFill;
-        private float _feverArmedPulseT;
-        private bool _feverGaugeArmedState; // 펄스 적용 여부 (armed && !active)
+        // ── 각성 게이지 내부 상태 ──
+        private Image _awakenGaugeFill;
 
         // ── 카드 선택 모드 (예: 불3 "패에서 카드 하나 선택해 소멸") ──
         private System.Action<CardInstance> _selectionCallback;
@@ -127,15 +135,16 @@ namespace Battle.UI
         [SerializeField] private RectTransform dimOverlay;
         [Tooltip("dim 오버레이 색(알파로 어둡기 조절) — 선택/픽커 모드.")]
         [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f);
-        [Tooltip("피버 모드 dim 색 — 일반 선택 모드와 다른 톤으로 구분 가능. 카드 선택 dim(dimColor)과 독립.")]
-        [SerializeField] private Color feverDimColor = new Color(0.02f, 0.0f, 0.08f, 0.82f);
+        [Tooltip("각성 모드 dim 색 — 일반 선택 모드와 다른 톤으로 구분 가능. 카드 선택 dim(dimColor)과 독립.")]
+        [FormerlySerializedAs("feverDimColor")]
+        [SerializeField] private Color awakenDimColor = new Color(0.02f, 0.0f, 0.08f, 0.82f);
 
         void Awake()
         {
             EnsureHandRoot();
             EnsureDragLayer();
             BuildSlotAnchors();
-            SetFeverMode(false); // 초기엔 콤보 UI 숨김
+            SetAwakenMode(false); // 초기엔 콤보 UI 숨김
         }
 
         public void Bind(CardDeckSystem deck)
@@ -151,35 +160,35 @@ namespace Battle.UI
             if (_deck != null) _deck.OnPileChanged -= Refresh;
         }
 
-        public void SetFeverText(string text)
+        public void SetAwakenText(string text)
         {
-            if (feverCountText != null) feverCountText.text = text;
+            if (awakenCountText != null) awakenCountText.text = text;
         }
 
         /// <summary>
-        /// 피버 게이지를 부착할 기준 RectTransform을 외부에서 지정 (보통 Player.hpBar).
+        /// 각성 게이지를 부착할 기준 RectTransform을 외부에서 지정 (보통 Player.hpBar).
         /// 이미 게이지가 자동 생성됐다면 부모를 재배치한다.
         /// 매 프레임 호출되어도 안전 — 같은 anchor면 즉시 return.
         /// </summary>
-        public void SetFeverGaugeAnchor(RectTransform anchor)
+        public void SetAwakenGaugeAnchor(RectTransform anchor)
         {
             if (anchor == null) return;
-            if (feverGaugeAnchor == anchor && feverGauge != null) return; // 이미 잡혀 있으면 스킵
-            feverGaugeAnchor = anchor;
-            EnsureFeverGauge();
-            RefitFeverGaugeToAnchor();
+            if (awakenGaugeAnchor == anchor && awakenGauge != null) return; // 이미 잡혀 있으면 스킵
+            awakenGaugeAnchor = anchor;
+            EnsureAwakenGauge();
+            RefitAwakenGaugeToAnchor();
         }
 
         /// <summary>
-        /// 피버 상태에 따라 게이지를 갱신.
-        /// chargeCur/chargeMax: 충전 단계(0~15) — armed/active=false일 때 사용.
-        /// armed: 충전 완료 후 F키 대기.
+        /// 각성 상태에 따라 게이지를 갱신.
+        /// chargeCur/chargeMax: 충전 단계(0~10) — active=false일 때 사용.
         /// active: 발동 중 — timeRemaining/timeMax로 fill 계산. timeMax는 콤보 보너스로 동적 증가.
+        /// 각성은 10장 도달 시 즉시 발동되므로 'READY 대기' 상태가 없다.
         /// </summary>
-        public void UpdateFeverGauge(int chargeCur, int chargeMax, bool armed, bool active, float timeRemaining, float timeMax)
+        public void UpdateAwakenGauge(int chargeCur, int chargeMax, bool active, float timeRemaining, float timeMax)
         {
-            EnsureFeverGauge();
-            if (feverGauge == null) return;
+            EnsureAwakenGauge();
+            if (awakenGauge == null) return;
 
             float fill;
             Color color;
@@ -188,86 +197,51 @@ namespace Battle.UI
             {
                 float denom = timeMax > 0f ? timeMax : 1f;
                 fill = Mathf.Clamp01(timeRemaining / denom);
-                color = feverActiveColor;
+                color = awakenActiveColor;
                 label = $"{Mathf.Max(0f, timeRemaining):F1}s";
-            }
-            else if (armed)
-            {
-                fill = 1f;
-                color = feverArmedColor;
-                label = "READY (F)";
             }
             else
             {
                 int max = Mathf.Max(1, chargeMax);
                 int cur = Mathf.Clamp(chargeCur, 0, max);
                 fill = (float)cur / max;
-                color = feverChargeColor;
+                color = awakenChargeColor;
                 label = $"{cur}/{max}";
             }
 
-            feverGauge.value = fill;
-            if (_feverGaugeFill != null)
-            {
-                // armed 상태는 펄스가 알파를 매 프레임 갱신하므로 현재 알파 유지, 그 외엔 1.0
-                float alpha = (armed && !active) ? _feverGaugeFill.color.a : 1f;
-                _feverGaugeFill.color = new Color(color.r, color.g, color.b, alpha);
-            }
-            if (feverGaugeLabel != null) feverGaugeLabel.text = label;
-
-            bool wasArmed = _feverGaugeArmedState;
-            _feverGaugeArmedState = armed && !active;
-            if (!_feverGaugeArmedState && wasArmed && _feverGaugeFill != null)
-            {
-                var c = _feverGaugeFill.color;
-                _feverGaugeFill.color = new Color(c.r, c.g, c.b, 1f);
-                _feverArmedPulseT = 0f;
-            }
+            awakenGauge.value = fill;
+            if (_awakenGaugeFill != null)
+                _awakenGaugeFill.color = new Color(color.r, color.g, color.b, 1f);
+            if (awakenGaugeLabel != null) awakenGaugeLabel.text = label;
         }
 
-        void Update()
+        void EnsureAwakenGauge()
         {
-            UpdateFeverArmedPulse();
-        }
-
-        void UpdateFeverArmedPulse()
-        {
-            if (!_feverGaugeArmedState || _feverGaugeFill == null) return;
-            if (feverArmedPulseHz <= 0f) return;
-            _feverArmedPulseT += Time.unscaledDeltaTime * feverArmedPulseHz * Mathf.PI * 2f;
-            float t = 0.5f + 0.5f * Mathf.Sin(_feverArmedPulseT);
-            float a = Mathf.Lerp(Mathf.Clamp01(feverArmedPulseMinAlpha), 1f, t);
-            var c = _feverGaugeFill.color;
-            _feverGaugeFill.color = new Color(c.r, c.g, c.b, a);
-        }
-
-        void EnsureFeverGauge()
-        {
-            if (feverGauge != null)
+            if (awakenGauge != null)
             {
-                if (_feverGaugeFill == null) _feverGaugeFill = ResolveGaugeFill(feverGauge);
+                if (_awakenGaugeFill == null) _awakenGaugeFill = ResolveGaugeFill(awakenGauge);
                 return;
             }
 
             // 부모 결정: anchor가 있으면 anchor의 부모(같은 레벨에 형제로 두기), 없으면 캔버스
             Transform parent = null;
-            if (feverGaugeAnchor != null)
-                parent = feverGaugeAnchor.parent != null ? feverGaugeAnchor.parent : (Transform)feverGaugeAnchor;
+            if (awakenGaugeAnchor != null)
+                parent = awakenGaugeAnchor.parent != null ? awakenGaugeAnchor.parent : (Transform)awakenGaugeAnchor;
             if (parent == null)
             {
                 Canvas canvas = ResolveTargetCanvas();
                 parent = canvas != null ? canvas.transform : transform;
             }
-            Debug.Log($"[CardHandHUD] FeverGauge 자동 생성 — parent='{(parent != null ? parent.name : "(null)")}', anchor='{(feverGaugeAnchor != null ? feverGaugeAnchor.name : "(없음, 캔버스 중앙 fallback)")}'");
+            Debug.Log($"[CardHandHUD] AwakenGauge 자동 생성 — parent='{(parent != null ? parent.name : "(null)")}', anchor='{(awakenGaugeAnchor != null ? awakenGaugeAnchor.name : "(없음, 캔버스 중앙 fallback)")}'");
 
             // 루트
-            var go = new GameObject("FeverGauge", typeof(RectTransform), typeof(Slider));
+            var go = new GameObject("AwakenGauge", typeof(RectTransform), typeof(Slider));
             go.transform.SetParent(parent, false);
             var rect = (RectTransform)go.transform;
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = feverGaugeSize;
+            rect.sizeDelta = awakenGaugeSize;
 
             // 배경
             var bgGo = new GameObject("Background", typeof(RectTransform), typeof(Image));
@@ -299,7 +273,7 @@ namespace Battle.UI
             fillRect.offsetMin = Vector2.zero;
             fillRect.offsetMax = Vector2.zero;
             var fillImg = fillGo.GetComponent<Image>();
-            fillImg.color = feverChargeColor;
+            fillImg.color = awakenChargeColor;
             fillImg.raycastTarget = false;
 
             var slider = go.GetComponent<Slider>();
@@ -313,11 +287,11 @@ namespace Battle.UI
             slider.value = 0f;
             slider.direction = Slider.Direction.LeftToRight;
 
-            feverGauge = slider;
-            _feverGaugeFill = fillImg;
+            awakenGauge = slider;
+            _awakenGaugeFill = fillImg;
 
             // 라벨 자동 생성
-            if (feverGaugeLabel == null)
+            if (awakenGaugeLabel == null)
             {
                 var labelGo = new GameObject("Label", typeof(RectTransform));
                 labelGo.transform.SetParent(rect, false);
@@ -333,45 +307,45 @@ namespace Battle.UI
                 tmp.color = Color.white;
                 tmp.text = "";
                 tmp.raycastTarget = false;
-                feverGaugeLabel = tmp;
+                awakenGaugeLabel = tmp;
             }
 
-            RefitFeverGaugeToAnchor();
+            RefitAwakenGaugeToAnchor();
 
             // anchor가 없는 fallback의 경우에도 게이지를 캔버스 최상단으로 (다른 UI에 가려지지 않게)
-            if (feverGaugeAnchor == null && feverGauge != null)
-                ((RectTransform)feverGauge.transform).SetAsLastSibling();
+            if (awakenGaugeAnchor == null && awakenGauge != null)
+                ((RectTransform)awakenGauge.transform).SetAsLastSibling();
         }
 
-        void RefitFeverGaugeToAnchor()
+        void RefitAwakenGaugeToAnchor()
         {
-            if (feverGauge == null || feverGaugeAnchor == null) return;
-            var rect = (RectTransform)feverGauge.transform;
-            var anchorParent = feverGaugeAnchor.parent != null
-                ? feverGaugeAnchor.parent
-                : (Transform)feverGaugeAnchor;
+            if (awakenGauge == null || awakenGaugeAnchor == null) return;
+            var rect = (RectTransform)awakenGauge.transform;
+            var anchorParent = awakenGaugeAnchor.parent != null
+                ? awakenGaugeAnchor.parent
+                : (Transform)awakenGaugeAnchor;
             if (rect.parent != anchorParent) rect.SetParent(anchorParent, false);
 
             // 부모에 LayoutGroup(예: HorizontalLayoutGroup)이 있으면 자식의 위치/크기를 강제로 덮어쓰므로,
             // 게이지는 LayoutElement.ignoreLayout=true로 layout 그룹에서 분리해야 우리가 지정한 좌표 유지됨.
-            var le = feverGauge.gameObject.GetComponent<LayoutElement>();
-            if (le == null) le = feverGauge.gameObject.AddComponent<LayoutElement>();
+            var le = awakenGauge.gameObject.GetComponent<LayoutElement>();
+            if (le == null) le = awakenGauge.gameObject.AddComponent<LayoutElement>();
             le.ignoreLayout = true;
 
             // anchor와 같은 정렬 기준으로 맞춘 후 오프셋 적용
-            rect.anchorMin = feverGaugeAnchor.anchorMin;
-            rect.anchorMax = feverGaugeAnchor.anchorMax;
-            rect.pivot = feverGaugeAnchor.pivot;
-            rect.anchoredPosition = feverGaugeAnchor.anchoredPosition + feverGaugeOffset;
-            rect.sizeDelta = feverGaugeSize;
+            rect.anchorMin = awakenGaugeAnchor.anchorMin;
+            rect.anchorMax = awakenGaugeAnchor.anchorMax;
+            rect.pivot = awakenGaugeAnchor.pivot;
+            rect.anchoredPosition = awakenGaugeAnchor.anchoredPosition + awakenGaugeOffset;
+            rect.sizeDelta = awakenGaugeSize;
             rect.SetAsLastSibling();
         }
 
         /// <summary>외부에서 게이지를 강제로 캔버스 최상단으로 — 다른 오버레이가 게이지를 가렸을 때 사용.</summary>
-        public void BringFeverGaugeToFront()
+        public void BringAwakenGaugeToFront()
         {
-            if (feverGauge != null)
-                ((RectTransform)feverGauge.transform).SetAsLastSibling();
+            if (awakenGauge != null)
+                ((RectTransform)awakenGauge.transform).SetAsLastSibling();
         }
 
         static Image ResolveGaugeFill(Slider slider)
@@ -385,25 +359,25 @@ namespace Battle.UI
             return slider.GetComponentInChildren<Image>();
         }
 
-        /// <summary>피버 활성/비활성에 따라 콤보 슬롯/스킬 UI를 토글 + dim 오버레이 처리.</summary>
-        public void SetFeverMode(bool active)
+        /// <summary>각성 활성/비활성에 따라 콤보 슬롯/스킬 UI를 토글 + dim 오버레이 처리.</summary>
+        public void SetAwakenMode(bool active)
         {
             if (comboSlotPanel != null) comboSlotPanel.SetActive(active);
             if (comboSkillPanel != null) comboSkillPanel.SetActive(active);
-            if (feverHistoryContainer != null) feverHistoryContainer.gameObject.SetActive(active);
+            if (awakenHistoryContainer != null) awakenHistoryContainer.gameObject.SetActive(active);
 
-            if (active) ShowFeverDim();
-            else HideFeverDim();
+            if (active) ShowAwakenDim();
+            else HideAwakenDim();
         }
 
-        void ShowFeverDim()
+        void ShowAwakenDim()
         {
             EnsureDimOverlay();
             if (dimOverlay != null)
             {
-                // 피버 전용 색으로 변경
+                // 각성 전용 색으로 변경
                 var img = dimOverlay.GetComponent<Image>();
-                if (img != null) img.color = feverDimColor;
+                if (img != null) img.color = awakenDimColor;
                 dimOverlay.gameObject.SetActive(true);
                 dimOverlay.SetAsLastSibling();
             }
@@ -411,13 +385,13 @@ namespace Battle.UI
             if (handRoot != null) handRoot.SetAsLastSibling();
             if (comboSlotPanel != null) comboSlotPanel.transform.SetAsLastSibling();
             if (comboSkillPanel != null) comboSkillPanel.transform.SetAsLastSibling();
-            if (feverHistoryContainer != null) feverHistoryContainer.SetAsLastSibling();
-            if (feverCountText != null) feverCountText.transform.SetAsLastSibling();
-            // 피버 게이지가 hpBar 부모와 같은 캔버스에 있다면 dim에 가려지지 않도록
-            BringFeverGaugeToFront();
+            if (awakenHistoryContainer != null) awakenHistoryContainer.SetAsLastSibling();
+            if (awakenCountText != null) awakenCountText.transform.SetAsLastSibling();
+            // 각성 게이지가 hpBar 부모와 같은 캔버스에 있다면 dim에 가려지지 않도록
+            BringAwakenGaugeToFront();
         }
 
-        void HideFeverDim()
+        void HideAwakenDim()
         {
             if (dimOverlay != null)
             {
@@ -431,44 +405,44 @@ namespace Battle.UI
         }
 
         // ─────────────────────────────────────────────────────────────
-        // 피버 입력 히스토리 (왼쪽 세로 표시)
+        // 각성 입력 히스토리 (왼쪽 세로 표시)
         // ─────────────────────────────────────────────────────────────
 
-        private readonly List<Image> _feverHistoryViews = new List<Image>();
+        private readonly List<Image> _awakenHistoryViews = new List<Image>();
 
-        public void UpdateFeverInputHistory(IList<CardElement> history)
+        public void UpdateAwakenInputHistory(IList<CardElement> history)
         {
-            EnsureFeverHistoryContainer();
-            if (feverHistoryContainer == null) return;
+            EnsureAwakenHistoryContainer();
+            if (awakenHistoryContainer == null) return;
 
             int total = history != null ? history.Count : 0;
-            int max = Mathf.Max(1, feverHistoryMaxItems);
+            int max = Mathf.Max(1, awakenHistoryMaxItems);
             // 표시 슬라이스: 최근 max개만(오래된 게 잘림)
             int start = Mathf.Max(0, total - max);
             int visible = total - start;
 
             // 풀 확장
-            while (_feverHistoryViews.Count < visible)
+            while (_awakenHistoryViews.Count < visible)
             {
-                var go = new GameObject($"FevHist_{_feverHistoryViews.Count}", typeof(RectTransform), typeof(Image));
-                go.transform.SetParent(feverHistoryContainer, false);
+                var go = new GameObject($"AwakenHist_{_awakenHistoryViews.Count}", typeof(RectTransform), typeof(Image));
+                go.transform.SetParent(awakenHistoryContainer, false);
                 var rect = (RectTransform)go.transform;
                 rect.anchorMin = new Vector2(0.5f, 1f);
                 rect.anchorMax = new Vector2(0.5f, 1f);
                 rect.pivot = new Vector2(0.5f, 1f);
-                rect.sizeDelta = feverHistoryItemSize;
+                rect.sizeDelta = awakenHistoryItemSize;
                 var img = go.GetComponent<Image>();
                 img.raycastTarget = false;
-                _feverHistoryViews.Add(img);
+                _awakenHistoryViews.Add(img);
             }
 
             // 활성/비활성/내용 갱신 — 한 열에 itemsPerColumn개씩, 초과 시 오른쪽 새 열로 wrap
-            int itemsPerCol = Mathf.Max(1, feverHistoryItemsPerColumn);
-            float colW = feverHistoryItemSize.x + feverHistoryColumnSpacing;
-            float rowH = feverHistoryItemSize.y + feverHistoryItemSpacing;
-            for (int i = 0; i < _feverHistoryViews.Count; i++)
+            int itemsPerCol = Mathf.Max(1, awakenHistoryItemsPerColumn);
+            float colW = awakenHistoryItemSize.x + awakenHistoryColumnSpacing;
+            float rowH = awakenHistoryItemSize.y + awakenHistoryItemSpacing;
+            for (int i = 0; i < _awakenHistoryViews.Count; i++)
             {
-                var img = _feverHistoryViews[i];
+                var img = _awakenHistoryViews[i];
                 if (i < visible)
                 {
                     img.gameObject.SetActive(true);
@@ -497,23 +471,23 @@ namespace Battle.UI
             }
         }
 
-        void EnsureFeverHistoryContainer()
+        void EnsureAwakenHistoryContainer()
         {
-            if (feverHistoryContainer != null) return;
+            if (awakenHistoryContainer != null) return;
             Canvas canvas = ResolveTargetCanvas();
             Transform parent = canvas != null ? canvas.transform : transform;
 
-            var go = new GameObject("FeverHistoryContainer", typeof(RectTransform));
+            var go = new GameObject("AwakenHistoryContainer", typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            feverHistoryContainer = (RectTransform)go.transform;
+            awakenHistoryContainer = (RectTransform)go.transform;
             // 좌측 중앙 정렬 (anchor를 좌측에, pivot도 좌측에)
-            feverHistoryContainer.anchorMin = new Vector2(0f, 0.5f);
-            feverHistoryContainer.anchorMax = new Vector2(0f, 0.5f);
-            feverHistoryContainer.pivot = new Vector2(0f, 0.5f);
-            feverHistoryContainer.anchoredPosition = feverHistoryAnchoredPos;
-            feverHistoryContainer.sizeDelta = new Vector2(feverHistoryItemSize.x, 600f);
-            // 기본적으로 active로 생성 — SetFeverMode가 visibility 제어
-            // (자동 생성 타이밍이 ActivateFever 안의 UpdateFeverInputHistory 호출이라 active 상태가 맞음)
+            awakenHistoryContainer.anchorMin = new Vector2(0f, 0.5f);
+            awakenHistoryContainer.anchorMax = new Vector2(0f, 0.5f);
+            awakenHistoryContainer.pivot = new Vector2(0f, 0.5f);
+            awakenHistoryContainer.anchoredPosition = awakenHistoryAnchoredPos;
+            awakenHistoryContainer.sizeDelta = new Vector2(awakenHistoryItemSize.x, 600f);
+            // 기본적으로 active로 생성 — SetAwakenMode가 visibility 제어
+            // (자동 생성 타이밍이 ActivateAwaken 안의 UpdateAwakenInputHistory 호출이라 active 상태가 맞음)
         }
 
         /// <summary>콤보 슬롯 3칸을 현재 입력 시퀀스로 갱신. 빈 슬롯은 회색.</summary>
@@ -599,7 +573,11 @@ namespace Battle.UI
         private readonly List<SkillListItemUI> _comboSkillItems = new List<SkillListItemUI>();
 
         /// <summary>콤보 스킬 목록을 SkillListItem 프리팹으로 표시. 발동된 스킬은 반투명.</summary>
-        public void UpdateComboSkillList(IList<ComboSkillDef> skills, HashSet<int> activatedIndices)
+        /// <summary>
+        /// 콤보 스킬 목록 갱신. cooldownRemaining[i] = 콤보 i의 재사용까지 남은 입력 횟수(0=재사용 가능).
+        /// 쿨다운 중이면 흐리게 + 남은 횟수 표시, 0이면 정상 표시.
+        /// </summary>
+        public void UpdateComboSkillList(IList<ComboSkillDef> skills, int[] cooldownRemaining)
         {
             if (comboSkillItemPrefab == null)
             {
@@ -640,8 +618,9 @@ namespace Battle.UI
                 if (i < needed && skills[i] != null)
                 {
                     item.gameObject.SetActive(true);
-                    bool activated = activatedIndices != null && activatedIndices.Contains(i);
-                    item.SetupForCombo(skills[i], activated, fireSp, waterSp, windSp, earthSp);
+                    int cooldown = (cooldownRemaining != null && i < cooldownRemaining.Length)
+                        ? cooldownRemaining[i] : 0;
+                    item.SetupForCombo(skills[i], cooldown, fireSp, waterSp, windSp, earthSp);
                 }
                 else
                 {
@@ -833,7 +812,7 @@ namespace Battle.UI
             _pickerRoot.SetAsLastSibling();
             BuildPickerCards(cards);
             // 게이지가 다른 캔버스라도 항상 위로 — 픽커 dim에 가려지지 않도록
-            BringFeverGaugeToFront();
+            BringAwakenGaugeToFront();
         }
 
         public void ExitPickerMode()
@@ -845,7 +824,7 @@ namespace Battle.UI
             if (selectionPromptText != null) selectionPromptText.gameObject.SetActive(false);
             // 손패가 SetAsFirstSibling 됐던 것 복원 — 최상단으로 다시 올림
             if (handRoot != null) handRoot.SetAsLastSibling();
-            BringFeverGaugeToFront();
+            BringAwakenGaugeToFront();
         }
 
         void EnsurePickerRoot()

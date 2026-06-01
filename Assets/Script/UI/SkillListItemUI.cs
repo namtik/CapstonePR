@@ -33,21 +33,26 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     /// <summary>
     /// 새 전투 시스템의 ComboSkillDef 표시용. 속성별 sprite는 호출자가 전달.
-    /// 발동된 콤보는 반투명으로 표시.
+    /// cooldownRemaining = 재사용까지 남은 속성 입력 횟수(0=재사용 가능).
+    /// 쿨다운 중이면 반투명 + 이름 옆에 남은 횟수를 표시하고, 0이면 정상 표시.
     /// </summary>
-    public void SetupForCombo(ComboSkillDef combo, bool activated,
+    public void SetupForCombo(ComboSkillDef combo, int cooldownRemaining,
         Sprite fireSp, Sprite waterSp, Sprite windSp, Sprite earthSp)
     {
         if (combo == null) return;
 
+        bool onCooldown = cooldownRemaining > 0;
+
         if (nameText != null)
-            nameText.text = combo.displayName;
+            nameText.text = onCooldown
+                ? $"{combo.displayName}  ({cooldownRemaining})"
+                : combo.displayName;
 
         CreateComboElementIcons(combo, fireSp, waterSp, windSp, earthSp);
 
         var canvasGroup = GetComponent<CanvasGroup>();
         if (canvasGroup == null) canvasGroup = gameObject.AddComponent<CanvasGroup>();
-        canvasGroup.alpha = activated ? 0.4f : 1f;
+        canvasGroup.alpha = onCooldown ? 0.4f : 1f;
     }
 
     void CreateComboElementIcons(ComboSkillDef combo,
