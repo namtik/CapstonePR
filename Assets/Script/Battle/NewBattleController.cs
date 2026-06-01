@@ -177,6 +177,21 @@ namespace Battle
         // 전투 진입/종료
         // ─────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// MapManager가 비활성화된 후에도 안전하게 2프레임 대기 후 StartBattle 호출.
+        /// </summary>
+        public void StartBattleAfterDelay()
+        {
+            StartCoroutine(StartBattleDelayedCoroutine());
+        }
+
+        System.Collections.IEnumerator StartBattleDelayedCoroutine()
+        {
+            yield return null;
+            yield return null;
+            StartBattle();
+        }
+
         public void StartBattle()
         {
             _player = FindFirstObjectByType<Player>();
@@ -209,6 +224,7 @@ namespace Battle
             _deck.StartBattle(startingDeck);
 
             if (handHud == null) handHud = ResolveOrCreateHandHud();
+            if (handHud != null) handHud.gameObject.SetActive(true);
             if (handHud != null)
             {
                 handHud.Bind(_deck);
@@ -246,7 +262,11 @@ namespace Battle
             _inBattle = false;
             _awakenActive = false;
             _deck.EndBattle();
-            if (handHud != null) handHud.UseCardCallback = null;
+            if (handHud != null)
+            {
+                handHud.UseCardCallback = null;
+                handHud.gameObject.SetActive(false);
+            }
             Log("전투 종료");
         }
 

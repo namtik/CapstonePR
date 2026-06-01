@@ -177,6 +177,7 @@ public class Roundmanager : MonoBehaviour
     {
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.EndBattle();
+        Battle.NewBattleController.Instance?.EndBattle();
 
         currentRoundHandler.OnExitRound(this);
         OnRoundClear?.Invoke();
@@ -294,6 +295,7 @@ public class Roundmanager : MonoBehaviour
     {
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.EndBattle();
+        Battle.NewBattleController.Instance?.EndBattle();
 
         var stateController = GameStateController.Instance;
         if (stateController == null)

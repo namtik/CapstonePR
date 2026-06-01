@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using static SkillDataParser;
 using Battle;
@@ -98,11 +98,12 @@ public class BattleTestController : MonoBehaviour
 
     void Start()
     {
-        HideNonCombatStages();
-        if (combatStage != null) combatStage.SetActive(true);
-
         if (autoStartOnPlay)
+        {
+            HideNonCombatStages();
+            if (combatStage != null) combatStage.SetActive(true);
             Invoke(nameof(StartTestBattle), startDelay);
+        }
     }
 
     [ContextMenu("Start Test Battle")]

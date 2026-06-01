@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -403,8 +403,24 @@ public class MapManager : MonoBehaviour
                 boss.columnIndex = col;
 
             roundManager.StartRound(roundData);
+
+            // 전투 노드면 새 전투 시스템도 시작
+            bool isCombatNode = (node.nodeType == NodeType.Combat || node.nodeType == NodeType.Elite
+                                 || node.nodeType == NodeType.Boss || isBossNode);
+            if (isCombatNode)
+            {
+                // MapManager는 MapStage 하위 → HideAllStages 후 비활성화되므로,
+                // 씬 루트의 NewBattleController에 딜레이 코루틴을 위임한다.
+                var newBattle = Battle.NewBattleController.Instance
+                    ?? FindFirstObjectByType<Battle.NewBattleController>();
+                if (newBattle != null)
+                    newBattle.StartBattleAfterDelay();
+                else
+                    Debug.LogWarning("[MapManager] NewBattleController를 찾을 수 없습니다.");
+            }
         }
     }
+
 
     // ��� Ÿ�Կ� �´� RoundData�� ���� ����
     
