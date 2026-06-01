@@ -200,7 +200,8 @@ namespace Battle.Card
                     raw.tags ?? Array.Empty<string>(),
                     raw.comboSlot,
                     raw.effectName ?? "",
-                    raw.skillImg ?? ""
+                    raw.skillImg ?? "",
+                    ParseRarity(raw.rarity)
                 );
                 _all.Add(card);
                 _byId[card.id] = card;
@@ -272,6 +273,20 @@ namespace Battle.Card
             }
         }
 
+        static CardRarity ParseRarity(string raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return CardRarity.Normal;
+            switch (raw.Trim().ToUpperInvariant())
+            {
+                case "NORMAL": return CardRarity.Normal;
+                case "RARE":   return CardRarity.Rare;
+                case "EPIC":   return CardRarity.Epic;
+                default:
+                    Debug.LogWarning($"[CardDatabase] 알 수 없는 Rarity '{raw}' → Normal 처리");
+                    return CardRarity.Normal;
+            }
+        }
+
         // JsonUtility 파싱용 DTO (Cards.json 스키마와 1:1).
         [Serializable]
         class CardJsonList
@@ -287,6 +302,7 @@ namespace Battle.Card
             public string element;
             public string type;
             public int gauge;
+            public string rarity;
             public string[] tags;
             public bool comboSlot;
             public string effectName;

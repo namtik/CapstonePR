@@ -18,6 +18,9 @@ namespace Battle.Card
         public int gauge;
         public string description;
 
+        /// <summary>카드 등급(Normal/Rare/Epic). 보상 등장 가중치 등에 사용. (프리팹 표시는 추후)</summary>
+        public CardRarity rarity;
+
         /// <summary>BASIC / EXHAUST / ONE_TIME / POWER / FRAGMENT / NO_COMBO_SLOT / TEMPORARY_ON_CREATE 등.</summary>
         public string[] tags;
 
@@ -35,7 +38,8 @@ namespace Battle.Card
         public CardData(int id, string displayName, CardElement element, CardType type,
                         int gauge, string description,
                         string[] tags = null, bool comboSlot = true,
-                        string effectName = "", string skillImg = "")
+                        string effectName = "", string skillImg = "",
+                        CardRarity rarity = CardRarity.Normal)
         {
             this.id = id;
             this.displayName = displayName;
@@ -47,6 +51,7 @@ namespace Battle.Card
             this.comboSlot = comboSlot;
             this.effectName = effectName;
             this.skillImg = skillImg;
+            this.rarity = rarity;
         }
 
         public bool IsFragment => element == CardElement.Fragment;
@@ -77,6 +82,9 @@ namespace Battle.Card
 
         /// <summary>드로우 직후 아직 어떤 카드도 사용되지 않은 상태(바람11/310 USED_IMMEDIATELY_AFTER_DRAW용).</summary>
         public bool justDrawn;
+
+        /// <summary>이 인스턴스가 사용된 누적 횟수(바람314 SELF_USE_COUNT / N회 후 소멸용).</summary>
+        public int selfUseCount;
 
         public CardInstance(CardData data, bool transient = false)
         {

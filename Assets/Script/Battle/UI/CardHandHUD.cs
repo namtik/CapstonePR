@@ -118,6 +118,8 @@ namespace Battle.UI
         private readonly List<RectTransform> _slotAnchors = new List<RectTransform>();
         private CardDeckSystem _deck;
         public System.Func<CardInstance, bool> UseCardCallback;
+        /// <summary>카드 선택/픽커 모드가 완료(선택 동작까지 수행)된 직후 호출 — 보류된 각성 발동 등에 사용.</summary>
+        public System.Action SelectionClosedCallback;
 
         // ── 각성 게이지 내부 상태 ──
         private Image _awakenGaugeFill;
@@ -145,6 +147,93 @@ namespace Battle.UI
             EnsureDragLayer();
             BuildSlotAnchors();
             SetAwakenMode(false); // 초기엔 콤보 UI 숨김
+            SetupPileClickHandlers(); // 뽑을/버린 더미 카운트 클릭 → 카드 보기
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 더미 보기 (뽑을/버린 더미 카운트 클릭 → 내용 표시, ID 순 정렬)
+        // ─────────────────────────────────────────────────────────────
+
+        private bool _viewerMode;
+        private int _viewerPile = -1; // 0=뽑을 더미, 1=버린 더미
+        public bool IsViewerMode => _viewerMode;
+
+        void SetupPileClickHandlers()
+        {
+            AttachPileClick(drawCountText, () => TogglePileViewer(0));
+            AttachPileClick(discardCountText, () => TogglePileViewer(1));
+        }
+
+        void AttachPileClick(TMP_Text txt, System.Action action)
+        {
+            if (txt == null) return;
+            txt.raycastTarget = true;
+            var trigger = txt.gameObject.GetComponent<EventTrigger>();
+            if (trigger == null) trigger = txt.gameObject.AddComponent<EventTrigger>();
+            var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            entry.callback.AddListener(_ => action());
+            trigger.triggers.Add(entry);
+        }
+
+        /// <summary>해당 더미 보기 토글. pile: 0=뽑을 더미, 1=버린 더미.</summary>
+        public void TogglePileViewer(int pile)
+        {
+            if (_deck == null) return;
+            if (IsSelectionMode || IsPickerMode) return; // 선택/픽커 중에는 무시
+            if (_viewerMode && _viewerPile == pile) { CloseViewer(); return; }
+
+            var src = pile == 0 ? _deck.DrawPile : _deck.DiscardPile;
+            var list = new List<CardInstance>(src);
+            list.Sort((a, b) => a.Id.CompareTo(b.Id)); // ID 순 정렬
+            string title = (pile == 0 ? "뽑을 더미" : "버린 더미") + $" ({list.Count})";
+            EnterPileViewer(title, list, pile);
+        }
+
+        void EnterPileViewer(string title, List<CardInstance> cards, int pile)
+        {
+            if (cardPrefab == null)
+            {
+                Debug.LogWarning("[CardHandHUD] cardPrefab 미설정 — 더미 보기 불가.");
+                return;
+            }
+            CloseViewer();
+            _viewerMode = true;
+            _viewerPile = pile;
+
+            EnsureDimOverlay();
+            EnsurePickerRoot();
+
+            if (handRoot != null) handRoot.SetAsFirstSibling();
+            if (dimOverlay != null)
+            {
+                dimOverlay.gameObject.SetActive(true);
+                dimOverlay.SetAsLastSibling();
+            }
+            if (selectionPromptText != null)
+            {
+                selectionPromptText.text = title;
+                selectionPromptText.gameObject.SetActive(true);
+                selectionPromptText.transform.SetAsLastSibling();
+            }
+            _pickerRoot.gameObject.SetActive(true);
+            _pickerRoot.SetAsLastSibling();
+            if (cards.Count > 0) BuildPickerCards(cards);
+            else ClearPickerViews();
+            BringAwakenGaugeToFront();
+        }
+
+        /// <summary>더미 보기 닫기. (카드/딤 클릭, 또는 같은 더미 재클릭 시)</summary>
+        public void CloseViewer()
+        {
+            if (!_viewerMode) return;
+            _viewerMode = false;
+            _viewerPile = -1;
+            ClearPickerViews();
+            if (_pickerRoot != null) _pickerRoot.gameObject.SetActive(false);
+            if (dimOverlay != null) dimOverlay.gameObject.SetActive(false);
+            if (selectionPromptText != null) selectionPromptText.gameObject.SetActive(false);
+            if (handRoot != null) handRoot.SetAsLastSibling();
+            BringAwakenGaugeToFront();
         }
 
         public void Bind(CardDeckSystem deck)
@@ -687,8 +776,8 @@ namespace Battle.UI
         public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
         {
             if (view.Card == null) return false;
-            // 선택/픽커 모드에서는 드래그 사용 금지
-            if (IsSelectionMode || IsPickerMode) return false;
+            // 선택/픽커/더미보기 모드에서는 드래그 사용 금지
+            if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
             if (ev.position.y < useThresholdY) return false;
             return UseCardCallback(view.Card);
@@ -698,7 +787,7 @@ namespace Battle.UI
         public bool TryUseFromClick(NewCardView view)
         {
             if (view == null || view.Card == null) return false;
-            if (IsSelectionMode || IsPickerMode) return false;
+            if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
             return UseCardCallback(view.Card);
         }
@@ -940,6 +1029,7 @@ namespace Battle.UI
             CardInstance picked = view.Card;
             ExitPickerMode();
             cb?.Invoke(picked);
+            SelectionClosedCallback?.Invoke(); // 선택 동작 수행 후 — 보류 각성 발동 트리거
             return true;
         }
 
@@ -963,6 +1053,12 @@ namespace Battle.UI
             img.color = dimColor;
             img.raycastTarget = true; // 오버레이 뒤쪽 UI 클릭 차단
 
+            // 더미 보기 중 빈 곳(딤) 클릭 시 닫기 (다른 모드에서는 무시)
+            var trigger = go.AddComponent<EventTrigger>();
+            var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+            entry.callback.AddListener(_ => { if (_viewerMode) CloseViewer(); });
+            trigger.triggers.Add(entry);
+
             dimOverlay = rect;
             dimOverlay.gameObject.SetActive(false);
         }
@@ -970,6 +1066,9 @@ namespace Battle.UI
         /// <summary>NewCardView가 클릭됐을 때 호출. 픽커/선택 모드면 콜백 발동.</summary>
         public void OnCardClicked(NewCardView view)
         {
+            // 더미 보기 모드: 카드 클릭 시 보기 닫기 (선택 동작 없음)
+            if (_viewerMode) { CloseViewer(); return; }
+
             // 픽커 모드 우선
             if (TryHandlePickerClick(view)) return;
 
@@ -982,6 +1081,7 @@ namespace Battle.UI
             CardInstance selected = view.Card;
             ExitSelectionMode();
             cb?.Invoke(selected);
+            SelectionClosedCallback?.Invoke(); // 선택 동작 수행 후 — 보류 각성 발동 트리거
         }
 
         // ─────────────────────────────────────────────────────────────

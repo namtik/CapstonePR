@@ -224,10 +224,13 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             view.ShowMidPatternNotice($"화상 {burn}!");
         }
 
-        int after = burn / 2;
+        // 불126: 화상이 적 행동 시에도 줄어들지 않음 — 활성 시 절반 감소 생략.
+        bool burnPersists = Battle.NewBattleController.Instance != null
+            && Battle.NewBattleController.Instance.BurnPersistsOnEnemyTurn;
+        int after = burnPersists ? burn : burn / 2;
         stat.statusEffects["burn"] = after;
         OnStatusChanged?.Invoke("burn", after);
-        Debug.Log($"[화상] 적 {burn} 고정피해, 잔여 화상={after}");
+        Debug.Log($"[화상] 적 {burn} 고정피해, 잔여 화상={after}{(burnPersists ? " (유지)" : "")}");
     }
     IEnumerator ExecuteMultiHit(int count, int damage)
     {

@@ -46,6 +46,8 @@ namespace Battle.Deck
         public event System.Action OnPileChanged;
         /// <summary>패로 새로 들어온 카드. gaugeSinceDrawn 리셋 등에 사용.</summary>
         public event System.Action<CardInstance> OnCardDrawn;
+        /// <summary>패에서 버린 더미로 '버려질' 때(사용 아님) 발생 — ON_SELF_DISCARDED 트리거용.</summary>
+        public event System.Action<CardInstance> OnCardDiscarded;
 
         // ─────────────────────────────────────────────────────────────
         // 초기화
@@ -170,6 +172,7 @@ namespace Battle.Deck
             _hand.RemoveAt(handIndex);
             _discardPile.Add(card);
             OnPileChanged?.Invoke();
+            OnCardDiscarded?.Invoke(card);
         }
 
         /// <summary>카드 인스턴스를 패에서 버린 더미로 이동.</summary>
@@ -179,6 +182,7 @@ namespace Battle.Deck
             {
                 _discardPile.Add(card);
                 OnPileChanged?.Invoke();
+                OnCardDiscarded?.Invoke(card);
                 return true;
             }
             return false;
@@ -187,9 +191,12 @@ namespace Battle.Deck
         public int DiscardAllFromHand()
         {
             int count = _hand.Count;
+            var discarded = count > 0 ? new List<CardInstance>(_hand) : null;
             for (int i = 0; i < _hand.Count; i++) _discardPile.Add(_hand[i]);
             _hand.Clear();
             if (count > 0) OnPileChanged?.Invoke();
+            if (discarded != null)
+                for (int i = 0; i < discarded.Count; i++) OnCardDiscarded?.Invoke(discarded[i]);
             return count;
         }
 
@@ -255,6 +262,30 @@ namespace Battle.Deck
         {
             _discardPile.Add(card);
             OnPileChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// 패/뽑을 더미/버린 더미를 주어진 스냅샷 내용으로 교체(각성 종료 시 직전 상태 복원).
+        /// null 인자는 빈 더미로 간주. 카드 인스턴스 참조를 그대로 사용한다.
+        /// </summary>
+        public void RestorePiles(List<CardInstance> hand, List<CardInstance> draw, List<CardInstance> discard)
+        {
+            _hand.Clear();
+            if (hand != null) _hand.AddRange(hand);
+            _drawPile.Clear();
+            if (draw != null) _drawPile.AddRange(draw);
+            _discardPile.Clear();
+            if (discard != null) _discardPile.AddRange(discard);
+            OnPileChanged?.Invoke();
+        }
+
+        /// <summary>뽑을 더미의 특정 카드를 버린 더미로 이동(땅419: 파편 사용 등). 성공 시 true.</summary>
+        public bool MoveFromDrawPileToDiscard(CardInstance card)
+        {
+            if (card == null || !_drawPile.Remove(card)) return false;
+            _discardPile.Add(card);
+            OnPileChanged?.Invoke();
+            return true;
         }
 
         /// <summary>버린 더미에서 displayName이 같은 카드 모두 제거.</summary>

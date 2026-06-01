@@ -75,9 +75,15 @@ namespace Battle
         // 각성 게이지
         private int _elementInputCount;   // 각성 발동용 누적 (10 도달 시 즉시 발동)
         private bool _awakenActive;
+        private bool _awakenPending;        // 발동 조건 충족(보류) — 선택 카드의 선택 완료 후 발동
         private float _awakenTimeRemaining; // 활성화 시 남은 시간(초). 0 이하가 되면 종료
         private float _awakenMaxTime;       // 콤보 보너스로 늘어나는 동적 최대치 (게이지 fill 계산용)
         private List<CardInstance> _awakenStoredNeutralCards = new List<CardInstance>();
+
+        // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 복원용
+        private List<CardInstance> _awakenSnapshotHand;
+        private List<CardInstance> _awakenSnapshotDraw;
+        private List<CardInstance> _awakenSnapshotDiscard;
 
         // 콤보 슬롯 (각성 동안 입력된 속성, sliding window 3장)
         private readonly List<CardElement> _comboInput = new List<CardElement>();
@@ -104,6 +110,11 @@ namespace Battle
         public CardDeckSystem Deck => _deck;
         public CardInstance LastResolvedCard => _lastResolvedCard;
         public CardElement? CursedElement => _cursedElement;
+        /// <summary>불126: 적 행동 시 화상이 줄어들지 않는지 — EnemyController가 조회.</summary>
+        public bool BurnPersistsOnEnemyTurn => _ctx != null && _ctx.burnPersistsOnEnemyTurn;
+        /// <summary>각성 발동에 필요한 실제 속성 카드 수 (바람326 등 보정 반영, 최소 1).</summary>
+        public int EffectiveAwakenInput =>
+            Mathf.Max(1, AWAKEN_ACTIVATION_INPUT + (_ctx != null ? _ctx.awakenGaugeMaxDelta : 0));
 
         /// <summary>BattleTestController가 라운드 시작 전에 주입하는 사용자 정의 시작 덱.</summary>
         private List<CardInstance> _customStartingDeck;
@@ -121,11 +132,14 @@ namespace Battle
 
             // 카드가 패로 들어올 때 gaugeSinceDrawn 리셋 + USED_IMMEDIATELY_AFTER_DRAW 플래그
             _deck.OnCardDrawn += OnCardDrawnHandler;
+            // 패에서 버려질 때 ON_SELF_DISCARDED 등 트리거
+            _deck.OnCardDiscarded += OnCardDiscardedHandler;
         }
 
         void OnDestroy()
         {
             _deck.OnCardDrawn -= OnCardDrawnHandler;
+            _deck.OnCardDiscarded -= OnCardDiscardedHandler;
             if (_player != null)
             {
                 _player.OnPlayerHit -= OnPlayerHitHandler;
@@ -141,6 +155,14 @@ namespace Battle
             card.gaugeSinceDrawn = 0;
             card.justDrawn = true;
             _ctx.currentCardJustDrawn = true;
+            // 바람319: 패에 들어올 때 트리거 (각성 중에는 효과가 드로우로 치환되므로 제외)
+            if (_inBattle && !_awakenActive) _resolver.NotifyCardEnteredHand(card);
+        }
+
+        void OnCardDiscardedHandler(CardInstance card)
+        {
+            // 물205/206/219: 패에서 버려질 때 트리거 (각성 중 제외)
+            if (_inBattle && !_awakenActive) _resolver.NotifyCardDiscardedFromHand(card);
         }
 
         void Update()
@@ -213,6 +235,7 @@ namespace Battle
             {
                 handHud.Bind(_deck);
                 handHud.UseCardCallback = OnUseCardRequested;
+                handHud.SelectionClosedCallback = TryActivatePendingAwaken; // 선택 완료 후 보류 각성 발동
                 handHud.SetAwakenMode(false); // 전투 시작 시점에는 콤보 UI 숨김
             }
             else
@@ -229,6 +252,7 @@ namespace Battle
             _inBattle = true;
             _elementInputCount = 0;
             _awakenActive = false;
+            _awakenPending = false;
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
 
@@ -245,8 +269,13 @@ namespace Battle
         {
             _inBattle = false;
             _awakenActive = false;
+            _awakenPending = false;
             _deck.EndBattle();
-            if (handHud != null) handHud.UseCardCallback = null;
+            if (handHud != null)
+            {
+                handHud.UseCardCallback = null;
+                handHud.SelectionClosedCallback = null;
+            }
             Log("전투 종료");
         }
 
@@ -281,6 +310,10 @@ namespace Battle
             _ctx.damageMultiplierThresholdHp = 25;
 
             _ctx.lastHpLost = 0;
+            _ctx.lastConsumedBurn = 0;
+            _ctx.exhaustedCardCount = 0;
+            _ctx.consumedChainCount = 0;
+            _ctx.lastHitEnemyCount = 0;
             _ctx.lastDiscardedCount = 0;
             _ctx.usedAttackCardCount = 0;
             _ctx.usedFragmentCardCount = 0;
@@ -291,6 +324,27 @@ namespace Battle
             _ctx.usedCardNameCounts.Clear();
             _ctx.handLimitBonus = 0;
             _ctx.firstCardAfterAttackFreeActive = false;
+
+            // 신규 카드 효과 플래그 초기화
+            _ctx.chainGainOnCardUseActive = false;
+            _ctx.chainGainOnCardUseAmount = 0;
+            _ctx.damageOnFragmentUseActive = false;
+            _ctx.damageOnFragmentUseAmount = 0;
+            _ctx.frostOnWaterUseActive = false;
+            _ctx.frostOnWaterUseAmount = 0;
+            _ctx.frostOnWaterUseEveryN = 0;
+            _ctx.waterUseCounter = 0;
+            _ctx.attackPowerOnHpLossActive = false;
+            _ctx.attackPowerOnHpLossAmount = 0;
+            _ctx.frostOnFrostByCardActive = false;
+            _ctx.frostOnFrostByCardAmount = 0;
+            _ctx.blockOnEnemyAttackActive = false;
+            _ctx.blockOnEnemyAttackAmount = 0;
+            _ctx.recastExhaustCardActive = false;
+            _ctx.burnSkillHitsAllActive = false;
+            _ctx.burnPersistsOnEnemyTurn = false;
+            _ctx.awakenGaugeMaxDelta = 0;
+            _ctx.FrostTriggerReentrancy = false;
 
             _skipNextGaugeCount = 0;
             _lastResolvedCard = null;
@@ -343,6 +397,10 @@ namespace Battle
         void OnEnemyAttackFiredHandler()
         {
             _ctx.firstCardAfterEnemyAttack = true;
+
+            // 땅424: 적 공격 종료 후 방어도 획득
+            if (_ctx.blockOnEnemyAttackActive && _ctx.blockOnEnemyAttackAmount > 0 && _player != null)
+                _player.AddGuard(_ctx.blockOnEnemyAttackAmount);
         }
 
         /// <summary>
@@ -362,6 +420,14 @@ namespace Battle
         {
             yield return null;
             if (handHud != null) handHud.EnterCardPickerMode(prompt, cards, callback);
+        }
+
+        /// <summary>카드 사용 후 보류된 각성을 (선택 모드 진입을 기다린 뒤) 발동 시도.</summary>
+        IEnumerator DeferredPendingAwakenCheck()
+        {
+            yield return null; // DeferredSelection이 선택 모드를 켜는 프레임 이후까지 대기
+            yield return null;
+            TryActivatePendingAwaken();
         }
 
         /// <summary>필터에 매칭되는 카드가 패에 있는지 확인.</summary>
@@ -498,7 +564,22 @@ namespace Battle
 
             var result = _resolver.Resolve(card);
 
-            _deck.PlaceCardAfterUse(card, result.exile, result.keepOnField);
+            // 이 카드 사용 횟수 누적(바람314 N회 후 소멸 판정용 — Resolve가 직전 값을 읽고 판정함)
+            card.selfUseCount++;
+
+            // 바람314: 버린 더미 대신 패로 복귀 (소멸이 아닐 때만)
+            if (result.returnToHandInsteadOfDiscard && !result.exile && !result.keepOnField)
+            {
+                if (!_deck.AddToHand(card)) _deck.AddToDiscard(card); // 패가 가득이면 버린 더미로 폴백
+            }
+            else
+            {
+                _deck.PlaceCardAfterUse(card, result.exile, result.keepOnField);
+
+                // 바람318: 사용 후 버린 더미로 이동하는 카드의 ON_CARD_MOVED_TO_DISCARD 트리거
+                if (!result.exile && !result.keepOnField)
+                    _resolver.NotifyCardMovedToDiscard(card);
+            }
 
             // 카드 사용 효과 애니메이션 (EffectName 기반 스프라이트 시트)
             if (effectOverlay != null) effectOverlay.Play(card.data);
@@ -618,6 +699,10 @@ namespace Battle
             // 각성 입력 카운팅
             if (card.data.comboSlot) AccumulateAwakenInput();
 
+            // 각성 발동이 보류됐다면 — 선택 카드가 아니면 곧 발동, 선택 카드면 선택 완료 후 발동.
+            // (선택 모드는 DeferredSelection이 1프레임 뒤 진입하므로 2프레임 후 확인)
+            if (_awakenPending) StartCoroutine(DeferredPendingAwakenCheck());
+
             // 마지막 카드 기록 (자기 복사 방지)
             if (card.Id != 211) _lastResolvedCard = card;
             _ctx.previousCardType = card.Type;
@@ -668,9 +753,22 @@ namespace Battle
             if (_awakenActive) return;
 
             _elementInputCount++;
-            // 속성 카드 10장 사용 시 즉시 발동 (별도 입력 키 없음)
-            if (_elementInputCount >= AWAKEN_ACTIVATION_INPUT)
-                ActivateAwaken();
+            // 속성 카드 N장 사용 시 발동 (별도 입력 키 없음). N은 바람326 등으로 가변.
+            // 단, 즉시 발동하지 않고 '보류'로 둔 뒤 — 선택 카드의 선택이 끝난 후 발동(TryActivatePendingAwaken).
+            if (_elementInputCount >= EffectiveAwakenInput)
+                _awakenPending = true;
+        }
+
+        /// <summary>
+        /// 각성 발동 보류분을 실제로 발동. 단, 카드 선택/픽커가 진행 중이면 대기(선택 완료 후 다시 호출됨).
+        /// 호출 시점: 카드 사용 종료 시(선택이 없을 때) + 선택/픽커 종료 콜백.
+        /// </summary>
+        void TryActivatePendingAwaken()
+        {
+            if (!_awakenPending || _awakenActive || !_inBattle) return;
+            if (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode)) return; // 선택 진행 중 — 대기
+            _awakenPending = false;
+            ActivateAwaken();
         }
 
         void ActivateAwaken()
@@ -680,7 +778,12 @@ namespace Battle
             _awakenTimeRemaining = AWAKEN_DURATION_SECONDS;
             _awakenMaxTime = AWAKEN_DURATION_SECONDS;
 
-            // 패/드로우/버린 더미의 무속성 카드 임시 격리
+            // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 그대로 복원.
+            _awakenSnapshotHand = new List<CardInstance>(_deck.Hand);
+            _awakenSnapshotDraw = new List<CardInstance>(_deck.DrawPile);
+            _awakenSnapshotDiscard = new List<CardInstance>(_deck.DiscardPile);
+
+            // 패/드로우/버린 더미의 무속성 카드 임시 격리 (각성 중 속성 카드만 순환)
             _awakenStoredNeutralCards = _deck.ExtractAllNeutralCards();
 
             // 패를 가득 차게 드로우 (기획서: 각성 발동 시 패 보충)
@@ -710,12 +813,15 @@ namespace Battle
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
 
-            _deck.ReturnNeutralCardsToDiscard(_awakenStoredNeutralCards);
+            // 각성 직전 상태로 패/뽑을 더미/버린 더미 복원 (각성 중의 드로우·사용 churn 되돌림).
+            // 격리했던 무속성/파편 카드도 스냅샷에 포함돼 있으므로 함께 복원됨.
+            _deck.RestorePiles(_awakenSnapshotHand, _awakenSnapshotDraw, _awakenSnapshotDiscard);
+            _awakenSnapshotHand = null;
+            _awakenSnapshotDraw = null;
+            _awakenSnapshotDiscard = null;
             _awakenStoredNeutralCards.Clear();
 
-            _deck.TrimHandOverflowToDiscard();
-
-            // 큐에 쌓인 콤보 스킬 일괄 발동 (매칭 순서대로)
+            // 큐에 쌓인 콤보 스킬 일괄 발동 (매칭 순서대로) — 복원 후 적용되므로 Draw 콤보 등은 복원된 덱에서 유효
             if (_queuedComboSkills.Count > 0)
             {
                 // Damage 콤보를 먼저 세어두면, 이펙트 분산 시 i번째/총N개로 좌우 정렬 가능
@@ -921,14 +1027,15 @@ namespace Battle
                 if (hpRect != null) handHud.SetAwakenGaugeAnchor(hpRect);
             }
 
-            // 각성은 10장 도달 시 즉시 발동되므로 'READY 대기' 상태가 없다.
+            // 각성은 N장 도달 시 즉시 발동되므로 'READY 대기' 상태가 없다. N은 바람326 등으로 가변.
+            int awakenMax = EffectiveAwakenInput;
             string label = _awakenActive
                 ? $"각성 {_awakenTimeRemaining:F1}s"
-                : $"{_elementInputCount}/{AWAKEN_ACTIVATION_INPUT}";
+                : $"{_elementInputCount}/{awakenMax}";
             handHud.SetAwakenText(label);
             handHud.UpdateAwakenGauge(
                 _elementInputCount,
-                AWAKEN_ACTIVATION_INPUT,
+                awakenMax,
                 _awakenActive,
                 _awakenTimeRemaining,
                 _awakenMaxTime

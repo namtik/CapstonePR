@@ -128,6 +128,7 @@ namespace Battle.EditorTools
             int elementCol    = RequireCol(hdr, "Element");
             int typeCol       = RequireCol(hdr, "CardType");
             int gaugeCol      = RequireCol(hdr, "GaugeCost");
+            int rarityCol     = TryCol(hdr, "Rarity");
             int tagsCol       = TryCol(hdr, "Tags");
             int comboCol      = TryCol(hdr, "ComboSlot");
             int effectNameCol = TryCol(hdr, "EffectName");
@@ -149,6 +150,7 @@ namespace Battle.EditorTools
                 string element    = GetCell(row, elementCol).Trim().ToUpperInvariant();
                 string type       = GetCell(row, typeCol).Trim().ToUpperInvariant();
                 int    gauge      = ParseInt(GetCell(row, gaugeCol), 0);
+                string rarity     = GetCell(row, rarityCol).Trim();
                 string[] tags     = ParseTags(GetCell(row, tagsCol));
                 bool   comboSlot  = ParseBool(GetCell(row, comboCol), defaultIfEmpty: true);
                 string effectName = GetCell(row, effectNameCol).Trim();
@@ -160,6 +162,7 @@ namespace Battle.EditorTools
                 sb.AppendFormat("      \"element\": {0},\n", JsonStr(element));
                 sb.AppendFormat("      \"type\": {0},\n", JsonStr(type));
                 sb.AppendFormat("      \"gauge\": {0},\n", gauge);
+                sb.AppendFormat("      \"rarity\": {0},\n", JsonStr(rarity));
                 sb.AppendFormat("      \"tags\": [{0}],\n", string.Join(", ", tags.Select(JsonStr)));
                 sb.AppendFormat("      \"comboSlot\": {0},\n", comboSlot ? "true" : "false");
                 sb.AppendFormat("      \"effectName\": {0},\n", JsonStr(effectName));

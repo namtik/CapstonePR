@@ -29,6 +29,10 @@ public class EnemyStat : MonoBehaviour
     private NodeType nodeType;
     private DifficultyConfig config;
 
+    public NodeType NodeType => nodeType;
+    /// <summary>물8(208) 즉사 예외 판정용 — 보스/정예 여부.</summary>
+    public bool IsBossOrElite => nodeType == NodeType.Boss || nodeType == NodeType.Elite;
+
     public event Action<float,float> OnHpChanged;// HP ���� �̺�Ʈ (���� HP, �ִ� HP)
     public event Action OnDied; // ��� �̺�Ʈ
     public event Action<int> OnAttackCountChanged;
@@ -45,6 +49,7 @@ public class EnemyStat : MonoBehaviour
         statusEffects["burn"] = 0;
         statusEffects["wet"] = 0;
         statusEffects["freeze"] = 0;
+        statusEffects["frost"] = 0; // 새 전투 시스템 빙결(데이터 키 FROST). 게이지 상승을 막음.
     }
     public void Initialize(EnemyData data, int columnIndex, NodeType nodeType, DifficultyConfig config)
     {
@@ -101,6 +106,16 @@ public class EnemyStat : MonoBehaviour
     public void ConsumeGaugeStep()
     {
         if (!IsAlive) return;
+
+        // 새 전투 시스템 빙결(FROST): 스택이 있으면 게이지 상승을 막고 스택 1 소모.
+        if (statusEffects.TryGetValue("frost", out int frost) && frost > 0)
+        {
+            var ctrl = GetComponent<EnemyController>();
+            if (ctrl != null) ctrl.SetStatus("frost", frost - 1);
+            else statusEffects["frost"] = frost - 1;
+            return;
+        }
+
         if (statusEffects.ContainsKey("freeze") && statusEffects["freeze"] > 0)
         {
             if (isNewlyFrozen)
