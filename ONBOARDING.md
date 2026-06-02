@@ -254,3 +254,4 @@ ENEMY_STATUS_VALUE:*, PLAYER_BLOCK, FLOOR(PLAYER_CURRENT_HP/2), LAST_HP_LOST(*N)
 - 일부 기존 파일은 인코딩이 깨져 보일 수 있음(EUC-KR 잔재) — 수정 시 UTF-8 유지
 - 손패 한도 동적(418)은 MAX_HAND_LIMIT=10 상한, UI 슬롯도 10개 사전 생성
 - RelicManager는 런타임 자동 생성(BattleTestController)되므로 아이콘 등 영구 설정은 씬에 오브젝트를 미리 배치할 것
+- RelicHUD 툴팁의 글씨체(`tooltipFont`)·이름/설명 글자 크기·가로 폭은 Inspector에서 설정(세로 높이는 설명 길이에 맞춰 자동). 단 런타임 자동 생성이므로 글씨체를 지정하려면 씬에 RelicHUD 오브젝트를 Canvas 하위에 미리 배치할 것

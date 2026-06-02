@@ -18,9 +18,22 @@ namespace Battle.UI
         private const float ICON_SIZE     = 60f;
         private const float ICON_SPACING  = 8f;
         private const float PANEL_PADDING = 10f;
-        private const float TOOLTIP_W     = 220f;
-        private const float TOOLTIP_H     = 100f;
-        private const float TOOLTIP_PAD   = 10f;
+        private const float TOOLTIP_PAD   = 12f;
+        private const float TT_ICON_SIZE  = 48f;
+
+        [Header("툴팁 글씨체")]
+        [Tooltip("유물 이름/설명에 사용할 글씨체. 비워두면 TMP 기본 폰트 사용")]
+        [SerializeField] private TMP_FontAsset tooltipFont;
+        [Tooltip("유물 이름 글자 크기")]
+        [SerializeField] private float nameFontSize = 18f;
+        [Tooltip("유물 설명 글자 크기")]
+        [SerializeField] private float descFontSize = 15f;
+
+        [Header("툴팁 크기")]
+        [Tooltip("툴팁 가로 폭(px). 세로 높이는 설명 길이에 맞춰 자동 조절된다")]
+        [SerializeField] private float tooltipWidth = 340f;
+        [Tooltip("툴팁 최소 세로 높이(px)")]
+        [SerializeField] private float tooltipMinHeight = 90f;
 
         private RectTransform   _iconContainer;
         private GameObject      _tooltip;
@@ -28,6 +41,9 @@ namespace Battle.UI
         private TextMeshProUGUI _tooltipName;
         private TextMeshProUGUI _tooltipDesc;
         private RectTransform   _tooltipRect;
+        private float           _textX;
+        private float           _textW;
+        private float           _nameH;
 
         private readonly List<RelicDef>   _relics    = new List<RelicDef>();
         private readonly List<GameObject> _iconItems = new List<GameObject>();
@@ -94,26 +110,27 @@ namespace Battle.UI
             _tooltipRect.anchorMin  = new Vector2(0f, 1f);
             _tooltipRect.anchorMax  = new Vector2(0f, 1f);
             _tooltipRect.pivot      = new Vector2(0f, 1f);
-            _tooltipRect.sizeDelta  = new Vector2(TOOLTIP_W, TOOLTIP_H);
+            _tooltipRect.sizeDelta  = new Vector2(tooltipWidth, tooltipMinHeight);
             _tooltip = tooltipGo;
 
             var bg = tooltipGo.AddComponent<Image>();
             bg.color = new Color(0.08f, 0.08f, 0.12f, 0.93f);
 
-            // 아이콘 (툴팁 좌측)
+            _textX = TOOLTIP_PAD + TT_ICON_SIZE + 8f;
+            _textW = tooltipWidth - _textX - TOOLTIP_PAD;
+            _nameH = Mathf.Ceil(nameFontSize * 1.4f);
+
+            // 아이콘 (툴팁 좌상단)
             var iconGo = new GameObject("TT_Icon", typeof(RectTransform));
             iconGo.transform.SetParent(tooltipGo.transform, false);
             var iconRect = (RectTransform)iconGo.transform;
-            iconRect.anchorMin        = new Vector2(0f, 0.5f);
-            iconRect.anchorMax        = new Vector2(0f, 0.5f);
-            iconRect.pivot            = new Vector2(0f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(TOOLTIP_PAD, 0f);
-            iconRect.sizeDelta        = new Vector2(40f, 40f);
+            iconRect.anchorMin        = new Vector2(0f, 1f);
+            iconRect.anchorMax        = new Vector2(0f, 1f);
+            iconRect.pivot            = new Vector2(0f, 1f);
+            iconRect.anchoredPosition = new Vector2(TOOLTIP_PAD, -TOOLTIP_PAD);
+            iconRect.sizeDelta        = new Vector2(TT_ICON_SIZE, TT_ICON_SIZE);
             _tooltipIcon = iconGo.AddComponent<Image>();
             _tooltipIcon.color = new Color(0.6f, 0.5f, 0.2f, 1f); // 아이콘 없을 때 기본색
-
-            float textX = TOOLTIP_PAD + 40f + 8f;
-            float textW = TOOLTIP_W - textX - TOOLTIP_PAD;
 
             // 이름
             var nameGo = new GameObject("TT_Name", typeof(RectTransform));
@@ -122,13 +139,14 @@ namespace Battle.UI
             nameRect.anchorMin        = new Vector2(0f, 1f);
             nameRect.anchorMax        = new Vector2(0f, 1f);
             nameRect.pivot            = new Vector2(0f, 1f);
-            nameRect.anchoredPosition = new Vector2(textX, -TOOLTIP_PAD);
-            nameRect.sizeDelta        = new Vector2(textW, 22f);
+            nameRect.anchoredPosition = new Vector2(_textX, -TOOLTIP_PAD);
+            nameRect.sizeDelta        = new Vector2(_textW, _nameH);
             _tooltipName = nameGo.AddComponent<TextMeshProUGUI>();
-            _tooltipName.fontSize     = 13f;
+            _tooltipName.fontSize     = nameFontSize;
             _tooltipName.fontStyle    = FontStyles.Bold;
             _tooltipName.color        = Color.white;
             _tooltipName.overflowMode = TextOverflowModes.Overflow;
+            if (tooltipFont != null) _tooltipName.font = tooltipFont;
 
             // 설명
             var descGo = new GameObject("TT_Desc", typeof(RectTransform));
@@ -137,12 +155,13 @@ namespace Battle.UI
             descRect.anchorMin        = new Vector2(0f, 1f);
             descRect.anchorMax        = new Vector2(0f, 1f);
             descRect.pivot            = new Vector2(0f, 1f);
-            descRect.anchoredPosition = new Vector2(textX, -TOOLTIP_PAD - 26f);
-            descRect.sizeDelta        = new Vector2(textW, 64f);
+            descRect.anchoredPosition = new Vector2(_textX, -TOOLTIP_PAD - _nameH - 4f);
+            descRect.sizeDelta        = new Vector2(_textW, 64f);
             _tooltipDesc = descGo.AddComponent<TextMeshProUGUI>();
-            _tooltipDesc.fontSize     = 11f;
+            _tooltipDesc.fontSize     = descFontSize;
             _tooltipDesc.color        = new Color(0.85f, 0.85f, 0.85f, 1f);
             _tooltipDesc.overflowMode = TextOverflowModes.Overflow;
+            if (tooltipFont != null) _tooltipDesc.font = tooltipFont;
 
             _tooltip.SetActive(false);
         }
@@ -209,7 +228,20 @@ namespace Battle.UI
                 _tooltipIcon.color  = relic.icon != null ? Color.white : new Color(0.6f, 0.5f, 0.2f, 1f);
             }
             if (_tooltipName != null) _tooltipName.text = relic.displayName;
-            if (_tooltipDesc != null) _tooltipDesc.text = relic.description;
+            if (_tooltipDesc != null)
+            {
+                _tooltipDesc.text = relic.description;
+
+                // 설명 길이에 맞춰 툴팁 세로 크기 자동 조절
+                float descH = _tooltipDesc.GetPreferredValues(
+                    relic.description ?? string.Empty, _textW, 0f).y;
+                _tooltipDesc.rectTransform.sizeDelta = new Vector2(_textW, descH);
+
+                float contentH = TOOLTIP_PAD + _nameH + 4f + descH + TOOLTIP_PAD;
+                float iconH    = TOOLTIP_PAD + TT_ICON_SIZE + TOOLTIP_PAD;
+                _tooltipRect.sizeDelta = new Vector2(
+                    tooltipWidth, Mathf.Max(contentH, iconH, tooltipMinHeight));
+            }
 
             // 위치: _iconContainer와 _tooltipRect 모두 캔버스 좌상단(0,1) 앵커
             // → anchoredPosition이 동일 기준이므로 직접 오프셋 계산 가능
