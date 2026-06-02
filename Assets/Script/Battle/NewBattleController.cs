@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using Battle.Card;
 using Battle.Deck;
+using Battle.Relic;
 using Battle.UI;
 
 namespace Battle
@@ -545,14 +546,19 @@ namespace Battle
                     comboTriggered = TryActivateCombo();
                 }
 
-                // 콤보 매칭 시 지속 시간 +1초 — 매칭이 일어났을 때만 보너스
+                // 콤보 매칭 시 지속 시간 +1초 (비급서 보유 시 +0.5초 추가)
                 // 게이지가 줄어들지 않도록 max도 함께 증가시킨다 (시각적으로 끝부분이 살짝 차오르는 효과)
                 if (comboTriggered)
                 {
+                    float extraBonus = (RelicManager.Instance != null &&
+                                        RelicManager.Instance.HasEffect(RelicEffectType.ComboBonusSecondsBoost))
+                                       ? RelicManager.COMBO_BONUS_SECONDS_EXTRA : 0f;
+                    float totalBonus = COMBO_BONUS_SECONDS + extraBonus;
                     float before = _awakenTimeRemaining;
-                    _awakenTimeRemaining += COMBO_BONUS_SECONDS;
-                    _awakenMaxTime += COMBO_BONUS_SECONDS;
-                    Log($"[각성] ⏱ 콤보 매칭 → 시간 +{COMBO_BONUS_SECONDS:F1}s ({before:F2}s → {_awakenTimeRemaining:F2}s, max={_awakenMaxTime:F2}s)");
+                    _awakenTimeRemaining += totalBonus;
+                    _awakenMaxTime += totalBonus;
+                    Log($"[각성] ⏱ 콤보 매칭 → 시간 +{totalBonus:F1}s ({before:F2}s → {_awakenTimeRemaining:F2}s, max={_awakenMaxTime:F2}s)" +
+                        (extraBonus > 0f ? " [비급서]" : ""));
                 }
 
                 Log($"[각성] {card.data.displayName} → 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은시간={_awakenTimeRemaining:F2}s");
@@ -886,6 +892,15 @@ namespace Battle
                 {
                     float intensity = Mathf.Min(damageCount * awakenShakeIntensityPerHit, awakenShakeIntensityMax);
                     damageOverlay.TriggerShake(intensity);
+                }
+
+                // 이무기의 여의주: 성공한 콤보 수만큼 각성 게이지 회복 (즉시 재발동 방지를 위해 max-1 상한)
+                if (RelicManager.Instance != null &&
+                    RelicManager.Instance.HasEffect(RelicEffectType.AwakenGaugeRecoverPerCombo))
+                {
+                    int recover = Mathf.Min(_queuedComboSkills.Count, EffectiveAwakenInput - 1);
+                    _elementInputCount = recover;
+                    Log($"[유물] 이무기의 여의주 — 각성 게이지 {_elementInputCount}/{EffectiveAwakenInput} 회복");
                 }
 
                 _queuedComboSkills.Clear();

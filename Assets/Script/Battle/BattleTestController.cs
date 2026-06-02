@@ -3,6 +3,8 @@ using UnityEngine;
 using static SkillDataParser;
 using Battle;
 using Battle.Card;
+using Battle.Relic;
+using Battle.UI;
 
 /// <summary>
 /// 전투 단일 라운드 테스트용 진입점.
@@ -41,6 +43,10 @@ public class BattleTestController : MonoBehaviour
     [Tooltip("ON이면 NewBattleController를 사용 — 기존 ElementSlotSystem/ComboSystem은 비활성.")]
     [SerializeField] private bool useNewBattleSystem = true;
     [SerializeField] private NewBattleController newBattleController;
+
+    [Header("유물 (테스트)")]
+    [Tooltip("전투 시작 시 자동 지급할 유물. 이무기의 여의주=AwakenGaugeRecoverPerCombo, 비급서=ComboBonusSecondsBoost")]
+    [SerializeField] private List<RelicEffectType> testRelics = new List<RelicEffectType>();
 
     [Header("시작 덱 (Inspector 편집 가능 / 비우면 PDF 프로토타입 덱 사용)")]
     [Tooltip("카드 ID + 보유 수량 리스트. 비어있으면 CardDatabase.DefaultPrototypeDeckEntries()를 사용한다.")]
@@ -144,6 +150,32 @@ public class BattleTestController : MonoBehaviour
             var go = new GameObject("NewBattleController");
             newBattleController = go.AddComponent<NewBattleController>();
             Debug.Log("[BattleTest] NewBattleController가 자동 생성되었습니다.");
+        }
+
+        // RelicManager 자동 생성
+        if (RelicManager.Instance == null)
+        {
+            var rmGo = new GameObject("RelicManager");
+            rmGo.AddComponent<RelicManager>();
+        }
+
+        // 테스트 유물 지급
+        if (testRelics != null)
+        {
+            foreach (var effectType in testRelics)
+                RelicManager.Instance?.GiveRelicByEffect(effectType);
+        }
+
+        // RelicHUD 자동 생성
+        if (RelicHUD.Instance == null)
+        {
+            Canvas canvas = FindFirstObjectByType<Canvas>();
+            if (canvas != null)
+            {
+                var hudGo = new GameObject("RelicHUD", typeof(RectTransform));
+                hudGo.transform.SetParent(canvas.transform, false);
+                hudGo.AddComponent<RelicHUD>();
+            }
         }
 
         // 인스펙터 덱 → CardInstance 리스트로 변환 후 주입
