@@ -23,7 +23,7 @@ namespace Battle
         /// <summary>각성 발동 시 기본 지속 시간(초).</summary>
         public const float AWAKEN_DURATION_SECONDS = 10f;
         /// <summary>콤보 1회 성공 시 추가되는 시간(초).</summary>
-        public const float COMBO_BONUS_SECONDS = 1f;
+        public const float COMBO_BONUS_SECONDS = 0.1f;
         /// <summary>콤보 스킬 발동 후 재사용까지 필요한 속성 카드 입력 횟수(발동 이후 카드부터 카운트).</summary>
         public const int COMBO_REUSE_INPUT = 5;
         public const int START_DRAW = 5;
