@@ -833,28 +833,46 @@ namespace Battle.UI
         [Tooltip("퇴장(사라짐) 시간(초). 이 직전에 효과가 발동된다.")]
         [SerializeField] private float cardUsePresentExitTime = 0.2f;
 
+        // 교체 가능(각성용 비차단) 연출 추적 — 빠른 연속 입력 시 직전 연출을 정리하고 새 카드로 교체.
+        private Coroutine _interruptablePresentCo;
+        private NewCardView _interruptablePresentView;
+
         /// <summary>
         /// 사용한 카드를 화면 중앙에 잠깐 띄웠다 사라지게 한다.
         /// 카드가 사라지기 시작하는 순간 onDisappear를 호출 — 호출자는 이때 실제 효과를 실행한다.
         /// 연출이 꺼져 있거나 표시 불가 시 onDisappear를 즉시 호출(효과만 실행).
+        /// interruptable=true(각성용): 입력을 막지 않고, 직전 연출이 남아 있으면 교체(항상 최신 카드만 표시).
         /// </summary>
-        public void PlayCardUsePresentation(CardInstance card, System.Action onDisappear)
+        public void PlayCardUsePresentation(CardInstance card, System.Action onDisappear, bool interruptable = false)
         {
             if (!cardUsePresentEnabled || card == null || cardPrefab == null || !isActiveAndEnabled)
             {
                 onDisappear?.Invoke();
                 return;
             }
-            StartCoroutine(CardUsePresentationRoutine(card, onDisappear));
+
+            if (interruptable)
+            {
+                // 직전 (각성용) 연출이 진행 중이면 즉시 정리하고 새 카드로 교체
+                if (_interruptablePresentCo != null) StopCoroutine(_interruptablePresentCo);
+                if (_interruptablePresentView != null) Destroy(_interruptablePresentView.gameObject);
+                _interruptablePresentView = null;
+                _interruptablePresentCo = StartCoroutine(CardUsePresentationRoutine(card, onDisappear, true));
+            }
+            else
+            {
+                StartCoroutine(CardUsePresentationRoutine(card, onDisappear, false));
+            }
         }
 
-        System.Collections.IEnumerator CardUsePresentationRoutine(CardInstance card, System.Action onDisappear)
+        System.Collections.IEnumerator CardUsePresentationRoutine(CardInstance card, System.Action onDisappear, bool interruptable)
         {
             Canvas canvas = ResolveTargetCanvas();
             Transform parent = canvas != null ? canvas.transform : transform;
 
             // 중앙 오버레이용 임시 카드 뷰 생성 (손패 풀과 독립 — Refresh 영향 없음)
             var view = Instantiate(cardPrefab, parent);
+            if (interruptable) _interruptablePresentView = view;
             view.Bind(this, -1);
             var vrect = (RectTransform)view.transform;
             vrect.anchorMin = vrect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -910,6 +928,11 @@ namespace Battle.UI
             }
 
             Destroy(view.gameObject);
+            if (interruptable)
+            {
+                _interruptablePresentView = null;
+                _interruptablePresentCo = null;
+            }
         }
 
         // ─────────────────────────────────────────────────────────────

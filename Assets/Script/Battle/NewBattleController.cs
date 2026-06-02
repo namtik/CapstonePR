@@ -598,6 +598,9 @@ namespace Battle
                     handHud.UpdateComboSlot(_comboInput);
                     handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
                     handHud.UpdateAwakenInputHistory(_awakenInputHistory);
+                    // 각성 중에도 사용한 카드를 중앙에 띄움 — 단, 콤보 연타를 막지 않도록 비차단(interruptable).
+                    // 빠르게 연속 입력하면 직전 연출을 교체해 항상 최신 카드만 중앙에 표시.
+                    handHud.PlayCardUsePresentation(card, null, interruptable: true);
                 }
 
                 // 콤보는 쿨다운 후 재사용 가능하므로 '전부 소진' 종료 없음 — 시간 종료(TickAwakenTimer)로만 종료.
