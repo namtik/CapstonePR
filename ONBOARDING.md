@@ -213,6 +213,7 @@ ENEMY_STATUS_VALUE:*, PLAYER_BLOCK, FLOOR(PLAYER_CURRENT_HP/2), LAST_HP_LOST(*N)
 
 ## 9. 최근 수정 이력
 
+0. **카드 사용 중앙 연출 + 효과 지연** — 일반 카드 사용 시 사용한 카드가 화면 중앙에 잠깐 떠올랐다(등장→유지→) 사라지며, **사라지는 순간 실제 효과가 실행**됨. 이를 위해 `OnUseCardRequested`(일반 경로)를 **둘로 분리**: 즉시 `PullFromHand`+연출 시작 → 연출 종료 콜백에서 `ResolveCardUse(card)`가 효과/게이지/각성카운트 등 실행. `_cardPresenting` 플래그로 연출 중 다른 카드 사용 차단(효과 직렬화). **각성 중 콤보 입력은 연출 제외(빠른 연타 유지)**. 연출 구현은 `CardHandHUD.PlayCardUsePresentation()`(임시 카드 뷰를 중앙에 생성→페이드/스케일→Destroy). 튜닝: `CardHandHUD`의 `cardUsePresent*`(위치/배율/등장·유지·퇴장 시간/ON-OFF). ⚠️ 향후 카드 사용 로직 수정 시 **효과는 연출 종료 시점에 실행됨**에 유의
 0. **카드 드로우 등장 연출** — 패에 새로 들어온 카드가 아래에서 위로 떠오르며(페이드+살짝 확대) 등장. 직전 패와 참조 비교로 "새 카드만" 연출, 연속 드로우는 stagger로 차례 등장. 부채꼴 회전을 상쇄해 화면 기준 수직 상승. 튜닝: `NewCardView`의 `drawIntro*`(길이/거리/시작배율/ON-OFF), `CardHandHUD.drawIntroStagger`. 드래그/hover/카드교체 시 자동 취소
 1. **유물 시스템 추가** — RelicDef/RelicManager/RelicHUD. 이무기의 여의주·비급서 2종 테스트 구현
 2. **콤보 스킬 DB 통합** — ComboSkill_DB.xlsx → JSON → 데이터 드리븐 실행. 64개 콤보(canonical 20종 + alias 44종), 순서무관 매칭

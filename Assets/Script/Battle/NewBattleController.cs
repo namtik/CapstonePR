@@ -81,6 +81,8 @@ namespace Battle
         private EnemyStat _enemyStat;
 
         private bool _inBattle;
+        // 일반 카드 사용 중앙 연출 진행 중 — 연출이 끝날 때까지 다른 카드 사용을 막아 효과 중첩/재진입 방지.
+        private bool _cardPresenting;
 
         // 각성 게이지
         private int _elementInputCount;   // 각성 발동용 누적 (10 도달 시 즉시 발동)
@@ -286,6 +288,7 @@ namespace Battle
             EnsureEventSystem();
 
             _inBattle = true;
+            _cardPresenting = false;
             _elementInputCount = 0;
             _awakenActive = false;
             _awakenPending = false;
@@ -305,6 +308,7 @@ namespace Battle
         public void EndBattle()
         {
             _inBattle = false;
+            _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
             _deck.EndBattle();
@@ -600,10 +604,33 @@ namespace Battle
                 return true;
             }
 
-            // 일반: 효과 실행
-            ApplyCurseOnCardUse(card);
+            // 일반: 사용한 카드를 화면 중앙에 잠깐 띄운 뒤, 사라지는 순간 효과를 실행한다.
+            // 연출 중에는 다른 카드 사용을 막아 효과 중첩/재진입을 방지.
+            if (_cardPresenting) return false;
 
+            // 카드를 즉시 패에서 빼 재사용 방지 + 손패 UI 정리. 중앙 연출이 끝나면 ResolveCardUse가 효과를 실행.
             _deck.PullFromHand(card);
+            _cardPresenting = true;
+
+            if (handHud != null)
+                handHud.PlayCardUsePresentation(card, () => { ResolveCardUse(card); _cardPresenting = false; });
+            else
+            {
+                ResolveCardUse(card);
+                _cardPresenting = false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 카드 사용의 실제 효과 처리 — 중앙 표시 연출이 끝나(카드가 사라지는) 시점에 호출된다.
+        /// 카드는 이미 패에서 제거된 상태(OnUseCardRequested의 PullFromHand 완료).
+        /// </summary>
+        void ResolveCardUse(CardInstance card)
+        {
+            if (card == null) return;
+
+            ApplyCurseOnCardUse(card);
 
             // 빙결 순서 처리용: 카드 사용 '전' 적 빙결량 기록 (이 카드가 부여한 빙결은 이 카드의 게이지 상승을 막지 않음)
             int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
@@ -778,7 +805,6 @@ namespace Battle
             if (card != null) card.justDrawn = false;
 
             Log($"{card.data.displayName} 사용 — 게이지+{gaugeCost}, 연쇄={_ctx.chainCount}");
-            return true;
         }
 
         // ─────────────────────────────────────────────────────────────

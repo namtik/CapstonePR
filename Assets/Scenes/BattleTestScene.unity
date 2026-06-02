@@ -7937,6 +7937,7 @@ MonoBehaviour:
   fanRadius: 1600
   fanArcAngle: 30
   fanVerticalDip: 0
+  drawIntroStagger: 0.05
   comboSlotPanel: {fileID: 1211821935}
   comboSkillPanel: {fileID: 1528637483}
   comboSlotImages:
@@ -7967,6 +7968,12 @@ MonoBehaviour:
   dimOverlay: {fileID: 0}
   dimColor: {r: 0, g: 0, b: 0, a: 0.6}
   awakenDimColor: {r: 0.02, g: 0, b: 0.08, a: 0.8666667}
+  cardUsePresentEnabled: 1
+  cardUsePresentPos: {x: 0, y: 60}
+  cardUsePresentScale: 1.3
+  cardUsePresentEnterTime: 0.15
+  cardUsePresentHold: 0.25
+  cardUsePresentExitTime: 0.2
   pickerColumns: 4
   pickerColumnSpacing: 480
   pickerRowSpacing: 620

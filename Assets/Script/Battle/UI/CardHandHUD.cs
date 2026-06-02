@@ -816,6 +816,103 @@ namespace Battle.UI
         }
 
         // ─────────────────────────────────────────────────────────────
+        // 카드 사용 연출 — 사용한 카드를 화면 중앙에 잠깐 띄웠다 사라뜨림
+        // ─────────────────────────────────────────────────────────────
+
+        [Header("카드 사용 연출 — 중앙 표시")]
+        [Tooltip("카드 사용 시 화면 중앙에 카드를 잠깐 띄웠다 사라지게 하는 연출 ON/OFF.")]
+        [SerializeField] private bool cardUsePresentEnabled = true;
+        [Tooltip("중앙 표시 위치(캔버스 중앙 기준 오프셋). y 양수 = 중앙보다 위.")]
+        [SerializeField] private Vector2 cardUsePresentPos = new Vector2(0f, 60f);
+        [Tooltip("중앙 표시 시 카드 크기 배율(프리팹 기본 스케일 기준).")]
+        [SerializeField] private float cardUsePresentScale = 1.5f;
+        [Tooltip("등장(커지며 나타남) 시간(초).")]
+        [SerializeField] private float cardUsePresentEnterTime = 0.15f;
+        [Tooltip("중앙에서 머무는 시간(초).")]
+        [SerializeField] private float cardUsePresentHold = 0.35f;
+        [Tooltip("퇴장(사라짐) 시간(초). 이 직전에 효과가 발동된다.")]
+        [SerializeField] private float cardUsePresentExitTime = 0.2f;
+
+        /// <summary>
+        /// 사용한 카드를 화면 중앙에 잠깐 띄웠다 사라지게 한다.
+        /// 카드가 사라지기 시작하는 순간 onDisappear를 호출 — 호출자는 이때 실제 효과를 실행한다.
+        /// 연출이 꺼져 있거나 표시 불가 시 onDisappear를 즉시 호출(효과만 실행).
+        /// </summary>
+        public void PlayCardUsePresentation(CardInstance card, System.Action onDisappear)
+        {
+            if (!cardUsePresentEnabled || card == null || cardPrefab == null || !isActiveAndEnabled)
+            {
+                onDisappear?.Invoke();
+                return;
+            }
+            StartCoroutine(CardUsePresentationRoutine(card, onDisappear));
+        }
+
+        System.Collections.IEnumerator CardUsePresentationRoutine(CardInstance card, System.Action onDisappear)
+        {
+            Canvas canvas = ResolveTargetCanvas();
+            Transform parent = canvas != null ? canvas.transform : transform;
+
+            // 중앙 오버레이용 임시 카드 뷰 생성 (손패 풀과 독립 — Refresh 영향 없음)
+            var view = Instantiate(cardPrefab, parent);
+            view.Bind(this, -1);
+            var vrect = (RectTransform)view.transform;
+            vrect.anchorMin = vrect.anchorMax = new Vector2(0.5f, 0.5f);
+            vrect.pivot = new Vector2(0.5f, 0.5f);
+            vrect.anchoredPosition = cardUsePresentPos;
+            vrect.localRotation = Quaternion.identity;
+            view.SetCard(card);
+            view.CaptureHome();
+            vrect.SetAsLastSibling();
+
+            var cg = view.GetComponent<CanvasGroup>();
+            if (cg == null) cg = view.gameObject.AddComponent<CanvasGroup>();
+            cg.blocksRaycasts = false; // 연출 카드는 클릭 차단
+
+            Vector3 targetScale = vrect.localScale * Mathf.Max(0.01f, cardUsePresentScale);
+
+            // 시작 상태 — 작게 + 투명
+            vrect.localScale = targetScale * 0.6f;
+            cg.alpha = 0f;
+
+            // 1) 등장 — 작게+투명 → 목표 크기+불투명 (ease-out)
+            float t = 0f;
+            float enter = Mathf.Max(0.0001f, cardUsePresentEnterTime);
+            while (t < 1f)
+            {
+                t += Time.unscaledDeltaTime / enter;
+                float e = 1f - Mathf.Pow(1f - Mathf.Clamp01(t), 3f);
+                vrect.localScale = Vector3.LerpUnclamped(targetScale * 0.6f, targetScale, e);
+                cg.alpha = Mathf.Clamp01(e);
+                yield return null;
+            }
+            vrect.localScale = targetScale;
+            cg.alpha = 1f;
+
+            // 2) 유지
+            float hold = Mathf.Max(0f, cardUsePresentHold);
+            while (hold > 0f) { hold -= Time.unscaledDeltaTime; yield return null; }
+
+            // 3) 사라지기 시작 — 이 순간 효과 발동
+            onDisappear?.Invoke();
+
+            // 4) 퇴장 — 페이드아웃 + 살짝 확대
+            t = 0f;
+            float exit = Mathf.Max(0.0001f, cardUsePresentExitTime);
+            Vector3 exitScale = targetScale * 1.12f;
+            while (t < 1f)
+            {
+                t += Time.unscaledDeltaTime / exit;
+                float e = Mathf.Clamp01(t);
+                vrect.localScale = Vector3.LerpUnclamped(targetScale, exitScale, e);
+                cg.alpha = 1f - e;
+                yield return null;
+            }
+
+            Destroy(view.gameObject);
+        }
+
+        // ─────────────────────────────────────────────────────────────
         // 카드 선택 모드 (불3 등)
         // ─────────────────────────────────────────────────────────────
 
