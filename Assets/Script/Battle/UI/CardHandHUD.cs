@@ -47,6 +47,10 @@ namespace Battle.UI
         [Tooltip("호 위 가장자리에서 카드들이 떨어질 깊이. 작을수록 카드들이 살짝 아래로 호를 그림.")]
         [SerializeField] private float fanVerticalDip = 50f;
 
+        [Header("드로우 등장 연출")]
+        [Tooltip("여러 장을 동시에 뽑을 때 카드마다 떠오르기 시작을 늦추는 간격(초). 0이면 동시에 올라옴.")]
+        [SerializeField] private float drawIntroStagger = 0.05f;
+
         [Header("콤보 UI — 각성 전용")]
         [Tooltip("각성 발동 시 활성화될 콤보 슬롯 패널.")]
         [SerializeField] private GameObject comboSlotPanel;
@@ -116,6 +120,8 @@ namespace Battle.UI
 
         private readonly List<NewCardView> _cardViews = new List<NewCardView>();
         private readonly List<RectTransform> _slotAnchors = new List<RectTransform>();
+        /// <summary>직전 Refresh 시점의 패 구성 — 이번에 새로 들어온 카드만 등장 연출하기 위한 비교용.</summary>
+        private readonly HashSet<CardInstance> _prevHandSet = new HashSet<CardInstance>();
         private CardDeckSystem _deck;
         public System.Func<CardInstance, bool> UseCardCallback;
         /// <summary>카드 선택/픽커 모드가 완료(선택 동작까지 수행)된 직후 호출 — 보류된 각성 발동 등에 사용.</summary>
@@ -740,6 +746,8 @@ namespace Battle.UI
             // 손 패 갯수에 맞춰 슬롯 위치 재계산 — 카드가 적으면 가운데로 모임
             PositionSlotAnchorsForCount(hand.Count);
 
+            int newCardOrder = 0; // 이번 Refresh에서 새로 들어온 카드 순번 — 등장 stagger 계산용
+
             for (int i = 0; i < SLOT_COUNT; i++)
             {
                 NewCardView view = i < _cardViews.Count ? _cardViews[i] : null;
@@ -751,8 +759,9 @@ namespace Battle.UI
                 }
                 if (view == null) continue;
 
-                // 사용된 카드 view가 DragLayer로 옮겨졌을 수 있으므로 매번 슬롯으로 복원
-                if (i < _slotAnchors.Count)
+                // 사용된 카드 view가 DragLayer로 옮겨졌을 수 있으므로 매번 슬롯으로 복원.
+                // 단, 등장 연출 중인 카드는 연출이 위치/스케일을 직접 제어하므로 건드리지 않는다.
+                if (i < _slotAnchors.Count && !view.IsPlayingDrawIntro)
                 {
                     RectTransform vrect = (RectTransform)view.transform;
                     vrect.SetParent(_slotAnchors[i], false);
@@ -765,9 +774,23 @@ namespace Battle.UI
                 }
 
                 CardInstance card = i < hand.Count ? hand[i] : null;
-                view.SetCard(card);
-                view.CaptureHome();
+                bool isNewToHand = card != null && !_prevHandSet.Contains(card);
+                view.SetCard(card); // 카드가 바뀌면 내부에서 진행 중 연출을 취소(홈 정착)함
+
+                // 연출이 여전히 진행 중이면(=같은 카드 유지) 홈 좌표가 이미 확정돼 있으니 재캡처 생략.
+                // (CaptureHome이 연출 중간 위치를 홈으로 잘못 저장하는 것 방지)
+                if (!view.IsPlayingDrawIntro)
+                    view.CaptureHome();
+
+                // 이번에 새로 패에 들어온 카드만 아래에서 위로 떠오르는 연출 (연속 드로우는 차례로)
+                if (isNewToHand)
+                    view.PlayDrawIntro(newCardOrder++ * Mathf.Max(0f, drawIntroStagger));
             }
+
+            // 다음 Refresh의 "새 카드" 판별을 위해 현재 패 구성을 스냅샷으로 저장
+            _prevHandSet.Clear();
+            for (int i = 0; i < hand.Count; i++)
+                if (hand[i] != null) _prevHandSet.Add(hand[i]);
 
             if (drawCountText != null) drawCountText.text = $"{_deck.DrawCount}";
             if (discardCountText != null) discardCountText.text = $"{_deck.DiscardCount}";

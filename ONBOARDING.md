@@ -213,6 +213,7 @@ ENEMY_STATUS_VALUE:*, PLAYER_BLOCK, FLOOR(PLAYER_CURRENT_HP/2), LAST_HP_LOST(*N)
 
 ## 9. 최근 수정 이력
 
+0. **카드 드로우 등장 연출** — 패에 새로 들어온 카드가 아래에서 위로 떠오르며(페이드+살짝 확대) 등장. 직전 패와 참조 비교로 "새 카드만" 연출, 연속 드로우는 stagger로 차례 등장. 부채꼴 회전을 상쇄해 화면 기준 수직 상승. 튜닝: `NewCardView`의 `drawIntro*`(길이/거리/시작배율/ON-OFF), `CardHandHUD.drawIntroStagger`. 드래그/hover/카드교체 시 자동 취소
 1. **유물 시스템 추가** — RelicDef/RelicManager/RelicHUD. 이무기의 여의주·비급서 2종 테스트 구현
 2. **콤보 스킬 DB 통합** — ComboSkill_DB.xlsx → JSON → 데이터 드리븐 실행. 64개 콤보(canonical 20종 + alias 44종), 순서무관 매칭
 3. **콤보 인스펙터 선택 UI** — NewBattleControllerEditor 커스텀 에디터, 체크박스 목록으로 보유 콤보 지정

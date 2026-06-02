@@ -71,6 +71,16 @@ namespace Battle.UI
         [Tooltip("Hover 시 카드가 위로 떠오를 거리 (UI 좌표 단위).")]
         [SerializeField] private Vector2 hoverPositionOffset = new Vector2(0f, 100f);
 
+        [Header("드로우 등장 연출 — 아래에서 위로")]
+        [Tooltip("패에 새로 들어온 카드가 아래에서 떠오르는 연출 ON/OFF.")]
+        [SerializeField] private bool drawIntroEnabled = true;
+        [Tooltip("등장 연출 길이(초).")]
+        [SerializeField] private float drawIntroDuration = 0.28f;
+        [Tooltip("등장 시작 시 홈 위치에서 아래로 떨어져 있을 거리(UI 단위).")]
+        [SerializeField] private float drawIntroRiseDistance = 240f;
+        [Tooltip("등장 시작 시 카드 크기 배율(홈 스케일 기준). 1이면 크기 변화 없음.")]
+        [SerializeField] private float drawIntroStartScale = 0.92f;
+
         [Header("색상 (sprite 매핑이 없을 때 fallback)")]
         [SerializeField] private bool tintBackgroundByElement = true;
         [Range(0f, 1f)]
@@ -93,6 +103,10 @@ namespace Battle.UI
         private bool _isDragging;
         private bool _isHovering;
         private int _hoverSlotOriginalSibling = -1;
+        private Coroutine _drawIntroCo;
+        private bool _playingIntro;
+        /// <summary>드로우 등장 연출 진행 중 — CardHandHUD가 슬롯 위치 리셋을 건너뛰는 판단에 사용.</summary>
+        public bool IsPlayingDrawIntro => _playingIntro;
 
         void Awake()
         {
@@ -109,6 +123,13 @@ namespace Battle.UI
                 _originalBackgroundColor = backgroundImage.color;
                 _capturedOriginalBgColor = true;
             }
+        }
+
+        void OnDisable()
+        {
+            // 비활성화되면 Unity가 코루틴을 멈추므로 등장 연출 상태를 정리 — 다음 활성화 시 깨끗한 상태 보장
+            if (_drawIntroCo != null) { StopCoroutine(_drawIntroCo); _drawIntroCo = null; }
+            _playingIntro = false;
         }
 
         /// <summary>외부(콤보 슬롯 UI 등)에서 prefab의 element sprite를 공유받기 위한 접근자.</summary>
@@ -165,6 +186,7 @@ namespace Battle.UI
             // 인한 손패 정렬 어긋남 방지(특히 더블클릭 사용 직후 마우스가 같은 위치에 있을 때).
             if (Card != card)
             {
+                CancelDrawIntro(); // 재사용되는 뷰에 남아있던 등장 연출 정리
                 _isHovering = false;
                 _isDragging = false;
                 if (_hoverSlotOriginalSibling >= 0 && transform.parent != null)
@@ -185,6 +207,8 @@ namespace Battle.UI
                 return;
             }
             gameObject.SetActive(true);
+            // 등장 연출 중이 아니면 알파를 항상 1로 — 이전 연출 잔여로 카드가 투명하게 남는 것 방지
+            if (!_playingIntro && _canvasGroup != null) _canvasGroup.alpha = 1f;
 
             // 새 전투 시스템: 글로벌 속성 저주 상태를 카드 인스턴스에 동기화 (시각 표시용)
             if (Battle.NewBattleController.Instance != null)
@@ -362,6 +386,98 @@ namespace Battle.UI
             _rect.localScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // 드로우 등장 연출 (아래에서 위로 떠오름)
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 패에 새로 들어온 카드를 홈 위치 아래에서 위로 떠오르게 한다.
+        /// CaptureHome() 직후(홈 좌표가 확정된 상태)에 호출해야 한다.
+        /// delay: 연속 드로우 시 카드마다 시작을 늦춰 차례로 올라오는 느낌(stagger).
+        /// </summary>
+        public void PlayDrawIntro(float delay = 0f)
+        {
+            if (_rect == null) _rect = GetComponent<RectTransform>();
+            if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
+
+            // 연출 비활성 또는 오브젝트 비활성(빈 슬롯) → 그냥 홈에 고정
+            if (!drawIntroEnabled || !isActiveAndEnabled)
+            {
+                SettleIntro();
+                return;
+            }
+
+            if (_drawIntroCo != null) StopCoroutine(_drawIntroCo);
+
+            // 부채꼴 슬롯은 회전돼 있으므로, 화면 기준 '수직 아래' 오프셋을 슬롯 로컬 좌표로 변환
+            // (가장자리 카드도 비스듬하지 않고 똑바로 위로 올라오도록).
+            Vector2 below = ComputeBelowOffset();
+
+            // 시작 상태를 즉시 적용 — delay(stagger) 동안 홈에서 깜빡이지 않도록 미리 아래에 숨긴다
+            _playingIntro = true;
+            Vector3 baseScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
+            _rect.anchoredPosition = _homeAnchoredPos + below;
+            _rect.localScale = baseScale * drawIntroStartScale;
+            if (_canvasGroup != null) _canvasGroup.alpha = 0f;
+
+            _drawIntroCo = StartCoroutine(DrawIntroRoutine(delay, baseScale, below));
+        }
+
+        /// <summary>화면 기준 '수직 아래로 drawIntroRiseDistance'를 현재 슬롯(부모) 회전을 상쇄한 로컬 오프셋으로 변환.</summary>
+        Vector2 ComputeBelowOffset()
+        {
+            float slotZ = (_rect != null && _rect.parent != null) ? _rect.parent.localEulerAngles.z : 0f;
+            float rad = -slotZ * Mathf.Deg2Rad;
+            float ry = -drawIntroRiseDistance; // 화면 기준 아래 방향
+            // Rot(rad) * (0, ry)
+            return new Vector2(-ry * Mathf.Sin(rad), ry * Mathf.Cos(rad));
+        }
+
+        System.Collections.IEnumerator DrawIntroRoutine(float delay, Vector3 baseScale, Vector2 below)
+        {
+            // stagger 대기 (이 동안 카드는 아래에서 알파 0으로 숨어 있음)
+            while (delay > 0f)
+            {
+                delay -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Vector2 start = _homeAnchoredPos + below;
+            float dur = Mathf.Max(0.01f, drawIntroDuration);
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.unscaledDeltaTime / dur;
+                float e = 1f - Mathf.Pow(1f - Mathf.Clamp01(t), 3f); // ease-out cubic — 빠르게 올라와 부드럽게 정착
+                _rect.anchoredPosition = Vector2.LerpUnclamped(start, _homeAnchoredPos, e);
+                _rect.localScale = baseScale * Mathf.LerpUnclamped(drawIntroStartScale, 1f, e);
+                if (_canvasGroup != null) _canvasGroup.alpha = Mathf.Clamp01(e);
+                yield return null;
+            }
+
+            _drawIntroCo = null;
+            SettleIntro();
+        }
+
+        /// <summary>등장 연출을 즉시 끝내고 홈 위치/스케일/알파로 고정.</summary>
+        void SettleIntro()
+        {
+            _playingIntro = false;
+            if (_rect != null)
+            {
+                _rect.anchoredPosition = _homeAnchoredPos;
+                _rect.localScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
+            }
+            if (_canvasGroup != null) _canvasGroup.alpha = 1f;
+        }
+
+        /// <summary>진행 중인 등장 연출을 취소(드래그/hover 시작·카드 교체 등)하고 홈으로 즉시 정착.</summary>
+        void CancelDrawIntro()
+        {
+            if (_drawIntroCo != null) { StopCoroutine(_drawIntroCo); _drawIntroCo = null; }
+            if (_playingIntro) SettleIntro();
+        }
+
         static Color ColorForElement(CardElement element, bool cursed)
         {
             if (cursed) return new Color(0.4f, 0.1f, 0.4f, 1f);
@@ -399,6 +515,7 @@ namespace Battle.UI
         public void OnBeginDrag(PointerEventData eventData)
         {
             if (Card == null || Hud == null) return;
+            CancelDrawIntro(); // 등장 연출 중 잡으면 즉시 홈으로 정착 후 드래그
 
             // hover 상태였다면 hover offset과 슬롯 sibling을 먼저 원래대로 복원
             if (_isHovering)
@@ -474,6 +591,7 @@ namespace Battle.UI
         {
             _isHovering = true;
             if (Card == null || _isDragging) return;
+            CancelDrawIntro(); // hover 시작하면 등장 연출을 끝내고 hover 표현으로 전환
             ApplyScale(hoverScaleMultiplier);
             ApplyHoverOffset(true);
 
