@@ -9,7 +9,10 @@
       "Bash(ls \"C:\\\\Users\\\\dusdn\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\2539d5af-c761-4af1-a865-5aa21ff50a92\\\\849da21b-33ca-4fd1-8b2a-55247e947846\\\\skills\\\\xlsx\\\\scripts\\\\\")",
       "Bash(pip install *)",
       "Bash(python Tools/ConvertCardDB.py)",
-      "PowerShell(pip install pypdf -q 2>&1)"
+      "PowerShell(pip install pypdf -q 2>&1)",
+      "PowerShell($tmp = \"C:\\\\Users\\\\hp\\\\Desktop\\\\CapstonePR\\\\Temp\\\\combo_xlsx\"; if \\(Test-Path $tmp\\) { Remove-Item $tmp -Recurse -Force }; New-Item -ItemType Directory -Force $tmp | Out-Null; Copy-Item \"C:\\\\Users\\\\hp\\\\Downloads\\\\ComboSkill_DB_\\(1\\).xlsx\" \"$tmp\\\\book.zip\"; Expand-Archive \"$tmp\\\\book.zip\" -DestinationPath \"$tmp\\\\ext\" -Force; Get-ChildItem \"$tmp\\\\ext\" -Recurse | Select-Object FullName)",
+      "PowerShell(python --version 2>&1)",
+      "PowerShell(python -c \"import openpyxl; print\\('openpyxl ok'\\)\" 2>&1)"
     ]
   }
 }

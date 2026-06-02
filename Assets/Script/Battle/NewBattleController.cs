@@ -42,6 +42,13 @@ namespace Battle
         [SerializeField] private List<ComboSkillDef> ownedComboSkills = new List<ComboSkillDef>();
         public IReadOnlyList<ComboSkillDef> OwnedComboSkills => ownedComboSkills;
 
+        [Header("콤보 스킬 DB")]
+        [Tooltip("ON이면 Resources/ComboDB의 데이터 드리븐 콤보를 사용 (Inspector의 ownedComboSkills를 덮어씀). " +
+                 "OFF면 위 Inspector 수동 리스트 사용.")]
+        [SerializeField] private bool useComboDatabase = true;
+        [Tooltip("보유할 콤보 RefComboID(1000~1019). 비우면 전체 보유. 예: 1000,1004,1008")]
+        [SerializeField] private List<int> ownedComboRefIds = new List<int>();
+
         [Header("각성 콤보 이펙트")]
         [Tooltip("각성 종료 시 Damage 콤보가 적에게 들어갈 때 재생할 이펙트 이름. " +
                  "Resources/CardEffects/{이름}.png 시트를 찾아 적 위치에서 재생. " +
@@ -66,6 +73,8 @@ namespace Battle
         private readonly CardDeckSystem _deck = new CardDeckSystem();
         private readonly CardEffectResolver _resolver = new CardEffectResolver();
         private readonly CardEffectContext _ctx = new CardEffectContext();
+        private readonly ComboEffectResolver _comboResolver = new ComboEffectResolver();
+        private readonly ComboResolveContext _comboCtx = new ComboResolveContext();
 
         private Player _player;
         private EnemyController _enemy;
@@ -95,6 +104,13 @@ namespace Battle
         private readonly List<ComboSkillDef> _queuedComboSkills = new List<ComboSkillDef>();
         // 각성 동안 입력된 속성 전체 기록(왼쪽 UI 표시용)
         private readonly List<CardElement> _awakenInputHistory = new List<CardElement>();
+
+        // 콤보 DB 효과용 카운터
+        private int _usedFireCardCount;       // 이번 전투 불 카드 사용 수 (USED_FIRE_CARD_COUNT)
+        private int _awakenFragmentExhausted; // 각성 진입 시 격리된 파편 수
+        private int _awakenComboCountThisEnd; // 이번 각성 종료 시 발동되는 콤보 총수 (REPEAT_BY_AWAKEN_COMBO_COUNT)
+        // refComboId별 이번 각성 발동 횟수 (REPEAT_BY_SELF_AWAKEN_USE_COUNT)
+        private readonly Dictionary<int, int> _comboSelfUseCount = new Dictionary<int, int>();
 
         // 방해 행동 — 속성 저주 (PDF: 한 속성 모든 카드, 플레이어 카드 사용 2회 동안 지속)
         public const int CURSE_DURATION_USES = 2;
@@ -242,6 +258,14 @@ namespace Battle
             var startingDeck = _customStartingDeck ?? CardDatabase.BuildDefaultPrototypeDeck();
             _deck.StartBattle(startingDeck);
 
+            // 콤보 스킬 DB 사용 시 — Inspector 수동 리스트를 DB 로드 결과로 교체
+            if (useComboDatabase)
+            {
+                ownedComboSkills = ComboSkillDatabase.BuildOwnedCombos(ownedComboRefIds);
+                Log($"콤보 DB 로드 — 보유 콤보 {ownedComboSkills.Count}개" +
+                    (ownedComboRefIds != null && ownedComboRefIds.Count > 0 ? $" (지정 {ownedComboRefIds.Count}종)" : " (전체)"));
+            }
+
             if (handHud == null) handHud = ResolveOrCreateHandHud();
             if (handHud != null)
             {
@@ -267,6 +291,7 @@ namespace Battle
             _awakenPending = false;
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
+            _usedFireCardCount = 0;
 
             // 각성 게이지를 Player.hpBar 아래에 자동 배치
             if (handHud != null && _player != null && _player.hpBar != null)
@@ -367,6 +392,7 @@ namespace Battle
             if (card == null) return;
             if (card.Type == CardType.Attack) _ctx.usedAttackCardCount++;
             if (card.Element == CardElement.Fragment) _ctx.usedFragmentCardCount++;
+            if (card.Element == CardElement.Fire) _usedFireCardCount++;
 
             string name = card.data.displayName ?? "";
             if (!string.IsNullOrEmpty(name))
@@ -823,6 +849,12 @@ namespace Battle
             // 패/드로우/버린 더미의 무속성 카드 임시 격리 (각성 중 속성 카드만 순환)
             _awakenStoredNeutralCards = _deck.ExtractAllNeutralCards();
 
+            // 격리된 카드 중 파편 수 기록 (REPEAT_BY_AWAKEN_FRAGMENT_EXHAUSTED용)
+            _awakenFragmentExhausted = 0;
+            foreach (var c in _awakenStoredNeutralCards)
+                if (c != null && c.Element == CardElement.Fragment) _awakenFragmentExhausted++;
+            _comboSelfUseCount.Clear();
+
             // 패를 가득 차게 드로우 (기획서: 각성 발동 시 패 보충)
             _deck.Draw(_deck.HandLimit);
 
@@ -868,6 +900,16 @@ namespace Battle
                         damageCount++;
 
                 Log($"[각성] 종료 — 콤보 {_queuedComboSkills.Count}건 일괄 발동 (Damage {damageCount}건)");
+
+                // DB 콤보 반복 공식용: 이번 각성 발동 콤보 총수 + refComboId별 발동 횟수
+                _awakenComboCountThisEnd = _queuedComboSkills.Count;
+                _comboSelfUseCount.Clear();
+                foreach (var s in _queuedComboSkills)
+                {
+                    if (s == null || !s.fromDatabase) continue;
+                    _comboSelfUseCount.TryGetValue(s.refComboId, out int c);
+                    _comboSelfUseCount[s.refComboId] = c + 1;
+                }
 
                 int damageIndex = 0;
                 for (int i = 0; i < _queuedComboSkills.Count; i++)
@@ -973,6 +1015,16 @@ namespace Battle
 
         void ActivateComboSkill(ComboSkillDef skill)
         {
+            // DB 콤보: 데이터 드리븐 다중 효과를 리졸버로 실행
+            if (skill.fromDatabase)
+            {
+                Log($"[콤보 스킬] {skill.displayName} ({skill.ComboString()}, ref={skill.refComboId}) 발동 — 효과 {(skill.dbEffects != null ? skill.dbEffects.Count : 0)}건");
+                FillComboContext(skill);
+                _comboResolver.Resolve(skill, _comboCtx);
+                return;
+            }
+
+            // 레거시(Inspector 수동) 콤보: 단일 효과
             Log($"[콤보 스킬] {skill.displayName} ({skill.ComboString()}) 발동 — {skill.effect} {skill.amount}");
 
             switch (skill.effect)
@@ -994,6 +1046,26 @@ namespace Battle
                     _deck.Draw(skill.amount);
                     break;
             }
+        }
+
+        /// <summary>DB 콤보 효과 실행 직전 런타임 참조/카운터를 채운다.</summary>
+        void FillComboContext(ComboSkillDef skill)
+        {
+            _comboCtx.enemy = _enemy;
+            _comboCtx.enemyStat = _enemyStat;
+            _comboCtx.player = _player;
+            _comboCtx.deck = _deck;
+
+            _comboCtx.usedFireCardCount = _usedFireCardCount;
+            _comboCtx.usedFragmentCardCount = _ctx.usedFragmentCardCount;
+            _comboCtx.playerChain = _ctx.chainCount;
+            _comboCtx.awakenComboCount = _awakenComboCountThisEnd;
+            _comboCtx.awakenFragmentExhausted = _awakenFragmentExhausted;
+            _comboSelfUseCount.TryGetValue(skill.refComboId, out int selfUse);
+            _comboCtx.selfRepeatCount = selfUse;
+
+            // GAIN_STATUS CHAIN → 연쇄 누적 (SyncChainStatus가 UI 반영)
+            _comboCtx.onGainChain = n => { _ctx.chainCount += n; };
         }
 
         // ─────────────────────────────────────────────────────────────
