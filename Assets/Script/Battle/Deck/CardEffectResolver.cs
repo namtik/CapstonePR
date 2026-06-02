@@ -1005,10 +1005,17 @@ namespace Battle.Deck
                 case "EXHAUST_CARD":
                     {
                         string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+                        string tgt = (eff.target ?? "").Trim().ToUpperInvariant();
                         if (sel == "SELECT_ONE_FROM_HAND")
                         {
                             result.requiresHandExileSelection = true;
                             result.handSelectionCardFilter = eff.cardFilter ?? "";
+                        }
+                        else if (sel == "ALL" && Ctx.deck != null)
+                        {
+                            // 불110: 지정 더미 전체 소멸 (패 제외)
+                            if (tgt == "DRAW_PILE") Ctx.deck.ExileWholeDrawPile();
+                            else if (tgt == "DISCARD_PILE") Ctx.deck.ExileWholeDiscardPile();
                         }
                     }
                     break;

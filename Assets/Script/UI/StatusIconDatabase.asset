@@ -17,6 +17,8 @@ MonoBehaviour:
     iconSprite: {fileID: 21300000, guid: 0abe44e5ec89d5640aa7f07c5e439146, type: 3}
   - statusKey: frost
     iconSprite: {fileID: 21300000, guid: d523864ea22af1247a0996664fe7535f, type: 3}
+  - statusKey: chain
+    iconSprite: {fileID: 21300000, guid: 0bad83de17ddea14c91e271b2b6c3d53, type: 3}
   - statusKey: wet
     iconSprite: {fileID: 21300000, guid: 0d17af4be67548d41bd2f8bf8ab814ba, type: 3}
   - statusKey: freeze

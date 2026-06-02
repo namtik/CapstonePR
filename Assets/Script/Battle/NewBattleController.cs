@@ -181,6 +181,17 @@ namespace Battle
             HandleInput();
             TickAwakenTimer();
             UpdateAwakenText();
+            SyncChainStatus();
+        }
+
+        // 연쇄(chain) 스택을 플레이어 상태 패널에 표시 — Ctx.chainCount가 바뀔 때만 갱신.
+        private int _lastChainShown = -1;
+        void SyncChainStatus()
+        {
+            if (_player == null) return;
+            if (_ctx.chainCount == _lastChainShown) return;
+            _lastChainShown = _ctx.chainCount;
+            _player.SetStatus("chain", _ctx.chainCount);
         }
 
         /// <summary>각성 지속 시간 카운트다운 (Update에서 매 프레임 호출).</summary>
@@ -562,6 +573,9 @@ namespace Battle
 
             _deck.PullFromHand(card);
 
+            // 빙결 순서 처리용: 카드 사용 '전' 적 빙결량 기록 (이 카드가 부여한 빙결은 이 카드의 게이지 상승을 막지 않음)
+            int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
+
             var result = _resolver.Resolve(card);
 
             // 이 카드 사용 횟수 누적(바람314 N회 후 소멸 판정용 — Resolve가 직전 값을 읽고 판정함)
@@ -690,7 +704,24 @@ namespace Battle
             if (result.currentCardFreeThisUse) gaugeCost = 0; // 바람11(310)
             if (_ctx.firstCardAfterAttackFreeActive && _ctx.firstCardAfterEnemyAttack)
                 gaugeCost = 0; // 바람20(319)
+
+            // 빙결 순서: 이 카드가 부여한 빙결은 '이 카드의 게이지 상승'을 막지 않도록,
+            // 게이지 처리 동안만 카드 사용 전 빙결량으로 되돌렸다가 처리 후 복원.
+            int frostAddedByCard = 0;
+            if (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int frostAfterCard))
+            {
+                frostAddedByCard = Mathf.Max(0, frostAfterCard - frostBeforeCard);
+                if (frostAddedByCard > 0) _enemyStat.statusEffects["frost"] = frostBeforeCard;
+            }
+
             AccrueEnemyGauge(gaugeCost);
+
+            if (frostAddedByCard > 0 && _enemyStat != null)
+            {
+                int frostRemaining = _enemyStat.statusEffects.TryGetValue("frost", out int fr) ? fr : 0;
+                _enemy?.SetStatus("frost", frostRemaining + frostAddedByCard); // 카드가 부여한 빙결 복원 + UI 갱신
+            }
+
             if (result.skipNextGaugeCost) _skipNextGaugeCount++;
 
             // 통계 갱신

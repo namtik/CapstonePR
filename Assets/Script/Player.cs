@@ -44,6 +44,7 @@ public class Player : MonoBehaviour, IBattleUnit
         statusEffects["launcher"] = 0;
         statusEffects["fortify"] = 0;
         statusEffects["charge"] = 0;
+        statusEffects["chain"] = 0; // 연쇄 스택 표시용 (실제 값은 CardEffectContext.chainCount와 동기화)
         UpdateUI();
     }
 

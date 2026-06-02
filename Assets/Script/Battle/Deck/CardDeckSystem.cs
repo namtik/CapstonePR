@@ -116,10 +116,11 @@ namespace Battle.Deck
             return true;
         }
 
-        /// <summary>지정 카드를 뽑을 더미에서 패로 이동(데이터 드리븐 효과용).</summary>
+        /// <summary>지정 카드를 뽑을 더미에서 패로 이동(데이터 드리븐 효과용). 패가 가득 차면 실패.</summary>
         public bool MoveFromDrawPileToHand(CardInstance card)
         {
             if (card == null) return false;
+            if (_hand.Count >= HandLimit) return false; // 패 한도 초과 방지
             int idx = _drawPile.IndexOf(card);
             if (idx < 0) return false;
             _drawPile.RemoveAt(idx);
@@ -277,6 +278,22 @@ namespace Battle.Deck
             _discardPile.Clear();
             if (discard != null) _discardPile.AddRange(discard);
             OnPileChanged?.Invoke();
+        }
+
+        /// <summary>뽑을 더미 전체를 소멸 더미로(불110: 패 제외 전체 소멸). 소멸된 수 반환.</summary>
+        public int ExileWholeDrawPile()
+        {
+            int n = _drawPile.Count;
+            if (n > 0) { _exilePile.AddRange(_drawPile); _drawPile.Clear(); OnPileChanged?.Invoke(); }
+            return n;
+        }
+
+        /// <summary>버린 더미 전체를 소멸 더미로(불110). 소멸된 수 반환.</summary>
+        public int ExileWholeDiscardPile()
+        {
+            int n = _discardPile.Count;
+            if (n > 0) { _exilePile.AddRange(_discardPile); _discardPile.Clear(); OnPileChanged?.Invoke(); }
+            return n;
         }
 
         /// <summary>뽑을 더미의 특정 카드를 버린 더미로 이동(땅419: 파편 사용 등). 성공 시 true.</summary>
