@@ -22,6 +22,8 @@ namespace Battle.UI
 
         [Header("프리팹 (필수)")]
         [SerializeField] private NewCardView cardPrefab;
+        /// <summary>카드 보상 UI 등 외부에서 카드 뷰 프리팹을 재사용하기 위한 읽기 전용 접근자.</summary>
+        public NewCardView CardPrefab => cardPrefab;
 
         [Header("배치")]
         [Tooltip("카드 슬롯들이 정렬될 부모. 비우면 본 트랜스폼 자식으로 자동 생성.")]
@@ -836,6 +838,9 @@ namespace Battle.UI
         // 교체 가능(각성용 비차단) 연출 추적 — 빠른 연속 입력 시 직전 연출을 정리하고 새 카드로 교체.
         private Coroutine _interruptablePresentCo;
         private NewCardView _interruptablePresentView;
+        // 일반(차단) 연출 추적 — 전투 종료 시 onDisappear 호출 없이 취소하기 위함(보상 화면과 겹침 방지).
+        private Coroutine _normalPresentCo;
+        private NewCardView _normalPresentView;
 
         /// <summary>
         /// 사용한 카드를 화면 중앙에 잠깐 띄웠다 사라지게 한다.
@@ -861,8 +866,20 @@ namespace Battle.UI
             }
             else
             {
-                StartCoroutine(CardUsePresentationRoutine(card, onDisappear, false));
+                _normalPresentCo = StartCoroutine(CardUsePresentationRoutine(card, onDisappear, false));
             }
+        }
+
+        /// <summary>
+        /// 진행 중인 카드 사용 중앙 연출(일반/각성용 모두)을 onDisappear 호출 없이 즉시 정리한다.
+        /// 전투 종료 시 호출 — 지연 효과(ResolveCardUse)가 보상 화면과 겹쳐 실행되는 것을 막는다.
+        /// </summary>
+        public void CancelCardUsePresentations()
+        {
+            if (_normalPresentCo != null) { StopCoroutine(_normalPresentCo); _normalPresentCo = null; }
+            if (_normalPresentView != null) { Destroy(_normalPresentView.gameObject); _normalPresentView = null; }
+            if (_interruptablePresentCo != null) { StopCoroutine(_interruptablePresentCo); _interruptablePresentCo = null; }
+            if (_interruptablePresentView != null) { Destroy(_interruptablePresentView.gameObject); _interruptablePresentView = null; }
         }
 
         System.Collections.IEnumerator CardUsePresentationRoutine(CardInstance card, System.Action onDisappear, bool interruptable)
@@ -873,6 +890,7 @@ namespace Battle.UI
             // 중앙 오버레이용 임시 카드 뷰 생성 (손패 풀과 독립 — Refresh 영향 없음)
             var view = Instantiate(cardPrefab, parent);
             if (interruptable) _interruptablePresentView = view;
+            else _normalPresentView = view;
             view.Bind(this, -1);
             var vrect = (RectTransform)view.transform;
             vrect.anchorMin = vrect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -932,6 +950,11 @@ namespace Battle.UI
             {
                 _interruptablePresentView = null;
                 _interruptablePresentCo = null;
+            }
+            else
+            {
+                _normalPresentView = null;
+                _normalPresentCo = null;
             }
         }
 

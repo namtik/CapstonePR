@@ -116,9 +116,11 @@ namespace Battle
 
         // 방해 행동 — 속성 저주 (PDF: 한 속성 모든 카드, 플레이어 카드 사용 2회 동안 지속)
         public const int CURSE_DURATION_USES = 2;
-        public const int CURSE_PLAYER_DAMAGE = 5;
+        public const int CURSE_PLAYER_DAMAGE = 6;
         private CardElement? _cursedElement;
         private int _curseRemainingUses;
+        // 방해행동(회복) 쿨다운 — 회복 발동 후 다른 방해행동 2회 수행해야 재사용.
+        private int _recoverCooldown;
 
         // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
         private int _skipNextGaugeCount;
@@ -240,6 +242,9 @@ namespace Battle
             _ctx.enemyStat = _enemyStat;
             _ctx.deck = _deck;
             ResetContextFlags();
+            // 땅410 등: 런 동안 누적된 영구 공격력(Permanent ATTACK_POWER)을 전투 시작 시 복원
+            if (RunDeckState.Instance != null)
+                _ctx.attackPowerBonus += RunDeckState.Instance.PermanentAttackPower;
 
             // 플레이어 피격/방어도 소모 이벤트 구독 (전투마다 갱신)
             if (_player != null)
@@ -295,6 +300,7 @@ namespace Battle
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
             _usedFireCardCount = 0;
+            _recoverCooldown = 0;
 
             // 각성 게이지를 Player.hpBar 아래에 자동 배치
             if (handHud != null && _player != null && _player.hpBar != null)
@@ -314,6 +320,8 @@ namespace Battle
             _deck.EndBattle();
             if (handHud != null)
             {
+                // 진행 중인 카드 사용 연출/지연 효과 취소 — 보상 화면과 카드 효과가 겹쳐 실행되는 것을 방지
+                handHud.CancelCardUsePresentations();
                 handHud.UseCardCallback = null;
                 handHud.SelectionClosedCallback = null;
             }
@@ -632,6 +640,8 @@ namespace Battle
         void ResolveCardUse(CardInstance card)
         {
             if (card == null) return;
+            // 전투 종료(보상 진입) 후 지연 콜백이 카드 효과를 실행하지 않도록 방어 — 보상 화면과 겹침 방지
+            if (!_inBattle) return;
 
             ApplyCurseOnCardUse(card);
 
@@ -1102,33 +1112,92 @@ namespace Battle
         // ─────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// PDF [방해행동]: 적이 게이지 5에 도달하면 호출.
-        /// 콤보 셔플은 사용 X. 무속성 삽입 또는 속성 저주를 무작위로 발동.
+        /// 기획서 0.6v + 확장 [방해행동]: 적이 특정 행동게이지(중간 단계)에 도달하면 호출.
+        /// 저주 / 탈진 / 흡수 / 강화 / 회복(쿨다운) / 버리기 중 무작위 1개 발동.
         /// </summary>
         public string TriggerDisruption()
         {
-            bool isCurse = Random.value < 0.5f;
+            // 0 저주 / 1 탈진 / 2 흡수 / 3 강화 / 4 회복(쿨다운) / 5 버리기(패 있을 때만)
+            var pool = new List<int> { 0, 1, 2, 3 };
+            if (_recoverCooldown <= 0) pool.Add(4);
+            if (_deck.HandCount > 0) pool.Add(5);
+            int pick = pool[Random.Range(0, pool.Count)];
 
-            if (isCurse)
+            // 회복 쿨다운 진행 — 회복이 아닌 행동이 발동되면 1 감소(회복 후 다른 행동 2회 후 재사용)
+            if (pick != 4 && _recoverCooldown > 0) _recoverCooldown--;
+
+            switch (pick)
             {
-                CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
-                CardElement target = elements[Random.Range(0, elements.Length)];
-                _cursedElement = target;
-                _curseRemainingUses = CURSE_DURATION_USES;
-
-                handHud?.Refresh();
-                Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
-                return $"방해: {ElementName(target)} 저주!";
+                case 0: // 저주 — 한 속성 카드 사용 시 플레이어 피해(2회 지속)
+                {
+                    CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
+                    CardElement target = elements[Random.Range(0, elements.Length)];
+                    _cursedElement = target;
+                    _curseRemainingUses = CURSE_DURATION_USES;
+                    handHud?.Refresh();
+                    Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
+                    return $"방해: {ElementName(target)} 저주!";
+                }
+                case 1: // 탈진 — 무속성 더미 카드(500)를 뽑을 더미에 섞어 넣음
+                {
+                    var dummy = CardDatabase.CreateNeutralFillerInstance();
+                    if (dummy != null) _deck.AddToDrawShuffled(dummy);
+                    handHud?.Refresh();
+                    Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
+                    return "방해: 탈진 카드 삽입!";
+                }
+                case 2: // 흡수 — 각성 게이지(누적 속성 카드 수) -2
+                {
+                    int before = _elementInputCount;
+                    _elementInputCount = Mathf.Max(0, _elementInputCount - 2);
+                    UpdateAwakenText();
+                    Log($"[방해] 흡수 — 각성 게이지 -2 ({before} → {_elementInputCount})");
+                    return "방해: 각성 게이지 흡수!";
+                }
+                case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
+                {
+                    _enemy?.BuffNextAttack();
+                    Log("[방해] 강화 — 적 다음 공격 피해 증가(1회)");
+                    return "방해: 적 강화!";
+                }
+                case 4: // 회복 — 적 HP 30% 회복, 재사용까지 다른 방해행동 2회 필요
+                {
+                    _recoverCooldown = 2;
+                    if (_enemyStat != null)
+                    {
+                        float heal = _enemyStat.maxHp * 0.3f;
+                        _enemyStat.Heal(heal);
+                        Log($"[방해] 회복 — 적 HP +{heal:F0} (최대 30%)");
+                    }
+                    return "방해: 적 체력 회복!";
+                }
+                default: // 5 버리기 — 플레이어가 패에서 2장 직접 선택해 버림
+                {
+                    int n = Mathf.Min(2, _deck.HandCount);
+                    if (n > 0) StartCoroutine(EnemyForcedDiscardRoutine(n));
+                    Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");
+                    return "방해: 카드 버리기!";
+                }
             }
-            else
-            {
-                // 무속성 카드(500) 1장을 뽑을 카드 더미에 섞어 넣음 — 사용해도 효과 없는 더미.
-                var dummy = CardDatabase.CreateNeutralFillerInstance();
-                if (dummy != null) _deck.AddToDrawShuffled(dummy);
+        }
 
-                handHud?.Refresh();
-                Log("[방해] 무속성 카드 1장 뽑을 더미에 삽입");
-                return "방해: 무속성 카드 삽입!";
+        /// <summary>방해(버리기): 플레이어가 패에서 count장을 직접 선택해 버린다. 카드 선택 모드를 연쇄로 사용.</summary>
+        IEnumerator EnemyForcedDiscardRoutine(int count)
+        {
+            int done = 0;
+            while (done < count && _deck.HandCount > 0 && handHud != null)
+            {
+                yield return null; // 선택 모드 진입 전 한 프레임 (렌더 안정)
+                if (_deck.HandCount == 0) break;
+                bool picked = false;
+                int idx = done + 1;
+                handHud.EnterSelectionMode($"버릴 카드를 선택하세요 ({idx}/{count})", card =>
+                {
+                    if (card != null) _deck.DiscardCardFromHand(card);
+                    picked = true;
+                }, filter: null);
+                while (!picked) yield return null;
+                done++;
             }
         }
 

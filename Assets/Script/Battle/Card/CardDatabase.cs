@@ -98,6 +98,25 @@ namespace Battle.Card
             };
         }
 
+        /// <summary>
+        /// 기획서 0.6v 기본 시작 덱 — 4속성 × (기본 공격 게이지1/피해5, 기본 방어 게이지1/방어도3) = 총 8장.
+        /// 실제 게임 런(RunDeckState)이 이 덱으로 시작. (DefaultPrototypeDeckEntries는 테스트 전용)
+        /// </summary>
+        public static List<DeckEntry> DefaultStartingDeckEntries()
+        {
+            return new List<DeckEntry>
+            {
+                new DeckEntry(100, 1), // 불 기본 공격 (피해5)
+                new DeckEntry(101, 1), // 불 기본 방어 (방어도3)
+                new DeckEntry(200, 1), // 물 기본 공격
+                new DeckEntry(201, 1), // 물 기본 방어
+                new DeckEntry(300, 1), // 바람 기본 공격
+                new DeckEntry(301, 1), // 바람 기본 방어
+                new DeckEntry(400, 1), // 땅 기본 공격
+                new DeckEntry(401, 1), // 땅 기본 방어
+            };
+        }
+
         /// <summary>DeckEntry 리스트를 실제 CardInstance 리스트로 변환.</summary>
         public static List<CardInstance> InstantiateDeck(IList<DeckEntry> entries)
         {

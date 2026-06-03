@@ -11,6 +11,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [Header("새 전투 시스템 공격 시퀀스 (PDF: 16-18-40 순환)")]
     [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 };
     private int _newSystemAttackIndex = 0;
+    // 기획서 0.6v [방해행동-강화]: 다음 공격 1회 한정 +50% 피해
+    private bool _nextAttackBuffed = false;
 
     private EnemyStat stat;
     private EnemyView view;
@@ -102,7 +104,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             stat.isNewlyFrozen = true;
         }
 
-        stat.statusEffects[type] += amount;
+        // 기획서 0.6v: 스택형 키워드 최대 999
+        stat.statusEffects[type] = Mathf.Clamp(stat.statusEffects[type] + amount, 0, 999);
 
         // 일반적인 상태이상 추가 시 갱신 신호 발송
         OnStatusChanged?.Invoke(type, stat.statusEffects[type]);
@@ -117,8 +120,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     {
         if (stat.statusEffects.ContainsKey(type))
         {
-            stat.statusEffects[type] = amount;
-            OnStatusChanged?.Invoke(type, amount);
+            int v = Mathf.Clamp(amount, 0, 999); // 기획서 0.6v: 스택 최대 999
+            stat.statusEffects[type] = v;
+            OnStatusChanged?.Invoke(type, v);
         }
     }
     public float GetAttackDamage()
@@ -128,7 +132,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
     public void AddGuard(float amount)
     {
-        stat.guard += amount;
+        stat.guard = Mathf.Clamp(stat.guard + amount, 0f, 999f); // 기획서 0.6v: 방어도 최대 999
     }
     /// <summary>Called by ElementSlotSystem each time the player uses a slot</summary>
     public void OnPlayerAction()
@@ -161,6 +165,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         view?.ShowMidPatternNotice(patternMessage);
     }
 
+    /// <summary>기획서 0.6v [방해행동-강화]: 다음 적 공격 1회를 +50% 강화.</summary>
+    public void BuffNextAttack() => _nextAttackBuffed = true;
+
     void HandleGaugeFull()
     {
         midPattern?.OnGauge10();
@@ -190,6 +197,15 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             damagePerHit = Mathf.RoundToInt(stat.AttackDamage);
             if (damagePerHit <= 0) damagePerHit = fallbackGaugeFullDamage;
             hitCount = Mathf.Max(0, stat.CurrentAttackCount);
+        }
+
+        // 기획서 0.6v [방해행동-강화]: 다음 공격 1회 한정 +50% (소수 올림)
+        if (_nextAttackBuffed)
+        {
+            damagePerHit = Mathf.CeilToInt(damagePerHit * 1.5f);
+            _nextAttackBuffed = false;
+            view?.ShowMidPatternNotice("강화!");
+            Debug.Log($"[적 강화] 다음 공격 +50% → {damagePerHit}");
         }
 
         if (player != null)

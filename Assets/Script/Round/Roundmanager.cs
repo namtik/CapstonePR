@@ -177,9 +177,23 @@ public class Roundmanager : MonoBehaviour
     {
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.EndBattle();
+        else
+            Battle.NewBattleController.Instance?.EndBattle();
 
         currentRoundHandler.OnExitRound(this);
         OnRoundClear?.Invoke();
+    }
+
+    /// <summary>신규 전투 시스템: 노드 진입 시 런 덱을 주입하고 전투를 시작한다.</summary>
+    void BeginNewBattleForNode()
+    {
+        var nb = Battle.NewBattleController.Instance;
+        if (nb == null) return;
+
+        var runDeck = Battle.RunDeckState.EnsureExists();
+        runDeck.EnsureSeeded();
+        nb.SetCustomStartingDeck(runDeck.InstantiateForBattle());
+        nb.StartBattle();
     }
 
     /// <summary>
@@ -196,6 +210,8 @@ public class Roundmanager : MonoBehaviour
 
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
+
+        if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
 
     /// <summary>
@@ -212,6 +228,8 @@ public class Roundmanager : MonoBehaviour
 
         currentEnemyIndex = 0;
         SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
+
+        if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
 
     /// <summary>
@@ -227,6 +245,8 @@ public class Roundmanager : MonoBehaviour
         if (player != null) player.ResetStatusForNewBattle();
 
         SpawnEnemy(data.bossEnemy, data.columnIndex, NodeType.Boss);
+
+        if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
 
     /// <summary>
@@ -263,6 +283,16 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void ShowSkillReward()
     {
+        // 기획서 0.6v: 전투 등급별 골드 일괄 지급 (일반 30~50 / 정예 100~150 / 보스 200~250)
+        GrantTieredCombatGold();
+
+        // 신규 전투 시스템: 스킬 보상 대신 카드 획득 보상으로 분기
+        if (IsNewBattleSystemActive())
+        {
+            ShowCardReward();
+            return;
+        }
+
         Debug.Log("스킬 보상 선택 UI 표시");
 
         if (rewardHubUIController == null)
@@ -286,6 +316,38 @@ public class Roundmanager : MonoBehaviour
             Debug.LogError("[Roundmanager] RewardHubUIController와 SkillRewardUI가 모두 없습니다.");
     }
 
+
+    /// <summary>
+    /// 신규 시스템 카드 획득 보상 — 3장 중 1장을 런 덱에 추가한 뒤 맵으로 복귀.
+    /// </summary>
+    void ShowCardReward()
+    {
+        Debug.Log("[Roundmanager] 카드 획득 보상 표시");
+
+        var hud = FindFirstObjectByType<Battle.UI.CardHandHUD>(FindObjectsInactive.Include);
+        Battle.UI.NewCardView cardPrefab = hud != null ? hud.CardPrefab : null;
+
+        var rewardUI = Battle.UI.CardRewardUI.EnsureExists();
+        rewardUI.Present(cardPrefab, pickedCardId =>
+        {
+            if (pickedCardId > 0)
+                Battle.RunDeckState.EnsureExists().AddCard(pickedCardId);
+            ReturnToMap();
+        });
+    }
+
+    /// <summary>기획서 0.6v: 전투 등급별 골드 일괄 지급. 비전투 라운드는 지급하지 않는다.</summary>
+    void GrantTieredCombatGold()
+    {
+        if (MoneyManager.Instance == null) return;
+        int gold;
+        if (currentRoundData is BossRoundData)        gold = Random.Range(200, 251); // 보스 200~250
+        else if (currentRoundData is EliteRoundData)  gold = Random.Range(100, 151); // 정예 100~150
+        else if (currentRoundData is CombatRoundData) gold = Random.Range(30, 51);   // 일반 30~50
+        else return;
+        MoneyManager.Instance.AddMoney(gold);
+        Debug.Log($"[보상] 전투 골드 +{gold}");
+    }
 
     /// <summary>
     /// 맵으로 복귀 (RestRoundHandler, 보상 선택 완료 후)
@@ -388,15 +450,10 @@ public class Roundmanager : MonoBehaviour
             currentEnemy.OnDied -= HandleEnemyDied;
         }
 
-        // 재화 지급
-        if (MoneyManager.Instance != null)
+        // 재화 지급 — 신규 시스템은 전투 종료 시 등급별 골드로 일괄 지급(기획서 0.6v)하므로 처치당 지급 X
+        if (!IsNewBattleSystemActive() && MoneyManager.Instance != null)
         {
-            Debug.Log("[RoundManager] MoneyManager.Instance 있음 - OnEnemyKilled 호출");
             MoneyManager.Instance.OnEnemyKilled();
-        }
-        else
-        {
-            Debug.LogError("[RoundManager] MoneyManager.Instance가 NULL입니다!");
         }
 
         currentEnemyIndex++;

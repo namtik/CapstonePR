@@ -235,6 +235,9 @@ public class GameStateController : MonoBehaviour
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
 
+        // 신규 전투 시스템: 런 덱을 기본값으로 리셋
+        Battle.RunDeckState.Instance?.ResetRun();
+
         ShowMap();
     }
 

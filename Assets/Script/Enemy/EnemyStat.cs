@@ -17,8 +17,9 @@ public class EnemyStat : MonoBehaviour
     private int currentAttackCount;
     private bool hasDied = false; // ��� �÷��� �߰�
 
-    // Player-action-driven gauge (full = 20, mid pattern = 10)
-    public const int GAUGE_MAX_STEPS = 20;
+    // Player-action-driven gauge (full = gaugeMaxSteps, mid pattern = half). 기획서 0.6v: per-enemy 10~30
+    public const int GAUGE_MAX_STEPS = 20; // 기본/폴백값
+    private int gaugeMaxSteps = GAUGE_MAX_STEPS; // Initialize에서 적별 10~30으로 설정
     private int gaugeStep = 0;
     private bool midPatternTriggered = false;
     public int GaugeStep => gaugeStep;
@@ -65,6 +66,8 @@ public class EnemyStat : MonoBehaviour
         hasDied = false;
         gaugeStep = 0;
         midPatternTriggered = false;
+        // 기획서 0.6v: 적마다 행동 게이지 최대치 10~30 (미설정/0이면 기본 20)
+        gaugeMaxSteps = Mathf.Clamp(data.actionGaugeMax > 0 ? data.actionGaugeMax : GAUGE_MAX_STEPS, 10, 30);
 
         OnHpChanged?.Invoke(currentHp, maxHp);
 
@@ -87,6 +90,14 @@ public class EnemyStat : MonoBehaviour
             Debug.Log($"[EnemyStat.OnDied] {enemyData.enemyName} ��� - OnDied �̺�Ʈ �߻�");
             OnDied?.Invoke();
         }
+    }
+
+    /// <summary>기획서 0.6v [방해행동-회복]: 적 HP 회복(최대치 클램프).</summary>
+    public void Heal(float amount)
+    {
+        if (!IsAlive || amount <= 0f) return;
+        currentHp = Mathf.Min(maxHp, currentHp + amount);
+        OnHpChanged?.Invoke(currentHp, maxHp);
     }
 
     public void RollNewAttackPlan()
@@ -135,17 +146,17 @@ public class EnemyStat : MonoBehaviour
         }
 
         gaugeStep++;
-        OnGaugeStepChanged?.Invoke((float)gaugeStep / GAUGE_MAX_STEPS);
+        OnGaugeStepChanged?.Invoke((float)gaugeStep / gaugeMaxSteps);
 
-        // Mid-point (step 5): trigger disruption pattern once per cycle
-        if (gaugeStep == GAUGE_MAX_STEPS / 2 && !midPatternTriggered)
+        // Mid-point (절반): trigger disruption pattern once per cycle
+        if (gaugeStep == gaugeMaxSteps / 2 && !midPatternTriggered)
         {
             midPatternTriggered = true;
             OnMidPattern?.Invoke();
         }
 
-        // Full gauge (step 10): enemy attacks, gauge resets
-        if (gaugeStep >= GAUGE_MAX_STEPS)
+        // Full gauge: enemy attacks, gauge resets (초과분은 다음 호출에서 자연 이월)
+        if (gaugeStep >= gaugeMaxSteps)
         {
             gaugeStep = 0;
             midPatternTriggered = false;

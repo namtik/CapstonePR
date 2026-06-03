@@ -344,7 +344,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0.52734375, y: -1.9730377, z: -0.421875, w: 0.031661987}
+  m_margin: {x: 7.36602, y: -1.9730377, z: 2.6167984, w: -6.006256}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -516,6 +516,10 @@ MonoBehaviour:
   dragScaleMultiplier: 1.5
   hoverScaleMultiplier: 1.4
   hoverPositionOffset: {x: 0, y: 100}
+  drawIntroEnabled: 1
+  drawIntroDuration: 0.28
+  drawIntroRiseDistance: 240
+  drawIntroStartScale: 0.92
   tintBackgroundByElement: 1
   backgroundTintAlpha: 0
   tintCardTypeBackground: 0

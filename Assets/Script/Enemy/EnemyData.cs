@@ -3,11 +3,13 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "EnemyData", menuName = "Enemy/EnemyData")]
 public class EnemyData : ScriptableObject
 {
-    public string enemyName; // ¸ó½ºÅÍ ÀÌ¸§
-    public Sprite enemySprite; // ¸ó½ºÅÍ ½ºÇÁ¶óÀÌÆ®
+    public string enemyName; // ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½
+    public Sprite enemySprite; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
 
-    public float maxHp = 1000f; // ÃÖ´ë Ã¼·Â
-    public float attackDamage= 10f; // °ø°İ·Â
-    public float gaugeSpeed=10f; // Çàµ¿ °ÔÀÌÁö Áõ°¡ ¼Óµµ
+    public float maxHp = 1000f; // ï¿½Ö´ï¿½ Ã¼ï¿½ï¿½
+    public float attackDamage= 10f; // ï¿½ï¿½ï¿½İ·ï¿½
+    public float gaugeSpeed=10f; // ï¿½àµ¿ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Óµï¿½
     public int baseAttackCount = 3;
+    [Tooltip("ê¸°íšì„œ 0.6v: í–‰ë™ ê²Œì´ì§€ ìµœëŒ€ì¹˜(10~30). ë‹¤ ì°¨ë©´ ê³µê²©, ì ˆë°˜ì—ì„œ ë°©í•´í–‰ë™. 0/ë¯¸ì„¤ì • ì‹œ ê¸°ë³¸ 20.")]
+    public int actionGaugeMax = 20; // 10~30
 }

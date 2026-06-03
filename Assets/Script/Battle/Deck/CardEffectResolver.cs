@@ -146,8 +146,8 @@ namespace Battle.Deck
             // 1. 저주 처리
             if (card.cursed && Ctx.player != null)
             {
-                Ctx.player.TakeDamage(5);
-                Debug.Log($"[Curse] {card.data.displayName} 저주 발동 — 플레이어 5 피해");
+                Ctx.player.TakeDamage(6);
+                Debug.Log($"[Curse] {card.data.displayName} 저주 발동 — 플레이어 6 피해");
                 card.cursed = false;
             }
 
@@ -208,7 +208,7 @@ namespace Battle.Deck
 
             // 바람325 — 카드 사용 시 연쇄 획득
             if (applyPowerEffects && Ctx.chainGainOnCardUseActive)
-                Ctx.chainCount += Mathf.Max(1, Ctx.chainGainOnCardUseAmount);
+                Ctx.chainCount = Mathf.Min(999, Ctx.chainCount + Mathf.Max(1, Ctx.chainGainOnCardUseAmount)); // 기획서 0.6v: 연쇄 최대 999
 
             // 땅425 — 파편 카드 사용 시 무작위 적에게 피해 (단일 적: 현재 적)
             if (applyPowerEffects && Ctx.damageOnFragmentUseActive
@@ -606,7 +606,11 @@ namespace Battle.Deck
             if (verb == "GAIN_STAT")
             {
                 string statKey = (eff.status ?? "").Trim().ToUpperInvariant();
-                if (statKey == "ATTACK_POWER") Ctx.attackPowerBonus += amount;
+                if (statKey == "ATTACK_POWER")
+                {
+                    Ctx.attackPowerBonus += amount;
+                    if (IsPermanentExtra(eff.extra)) Battle.RunDeckState.Instance?.AddPermanentAttackPower(amount); // 땅410: 영구 지속
+                }
                 else if (statKey == "CHAIN_DAMAGE_BONUS") Ctx.chainBonusDamage += amount;
             }
 
@@ -1033,7 +1037,7 @@ namespace Battle.Deck
                         string st = (eff.status ?? "").Trim().ToUpperInvariant();
                         if (amount > 0)
                         {
-                            if (st == "CHAIN") Ctx.chainCount += amount;
+                            if (st == "CHAIN") Ctx.chainCount = Mathf.Min(999, Ctx.chainCount + amount); // 기획서 0.6v: 연쇄 최대 999
                             else if (st == "ATTACK_POWER") Ctx.attackPowerBonus += amount;
                             else if (st == "CHAIN_DAMAGE_BONUS") Ctx.chainBonusDamage += amount;
                             // 그 외 GAIN_STATUS는 플레이어 상태이상으로
@@ -1045,7 +1049,12 @@ namespace Battle.Deck
                 case "GAIN_STAT":
                     {
                         string st = (eff.status ?? "").Trim().ToUpperInvariant();
-                        if (st == "ATTACK_POWER") Ctx.attackPowerBonus += amount;
+                        if (st == "ATTACK_POWER")
+                        {
+                            Ctx.attackPowerBonus += amount;
+                            // 땅410: Permanent=true면 런 단위로 영구 지속(전투 종료 후에도 유지)
+                            if (IsPermanentExtra(eff.extra)) Battle.RunDeckState.Instance?.AddPermanentAttackPower(amount);
+                        }
                         else if (st == "CHAIN_DAMAGE_BONUS") Ctx.chainBonusDamage += amount;
                     }
                     break;
@@ -1376,11 +1385,18 @@ namespace Battle.Deck
             if (Ctx.chainCount <= 0) return 0;
             Ctx.chainCount--;
             Ctx.consumedChainCount++; // 바람310: 소모한 연쇄 수 집계
-            int chainDmg = 1 + Ctx.chainBonusDamage;
+            // 기획서 0.6v [연쇄]: 플레이어 공격력의 10% 만큼 추가 타격 (최소 1) + 보너스
+            int chainBase = Ctx.player != null ? Mathf.Max(1, Mathf.RoundToInt(Ctx.player.attackDamage * 0.1f)) : 1;
+            int chainDmg = chainBase + Ctx.chainBonusDamage;
             Ctx.enemy.TakeDamage(chainDmg);
             Debug.Log($"[연쇄] 발동 — 추가 피해 {chainDmg}, 남은 연쇄 {Ctx.chainCount}");
             return chainDmg;
         }
+
+        /// <summary>효과 extra에 "Permanent=true"가 있으면 true (땅410 등 런 동안 지속되는 스탯).</summary>
+        static bool IsPermanentExtra(string extra) =>
+            !string.IsNullOrEmpty(extra) &&
+            extra.IndexOf("Permanent=true", System.StringComparison.OrdinalIgnoreCase) >= 0;
 
         void HealPlayer(int amount)
         {

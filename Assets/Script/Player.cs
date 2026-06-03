@@ -377,7 +377,8 @@ public class Player : MonoBehaviour, IBattleUnit
             OnStatusChanged?.Invoke("wet", 0);
             return;
         }
-        statusEffects[type] += amount;
+        // 기획서 0.6v: 스택형 키워드 최대 999
+        statusEffects[type] = Mathf.Clamp(statusEffects[type] + amount, 0, 999);
         OnStatusChanged?.Invoke(type, statusEffects[type]);
     }
 
@@ -390,8 +391,9 @@ public class Player : MonoBehaviour, IBattleUnit
     {
         if (statusEffects.ContainsKey(type))
         {
-            statusEffects[type] = amount;
-            OnStatusChanged?.Invoke(type, amount);
+            int v = Mathf.Clamp(amount, 0, 999); // 기획서 0.6v: 스택 최대 999
+            statusEffects[type] = v;
+            OnStatusChanged?.Invoke(type, v);
         }
 
      }
@@ -401,7 +403,7 @@ public class Player : MonoBehaviour, IBattleUnit
     }
     public void AddGuard(float amount)
     {
-        guard += amount;
+        guard = Mathf.Clamp(guard + amount, 0f, 999f); // 기획서 0.6v: 방어도 최대 999
         OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
     }
 

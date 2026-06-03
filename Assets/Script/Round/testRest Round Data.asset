@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RestRoundData
   roundName: "\uD14C\uC2A4\uD2B8 rest"
   roundType: 2
-  healPercent: 0.3
+  healPercent: 0.2
