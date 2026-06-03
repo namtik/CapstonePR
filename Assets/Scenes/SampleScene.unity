@@ -9142,6 +9142,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4654442579791755405, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
   m_PrefabInstance: {fileID: 1395472737}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1375488135 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+  m_PrefabInstance: {fileID: 1395472737}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd57ff26d0b91154eba426b49f6ccb74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Battle.UI.CardHandHUD
 --- !u!1 &1380454376
 GameObject:
   m_ObjectHideFlags: 0
@@ -9514,7 +9525,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1396382817}
-  - component: {fileID: 1396382816}
+  - component: {fileID: 1396382818}
   m_Layer: 0
   m_Name: NewBattleController
   m_TagString: Untagged
@@ -9522,32 +9533,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1396382816
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1396382815}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 11a0af3616e281e4dae9aa40bd7a694d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Battle.NewBattleController
-  handHud: {fileID: 0}
-  effectOverlay: {fileID: 0}
-  damageOverlay: {fileID: 0}
-  ownedComboSkills: []
-  useComboDatabase: 1
-  ownedComboRefIds: 
-  awakenDamageEffectName: Fever_ATK
-  awakenDamageEffectSpread: {x: 220, y: 80}
-  awakenShakeIntensityPerHit: 0.6
-  awakenShakeIntensityMax: 2
-  logVerbose: 1
-  useAiDisruption: 1
-  aiExplorationEpsilon: 0.15
-  logAiDecisions: 0
 --- !u!4 &1396382817
 Transform:
   m_ObjectHideFlags: 0
@@ -9563,6 +9548,32 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1396382818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1396382815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11a0af3616e281e4dae9aa40bd7a694d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Battle.NewBattleController
+  handHud: {fileID: 1375488135}
+  effectOverlay: {fileID: 862967831}
+  damageOverlay: {fileID: 0}
+  ownedComboSkills: []
+  useComboDatabase: 1
+  ownedComboRefIds: e8030000
+  awakenDamageEffectName: Fire_ATK
+  awakenDamageEffectSpread: {x: 220, y: 80}
+  awakenShakeIntensityPerHit: 0.6
+  awakenShakeIntensityMax: 2
+  logVerbose: 1
+  useAiDisruption: 1
+  aiExplorationEpsilon: 0.15
+  logAiDecisions: 1
 --- !u!1 &1401766510
 GameObject:
   m_ObjectHideFlags: 0
