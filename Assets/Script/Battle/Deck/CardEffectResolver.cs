@@ -1015,6 +1015,14 @@ namespace Battle.Deck
                             result.requiresHandExileSelection = true;
                             result.handSelectionCardFilter = eff.cardFilter ?? "";
                         }
+                        else if (sel == "RANDOM" && Ctx.deck != null && Ctx.deck.Hand.Count > 0)
+                        {
+                            // 불22/121: 패에서 무작위 카드 1장 소멸 (사용 카드는 이미 패에서 빠진 상태)
+                            var hand = Ctx.deck.Hand;
+                            var victim = hand[UnityEngine.Random.Range(0, hand.Count)];
+                            Ctx.deck.ExileFromHand(victim);
+                            NotifyExile(victim);
+                        }
                         else if (sel == "ALL" && Ctx.deck != null)
                         {
                             // 불110: 지정 더미 전체 소멸 (패 제외)

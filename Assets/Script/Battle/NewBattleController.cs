@@ -595,7 +595,13 @@ namespace Battle
 
         void HandleInput()
         {
-            if (Input.GetKeyDown(KeyCode.D)) TryDDraw();
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                // 카드 사용 연출 중 / 카드 선택·픽커·더미보기 모드 중에는 D 드로우 금지
+                if (_cardPresenting) return;
+                if (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode || handHud.IsViewerMode)) return;
+                TryDDraw();
+            }
             // 각성은 속성 카드 10장 사용 시 즉시 발동 — 별도 입력 키 없음.
         }
 
