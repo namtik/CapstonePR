@@ -106,6 +106,17 @@ namespace Battle.EditorTools
                 }
             }
 
+            // 플레이 중: 체크 변경을 즉시 전투에 반영(다음 전투/각성 기다리지 않고)
+            if (Application.isPlaying)
+            {
+                EditorGUILayout.Space(2);
+                if (GUILayout.Button("▶ 지금 적용 (보유 콤보 런타임 갱신)"))
+                {
+                    serializedObject.ApplyModifiedProperties(); // 체크 변경 먼저 반영
+                    (target as NewBattleController)?.RefreshOwnedCombosRuntime();
+                }
+            }
+
             EditorGUILayout.EndVertical();
         }
 

@@ -48,6 +48,8 @@ namespace Battle
         [SerializeField] private bool useComboDatabase = true;
         [Tooltip("보유할 콤보 RefComboID(1000~1019). 비우면 전체 보유. 예: 1000,1004,1008")]
         [SerializeField] private List<int> ownedComboRefIds = new List<int>();
+        [Tooltip("[테스트] 콤보 보상 UI 전까지 수동 획득용 — 이 RefComboID(1000~1019)를 컨텍스트 메뉴 '콤보 1개 추가'로 보유에 더함.")]
+        [SerializeField] private int debugAddComboRefId = 1000;
 
         [Header("각성 콤보 이펙트")]
         [Tooltip("각성 종료 시 Damage 콤보가 적에게 들어갈 때 재생할 이펙트 이름. " +
@@ -336,6 +338,51 @@ namespace Battle
             }
             Log("전투 종료");
         }
+
+        // ─────────────────────────────────────────────────────────────
+        // [테스트] 보유 콤보 런타임 추가/갱신 (콤보 보상 UI 전까지 수동 획득용)
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>인스펙터 ownedComboRefIds 리스트를 즉시 적용(런타임 콤보 갱신). 각성 중에는 desync 방지 위해 보류(다음 각성부터 반영).</summary>
+        [ContextMenu("[테스트] 보유 콤보 갱신 (인스펙터 리스트 적용)")]
+        public void RefreshOwnedCombosRuntime()
+        {
+            if (!useComboDatabase)
+            {
+                Debug.LogWarning("[NewBattle] useComboDatabase가 OFF — 콤보 DB로 갱신하려면 ON으로 두세요.");
+                return;
+            }
+            if (_awakenActive)
+            {
+                Debug.LogWarning("[NewBattle] 각성 중에는 콤보 갱신 보류 — 다음 각성부터 반영됩니다.");
+                return;
+            }
+            ownedComboSkills = ComboSkillDatabase.BuildOwnedCombos(ownedComboRefIds);
+            _comboCooldown = new int[ownedComboSkills.Count];
+            if (handHud != null) handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+            Debug.Log($"[NewBattle] 보유 콤보 갱신 — {ownedComboSkills.Count}개 " +
+                      (ownedComboRefIds != null && ownedComboRefIds.Count > 0
+                          ? $"(refIds: {string.Join(",", ownedComboRefIds)})" : "(전체)"));
+        }
+
+        /// <summary>콤보 1개(refComboId 1000~1019) 추가 후 즉시 적용. 추후 콤보 보상이 이 메서드를 호출하면 됨.</summary>
+        public void AddOwnedCombo(int refComboId)
+        {
+            if (ownedComboRefIds == null) ownedComboRefIds = new List<int>();
+            if (ownedComboRefIds.Contains(refComboId))
+            {
+                Debug.Log($"[NewBattle] 콤보 {refComboId} 이미 보유 중.");
+                return;
+            }
+            // ⚠️ 빈 리스트(=전체 보유) 상태에서 처음 추가하면 '지정 집합'으로 전환됨(전체→해당 1개).
+            ownedComboRefIds.Add(refComboId);
+            useComboDatabase = true;
+            RefreshOwnedCombosRuntime();
+            Debug.Log($"[NewBattle] 콤보 추가: {refComboId}");
+        }
+
+        [ContextMenu("[테스트] 콤보 1개 추가 (debugAddComboRefId)")]
+        void DebugAddOneCombo() => AddOwnedCombo(debugAddComboRefId);
 
         void ResetContextFlags()
         {

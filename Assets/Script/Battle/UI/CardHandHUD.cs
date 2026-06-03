@@ -87,6 +87,8 @@ namespace Battle.UI
         [Tooltip("anchor 기준 오프셋. y 음수 = 아래(HP바 아래).")]
         [FormerlySerializedAs("feverGaugeOffset")]
         [SerializeField] private Vector2 awakenGaugeOffset = new Vector2(0f, -32f);
+        [Tooltip("anchor(Player.hpBar) 미배선 시 게이지를 표시할 위치 — 화면 상단 중앙 기준(y 음수=아래로). hpBar 배선되면 무시.")]
+        [SerializeField] private Vector2 awakenGaugeFallbackPos = new Vector2(0f, -40f);
         [Tooltip("게이지 위에 표시할 라벨 (예: 6/10, 10.0s). 비우면 게이지 자동 생성 시 함께 생성.")]
         [FormerlySerializedAs("feverGaugeLabel")]
         [SerializeField] private TMP_Text awakenGaugeLabel;
@@ -409,9 +411,14 @@ namespace Battle.UI
 
             RefitAwakenGaugeToAnchor();
 
-            // anchor가 없는 fallback의 경우에도 게이지를 캔버스 최상단으로 (다른 UI에 가려지지 않게)
+            // anchor(Player.hpBar) 미배선 시: 정중앙(0,0)은 적/카드에 가려 안 보이므로 상단 중앙 가시 위치로 배치
             if (awakenGaugeAnchor == null && awakenGauge != null)
-                ((RectTransform)awakenGauge.transform).SetAsLastSibling();
+            {
+                var grect = (RectTransform)awakenGauge.transform;
+                grect.anchorMin = grect.anchorMax = grect.pivot = new Vector2(0.5f, 1f);
+                grect.anchoredPosition = awakenGaugeFallbackPos;
+                grect.SetAsLastSibling();
+            }
         }
 
         void RefitAwakenGaugeToAnchor()

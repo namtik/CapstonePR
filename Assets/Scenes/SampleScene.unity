@@ -9566,6 +9566,7 @@ MonoBehaviour:
   ownedComboSkills: []
   useComboDatabase: 1
   ownedComboRefIds: e8030000
+  debugAddComboRefId: 1000
   awakenDamageEffectName: Fire_ATK
   awakenDamageEffectSpread: {x: 220, y: 80}
   awakenShakeIntensityPerHit: 0.6
@@ -14097,6 +14098,10 @@ PrefabInstance:
     - target: {fileID: 113969877568408591, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
       propertyPath: m_Name
       value: menubar
+      objectReference: {fileID: 0}
+    - target: {fileID: 113969877568408591, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 696245774759462229, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
       propertyPath: m_AnchoredPosition.x
