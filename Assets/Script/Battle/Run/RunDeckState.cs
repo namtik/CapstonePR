@@ -19,6 +19,12 @@ namespace Battle
         private bool _seeded;
         private int _permanentAttackPower; // 땅410 등: 런 동안 지속되는 영구 공격력 보너스
 
+        // ── 적 AI용 런 플레이어 프로파일 (f4 방어성향 / f7 피버사이클) ──
+        private const int PROFILE_WINDOW = 10;
+        private readonly Queue<Battle.AI.CardCategory> _recentUses = new Queue<Battle.AI.CardCategory>();
+        private int _awakenActivations;
+        private int _nonAwakenCardUses;
+
         public IReadOnlyList<CardDatabase.DeckEntry> RunDeck => _runDeck;
 
         /// <summary>땅410 등 영구 공격력 보너스(런 동안 지속). 전투 시작 시 Ctx.attackPowerBonus로 복원.</summary>
@@ -29,6 +35,31 @@ namespace Battle
             _permanentAttackPower += n;
             Debug.Log($"[RunDeck] 영구 공격력 +{n} (누적 {_permanentAttackPower})");
         }
+
+        /// <summary>f4 방어성향 = 최근 10회 카드사용 중 방어(방어/회복) 카테고리 비율(/10 고정).</summary>
+        public float DefenseWindowRatio
+        {
+            get
+            {
+                if (_recentUses.Count == 0) return 0f;
+                int def = 0;
+                foreach (var cat in _recentUses) if (cat == Battle.AI.CardCategory.Defense) def++;
+                return def / (float)PROFILE_WINDOW;
+            }
+        }
+        public int AwakenActivations => _awakenActivations;
+        public int NonAwakenCardUses => _nonAwakenCardUses;
+
+        /// <summary>일반(비각성) 카드 1장 사용 기록 — 최근 윈도우 갱신 + 비각성 사용 누적.</summary>
+        public void RecordCardUse(Battle.AI.CardCategory category)
+        {
+            _recentUses.Enqueue(category);
+            while (_recentUses.Count > PROFILE_WINDOW) _recentUses.Dequeue();
+            _nonAwakenCardUses++;
+        }
+
+        /// <summary>각성(피버) 발동 1회 기록.</summary>
+        public void RecordAwakenActivation() => _awakenActivations++;
 
         /// <summary>덱에 든 카드 총 장수(수량 합).</summary>
         public int TotalCardCount
@@ -112,6 +143,9 @@ namespace Battle
             _runDeck.Clear();
             _seeded = false;
             _permanentAttackPower = 0;
+            _recentUses.Clear();
+            _awakenActivations = 0;
+            _nonAwakenCardUses = 0;
             EnsureSeeded();
             Debug.Log("[RunDeck] 런 리셋 — 기본 덱으로 복원");
         }

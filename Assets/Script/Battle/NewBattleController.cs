@@ -70,6 +70,15 @@ namespace Battle
         [Header("디버그")]
         [SerializeField] private bool logVerbose = true;
 
+        [Header("적 AI (방해행동 선택)")]
+        [Tooltip("ON이면 FCM-RBFN 학습 모델로 방해행동을 선택. OFF면 랜덤.")]
+        [SerializeField] private bool useAiDisruption = true;
+        [Tooltip("탐험 비율 — 데이터 수집 시 행동 다양성 확보용(0=항상 최적, 0.1~0.2=수집용). 학습 데이터가 충분하면 0으로.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float aiExplorationEpsilon = 0.15f;
+        [Tooltip("ON이면 각 방해행동 결정을 CSV로 기록(persistentDataPath/ai_logs) → 오프라인 재학습용.")]
+        [SerializeField] private bool logAiDecisions = false;
+
         private readonly CardDeckSystem _deck = new CardDeckSystem();
         private readonly CardEffectResolver _resolver = new CardEffectResolver();
         private readonly CardEffectContext _ctx = new CardEffectContext();
@@ -412,6 +421,9 @@ namespace Battle
                 _ctx.usedCardNameCounts.TryGetValue(name, out int cur);
                 _ctx.usedCardNameCounts[name] = cur + 1;
             }
+
+            // 적 AI 런 프로파일: 일반(비각성) 카드 사용 기록 (f4 방어성향 / f7 비각성 사용 수)
+            RunDeckState.Instance?.RecordCardUse(Battle.AI.EnemyDisruptionAI.Classify(card.data));
         }
 
         /// <summary>물15(214) — 플레이어에게 적용된 모든 저주 해제.</summary>
@@ -876,6 +888,7 @@ namespace Battle
         void ActivateAwaken()
         {
             _awakenActive = true;
+            RunDeckState.Instance?.RecordAwakenActivation(); // 적 AI 런 프로파일: 피버사이클(f7)
             _elementInputCount = 0;
             _awakenTimeRemaining = AWAKEN_DURATION_SECONDS;
             _awakenMaxTime = AWAKEN_DURATION_SECONDS;
@@ -1111,17 +1124,45 @@ namespace Battle
         // 방해 행동 — EnemyController.HandleMidPattern이 호출
         // ─────────────────────────────────────────────────────────────
 
+        /// <summary>AI 미사용/폴백 — 가용 행동(저주/탈진/흡수/강화 + 회복(쿨다운 가용) + 버리기(패≥2)) 중 무작위 1개.</summary>
+        int RandomFallbackPick(bool recoverReady)
+        {
+            var pool = new List<int> { 0, 1, 2, 3 };
+            if (recoverReady) pool.Add(4);
+            if (_deck.HandCount >= 2) pool.Add(5);
+            return pool[Random.Range(0, pool.Count)];
+        }
+
         /// <summary>
         /// 기획서 0.6v + 확장 [방해행동]: 적이 특정 행동게이지(중간 단계)에 도달하면 호출.
-        /// 저주 / 탈진 / 흡수 / 강화 / 회복(쿨다운) / 버리기 중 무작위 1개 발동.
+        /// 저주 / 탈진 / 흡수 / 강화 / 회복(쿨다운) / 버리기 중 1개 — FCM-RBFN AI가 선택(폴백 랜덤). 실행 분기는 공통.
         /// </summary>
         public string TriggerDisruption()
         {
-            // 0 저주 / 1 탈진 / 2 흡수 / 3 강화 / 4 회복(쿨다운) / 5 버리기(패 있을 때만)
-            var pool = new List<int> { 0, 1, 2, 3 };
-            if (_recoverCooldown <= 0) pool.Add(4);
-            if (_deck.HandCount > 0) pool.Add(5);
-            int pick = pool[Random.Range(0, pool.Count)];
+            // FCM-RBFN 학습 모델로 방해행동 선택(랜덤 폴백). 6개 실행 분기는 그대로 재사용.
+            bool recoverReady = _recoverCooldown <= 0;
+            int pick;
+            if (useAiDisruption && Battle.AI.EnemyAiModel.Loaded)
+            {
+                try
+                {
+                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon);
+                    pick = decision.action;
+                    if (logVerbose)
+                        Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
+                            $" → 선택={Battle.AI.EnemyAiModel.ActionNames[pick]}{(decision.explored ? " (탐험)" : "")}");
+                    if (logAiDecisions) Battle.AI.DisruptionLogger.Log(decision);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[적AI] 추론 실패 → 랜덤 폴백: {e.Message}");
+                    pick = RandomFallbackPick(recoverReady);
+                }
+            }
+            else
+            {
+                pick = RandomFallbackPick(recoverReady);
+            }
 
             // 회복 쿨다운 진행 — 회복이 아닌 행동이 발동되면 1 감소(회복 후 다른 행동 2회 후 재사용)
             if (pick != 4 && _recoverCooldown > 0) _recoverCooldown--;
