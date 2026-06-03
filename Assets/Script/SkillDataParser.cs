@@ -44,6 +44,8 @@ public class SkillDataParser : MonoBehaviour
 
     void LoadSkillData()
     {
+        Dictionary<string, Sprite> skillIconLookup = BuildSkillIconLookup();
+
         // 로드할 파일명 "SkillDB"
         TextAsset csvData = Resources.Load<TextAsset>("SkillDB");
 
@@ -85,7 +87,7 @@ public class SkillDataParser : MonoBehaviour
                 // 엑셀 줄바꿈 문자 및 양끝 따옴표 제거
                 skill.description = row[9].Replace("\r", "").Replace("\"", "");
 
-                skill.skillIcon = Resources.Load<Sprite>($"SkillIcons/{skill.iconName}");
+                skill.skillIcon = ResolveSkillIcon(skill.iconName, skillIconLookup);
                 allSkills.Add(skill);
 
                 if (!skillDic.ContainsKey(skill.id))
@@ -100,6 +102,62 @@ public class SkillDataParser : MonoBehaviour
         }
 
         Debug.Log($"총 {skillDic.Count}개의 스킬 로드 완료!");
+    }
+
+    Dictionary<string, Sprite> BuildSkillIconLookup()
+    {
+        var lookup = new Dictionary<string, Sprite>(StringComparer.OrdinalIgnoreCase);
+        Sprite[] sprites = Resources.LoadAll<Sprite>("SkillIcons");
+        foreach (Sprite sprite in sprites)
+        {
+            if (sprite == null) continue;
+            AddIconAlias(lookup, sprite.name, sprite);
+            AddIconAlias(lookup, sprite.name.Replace(" ", string.Empty), sprite);
+            AddIconAlias(lookup, sprite.name.Replace("_", string.Empty), sprite);
+            AddIconAlias(lookup, sprite.name.Replace("_", string.Empty).Replace(" ", string.Empty), sprite);
+        }
+        return lookup;
+    }
+
+    static void AddIconAlias(Dictionary<string, Sprite> lookup, string alias, Sprite sprite)
+    {
+        if (string.IsNullOrWhiteSpace(alias) || sprite == null) return;
+        if (!lookup.ContainsKey(alias))
+            lookup.Add(alias, sprite);
+    }
+
+    Sprite ResolveSkillIcon(string iconName, Dictionary<string, Sprite> lookup)
+    {
+        if (string.IsNullOrWhiteSpace(iconName))
+            return null;
+
+        string key = iconName.Trim();
+
+        // 1) 기존 방식 우선
+        Sprite direct = Resources.Load<Sprite>($"SkillIcons/{key}");
+        if (direct != null) return direct;
+
+        // 2) 파일명에 " 1"이 붙은 경우 대응
+        Sprite withSuffix = Resources.Load<Sprite>($"SkillIcons/{key} 1");
+        if (withSuffix != null) return withSuffix;
+
+        // 3) 사전 기반 유사 키 매칭
+        if (lookup.TryGetValue(key, out Sprite byKey))
+            return byKey;
+
+        string compact = key.Replace(" ", string.Empty);
+        if (lookup.TryGetValue(compact, out Sprite byCompact))
+            return byCompact;
+
+        string noUnderscore = key.Replace("_", string.Empty);
+        if (lookup.TryGetValue(noUnderscore, out Sprite byNoUnderscore))
+            return byNoUnderscore;
+
+        string compactNoUnderscore = compact.Replace("_", string.Empty);
+        if (lookup.TryGetValue(compactNoUnderscore, out Sprite byCompactNoUnderscore))
+            return byCompactNoUnderscore;
+
+        return null;
     }
 
     public SkillData GetSkill(int id)

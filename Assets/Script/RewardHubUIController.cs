@@ -86,6 +86,30 @@ public class RewardHubUIController : MonoBehaviour
             Debug.LogError("[RewardHubUIController] skillRewardUI reference is missing.");
     }
 
+    /// <summary>
+    /// 허브 버튼 루트 없이 스킬 보상 카드만 단독으로 표시한다.
+    /// 신규 전투(카드 보상 직후)에서 사용.
+    /// </summary>
+    public void OpenSkillRewardStandalone()
+    {
+        ResolveReferences();
+
+        rewardFlowActive = false;
+        skillClaimedThisReward = false;
+        Time.timeScale = 0f;
+
+        SetOnly(skillRewardRoot);
+        if (skillRewardUI != null)
+        {
+            skillRewardUI.SetReturnToMapAfterSelection(false);
+            skillRewardUI.ShowRewardOptions();
+        }
+        else
+        {
+            Debug.LogError("[RewardHubUIController] OpenSkillRewardStandalone failed: skillRewardUI reference is missing.");
+        }
+    }
+
     public void OpenCardUpgrade()
     {
         if (!rewardFlowActive)
