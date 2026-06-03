@@ -80,6 +80,11 @@ namespace Battle
         [SerializeField] private float aiExplorationEpsilon = 0.15f;
         [Tooltip("ON이면 각 방해행동 결정을 CSV로 기록(persistentDataPath/ai_logs) → 오프라인 재학습용.")]
         [SerializeField] private bool logAiDecisions = false;
+        [Tooltip("ON이면 게임 중 실제 결과로 적 AI Q-가중치를 미세조정(세션 단위 누적, 오프라인 베이스에서 시작).")]
+        [SerializeField] private bool onlineLearning = false;
+        [Tooltip("온라인 보상 혼합 — 1=휴리스틱(유형적합)만, 0=실결과(ΔHP)만. 기본 0.5.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float rewardBlend = 0.5f;
 
         private readonly CardDeckSystem _deck = new CardDeckSystem();
         private readonly CardEffectResolver _resolver = new CardEffectResolver();
@@ -132,6 +137,14 @@ namespace Battle
         private int _curseRemainingUses;
         // 방해행동(회복) 쿨다운 — 회복 발동 후 다른 방해행동 2회 수행해야 재사용.
         private int _recoverCooldown;
+
+        // 온라인 학습 — 직전 방해 결정의 보상 윈도우(동시 1개)
+        private const float REWARD_WINDOW_SECONDS = 4f;
+        private Battle.AI.AiDecision? _pendingDisruption;
+        private int _pendingPlayerHpAtFire;
+        private float _pendingEnemyHpAtFire;
+        private float _pendingEnemyMaxAtFire;
+        private float _rewardWindowRemaining;
 
         // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
         private int _skipNextGaugeCount;
@@ -212,6 +225,7 @@ namespace Battle
 
             HandleInput();
             TickAwakenTimer();
+            TickDisruptionReward();
             UpdateAwakenText();
             SyncChainStatus();
         }
@@ -328,6 +342,7 @@ namespace Battle
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
+            if (_pendingDisruption.HasValue) CloseDisruptionReward(); // 온라인 학습: 진행 중 보상 윈도우 마감
             _deck.EndBattle();
             if (handHud != null)
             {
@@ -1199,12 +1214,13 @@ namespace Battle
             {
                 try
                 {
-                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon);
+                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon, onlineLearning);
                     pick = decision.action;
                     if (logVerbose)
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
                             $" → 선택={Battle.AI.EnemyAiModel.ActionNames[pick]}{(decision.explored ? " (탐험)" : "")}");
                     if (logAiDecisions) Battle.AI.DisruptionLogger.Log(decision);
+                    if (onlineLearning) BeginDisruptionRewardWindow(decision);
                 }
                 catch (System.Exception e)
                 {
@@ -1293,6 +1309,49 @@ namespace Battle
                 while (!picked) yield return null;
                 done++;
             }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 온라인 학습 — 방해행동 보상 윈도우
+        // ─────────────────────────────────────────────────────────────
+
+        void BeginDisruptionRewardWindow(Battle.AI.AiDecision decision)
+        {
+            if (_pendingDisruption.HasValue) CloseDisruptionReward(); // 직전 pending 먼저 마감(동시 1개)
+            _pendingDisruption = decision;
+            _pendingPlayerHpAtFire = _player != null ? _player.currentHp : 0;
+            _pendingEnemyHpAtFire = _enemyStat != null ? _enemyStat.currentHp : 0f;
+            _pendingEnemyMaxAtFire = _enemyStat != null ? _enemyStat.maxHp : 1f;
+            _rewardWindowRemaining = REWARD_WINDOW_SECONDS;
+        }
+
+        void TickDisruptionReward()
+        {
+            if (!_pendingDisruption.HasValue) return;
+            _rewardWindowRemaining -= Time.deltaTime;
+            if (_rewardWindowRemaining <= 0f) CloseDisruptionReward();
+        }
+
+        /// <summary>보상 윈도우 종료 — 결과(ΔHP)+휴리스틱 혼합 보상으로 온라인 학습 1스텝.</summary>
+        void CloseDisruptionReward()
+        {
+            if (!_pendingDisruption.HasValue) return;
+            var d = _pendingDisruption.Value;
+            _pendingDisruption = null;
+
+            // 결과: 윈도우 동안 플레이어 HP 감소율(AI에 +) − 적 HP 감소율(AI에 −)
+            float playerLost = (_player != null && _player.maxHp > 0)
+                ? Mathf.Clamp01((_pendingPlayerHpAtFire - _player.currentHp) / (float)_player.maxHp) : 0f;
+            float enemyLost = (_enemyStat != null && _pendingEnemyMaxAtFire > 0f)
+                ? Mathf.Clamp01((_pendingEnemyHpAtFire - _enemyStat.currentHp) / _pendingEnemyMaxAtFire) : 0f;
+            float outcome = Mathf.Clamp(2f * playerLost - 2f * enemyLost, -1f, 1f);
+
+            float heur = Battle.AI.EnemyDisruptionAI.HeuristicReward(d);
+            float reward = rewardBlend * heur + (1f - rewardBlend) * outcome;
+
+            Battle.AI.OnlineQLearner.Observe(d.membership, d.context, d.action, reward);
+            if (logVerbose)
+                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[d.action]} heur={heur:+0.0;-0.0} out={outcome:+0.00;-0.00} r={reward:+0.00;-0.00} drift={Battle.AI.OnlineQLearner.WeightDriftFromBase():F3}");
         }
 
         /// <summary>외부(NewCardView)가 카드가 저주되었는지 확인용.</summary>

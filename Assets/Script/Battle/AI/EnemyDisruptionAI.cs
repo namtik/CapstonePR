@@ -198,12 +198,13 @@ namespace Battle.AI
         // ── 결정 ──────────────────────────────────────────────────
         /// <summary>현재 상태로 방해행동을 고른다. epsilon&gt;0이면 탐험(데이터 수집용 다양성).</summary>
         public static AiDecision Decide(CardDeckSystem deck, EnemyStat enemyStat, Player player,
-                                        bool recoverReady, float epsilon)
+                                        bool recoverReady, float epsilon, bool onlineLearning = false)
         {
             float[] x = BuildFeatures();
             float[] c = BuildContext(deck, enemyStat, player, out int handCount);
             float[] mu = FuzzyMembership(x);
-            float[] q = QTotal(mu, c);
+            // 온라인 학습 모드면 세션 학습 가중치로 Q 계산(베이스에서 warm-start), 아니면 고정 베이스.
+            float[] q = onlineLearning ? OnlineQLearner.QTotal(mu, c) : QTotal(mu, c);
             bool[] mask = AvailabilityMask(handCount, recoverReady);
 
             int action;
@@ -238,6 +239,67 @@ namespace Battle.AI
                 recoverReady = recoverReady,
                 explored = explored
             };
+        }
+
+        // ── 휴리스틱 보상 (온라인 학습용 — Python action_is_good 이식) ──
+        /// <summary>유형(argmax μ)·상황에 알맞은 행동이면 +1, 아니면 -1. 온라인 보상의 휴리스틱 항.</summary>
+        public static float HeuristicReward(AiDecision d)
+        {
+            if (d.membership == null || d.context == null) return 0f;
+            int type = ArgMax(d.membership);          // 0..4
+            return ActionIsGood(type, d.action, d.context[0], d.handCount, d.context) ? 1f : -1f;
+        }
+
+        // ctx: [0 enemy_hp,1 player_hp,2 hand_fire,3 hand_frag,4 hand_chain,5 hand_def,6 hand_null,7 hand_count/10]
+        static bool ActionIsGood(int type, int a, float enemyHp, int handCount, float[] ctx)
+        {
+            // 유형 무관 컨텍스트 강수
+            if (a == 5 && handCount >= 4) return true;   // 버리기: 패 과부하
+            if (a == 4 && enemyHp <= 0.3f) return true;  // 회복: 빈사
+
+            if (!IsTypeCorrect(type, a)) return false;   // 유형 적합 행동만
+            if (a == 0)                                  // 저주: 압박 속성 손패 비율 ≥ 0.25
+            {
+                int attr = CurseAttrCtxIndex(type);
+                return attr >= 0 && ctx[attr] >= 0.25f;
+            }
+            if (a == 5) return handCount >= 2;           // 버리기
+            if (a == 4) return enemyHp <= 0.5f;          // 회복
+            return true;                                 // 탈진/흡수/강화
+        }
+
+        // 유형별 알맞은 행동 (0저주 1탈진 2흡수 3강화 4회복 5버리기)
+        static bool IsTypeCorrect(int type, int a)
+        {
+            switch (type)
+            {
+                case 0: return a == 0;                     // 화상형: 저주
+                case 1: return a == 1;                     // 파편형: 탈진
+                case 2: return a == 0 || a == 3 || a == 5; // 연속타격형: 저주/강화/버리기
+                case 3: return a == 2;                     // 피버형: 흡수
+                case 4: return a == 3 || a == 4;           // 안정형: 강화/회복
+                default: return false;
+            }
+        }
+
+        // 유형이 압박하는 속성의 context 인덱스(저주 유효성용). 피버형은 없음(-1).
+        static int CurseAttrCtxIndex(int type)
+        {
+            switch (type)
+            {
+                case 0: return 2; // 화상형 → hand_fire
+                case 1: return 3; // 파편형 → hand_frag
+                case 2: return 4; // 연속타격형 → hand_chain
+                case 4: return 5; // 안정형 → hand_def
+                default: return -1;
+            }
+        }
+
+        static int ArgMax(float[] v)
+        {
+            int idx = 0; float best = v[0];
+            for (int i = 1; i < v.Length; i++) if (v[i] > best) { best = v[i]; idx = i; }
+            return idx;
         }
     }
 }
