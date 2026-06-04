@@ -9621,8 +9621,7 @@ MonoBehaviour:
   aiExplorationEpsilon: 0.15
   logAiDecisions: 1
   onlineLearning: 1
-  rewardSafetyTimeout: 30
-  awakenRewardWeight: 1
+  disruptionTrackTimeout: 25
 --- !u!1 &1401766510
 GameObject:
   m_ObjectHideFlags: 0
@@ -14465,7 +14464,8 @@ MonoBehaviour:
   toggleKey: 9
   displayDuration: 4
   alwaysVisible: 1
-  koreanFont: {fileID: 11400000, guid: 9963c0f83d2a95641a8a9fb171db72d1, type: 2}
+  koreanFont: {fileID: 11400000, guid: 83d4353681570c4488253596361979fa, type: 2}
+  uiScale: 2
 --- !u!4 &1958806591
 Transform:
   m_ObjectHideFlags: 0

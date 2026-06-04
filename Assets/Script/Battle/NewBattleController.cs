@@ -1360,8 +1360,10 @@ namespace Battle
         {
             reward = Mathf.Clamp(reward, -1f, 1f);
             Battle.AI.OnlineQLearner.Observe(decision.membership, decision.context, action, reward);
+            float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
+            Battle.AI.AiDebug.PublishReward(action, reward, true, drift); // 디버그 오버레이용
             if (logVerbose)
-                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[action]} r={reward:+0.00;-0.00} (즉시) drift={Battle.AI.OnlineQLearner.WeightDriftFromBase():F3}");
+                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[action]} r={reward:+0.00;-0.00} (즉시) drift={drift:F3}");
         }
 
         // 지연형 발현 → 보상 확정.
@@ -1371,8 +1373,10 @@ namespace Battle
             var t = _track; _track = null;
             reward = Mathf.Clamp(reward, -1f, 1f);
             Battle.AI.OnlineQLearner.Observe(t.decision.membership, t.decision.context, t.action, reward);
+            float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
+            Battle.AI.AiDebug.PublishReward(t.action, reward, false, drift); // 디버그 오버레이용
             if (logVerbose)
-                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={reward:+0.00;-0.00} (발현) drift={Battle.AI.OnlineQLearner.WeightDriftFromBase():F3}");
+                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={reward:+0.00;-0.00} (발현) drift={drift:F3}");
         }
 
         // 발현 못 하고 끝남(타임아웃/전투종료) → 저주는 자해/회피분 반영, 그 외 미발현 음수.

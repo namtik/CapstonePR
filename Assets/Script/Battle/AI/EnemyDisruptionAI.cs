@@ -16,6 +16,7 @@ namespace Battle.AI
         public float[] context;     // [enemy_hp, player_hp, hand_fire, hand_frag, hand_chain, hand_def, hand_null, hand_count/10]
         public float[] membership;  // μ [5]
         public float[] q;           // Q [6]
+        public bool[] mask;         // 가용성 마스크 [6] (false=상태의존/쿨다운으로 제외)
         public int handCount;       // 원값
         public bool recoverReady;
         public bool explored;       // epsilon 탐험으로 무작위 선택됐는지
@@ -224,17 +225,20 @@ namespace Battle.AI
                 }
             }
 
-            return new AiDecision
+            var decision = new AiDecision
             {
                 action = action,
                 features = x,
                 context = c,
                 membership = mu,
                 q = q,
+                mask = mask,
                 handCount = handCount,
                 recoverReady = recoverReady,
                 explored = explored
             };
+            AiDebug.PublishDecision(decision); // 디버그 오버레이용 게시(폴링)
+            return decision;
         }
 
         // ── 휴리스틱 보상 (온라인 학습용 — Python action_is_good 이식) ──

@@ -9,6 +9,7 @@
 코드 병합·컴파일(`dotnet build` 오류 0) 완료. 이제 **Unity Play로 런타임 검증**만 남음:
 
 1. `NewBattleController` 인스펙터: **`onlineLearning` ON**, **`logVerbose` ON** (선택 `aiExplorationEpsilon` 0.15 유지).
+   - 화면 좌상단 **FCM Debug Overlay**(`Tab` 토글, 기본 항상표시)로 특성 x[6]·FCM유형 μ[5]·컨텍스트·Q값/마스크/선택·**보상 r+drift**를 실시간 확인. (`AiDebug` 허브 폴링 — `EnemyDisruptionAI.Decide`가 결정을, 보상 정산이 reward를 게시.)
 2. 한 판 플레이하며 콘솔 `[적AI학습]` 로그 확인:
    - **즉시형**(흡수/회복/버리기): `... r=±0.00 (즉시) drift=...` — 발동 즉시 정산.
    - **발현형**(저주/탈진/강화): `... r=±0.00 (발현) drift=...` — 자해발생/카드뽑힘/적공격 시 정산.
