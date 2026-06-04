@@ -591,6 +591,8 @@ namespace Battle.UI
         {
             _isHovering = true;
             if (Card == null || _isDragging) return;
+            // 선택 모드에서 선택 불가(필터/제외) 카드는 hover 강조하지 않음 — 잘못된 시각 피드백 방지
+            if (Hud != null && Hud.IsSelectionMode && !Hud.IsCardSelectable(Card)) return;
             CancelDrawIntro(); // hover 시작하면 등장 연출을 끝내고 hover 표현으로 전환
             ApplyScale(hoverScaleMultiplier);
             ApplyHoverOffset(true);

@@ -214,6 +214,7 @@ namespace Battle.UI
             EnsurePickerRoot();
 
             if (handRoot != null) handRoot.SetAsFirstSibling();
+            SetHandInteractable(false); // 뷰어 중 손패 비활성(픽커와 동일 — 손패가 뷰어 위에 남아 가로채기 방지)
             if (dimOverlay != null)
             {
                 dimOverlay.gameObject.SetActive(true);
@@ -243,6 +244,7 @@ namespace Battle.UI
             if (dimOverlay != null) dimOverlay.gameObject.SetActive(false);
             if (selectionPromptText != null) selectionPromptText.gameObject.SetActive(false);
             if (handRoot != null) handRoot.SetAsLastSibling();
+            SetHandInteractable(true);
             BringAwakenGaugeToFront();
         }
 
@@ -1060,6 +1062,10 @@ namespace Battle.UI
 
             // 순서: handRoot(맨 뒤) → dim → 안내문 → pickerRoot(최상단)
             if (handRoot != null) handRoot.SetAsFirstSibling();
+            // 손패 비활성(흐림 + raycast 차단): handRoot가 픽커와 다른 부모/캔버스 계층이면
+            // SetAsFirstSibling만으로는 손패가 픽커 위에 남아 hover를 가로채고(엉뚱한 패 강조)
+            // 파편 픽커를 가린다(파편 강조 안 됨). CanvasGroup으로 계층과 무관하게 손패를 죽인다.
+            SetHandInteractable(false);
             if (dimOverlay != null)
             {
                 dimOverlay.gameObject.SetActive(true);
@@ -1087,7 +1093,24 @@ namespace Battle.UI
             if (selectionPromptText != null) selectionPromptText.gameObject.SetActive(false);
             // 손패가 SetAsFirstSibling 됐던 것 복원 — 최상단으로 다시 올림
             if (handRoot != null) handRoot.SetAsLastSibling();
+            SetHandInteractable(true);
             BringAwakenGaugeToFront();
+        }
+
+        // 픽커/뷰어 모드에서 손패를 비활성화(흐림 + raycast 차단)해, 손패가 픽커 위에 그려지거나
+        // hover/클릭을 가로채는 것을 막는다. handRoot CanvasGroup으로 캔버스 계층과 무관하게 보장.
+        private CanvasGroup _handCanvasGroup;
+        void SetHandInteractable(bool on)
+        {
+            if (handRoot == null) return;
+            if (_handCanvasGroup == null)
+            {
+                _handCanvasGroup = handRoot.GetComponent<CanvasGroup>();
+                if (_handCanvasGroup == null) _handCanvasGroup = handRoot.gameObject.AddComponent<CanvasGroup>();
+            }
+            _handCanvasGroup.blocksRaycasts = on;
+            _handCanvasGroup.interactable = on;
+            _handCanvasGroup.alpha = on ? 1f : 0.25f;
         }
 
         void EnsurePickerRoot()
@@ -1235,6 +1258,16 @@ namespace Battle.UI
 
             dimOverlay = rect;
             dimOverlay.gameObject.SetActive(false);
+        }
+
+        /// <summary>선택 모드에서 이 카드가 선택 가능한지(필터/제외 반영). 비선택 모드면 true.</summary>
+        public bool IsCardSelectable(CardInstance card)
+        {
+            if (!IsSelectionMode) return true;
+            if (card == null) return false;
+            if (_selectionExcludeCard != null && card == _selectionExcludeCard) return false;
+            if (_selectionFilter != null && !_selectionFilter(card)) return false;
+            return true;
         }
 
         /// <summary>NewCardView가 클릭됐을 때 호출. 픽커/선택 모드면 콜백 발동.</summary>
