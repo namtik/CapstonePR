@@ -135,17 +135,22 @@ namespace Battle
         // 방해행동(회복) 쿨다운 — 회복 발동 후 다른 방해행동 2회 수행해야 재사용.
         private int _recoverCooldown;
 
-        // 온라인 학습 — 단기 종합 결과 보상 (방해~다음 적 공격 구간의 '적 우세도' 변화, 동시 1개)
-        [Tooltip("방해 보상 정산까지 다음 적 공격이 오지 않을 때의 안전 타임아웃(초).")]
-        [SerializeField] private float rewardSafetyTimeout = 30f;
-        [Tooltip("보상의 각성 지연 항 가중치 — 플레이어 각성 게이지가 줄면 적 유리(+).")]
-        [SerializeField] private float awakenRewardWeight = 1f;
-        private Battle.AI.AiDecision? _pendingDisruption;
-        private int _pendingPlayerHpAtFire;
-        private float _pendingEnemyHpAtFire;
-        private float _pendingEnemyMaxAtFire;
-        private int _pendingAwakenAtFire;
-        private float _rewardElapsed;
+        // ── 온라인 학습: 방해행동 효과 추적 보상 (각 방해의 '의도 달성'으로 학습, 동시 1개) ──
+        // 즉시형(흡수/회복/버리기)=발동 직전 상황으로 즉시 측정. 지연형(저주/탈진/강화)=발현 이벤트까지 추적.
+        [Tooltip("지연형 방해가 발현되지 않은 채 흐른 최대 시간(초). 초과하면 미발현 보상으로 마감.")]
+        [SerializeField] private float disruptionTrackTimeout = 25f;
+        private DisruptionTrack _track;       // 진행 중 지연형 추적(동시 1개)
+        const float UNFIRED_REWARD = -0.3f;   // 발현 못 한 지연형 — 약한 음수(실패와 구분)
+
+        class DisruptionTrack
+        {
+            public Battle.AI.AiDecision decision;
+            public int action;                // 0 저주 / 1 탈진 / 3 강화
+            public float elapsed;
+            public int curseHits;             // 저주: 실제 자해 발생 횟수
+            public CardInstance exhaustCard;  // 탈진: 삽입한 카드 인스턴스
+            public int playerHpAtFire;        // 강화: 발동 시 플레이어 HP
+        }
 
         // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
         private int _skipNextGaugeCount;
@@ -203,6 +208,10 @@ namespace Battle
             _ctx.currentCardJustDrawn = true;
             // 바람319: 패에 들어올 때 트리거 (각성 중에는 효과가 드로우로 치환되므로 제외)
             if (_inBattle && !_awakenActive) _resolver.NotifyCardEnteredHand(card);
+
+            // 효과 추적: 탈진으로 삽입한 카드가 뽑혔다 = 손패 1칸 낭비 성공
+            if (_track != null && _track.action == 1 && ReferenceEquals(card, _track.exhaustCard))
+                ResolveTrack(0.7f);
         }
 
         void OnCardDiscardedHandler(CardInstance card)
@@ -226,7 +235,7 @@ namespace Battle
 
             HandleInput();
             TickAwakenTimer();
-            TickDisruptionReward();
+            TickDisruptionTrack();
             UpdateAwakenText();
             SyncChainStatus();
         }
@@ -343,7 +352,7 @@ namespace Battle
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
-            if (_pendingDisruption.HasValue) CloseDisruptionReward(); // 온라인 학습: 진행 중 보상 윈도우 마감
+            ResolveTrackUnfired(); // 온라인 학습: 진행 중 지연 추적을 미발현으로 마감
             _deck.EndBattle();
             if (handHud != null)
             {
@@ -521,10 +530,11 @@ namespace Battle
 
         void OnEnemyAttackFiredHandler()
         {
-            // 온라인 학습: 방해~다음 적 공격 구간을 여기서 정산(적 공격의 각성-5가 적용되기 '전' 상태로).
-            if (_pendingDisruption.HasValue) CloseDisruptionReward();
-
             _ctx.firstCardAfterEnemyAttack = true;
+
+            // 효과 추적: 강화가 걸린 채 적 공격이 발생 = 발현. 그 사이 받은 피해로 보상.
+            // (EnemyController.HandleGaugeFull이 먼저 구독돼 첫 타격 피해가 동기 적용된 뒤 호출됨)
+            if (_track != null && _track.action == 3) ResolveTrack(EnhanceReward(_track.playerHpAtFire));
 
             // 새 메커니즘: 적 공격을 받으면 플레이어 각성 게이지 -5 (각성 빌드업 vs 적 공격의 레이스).
             if (!_awakenActive)
@@ -1221,6 +1231,7 @@ namespace Battle
             // FCM-RBFN 학습 모델로 방해행동 선택(랜덤 폴백). 6개 실행 분기는 그대로 재사용.
             bool recoverReady = _recoverCooldown <= 0;
             int pick;
+            Battle.AI.AiDecision? rewardDecision = null; // 온라인 학습 ON일 때만 채워짐 → 효과 추적 시작용
             if (useAiDisruption && Battle.AI.EnemyAiModel.Loaded)
             {
                 try
@@ -1234,7 +1245,7 @@ namespace Battle
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
                             $" → 선택={Battle.AI.EnemyAiModel.ActionNames[pick]}{(decision.explored ? " (탐험)" : "")}");
                     if (logAiDecisions) Battle.AI.DisruptionLogger.Log(decision);
-                    if (onlineLearning) BeginDisruptionRewardWindow(decision);
+                    if (onlineLearning) rewardDecision = decision;
                 }
                 catch (System.Exception e)
                 {
@@ -1259,6 +1270,7 @@ namespace Battle
                     _cursedElement = target;
                     _curseRemainingUses = CURSE_DURATION_USES;
                     handHud?.Refresh();
+                    if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0); // 자해/회피 발현까지 추적
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
                     return $"방해: {ElementName(target)} 저주!";
                 }
@@ -1267,38 +1279,45 @@ namespace Battle
                     var dummy = CardDatabase.CreateNeutralFillerInstance();
                     if (dummy != null) _deck.AddToDrawShuffled(dummy);
                     handHud?.Refresh();
+                    if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 1); if (_track != null) _track.exhaustCard = dummy; } // 그 카드가 뽑힐 때까지 추적
                     Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
                     return "방해: 탈진 카드 삽입!";
                 }
-                case 2: // 흡수 — 각성 게이지(누적 속성 카드 수) -2
+                case 2: // 흡수 — 각성 게이지(누적 속성 카드 수) -2  [즉시형]
                 {
                     int before = _elementInputCount;
                     _elementInputCount = Mathf.Max(0, _elementInputCount - 2);
                     UpdateAwakenText();
+                    if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 2, AbsorbReward(before));
                     Log($"[방해] 흡수 — 각성 게이지 -2 ({before} → {_elementInputCount})");
                     return "방해: 각성 게이지 흡수!";
                 }
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
                 {
                     _enemy?.BuffNextAttack();
+                    if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 3); if (_track != null) _track.playerHpAtFire = _player != null ? _player.currentHp : 0; } // 다음 적 공격까지 추적
                     Log("[방해] 강화 — 적 다음 공격 피해 증가(1회)");
                     return "방해: 적 강화!";
                 }
-                case 4: // 회복 — 적 HP 30% 회복, 재사용까지 다른 방해행동 2회 필요
+                case 4: // 회복 — 적 HP 30% 회복, 재사용까지 다른 방해행동 2회 필요  [즉시형]
                 {
                     _recoverCooldown = 2;
+                    float enemyHpBefore = _enemyStat != null ? _enemyStat.currentHp : 0f;
                     if (_enemyStat != null)
                     {
                         float heal = _enemyStat.maxHp * 0.3f;
                         _enemyStat.Heal(heal);
                         Log($"[방해] 회복 — 적 HP +{heal:F0} (최대 30%)");
                     }
+                    if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 4, RecoverReward(enemyHpBefore));
                     return "방해: 적 체력 회복!";
                 }
-                default: // 5 버리기 — 플레이어가 패에서 2장 직접 선택해 버림
+                default: // 5 버리기 — 플레이어가 패에서 2장 직접 선택해 버림  [즉시형]
                 {
+                    int handBefore = _deck != null ? _deck.HandCount : 0;
                     int n = Mathf.Min(2, _deck.HandCount);
                     if (n > 0) StartCoroutine(EnemyForcedDiscardRoutine(n));
+                    if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
                     Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");
                     return "방해: 카드 버리기!";
                 }
@@ -1326,49 +1345,82 @@ namespace Battle
         }
 
         // ─────────────────────────────────────────────────────────────
-        // 온라인 학습 — 방해행동 보상 윈도우
+        // 온라인 학습 — 방해행동 효과 추적 보상 (각 방해의 '의도 달성'으로 학습)
         // ─────────────────────────────────────────────────────────────
 
-        void BeginDisruptionRewardWindow(Battle.AI.AiDecision decision)
+        // 지연형(저주/탈진/강화) 추적 시작. 직전 미발현 추적은 먼저 마감.
+        void BeginTrack(Battle.AI.AiDecision decision, int action)
         {
-            if (_pendingDisruption.HasValue) CloseDisruptionReward(); // 직전 미정산 먼저 마감(동시 1개)
-            _pendingDisruption = decision;
-            _pendingPlayerHpAtFire = _player != null ? _player.currentHp : 0;
-            _pendingEnemyHpAtFire = _enemyStat != null ? _enemyStat.currentHp : 0f;
-            _pendingEnemyMaxAtFire = _enemyStat != null ? _enemyStat.maxHp : 1f;
-            _pendingAwakenAtFire = _elementInputCount; // 방해 실행 직전 각성(흡수 등 즉시형 효과 포함 위해)
-            _rewardElapsed = 0f;
+            ResolveTrackUnfired();
+            _track = new DisruptionTrack { decision = decision, action = action };
         }
 
-        void TickDisruptionReward()
+        // 즉시형(흡수/회복/버리기): 발동 시점 가치로 바로 학습.
+        void ObserveDisruption(Battle.AI.AiDecision decision, int action, float reward)
         {
-            if (!_pendingDisruption.HasValue) return;
-            _rewardElapsed += Time.deltaTime;
-            if (_rewardElapsed >= rewardSafetyTimeout) CloseDisruptionReward(); // 적 공격이 안 오면 안전 마감
-        }
-
-        /// <summary>방해~다음 적 공격 구간의 '적 우세도' 변화로 온라인 학습 1스텝 (순수 결과, 휴리스틱 없음).</summary>
-        void CloseDisruptionReward()
-        {
-            if (!_pendingDisruption.HasValue) return;
-            var d = _pendingDisruption.Value;
-            _pendingDisruption = null;
-
-            // 플레이어 HP 감소(적 유리) − 적 HP 감소(적 불리)
-            float playerLost = (_player != null && _player.maxHp > 0)
-                ? Mathf.Clamp01((_pendingPlayerHpAtFire - _player.currentHp) / (float)_player.maxHp) : 0f;
-            float enemyLost = (_enemyStat != null && _pendingEnemyMaxAtFire > 0f)
-                ? Mathf.Clamp01((_pendingEnemyHpAtFire - _enemyStat.currentHp) / _pendingEnemyMaxAtFire) : 0f;
-            // 플레이어 각성 지연(줄면 적 유리, 쌓이면 적 불리) — 흡수/각성-5와 플레이어 빌드업이 함께 반영
-            int awakenDenom = Mathf.Max(1, EffectiveAwakenInput);
-            float awakenSwing = Mathf.Clamp((_pendingAwakenAtFire - _elementInputCount) / (float)awakenDenom, -1f, 1f);
-
-            float reward = Mathf.Clamp(
-                2f * playerLost - 2f * enemyLost + awakenRewardWeight * awakenSwing, -1f, 1f);
-
-            Battle.AI.OnlineQLearner.Observe(d.membership, d.context, d.action, reward);
+            reward = Mathf.Clamp(reward, -1f, 1f);
+            Battle.AI.OnlineQLearner.Observe(decision.membership, decision.context, action, reward);
             if (logVerbose)
-                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[d.action]} 플HP-{playerLost:F2} 적HP-{enemyLost:F2} 각성{awakenSwing:+0.00;-0.00} → r={reward:+0.00;-0.00} drift={Battle.AI.OnlineQLearner.WeightDriftFromBase():F3}");
+                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[action]} r={reward:+0.00;-0.00} (즉시) drift={Battle.AI.OnlineQLearner.WeightDriftFromBase():F3}");
+        }
+
+        // 지연형 발현 → 보상 확정.
+        void ResolveTrack(float reward)
+        {
+            if (_track == null) return;
+            var t = _track; _track = null;
+            reward = Mathf.Clamp(reward, -1f, 1f);
+            Battle.AI.OnlineQLearner.Observe(t.decision.membership, t.decision.context, t.action, reward);
+            if (logVerbose)
+                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={reward:+0.00;-0.00} (발현) drift={Battle.AI.OnlineQLearner.WeightDriftFromBase():F3}");
+        }
+
+        // 발현 못 하고 끝남(타임아웃/전투종료) → 저주는 자해/회피분 반영, 그 외 미발현 음수.
+        void ResolveTrackUnfired()
+        {
+            if (_track == null) return;
+            if (_track.action == 0) ResolveTrack(CurseReward(_track.curseHits));
+            else ResolveTrack(UNFIRED_REWARD);
+        }
+
+        void TickDisruptionTrack()
+        {
+            if (_track == null) return;
+            _track.elapsed += Time.deltaTime;
+            if (_track.elapsed >= disruptionTrackTimeout) ResolveTrackUnfired();
+        }
+
+        // ── 행동별 보상 공식 (모두 [-1,1], 각 방해의 '의도 달성'을 측정) ──
+        // 흡수: 발동 직전 각성 근접도(임박할수록 가치↑).
+        float AbsorbReward(int awakenBefore)
+        {
+            float prox = EffectiveAwakenInput > 0 ? Mathf.Clamp01(awakenBefore / (float)EffectiveAwakenInput) : 0f;
+            return Mathf.Clamp(prox * 2f - 0.6f, -1f, 1f);
+        }
+        // 회복: 발동 직전 적 빈사도(빈사일수록 가치↑, 만피는 낭비라 음수).
+        float RecoverReward(float enemyHpBefore)
+        {
+            float ratio = (_enemyStat != null && _enemyStat.maxHp > 0f) ? Mathf.Clamp01(enemyHpBefore / _enemyStat.maxHp) : 1f;
+            return Mathf.Clamp((1f - ratio) * 2f - 1f, -1f, 1f);
+        }
+        // 버리기: 발동 직전 손패 압박(가득 찰수록 가치↑). 기본 패 한도 5 기준.
+        float DiscardReward(int handBefore)
+        {
+            float pressure = Mathf.Clamp01(handBefore / 5f);
+            return Mathf.Clamp(pressure * 2f - 0.8f, -1f, 1f);
+        }
+        // 저주: 자해를 유도하면 강한+(2회 다 유도 시 최대), 안 써도(회피=제약 성공) 약한+. HP 못 깎아도 실패 아님.
+        float CurseReward(int hits)
+        {
+            if (hits <= 0) return 0.2f; // 회피 = 플레이어 행동을 제약한 약한 성공(실패 아님)
+            return Mathf.Clamp(0.3f + hits * 0.45f, -1f, 1f);
+        }
+        // 강화: 발현(적 공격 발생) 자체 +0.4(가드 흡수도 성공 인정), 그 사이 받은 HP 피해만큼 가산.
+        float EnhanceReward(int playerHpAtFire)
+        {
+            float lost = (_player != null && _player.maxHp > 0)
+                ? Mathf.Clamp01((playerHpAtFire - _player.currentHp) / (float)_player.maxHp) : 0f;
+            return Mathf.Clamp(0.4f + lost * 3f, -1f, 1f);
         }
 
         /// <summary>외부(NewCardView)가 카드가 저주되었는지 확인용.</summary>
@@ -1386,6 +1438,7 @@ namespace Battle
             {
                 _player.TakeDamage(CURSE_PLAYER_DAMAGE);
                 Log($"[저주] {_cursedElement.Value} 카드 사용 — 플레이어 {CURSE_PLAYER_DAMAGE} 피해");
+                if (_track != null && _track.action == 0) _track.curseHits++; // 효과 추적: 실제 자해 발생
             }
 
             _curseRemainingUses--;
@@ -1393,6 +1446,7 @@ namespace Battle
             {
                 Log($"[저주] {_cursedElement.Value} 저주 종료");
                 _cursedElement = null;
+                if (_track != null && _track.action == 0) ResolveTrack(CurseReward(_track.curseHits)); // 저주 소진 → 보상 확정(자해/회피)
             }
         }
 
