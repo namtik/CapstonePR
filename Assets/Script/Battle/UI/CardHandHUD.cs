@@ -785,6 +785,7 @@ namespace Battle.UI
                 CardInstance card = i < hand.Count ? hand[i] : null;
                 bool isNewToHand = card != null && !_prevHandSet.Contains(card);
                 view.SetCard(card); // 카드가 바뀌면 내부에서 진행 중 연출을 취소(홈 정착)함
+                view.EnsureRaycastable(); // 드래그/각성 연출로 남은 raycast 차단(blocksRaycasts=false)을 해제 — 다음 전투로 이월된 카드뷰의 클릭 불가 방지
 
                 // 연출이 여전히 진행 중이면(=같은 카드 유지) 홈 좌표가 이미 확정돼 있으니 재캡처 생략.
                 // (CaptureHome이 연출 중간 위치를 홈으로 잘못 저장하는 것 방지)

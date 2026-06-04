@@ -654,5 +654,17 @@ namespace Battle.UI
             _rect.localScale = baseScale * multiplier;
         }
 
+        /// <summary>
+        /// 손패로 복귀/갱신 시 raycast 차단을 해제해 항상 클릭 가능하게 한다.
+        /// 드래그(OnBeginDrag)나 각성 중 비차단 연출 churn으로 OnEndDrag가 누락되면
+        /// blocksRaycasts=false가 남아 그 카드뷰가 다음 전투로 재사용될 때 클릭 불가가 된다.
+        /// CardHandHUD.Refresh가 매 손패 갱신마다 호출.
+        /// </summary>
+        public void EnsureRaycastable()
+        {
+            if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
+            if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
+        }
+
     }
 }
