@@ -15,6 +15,12 @@ namespace Battle
     {
         public static RunDeckState Instance { get; private set; }
 
+        [Header("시작 덱 (인스펙터 편집)")]
+        [Tooltip("런 시작 덱. 항목을 넣으면 이 덱으로 시작하고, 비우면 기본 8장(DefaultStartingDeckEntries)을 쓴다.\n" +
+                 "cardId = 카드 번호(불 100~, 물 200~, 바람 300~, 땅 400~), count = 장수.\n" +
+                 "변경은 새 런/리셋부터 반영된다. (인스펙터로 편집하려면 RunDeckState를 씬에 미리 배치)")]
+        [SerializeField] private List<CardDatabase.DeckEntry> startingDeck = new List<CardDatabase.DeckEntry>();
+
         private readonly List<CardDatabase.DeckEntry> _runDeck = new List<CardDatabase.DeckEntry>();
         private bool _seeded;
         private int _permanentAttackPower; // 땅410 등: 런 동안 지속되는 영구 공격력 보너스
@@ -93,14 +99,22 @@ namespace Battle
             return go.AddComponent<RunDeckState>(); // Awake에서 Instance 설정
         }
 
-        /// <summary>비어 있으면 기획서 기본 시작 덱(8장)으로 시드.</summary>
+        /// <summary>비어 있으면 시작 덱으로 시드. 인스펙터 startingDeck이 있으면 그걸, 없으면 기본 8장.</summary>
         public void EnsureSeeded()
         {
             if (_seeded && _runDeck.Count > 0) return;
             _runDeck.Clear();
-            _runDeck.AddRange(CardDatabase.DefaultStartingDeckEntries());
+            if (startingDeck != null && startingDeck.Count > 0)
+            {
+                _runDeck.AddRange(startingDeck);
+                Debug.Log($"[RunDeck] 인스펙터 시작 덱 시드 — {TotalCardCount}장");
+            }
+            else
+            {
+                _runDeck.AddRange(CardDatabase.DefaultStartingDeckEntries());
+                Debug.Log($"[RunDeck] 기본 시작 덱 시드 — {TotalCardCount}장");
+            }
             _seeded = true;
-            Debug.Log($"[RunDeck] 기본 시작 덱 시드 — {TotalCardCount}장");
         }
 
         /// <summary>이번 전투용으로 보존 덱에서 새 CardInstance 리스트 생성.</summary>
