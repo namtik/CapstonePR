@@ -25,9 +25,10 @@ namespace Battle
         private bool _seeded;
         private int _permanentAttackPower; // 땅410 등: 런 동안 지속되는 영구 공격력 보너스
 
-        // ── 적 AI용 런 플레이어 프로파일 (f4 방어성향 / f7 피버사이클) ──
-        private const int PROFILE_WINDOW = 10;
+        // ── 적 AI용 런 플레이어 프로파일 (실제 플레이 패턴: 카테고리 사용빈도 + 평균 코스트 + 각성) ──
+        private const int PROFILE_WINDOW = 15;
         private readonly Queue<Battle.AI.CardCategory> _recentUses = new Queue<Battle.AI.CardCategory>();
+        private readonly Queue<int> _recentCosts = new Queue<int>();
         private int _awakenActivations;
         private int _nonAwakenCardUses;
 
@@ -42,25 +43,40 @@ namespace Battle
             Debug.Log($"[RunDeck] 영구 공격력 +{n} (누적 {_permanentAttackPower})");
         }
 
-        /// <summary>f4 방어성향 = 최근 10회 카드사용 중 방어(방어/회복) 카테고리 비율(/10 고정).</summary>
-        public float DefenseWindowRatio
+        /// <summary>최근 사용 윈도우에서 해당 카테고리 사용 비율 = 실제 플레이 빈도.</summary>
+        float CategoryUseRatio(Battle.AI.CardCategory cat)
+        {
+            if (_recentUses.Count == 0) return 0f;
+            int n = 0;
+            foreach (var c in _recentUses) if (c == cat) n++;
+            return n / (float)_recentUses.Count;
+        }
+        public float BurnUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Burn);       // f1
+        public float FragmentUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Fragment); // f2
+        public float ChainUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Chain);      // f3
+        /// <summary>f4 방어성향 = 최근 사용 중 방어/회복 비율(실제 플레이).</summary>
+        public float DefenseWindowRatio => CategoryUseRatio(Battle.AI.CardCategory.Defense);
+        /// <summary>최근 사용 카드 평균 코스트(게이지). 저코스트일수록 빠른 각성 빌드업(피버 지향).</summary>
+        public float AvgUsedCost
         {
             get
             {
-                if (_recentUses.Count == 0) return 0f;
-                int def = 0;
-                foreach (var cat in _recentUses) if (cat == Battle.AI.CardCategory.Defense) def++;
-                return def / (float)PROFILE_WINDOW;
+                if (_recentCosts.Count == 0) return 1f;
+                int sum = 0;
+                foreach (var c in _recentCosts) sum += c;
+                return sum / (float)_recentCosts.Count;
             }
         }
         public int AwakenActivations => _awakenActivations;
         public int NonAwakenCardUses => _nonAwakenCardUses;
 
-        /// <summary>일반(비각성) 카드 1장 사용 기록 — 최근 윈도우 갱신 + 비각성 사용 누적.</summary>
-        public void RecordCardUse(Battle.AI.CardCategory category)
+        /// <summary>일반(비각성) 카드 1장 사용 기록 — 카테고리·코스트 윈도우 갱신 + 비각성 사용 누적.</summary>
+        public void RecordCardUse(Battle.AI.CardCategory category, int cost)
         {
             _recentUses.Enqueue(category);
             while (_recentUses.Count > PROFILE_WINDOW) _recentUses.Dequeue();
+            _recentCosts.Enqueue(Mathf.Max(0, cost));
+            while (_recentCosts.Count > PROFILE_WINDOW) _recentCosts.Dequeue();
             _nonAwakenCardUses++;
         }
 
@@ -158,6 +174,7 @@ namespace Battle
             _seeded = false;
             _permanentAttackPower = 0;
             _recentUses.Clear();
+            _recentCosts.Clear();
             _awakenActivations = 0;
             _nonAwakenCardUses = 0;
             EnsureSeeded();

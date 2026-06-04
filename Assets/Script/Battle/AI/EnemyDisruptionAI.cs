@@ -68,37 +68,21 @@ namespace Battle.AI
         }
 
         // ── 특성 x[6] = [f1,f2,f3,f4,f5,f7] ─────────────────────────
+        // ── 특성 x[6] = 실제 플레이 패턴 (최근 사용 빈도 + 평균 코스트 + 각성 활용) ──
+        // 덱에 '뭘 가졌나'가 아니라 '어떻게 쓰나'를 본다. RunDeckState가 최근 사용을 누적.
+        // f1 화상사용 / f2 파편사용 / f3 연쇄사용 / f4 방어사용 / f5 저코스트도 / f7 각성활용
         static float[] BuildFeatures()
         {
             var run = RunDeckState.Instance;
-            int total = 0, burn = 0, frag = 0, chain = 0;
-            float gaugeSum = 0f;
-            if (run != null)
-            {
-                var deck = run.RunDeck;
-                for (int i = 0; i < deck.Count; i++)
-                {
-                    var data = CardDatabase.GetById(deck[i].cardId);
-                    if (data == null) continue;
-                    var cat = Classify(data);
-                    int cnt = deck[i].count;
-                    total += cnt;
-                    gaugeSum += data.gauge * cnt;
-                    if (cat == CardCategory.Burn) burn += cnt;
-                    else if (cat == CardCategory.Fragment) frag += cnt;
-                    else if (cat == CardCategory.Chain) chain += cnt;
-                }
-            }
+            if (run == null) return new float[] { 0f, 0f, 0f, 0f, 0.5f, 0f };
 
-            float f1 = total > 0 ? (float)burn / total : 0f;   // 화상의존도
-            float f2 = total > 0 ? (float)frag / total : 0f;   // 파편의존도
-            float f3 = total > 0 ? (float)chain / total : 0f;  // 연속/연쇄의존도
-            float avgGauge = total > 0 ? gaugeSum / total : 1f;
-            float f5 = Mathf.Clamp01((3f - avgGauge) / 2f);    // 덱평균코스트(저코스트↔고코스트)
-            float f4 = run != null ? run.DefenseWindowRatio : 0f;  // 방어성향(최근 윈도우)
-            float f7 = 0f;                                      // 피버사이클
-            if (run != null && run.NonAwakenCardUses > 0)
-                f7 = Mathf.Min(1f, run.AwakenActivations / (run.NonAwakenCardUses / 15f));
+            float f1 = run.BurnUseRatio;        // 화상 카드 사용 빈도
+            float f2 = run.FragmentUseRatio;    // 파편 카드 사용 빈도
+            float f3 = run.ChainUseRatio;       // 연쇄/다타격 사용 빈도
+            float f4 = run.DefenseWindowRatio;  // 방어/회복 사용 빈도
+            float f5 = Mathf.Clamp01((3f - run.AvgUsedCost) / 2f); // 저코스트일수록↑ (빠른 각성 빌드업=피버 지향)
+            float f7 = run.NonAwakenCardUses > 0
+                ? Mathf.Min(1f, run.AwakenActivations / (run.NonAwakenCardUses / 15f)) : 0f; // 각성 활용도
 
             return new float[] { f1, f2, f3, f4, f5, f7 };
         }
@@ -186,26 +170,34 @@ namespace Battle.AI
         }
 
         // ── 가용성 마스크 (설계 §5.5) ──────────────────────────────
-        static bool[] AvailabilityMask(int handCount, bool recoverReady)
+        // ── 가용성 마스크 — 상태의존(self-state) 반영 ──
+        // 이미 건 저주/강화는 중복 제외, 깎을 각성 게이지가 없으면 흡수 제외.
+        static bool[] AvailabilityMask(int handCount, bool recoverReady,
+                                       bool curseActive, bool enhanceActive, int awakenGauge)
         {
             var m = new bool[EnemyAiModel.ACTIONS];
             for (int a = 0; a < m.Length; a++) m[a] = true;
-            if (handCount < 2) m[5] = false;     // 버리기: 패 2장 미만 제외
+            if (curseActive) m[0] = false;       // 저주: 이미 걸려 있으면 중복 제외
+            if (awakenGauge <= 0) m[2] = false;  // 흡수: 깎을 각성 게이지가 없으면 제외
+            if (enhanceActive) m[3] = false;     // 강화: 이미 걸려 있으면 중복 제외
             if (!recoverReady) m[4] = false;     // 회복: 쿨다운 중 제외
+            if (handCount < 2) m[5] = false;     // 버리기: 패 2장 미만 제외
+            // 탈진(1)은 전제조건이 없어 항상 가용 — 모두 막혀도 안전망 역할.
             return m;
         }
 
         // ── 결정 ──────────────────────────────────────────────────
         /// <summary>현재 상태로 방해행동을 고른다. epsilon&gt;0이면 탐험(데이터 수집용 다양성).</summary>
         public static AiDecision Decide(CardDeckSystem deck, EnemyStat enemyStat, Player player,
-                                        bool recoverReady, float epsilon, bool onlineLearning = false)
+                                        bool recoverReady, float epsilon, bool onlineLearning,
+                                        bool curseActive, bool enhanceActive, int awakenGauge)
         {
             float[] x = BuildFeatures();
             float[] c = BuildContext(deck, enemyStat, player, out int handCount);
             float[] mu = FuzzyMembership(x);
             // 온라인 학습 모드면 세션 학습 가중치로 Q 계산(베이스에서 warm-start), 아니면 고정 베이스.
             float[] q = onlineLearning ? OnlineQLearner.QTotal(mu, c) : QTotal(mu, c);
-            bool[] mask = AvailabilityMask(handCount, recoverReady);
+            bool[] mask = AvailabilityMask(handCount, recoverReady, curseActive, enhanceActive, awakenGauge);
 
             int action;
             bool explored = false;
@@ -213,7 +205,7 @@ namespace Battle.AI
             {
                 var avail = new List<int>();
                 for (int a = 0; a < EnemyAiModel.ACTIONS; a++) if (mask[a]) avail.Add(a);
-                action = avail[Random.Range(0, avail.Count)];
+                action = avail.Count > 0 ? avail[Random.Range(0, avail.Count)] : 1; // 탈진 폴백
                 explored = true;
             }
             else
@@ -225,7 +217,11 @@ namespace Battle.AI
                     if (!mask[a]) continue;
                     if (q[a] > best) { best = q[a]; action = a; }
                 }
-                if (action < 0) action = 0; // 안전망 — 0~3은 항상 가용
+                if (action < 0) // 전부 막힘 — 가용 행동(없으면 탈진 1)으로 폴백
+                {
+                    for (int a = 0; a < EnemyAiModel.ACTIONS; a++) if (mask[a]) { action = a; break; }
+                    if (action < 0) action = 1;
+                }
             }
 
             return new AiDecision

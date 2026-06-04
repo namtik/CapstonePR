@@ -484,8 +484,8 @@ namespace Battle
                 _ctx.usedCardNameCounts[name] = cur + 1;
             }
 
-            // 적 AI 런 프로파일: 일반(비각성) 카드 사용 기록 (f4 방어성향 / f7 비각성 사용 수)
-            RunDeckState.Instance?.RecordCardUse(Battle.AI.EnemyDisruptionAI.Classify(card.data));
+            // 적 AI 런 프로파일: 일반(비각성) 카드 사용 기록 — 카테고리(플레이 빈도) + 코스트(평균 코스트)
+            RunDeckState.Instance?.RecordCardUse(Battle.AI.EnemyDisruptionAI.Classify(card.data), card.data.gauge);
         }
 
         /// <summary>물15(214) — 플레이어에게 적용된 모든 저주 해제.</summary>
@@ -521,6 +521,13 @@ namespace Battle
         void OnEnemyAttackFiredHandler()
         {
             _ctx.firstCardAfterEnemyAttack = true;
+
+            // 새 메커니즘: 적 공격을 받으면 플레이어 각성 게이지 -5 (각성 빌드업 vs 적 공격의 레이스).
+            if (!_awakenActive)
+            {
+                _elementInputCount = Mathf.Max(0, _elementInputCount - 5);
+                UpdateAwakenText();
+            }
 
             // 땅424: 적 공격 종료 후 방어도 획득
             if (_ctx.blockOnEnemyAttackActive && _ctx.blockOnEnemyAttackAmount > 0 && _player != null)
@@ -1214,7 +1221,10 @@ namespace Battle
             {
                 try
                 {
-                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon, onlineLearning);
+                    // self-state(상태의존 마스크용): 이미 건 저주/강화, 현재 각성 게이지
+                    bool curseActive = _cursedElement.HasValue;
+                    bool enhanceActive = _enemy != null && _enemy.IsNextAttackBuffed;
+                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon, onlineLearning, curseActive, enhanceActive, _elementInputCount);
                     pick = decision.action;
                     if (logVerbose)
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +

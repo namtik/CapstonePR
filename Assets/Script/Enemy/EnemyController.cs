@@ -167,6 +167,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
     /// <summary>기획서 0.6v [방해행동-강화]: 다음 적 공격 1회를 +50% 강화.</summary>
     public void BuffNextAttack() => _nextAttackBuffed = true;
+    /// <summary>다음 공격이 이미 강화(+50%) 걸려 있는지 — 적 AI 중복 강화 방지용.</summary>
+    public bool IsNextAttackBuffed => _nextAttackBuffed;
 
     void HandleGaugeFull()
     {
