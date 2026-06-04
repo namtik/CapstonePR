@@ -9610,7 +9610,7 @@ MonoBehaviour:
   damageOverlay: {fileID: 0}
   ownedComboSkills: []
   useComboDatabase: 1
-  ownedComboRefIds: e8030000
+  ownedComboRefIds: f8030000
   debugAddComboRefId: 1000
   awakenDamageEffectName: Fire_ATK
   awakenDamageEffectSpread: {x: 220, y: 80}
@@ -9620,8 +9620,9 @@ MonoBehaviour:
   useAiDisruption: 1
   aiExplorationEpsilon: 0.15
   logAiDecisions: 1
-  onlineLearning: 0
-  rewardBlend: 0.5
+  onlineLearning: 1
+  rewardSafetyTimeout: 30
+  awakenRewardWeight: 1
 --- !u!1 &1401766510
 GameObject:
   m_ObjectHideFlags: 0
@@ -14463,7 +14464,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FCMDebugOverlay
   toggleKey: 9
   displayDuration: 4
-  alwaysVisible: 0
+  alwaysVisible: 1
   koreanFont: {fileID: 11400000, guid: 9963c0f83d2a95641a8a9fb171db72d1, type: 2}
 --- !u!4 &1958806591
 Transform:

@@ -82,9 +82,6 @@ namespace Battle
         [SerializeField] private bool logAiDecisions = false;
         [Tooltip("ON이면 게임 중 실제 결과로 적 AI Q-가중치를 미세조정(세션 단위 누적, 오프라인 베이스에서 시작).")]
         [SerializeField] private bool onlineLearning = false;
-        [Tooltip("온라인 보상 혼합 — 1=휴리스틱(유형적합)만, 0=실결과(ΔHP)만. 기본 0.5.")]
-        [Range(0f, 1f)]
-        [SerializeField] private float rewardBlend = 0.5f;
 
         private readonly CardDeckSystem _deck = new CardDeckSystem();
         private readonly CardEffectResolver _resolver = new CardEffectResolver();
@@ -138,13 +135,17 @@ namespace Battle
         // 방해행동(회복) 쿨다운 — 회복 발동 후 다른 방해행동 2회 수행해야 재사용.
         private int _recoverCooldown;
 
-        // 온라인 학습 — 직전 방해 결정의 보상 윈도우(동시 1개)
-        private const float REWARD_WINDOW_SECONDS = 4f;
+        // 온라인 학습 — 단기 종합 결과 보상 (방해~다음 적 공격 구간의 '적 우세도' 변화, 동시 1개)
+        [Tooltip("방해 보상 정산까지 다음 적 공격이 오지 않을 때의 안전 타임아웃(초).")]
+        [SerializeField] private float rewardSafetyTimeout = 30f;
+        [Tooltip("보상의 각성 지연 항 가중치 — 플레이어 각성 게이지가 줄면 적 유리(+).")]
+        [SerializeField] private float awakenRewardWeight = 1f;
         private Battle.AI.AiDecision? _pendingDisruption;
         private int _pendingPlayerHpAtFire;
         private float _pendingEnemyHpAtFire;
         private float _pendingEnemyMaxAtFire;
-        private float _rewardWindowRemaining;
+        private int _pendingAwakenAtFire;
+        private float _rewardElapsed;
 
         // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
         private int _skipNextGaugeCount;
@@ -520,6 +521,9 @@ namespace Battle
 
         void OnEnemyAttackFiredHandler()
         {
+            // 온라인 학습: 방해~다음 적 공격 구간을 여기서 정산(적 공격의 각성-5가 적용되기 '전' 상태로).
+            if (_pendingDisruption.HasValue) CloseDisruptionReward();
+
             _ctx.firstCardAfterEnemyAttack = true;
 
             // 새 메커니즘: 적 공격을 받으면 플레이어 각성 게이지 -5 (각성 빌드업 vs 적 공격의 레이스).
@@ -1327,41 +1331,44 @@ namespace Battle
 
         void BeginDisruptionRewardWindow(Battle.AI.AiDecision decision)
         {
-            if (_pendingDisruption.HasValue) CloseDisruptionReward(); // 직전 pending 먼저 마감(동시 1개)
+            if (_pendingDisruption.HasValue) CloseDisruptionReward(); // 직전 미정산 먼저 마감(동시 1개)
             _pendingDisruption = decision;
             _pendingPlayerHpAtFire = _player != null ? _player.currentHp : 0;
             _pendingEnemyHpAtFire = _enemyStat != null ? _enemyStat.currentHp : 0f;
             _pendingEnemyMaxAtFire = _enemyStat != null ? _enemyStat.maxHp : 1f;
-            _rewardWindowRemaining = REWARD_WINDOW_SECONDS;
+            _pendingAwakenAtFire = _elementInputCount; // 방해 실행 직전 각성(흡수 등 즉시형 효과 포함 위해)
+            _rewardElapsed = 0f;
         }
 
         void TickDisruptionReward()
         {
             if (!_pendingDisruption.HasValue) return;
-            _rewardWindowRemaining -= Time.deltaTime;
-            if (_rewardWindowRemaining <= 0f) CloseDisruptionReward();
+            _rewardElapsed += Time.deltaTime;
+            if (_rewardElapsed >= rewardSafetyTimeout) CloseDisruptionReward(); // 적 공격이 안 오면 안전 마감
         }
 
-        /// <summary>보상 윈도우 종료 — 결과(ΔHP)+휴리스틱 혼합 보상으로 온라인 학습 1스텝.</summary>
+        /// <summary>방해~다음 적 공격 구간의 '적 우세도' 변화로 온라인 학습 1스텝 (순수 결과, 휴리스틱 없음).</summary>
         void CloseDisruptionReward()
         {
             if (!_pendingDisruption.HasValue) return;
             var d = _pendingDisruption.Value;
             _pendingDisruption = null;
 
-            // 결과: 윈도우 동안 플레이어 HP 감소율(AI에 +) − 적 HP 감소율(AI에 −)
+            // 플레이어 HP 감소(적 유리) − 적 HP 감소(적 불리)
             float playerLost = (_player != null && _player.maxHp > 0)
                 ? Mathf.Clamp01((_pendingPlayerHpAtFire - _player.currentHp) / (float)_player.maxHp) : 0f;
             float enemyLost = (_enemyStat != null && _pendingEnemyMaxAtFire > 0f)
                 ? Mathf.Clamp01((_pendingEnemyHpAtFire - _enemyStat.currentHp) / _pendingEnemyMaxAtFire) : 0f;
-            float outcome = Mathf.Clamp(2f * playerLost - 2f * enemyLost, -1f, 1f);
+            // 플레이어 각성 지연(줄면 적 유리, 쌓이면 적 불리) — 흡수/각성-5와 플레이어 빌드업이 함께 반영
+            int awakenDenom = Mathf.Max(1, EffectiveAwakenInput);
+            float awakenSwing = Mathf.Clamp((_pendingAwakenAtFire - _elementInputCount) / (float)awakenDenom, -1f, 1f);
 
-            float heur = Battle.AI.EnemyDisruptionAI.HeuristicReward(d);
-            float reward = rewardBlend * heur + (1f - rewardBlend) * outcome;
+            float reward = Mathf.Clamp(
+                2f * playerLost - 2f * enemyLost + awakenRewardWeight * awakenSwing, -1f, 1f);
 
             Battle.AI.OnlineQLearner.Observe(d.membership, d.context, d.action, reward);
             if (logVerbose)
-                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[d.action]} heur={heur:+0.0;-0.0} out={outcome:+0.00;-0.00} r={reward:+0.00;-0.00} drift={Battle.AI.OnlineQLearner.WeightDriftFromBase():F3}");
+                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[d.action]} 플HP-{playerLost:F2} 적HP-{enemyLost:F2} 각성{awakenSwing:+0.00;-0.00} → r={reward:+0.00;-0.00} drift={Battle.AI.OnlineQLearner.WeightDriftFromBase():F3}");
         }
 
         /// <summary>외부(NewCardView)가 카드가 저주되었는지 확인용.</summary>

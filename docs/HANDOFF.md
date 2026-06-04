@@ -1,67 +1,76 @@
-# 다음 세션 핸드오프 (2026-06-04 기준)
+# 다음 세션 핸드오프 (2026-06-05 기준)
 
-> 브랜치 `mig/sys0.2`. 작업 범위 = **SampleScene(실제 게임) 전용**. 격리 BattleTestScene/BattleTestController는 손대지 않음(공유 전투 스크립트 편집은 OK).
-
----
-
-## ⚠️ 가장 먼저 할 일 (검증 게이트)
-이번 세션의 **모든 코드 변경은 미컴파일 상태**다. 순서:
-1. **Unity 열어 컴파일 에러 확인** — 신규 `Assets/Script/Battle/AI/*` + 다수 편집(NewBattleController/EnemyStat/EnemyController/Player/CardEffectResolver/RunDeckState/CardHandHUD/Roundmanager/NewBattleSystemBootstrap/EnemyDisruptionAI).
-2. **SampleScene 씬 셋업**(아래 체크리스트) — 이게 돼야 신규 전투 시스템이 돌고 그 위 기능들(AI/보상/각성/방해)을 검증 가능.
-3. 플레이로 핵심 기능 확인.
+> 브랜치 `mig/sys0.2`. 작업 범위 = **SampleScene 전용** (BattleTestScene/Controller 손대지 않음, 공유 전투 스크립트는 OK).
 
 ---
 
-## SampleScene 씬 셋업 체크리스트 (검증 전 필수)
-SampleScene엔 신규 시스템(CardHandHUD/NewBattleController)이 **아직 배치 안 됨**. 코드 자동생성으론 CardHandHUD가 비어서 안 그려짐 → 수동 작업 필요:
-1. **CardHandHUD 가져오기 (method A)**: BattleTestScene에서 `CombatStage > Canvas`(handRoot/Comboslot/SkillIconParent/dragLayer 포함) + 최상위 `CardHandHUD`를 **함께 복사** → SampleScene `CombatStage` 밑으로. 붙인 Canvas의 Render Camera 확인. `CardHandHUD` Inspector에 Missing 참조 없는지 확인.
-2. **부트스트랩 배치**: SampleScene 영속 오브젝트에 `NewBattleSystemBootstrap` 컴포넌트 추가.
-3. **NewBattleController·RelicManager 씬 루트에 미리 배치**(권장, 인스펙터 설정용) — 부트스트랩이 있으면 찾아 씀(중복 생성 안 함). RelicManager는 relicDefinitions(유물 아이콘) 설정.
-4. **각성 게이지**: SampleScene엔 Player 오브젝트도 "PlayerHpBar"도 없음 → 게이지는 **상단 중앙 fallback**으로 뜸(방금 fix). HP바 아래로 붙이려면 ⓐ HP 슬라이더 이름을 `PlayerHpBar`로, 또는 ⓑ `CardHandHUD.awakenGaugeAnchor`에 직접 RectTransform 드래그.
+## 🎯 즉시 할 일 — 적 AI 보상 ① "효과추적(의도 달성)" 재설계 (확정)
+
+②(단기 종합 결과) 보상이 **귀속 노이즈로 실패** → ①(행동별 의도) 전환하기로 사용자와 합의.
+
+1. **`stash@{0}` 효과추적 복구 → 현재 코드에 병합**
+   - `git stash show -p stash@{0}` 로 내용 확인.
+   - ⚠️ stash는 *효과추적 시점*의 NewBattleController라 현재(입출력재설계+보상②)와 **충돌**. `git stash apply`는 충돌 → **수동 병합** 권장.
+   - 효과추적 골격: `DisruptionTrack` 클래스 + `BeginTrack/ObserveDisruption/ResolveTrack/ResolveTrackUnfired` + 즉시형(흡수·회복·버리기 발동 즉시)·지연형(저주·탈진·강화 발현까지 추적) 분기 + 이벤트 훅(`ApplyCurseOnCardUse`=저주 자해, `OnCardDrawn`=탈진, `OnEnemyAttackFired`=강화).
+
+2. **보상을 각 방해의 "의도 달성"으로 (HP/결과숫자 아님)** — 사용자 핵심 통찰:
+   | 방해 | 성공 측정 |
+   |---|---|
+   | **저주** | **자해(씀) 강한+ / 회피(안 씀) 약한+ — 자해 0회도 실패 아님(제약 성공)** |
+   | 탈진 | 그 카드 뽑힘(손패 낭비) + |
+   | 흡수 | 각성 게이지 깎인 양 |
+   | 강화 | 강화된 적 공격의 추가 피해 |
+   | 회복 | 빈사일수록 가치↑, 만피 회복은 낭비(−) |
+   | 버리기 | 버린 카드 가치 |
+   - stash의 `CurseReward`는 `자해0회=−0.3(실패)`였음 → **`+0.2(제약 성공)`로 고칠 것.**
+
+3. **②의 단기종합 보상 제거** (현재 `CloseDisruptionReward` = `2·플HP감소 − 2·적HP감소 + W·각성swing`).
+
+4. 컴파일 + `onlineLearning` ON + `logVerbose` 로 `[적AI학습]` 로그 검증.
 
 ---
 
-## 이번 세션에 한 일 (전부 미검증/미컴파일)
+## ✅ 이번 세션 완료 (컴파일·플레이 확인됨)
 
-### 전투 버그픽스
-- **보상↔카드효과 겹침 레이스**: EndBattle이 진행중 카드연출/지연효과 취소 + `ResolveCardUse`에 `!_inBattle` 가드. (CardHandHUD `CancelCardUsePresentations`)
-- **카드 121 무작위 소멸**: `CardEffectResolver` EXHAUST_CARD에 `select=RANDOM` 분기 추가(패 무작위 1장 소멸+NotifyExile).
-- **선택/픽커 중 D 드로우**: `HandleInput`에 가드(IsSelectionMode/Picker/Viewer/연출 중 차단).
-- **카드 410 영구 공격력**: 런 단위 지속(`RunDeckState.PermanentAttackPower`, GAIN_STAT Permanent=true, StartBattle서 복원).
+### 적 AI 입출력 재설계
+- **입력**: 덱 구성 → **실제 플레이 빈도** (`RunDeckState` 카테고리+코스트 윈도우=15, `BuildFeatures` 사용 프로파일, **p5 = 평균 사용 코스트**).
+- **출력**: 6행동 + **self-state 마스크**(저주/강화 중복 제외, 게이지0 흡수 제외). `EnemyDisruptionAI.Decide(... curseActive, enhanceActive, awakenGauge)` 시그니처.
+- **적 공격 시 각성 −5** (`OnEnemyAttackFiredHandler`) — 피버 빌드업 vs 적 공격 레이스.
+- 파일: `EnemyController`(IsNextAttackBuffed), `RunDeckState`, `EnemyDisruptionAI`, `NewBattleController`.
+- 검증: 로그 CSV(플레이 빈도 변동 확인), `[적AI학습]` 콘솔(정산 트리거 3종·drift 증가 확인).
+- 한계: `f5≈1.0`(기본덱 저코스트라 초반 변별 약함, 정상). self-state는 CSV 미기록이라 마스크 검증 불완전.
 
-### 기획서 0.6v 반영
-저주 5→6 / 휴식 30→20% / 카드보상 3→4장 / 방해행동 4종→**6종**(흡수·강화 + 회복·버리기) / 기본덱 8장(`DefaultStartingDeckEntries`) / 연쇄=공격력10% / 적게이지 per-enemy 10~30(`EnemyData.actionGaugeMax`) / 스택 999 / 티어 골드(일반30-50·정예100-150·보스200-250).
+### 보상 ② (단기 종합) — 구현했으나 **실패** (교훈)
+- `CloseDisruptionReward` = ΔHP + 각성swing, 휴리스틱/rewardBlend 제거, 윈도우=다음 적 공격.
+- **데이터상 거의 전부 음수 보상**. 원인: ①`플HP-0.00`(적 공격 피해 정산 전 타이밍) ②적HP감소·각성swing이 플레이어 *정상 행동*(귀속 노이즈) ③6행동 발현 시점 제각각 → 단일 윈도우로 못 잡음.
 
-### FCM-RBFN 적 AI (방해행동 선택)
-- 신규 `Assets/Script/Battle/AI/`: `EnemyAiModel`(임베드 가중치=**합성, 플레이스홀더**), `EnemyDisruptionAI`(Classify 키워드기준+특성6+컨텍스트8+μ+Q+마스크+argmax), `DisruptionLogger`(CSV).
-- `RunDeckState` 프로파일(f4/f7), `NewBattleController` 통합 + 토글(`useAiDisruption`/`aiExplorationEpsilon`/`logAiDecisions`).
-- **하이브리드 온라인 학습**: `OnlineQLearner`(세션 static, warm-start+미니배치 SGD+베이스 L2) + 보상 윈도우(4s, blend=휴리스틱+ΔHP) — 토글 `onlineLearning`(기본 OFF)/`rewardBlend`.
+### 손패 UI 버그 4건 — **017def3 "버그 수정"으로 커밋됨**
+- 슬롯 sibling 정규화, Refresh raycast 복원(`EnsureRaycastable`), 픽커/뷰어 손패 비활성(`SetHandInteractable`), 선택모드 hover 가드(`IsCardSelectable`).
 
-### 도구/문서
-- 각성 게이지 fallback 위치, 콤보 런타임 추가(`RefreshOwnedCombosRuntime`/`AddOwnedCombo` + 에디터 "지금 적용" 버튼, `debugAddComboRefId`).
-- 문서: `시스템_명세서.md`(개요), `docs/systems/`(시스템별 10 + README), `docs/systems/enemy-ai-pipeline.md`(수식+코드+수치예시+설계근거).
-
----
-
-## TODO (우선순위)
-1. **[게이트] 컴파일 + 씬셋업 + 플레이 검증** (위 2개 섹션).
-2. **버그1 미해결**: "패 특정 자리 카드 선택 안됨"(부채꼴 겹침으로 가려진 카드 hover/클릭 불가). **사용자 결정 대기** → (A) 선택모드에서 손패 펼치기 / (B) 패 선택을 픽커 그리드로. 결정되면 구현.
-3. **콤보·유물 보상 UI** (task #9 잔여 — 티어 골드는 됨): 정예/보스 콤보 4택1 + 보스 유물 3택1. RunComboState(런 콤보 보유) 신설 + 픽 UI. 현재 콤보는 인스펙터 수동 추가만.
-4. **맵 구조 개편** (task #10): 고정 층(1-2전투/5유물/10보스), 스테이지 2회 클리어=게임클리어, `NodeType.Relic`+유물 라운드. (+상점/이벤트/휴식 명상·깨달음 선택 UI는 기획서 미반영분)
-5. **적 AI 실데이터 루프**: `logAiDecisions` ON 수집 → Python(`fcm_retrain_gk.py`/`rbfn_train_gk.py`) 재학습 → 산출 .cs를 `EnemyAiModel.cs`에 교체(현재 합성 가중치 대체).
-6. **온라인 학습 정교화(선택)**: 보상 outcome에 행동별 의도성공(저주발동/각성지연) 항 가산, 학습 모니터 UI(drift/행동분포).
-7. **미세 항목**: 보스 라운드 `SpawnNextAfterDelay` BossRoundData 분기 누락, EnemyStat.guard 직접쓰기 999 클램프 비대칭, 적 공격 시퀀스 주석(16-18-40) vs 실제({8,9,20}). (docs/systems/battle-integration.md에 기록)
+### 기타 (017def3 커밋)
+- 카드보상: 자리별 속성 80/20(`SlotElements`) + 등급 50/35/15(`RarityWeight`) + `RunDeckState.startingDeck` 인스펙터.
+- FCM-RBFN 학술 보고서: `docs/ai-report/` (md+docx+그림5+시뮬코드).
+- 오프라인 `fcm_retrain_gk.py` FEAT_NAMES 라벨을 플레이 빈도로.
 
 ---
 
-## 핵심 결정/제약 (반드시 유지)
-- **SampleScene 전용** — BattleTestScene/Controller 수정·셋업 안 함(공유 스크립트는 OK).
-- **적 AI 항상 신규**: SampleScene 부트스트랩이 NewBattleController 생성 → IsNewBattleSystemActive 가드로 레거시 스킵.
-- **온라인 학습**: 보상=휴리스틱+결과 혼합, 지속=세션 단위(디스크 영속 미채택), Q-가중치만 학습(FCM 고정).
-- **카드 분류**: 키워드(효과) 기준 — f1 화상=burn효과 카드(불-색 폴백 X), f2 파편=땅+파편(원소 유지).
-- 일부 레거시 파일 EUC-KR 잔재(주석) — 편집 시 UTF-8 유지.
+## ⚠️ git / 상태
+- **GitHub Desktop이 세션 중 `017def3 "버그 수정"` 커밋함**(손패UI/보상/덱). git status에 그 변경이 안 보이는 건 *정상*(이미 커밋됨).
+- `NewBattleController`는 modified(입출력재설계+보상②, **미커밋**).
+- **`stash@{0}`** = 효과추적 (복구 대기).
+- 컴파일 OK (게임 로그 정상 생성).
 
-## 핵심 참조
-- 개요: `시스템_명세서.md` / 시스템별: `docs/systems/README.md` / 적AI 계산: `docs/systems/enemy-ai-pipeline.md`
-- 기획서 추출본: `.git/gdd_0.6v_extracted.txt` / FCM-RBFN 소스: `C:\Users\dusdn\OneDrive\바탕 화면\FcmRbfnCode (1)\FcmRbfnCode\FCMRbfnoffline_0.2\`
-- 메모리: `migration-newbattle-into-samplescene.md`, `gdd-0.6v-reflection.md`, `fcm-rbfn-ai-integration.md`
+## 핵심 통찰/결정 (반드시 유지)
+- **보상 = 각 방해의 "의도 달성"** (HP/결과 숫자 아님). ②가 귀속 노이즈로 실패한 교훈.
+- **저주: HP 못 깎아도 실패 아님** (회피=제약 성공).
+- **오프라인 코드: ①은 온라인 보상이라 오프라인 필수 수정 없음** (휴리스틱 베이스 + 온라인 효과추적). 완전 정합(CSV에 보상 소급 기록 + 오프라인이 그 보상 사용)은 나중 실데이터 재학습 때.
+
+## 기존 잔여 TODO (적 AI 마무리 후)
+- 콤보·유물 보상 UI / 맵 개편 ([gdd-0.6v-reflection] 메모리).
+- AI 실데이터 재학습 루프(`logAiDecisions` ON → Python 재학습 → `EnemyAiModel.cs` 교체).
+
+## 참조
+- 적 AI: `Assets/Script/Battle/AI/` + `NewBattleController.cs`(보상 = `CloseDisruptionReward`)
+- 오프라인: `C:\Users\dusdn\OneDrive\바탕 화면\FcmRbfnCode (1)\FcmRbfnCode\FCMRbfnoffline_0.2\`
+- 보고서: `docs/ai-report/`
+- 메모리: `fcm-rbfn-ai-integration.md`, `gdd-0.6v-reflection.md`, `ai-report-fcm-rbfn-deliverable.md`
