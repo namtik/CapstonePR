@@ -12,7 +12,11 @@
       "PowerShell(pip install pypdf -q 2>&1)",
       "PowerShell($tmp = \"C:\\\\Users\\\\hp\\\\Desktop\\\\CapstonePR\\\\Temp\\\\combo_xlsx\"; if \\(Test-Path $tmp\\) { Remove-Item $tmp -Recurse -Force }; New-Item -ItemType Directory -Force $tmp | Out-Null; Copy-Item \"C:\\\\Users\\\\hp\\\\Downloads\\\\ComboSkill_DB_\\(1\\).xlsx\" \"$tmp\\\\book.zip\"; Expand-Archive \"$tmp\\\\book.zip\" -DestinationPath \"$tmp\\\\ext\" -Force; Get-ChildItem \"$tmp\\\\ext\" -Recurse | Select-Object FullName)",
       "PowerShell(python --version 2>&1)",
-      "PowerShell(python -c \"import openpyxl; print\\('openpyxl ok'\\)\" 2>&1)"
+      "PowerShell(python -c \"import openpyxl; print\\('openpyxl ok'\\)\" 2>&1)",
+      "PowerShell(python --version)",
+      "PowerShell(python -c \"import numpy, matplotlib; print\\('numpy', numpy.__version__, 'matplotlib', matplotlib.__version__\\)\" 2>&1)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\dusdn\\\\OneDrive\\\\바탕 화면\\\\FcmRbfnCode \\(1\\)\\\\FcmRbfnCode\\\\FCMRbfnoffline_0.2\" -Recurse | Where-Object { $_.Extension -in '.py','.md','.txt' } | Select-Object -ExpandProperty FullName)",
+      "PowerShell($s = Get-Command soffice.exe -ErrorAction SilentlyContinue; if \\(-not $s\\) { $s = Test-Path \"C:\\\\Program Files\\\\LibreOffice\\\\program\\\\soffice.exe\" } ; if \\($s\\) { Write-Host \"LIBREOFFICE_OK\" } else { Write-Host \"NO_LIBREOFFICE\" }; $w = Test-Path \"C:\\\\Program Files\\\\Microsoft Office\\\\root\\\\Office16\\\\WINWORD.EXE\"; Write-Host \"WINWORD:$w\")"
     ]
   }
 }

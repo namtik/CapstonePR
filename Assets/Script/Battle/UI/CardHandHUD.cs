@@ -1345,6 +1345,11 @@ namespace Battle.UI
             {
                 var rect = _slotAnchors[i];
                 if (rect == null) continue;
+                // 겹침(그리기) 순서를 슬롯 인덱스 순으로 정규화한다.
+                // hover 시 NewCardView가 슬롯을 SetAsLastSibling으로 올리는데, 선택/픽커/뷰어 모드
+                // 전환으로 OnPointerExit가 누락되면 그 순서가 어긋난 채 남아 특정 카드가 가려져
+                // 클릭 불가가 된다. 손패가 갱신되는 매 Refresh마다 여기서 순서를 복원한다.
+                rect.SetSiblingIndex(i);
 
                 if (i < activeCount)
                 {
@@ -1374,6 +1379,7 @@ namespace Battle.UI
             {
                 var rect = _slotAnchors[i];
                 if (rect == null) continue;
+                rect.SetSiblingIndex(i); // 겹침 순서 정규화 (hover/모드 전환 잔여 복원 — PositionFanForCount 주석 참조)
                 if (i < activeCount)
                     rect.anchoredPosition = new Vector2(startX + i * slotSpacing.x, slotSpacing.y);
                 else
