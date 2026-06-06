@@ -17,9 +17,18 @@ namespace Battle.UI
 
         private const float ICON_SIZE     = 60f;
         private const float ICON_SPACING  = 8f;
-        private const float PANEL_PADDING = 10f;
         private const float TOOLTIP_PAD   = 12f;
         private const float TT_ICON_SIZE  = 48f;
+
+        [Header("HUD 위치")]
+        [Tooltip("유물 HUD 아이콘 컨테이너의 좌상단 앵커 기준 위치. Y를 더 작은(음수) 값으로 내리면 화면 아래로 이동")]
+        [SerializeField] private Vector2 hudAnchoredPosition = new Vector2(10f, -10f);
+
+        [Header("HUD 배경 박스")]
+        [Tooltip("유물 아이콘 뒤 박스 배경색(알파를 낮추면 반투명)")]
+        [SerializeField] private Color hudBackgroundColor = new Color(0f, 0f, 0f, 0.45f);
+        [Tooltip("배경 박스 내부 여백 (Left, Right, Top, Bottom)")]
+        [SerializeField] private Vector4 hudBackgroundPadding = new Vector4(10f, 10f, 8f, 8f);
 
         [Header("툴팁 글씨체")]
         [Tooltip("유물 이름/설명에 사용할 글씨체. 비워두면 TMP 기본 폰트 사용")]
@@ -90,7 +99,11 @@ namespace Battle.UI
             _iconContainer.anchorMin        = new Vector2(0f, 1f);
             _iconContainer.anchorMax        = new Vector2(0f, 1f);
             _iconContainer.pivot            = new Vector2(0f, 1f);
-            _iconContainer.anchoredPosition = new Vector2(PANEL_PADDING, -PANEL_PADDING);
+            _iconContainer.anchoredPosition = hudAnchoredPosition;
+
+            var panelBg = containerGo.AddComponent<Image>();
+            panelBg.color = hudBackgroundColor;
+            panelBg.raycastTarget = false;
 
             var layout = containerGo.AddComponent<HorizontalLayoutGroup>();
             layout.spacing              = ICON_SPACING;
@@ -98,9 +111,15 @@ namespace Battle.UI
             layout.childForceExpandHeight = false;
             layout.childControlWidth      = false;
             layout.childControlHeight     = false;
+            layout.padding = new RectOffset(
+                Mathf.RoundToInt(hudBackgroundPadding.x),
+                Mathf.RoundToInt(hudBackgroundPadding.y),
+                Mathf.RoundToInt(hudBackgroundPadding.z),
+                Mathf.RoundToInt(hudBackgroundPadding.w));
 
-            containerGo.AddComponent<ContentSizeFitter>().horizontalFit =
-                ContentSizeFitter.FitMode.PreferredSize;
+            var sizeFitter = containerGo.AddComponent<ContentSizeFitter>();
+            sizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             // 툴팁 패널: 캔버스 좌상단 앵커 (아이콘 컨테이너와 동일 기준)
             var tooltipGo = new GameObject("RelicTooltip", typeof(RectTransform));
@@ -245,8 +264,8 @@ namespace Battle.UI
 
             // 위치: _iconContainer와 _tooltipRect 모두 캔버스 좌상단(0,1) 앵커
             // → anchoredPosition이 동일 기준이므로 직접 오프셋 계산 가능
-            float iconX = PANEL_PADDING + iconIndex * (ICON_SIZE + ICON_SPACING);
-            float iconY = -PANEL_PADDING; // 아이콘 컨테이너 상단 Y
+            float iconX = hudAnchoredPosition.x + hudBackgroundPadding.x + iconIndex * (ICON_SIZE + ICON_SPACING);
+            float iconY = hudAnchoredPosition.y - hudBackgroundPadding.z; // 패딩 적용된 아이콘 상단 Y
 
             _tooltipRect.anchoredPosition = new Vector2(iconX, iconY - ICON_SIZE - 4f);
             _tooltip.SetActive(true);
