@@ -76,7 +76,7 @@ public class ComboSystem : MonoBehaviour
 
     void Start()
     {
-        player = FindFirstObjectByType<Player>();
+        player = Player.Resolve(true);
         RefreshEnemyRef();
 
         // UI 생성

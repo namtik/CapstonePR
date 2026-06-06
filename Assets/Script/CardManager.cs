@@ -46,7 +46,7 @@ public class CardSystem : MonoBehaviour
             return;
         }
 
-        player = FindFirstObjectByType<Player>();
+        player = Player.Resolve(true);
         comboSystem = FindFirstObjectByType<ComboSystem>(); // 콤보 시스템 찾기
         RefreshEnemyRef();
 

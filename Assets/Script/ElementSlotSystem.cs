@@ -112,7 +112,7 @@ public class ElementSlotSystem : MonoBehaviour
     void Start()
     {
         comboSystem = FindFirstObjectByType<ComboSystem>();
-        player      = FindFirstObjectByType<Player>();
+        player      = Player.Resolve(true);
         RefreshEnemyRef();
         EnsureHudComponent();
     }
@@ -132,7 +132,7 @@ public class ElementSlotSystem : MonoBehaviour
             enemyController = FindFirstObjectByType<EnemyController>();
 
         if (player == null || !player.gameObject.activeInHierarchy)
-            player = FindFirstObjectByType<Player>();
+            player = Player.Resolve(true);
     }
 
     void EnsureHudComponent()
@@ -165,7 +165,7 @@ public class ElementSlotSystem : MonoBehaviour
     {
         inBattle = true;
 
-        player      = FindFirstObjectByType<Player>();
+        player      = Player.Resolve(true);
         comboSystem = FindFirstObjectByType<ComboSystem>();
         RefreshEnemyRef();
 

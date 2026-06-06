@@ -27,7 +27,7 @@ public class Roundmanager : MonoBehaviour
 
     void EnsureRuntimePlayerExists()
     {
-        Player existingPlayer = FindFirstObjectByType<Player>();
+        Player existingPlayer = Player.Resolve(true);
         if (existingPlayer != null)
         {
             existingPlayer.UpdateUIForExternalSync();
@@ -36,9 +36,7 @@ public class Roundmanager : MonoBehaviour
             return;
         }
 
-        GameObject playerObject = new GameObject("PlayerLogic");
-        Player newPlayer = playerObject.AddComponent<Player>();
-        DontDestroyOnLoad(playerObject);
+        Player newPlayer = Player.GetOrCreateRuntime();
 
         Debug.Log("[RoundManager] Hidden runtime Player created");
 
@@ -205,7 +203,7 @@ public class Roundmanager : MonoBehaviour
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
 
-        Player player = FindFirstObjectByType<Player>();
+        Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
         currentEnemyIndex = 0;
@@ -223,7 +221,7 @@ public class Roundmanager : MonoBehaviour
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
 
-        Player player = FindFirstObjectByType<Player>();
+        Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
         currentEnemyIndex = 0;
@@ -241,7 +239,7 @@ public class Roundmanager : MonoBehaviour
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
 
-        Player player = FindFirstObjectByType<Player>();
+        Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
         SpawnEnemy(data.bossEnemy, data.columnIndex, NodeType.Boss);
@@ -263,11 +261,57 @@ public class Roundmanager : MonoBehaviour
     }
 
     /// <summary>
+    /// 이벤트 스테이지 시작 (EventRoundHandler)
+    /// </summary>
+    public void OpenEvent(EventRoundData data)
+    {
+        EventStageController controller = FindFirstObjectByType<EventStageController>(FindObjectsInactive.Include);
+        if (controller == null)
+        {
+            Debug.LogError("[Roundmanager] EventStageController를 찾지 못해 맵으로 복귀합니다.");
+            ReturnToMap();
+            return;
+        }
+
+        controller.BeginEvent(data, this);
+        Debug.Log("[Roundmanager] 이벤트 스테이지 시작");
+    }
+
+    /// <summary>
+    /// 휴식 스테이지 시작 (RestRoundHandler)
+    /// </summary>
+    public void OpenRest(RestRoundData data)
+    {
+        RestStageController controller = FindFirstObjectByType<RestStageController>(FindObjectsInactive.Include);
+
+        if (controller == null)
+        {
+            var stateController = GameStateController.Instance;
+            if (stateController != null && stateController.restStage != null)
+            {
+                controller = stateController.restStage.GetComponentInChildren<RestStageController>(true);
+                if (controller == null)
+                    controller = stateController.restStage.AddComponent<RestStageController>();
+            }
+        }
+
+        if (controller == null)
+        {
+            Debug.LogError("[Roundmanager] RestStageController를 찾지 못해 맵으로 복귀합니다.");
+            ReturnToMap();
+            return;
+        }
+
+        controller.BeginRest(data, this);
+        Debug.Log("[Roundmanager] 휴식 스테이지 시작");
+    }
+
+    /// <summary>
     /// 플레이어 HP 회복 (RestRoundHandler)
     /// </summary>
     public void HealPlayer(float healPercent)
     {
-        var player = FindFirstObjectByType<Player>();
+        var player = Player.Resolve(true);
         if (player == null) return;
 
         int healAmount = Mathf.Max(1, Mathf.RoundToInt(player.maxHp * healPercent));

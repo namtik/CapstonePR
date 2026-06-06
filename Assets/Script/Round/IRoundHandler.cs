@@ -91,6 +91,7 @@ public class EventRoundHandler : IRoundHandler
     public void OnEnterRound(Roundmanager rm)
     {
         Debug.Log("Entering Event Round: " + Data.roundName);
+        rm.OpenEvent(Data);
     }
     public void OnExitRound(Roundmanager rm)
     {
@@ -108,7 +109,7 @@ public class RestRoundHandler : IRoundHandler
     public void OnEnterRound(Roundmanager rm)
     {
         Debug.Log("Entering Rest Round: " + Data.roundName);
-        rm.HealPlayer(Data.healPercent);
+        rm.OpenRest(Data);
     }
     public void OnExitRound(Roundmanager rm)
     {

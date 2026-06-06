@@ -18,3 +18,4 @@ MonoBehaviour:
   attackDamage: 10
   gaugeSpeed: 20
   baseAttackCount: 3
+  actionGaugeMax: 20

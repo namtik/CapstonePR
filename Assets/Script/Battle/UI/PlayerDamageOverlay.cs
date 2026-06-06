@@ -62,7 +62,7 @@ namespace Battle.UI
             SetAlpha(0f);
 
             // Player 자동 구독
-            _player = FindFirstObjectByType<Player>();
+            _player = Player.Resolve(true);
             if (_player != null)
             {
                 _player.OnHpDecreased -= OnPlayerHpDecreased;

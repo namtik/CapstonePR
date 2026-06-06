@@ -6,6 +6,8 @@ using System;
 
 public class Player : MonoBehaviour, IBattleUnit
 {
+    public static Player Instance { get; private set; }
+
     [Header("능력치")]
     public int maxHp = 100;
     public int currentHp;
@@ -36,10 +38,70 @@ public class Player : MonoBehaviour, IBattleUnit
 
     public ParticleSystem attackParticle;
 
+    static bool IsRuntimeFallback(Player player)
+    {
+        return player != null && player.gameObject != null && player.gameObject.name == "PlayerLogic";
+    }
+
+    public static Player Resolve(bool includeInactive = true)
+    {
+        if (Instance != null)
+        {
+            if (includeInactive || Instance.gameObject.activeInHierarchy)
+            {
+                if (!IsRuntimeFallback(Instance))
+                    return Instance;
+            }
+        }
+
+        Player[] players = includeInactive
+            ? FindObjectsByType<Player>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            : FindObjectsByType<Player>(FindObjectsSortMode.None);
+
+        if (players == null || players.Length == 0)
+            return includeInactive ? Instance : null;
+
+        Player preferred = null;
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i] == null) continue;
+            if (!IsRuntimeFallback(players[i]))
+            {
+                preferred = players[i];
+                break;
+            }
+        }
+
+        if (preferred == null)
+            preferred = players[0];
+
+        Instance = preferred;
+        return preferred;
+    }
+
+    public static Player GetOrCreateRuntime()
+    {
+        Player resolved = Resolve(true);
+        if (resolved != null)
+            return resolved;
+
+        GameObject go = new GameObject("PlayerLogic");
+        Player player = go.AddComponent<Player>();
+        DontDestroyOnLoad(go);
+        Instance = player;
+        return player;
+    }
+
     void Awake()
     {
+        if (Instance == null || IsRuntimeFallback(Instance))
+            Instance = this;
+
         ResolveUiReferences();
-        currentHp = maxHp;
+        if (currentHp <= 0)
+            currentHp = maxHp;
+        else
+            currentHp = Mathf.Clamp(currentHp, 1, maxHp);
 
         statusEffects["launcher"] = 0;
         statusEffects["fortify"] = 0;

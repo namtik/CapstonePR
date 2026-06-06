@@ -204,7 +204,7 @@ public class BattleTestController : MonoBehaviour
 
     void ApplyPlayerOverrides()
     {
-        Player player = FindFirstObjectByType<Player>();
+        Player player = Player.Resolve(true);
         if (player == null)
         {
             GameObject go = new GameObject("PlayerLogic");

@@ -244,7 +244,7 @@ namespace Battle
 
         public void StartBattle()
         {
-            _player = FindFirstObjectByType<Player>();
+            _player = Player.Resolve(true);
             _enemy = FindFirstObjectByType<EnemyController>();
             _enemyStat = _enemy != null ? _enemy.GetComponent<EnemyStat>() : null;
 

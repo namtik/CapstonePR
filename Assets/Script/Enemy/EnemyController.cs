@@ -30,7 +30,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
     private void Start()
     {
-        player = FindFirstObjectByType<Player>();
+        player = Player.Resolve(true);
         roundmanager = FindFirstObjectByType<Roundmanager>();
 
         stat.OnDied += HandleDeath;
@@ -172,7 +172,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     {
         midPattern?.OnGauge10();
         if (player == null)
-            player = FindFirstObjectByType<Player>();
+            player = Player.Resolve(true);
 
         // 새 전투 시스템: 적 공격 피격 처리 전 화상 발동 (PDF 명세)
         if (Battle.NewBattleController.Instance != null)
