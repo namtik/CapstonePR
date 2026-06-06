@@ -4,21 +4,22 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "RoundDataConfig", menuName = "Round/RoundDataConfig")]
 public class RoundDataConfig : ScriptableObject
 {
-    [Header("ÀüÅõ (ÀÏ¹Ý)")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ (ï¿½Ï¹ï¿½)")]
     public List<CombatRoundData> combatPool;
 
-    [Header("Á¤¿¹")]
+    [Header("ï¿½ï¿½ï¿½ï¿½")]
     public List<EliteRoundData> elitePool;
 
-    [Header("º¸½º")]
+    [Header("ï¿½ï¿½ï¿½ï¿½")]
     public List<BossRoundData> bossPool;
 
-    [Header("»óÁ¡/ÈÞ½Ä/»ç°Ç")]
+    [Header("ï¿½ï¿½ï¿½ï¿½/ï¿½Þ½ï¿½/ï¿½ï¿½ï¿½")]
     public ShopRoundData shopData;
     public RestRoundData restData;
     public EventRoundData eventData;
+    public RelicRoundData relicData;
 
-    // NodeType¿¡ ¸Â´Â RoundData¸¦ ·£´ý ¹ÝÈ¯
+    // NodeTypeï¿½ï¿½ ï¿½Â´ï¿½ RoundDataï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯
     public RoundData GetRoundData(NodeType type)
     {
         return type switch
@@ -29,6 +30,7 @@ public class RoundDataConfig : ScriptableObject
             NodeType.Shop => shopData,
             NodeType.Rest => restData,
             NodeType.Event => eventData,
+            NodeType.Relic => relicData,
             _ => null
         };
     }
@@ -37,7 +39,7 @@ public class RoundDataConfig : ScriptableObject
     {
         if (pool == null || pool.Count == 0)
         {
-            Debug.LogWarning($"RoundDataConfig: {typeof(T).Name} Ç®ÀÌ ºñ¾îÀÖ½À´Ï´Ù!");
+            Debug.LogWarning($"RoundDataConfig: {typeof(T).Name} Ç®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½Ï´ï¿½!");
             return null;
         }
         return pool[Random.Range(0, pool.Count)];

@@ -31,4 +31,7 @@ MonoBehaviour:
   - nodeType: 5
     sprite: {fileID: 21300000, guid: 68f15ebe85542a3489032058d0bdf7eb, type: 3}
     fallbackColor: {r: 0, g: 0, b: 1, a: 1}
+  - nodeType: 6
+    sprite: {fileID: 21300000, guid: e76dfd32325da614fb46dbac7519ff3f, type: 3}
+    fallbackColor: {r: 0.9137256, g: 0.5882353, b: 0.4784314, a: 1}
   clearedColor: {r: 0, g: 0, b: 0, a: 1}

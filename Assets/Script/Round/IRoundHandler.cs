@@ -116,3 +116,23 @@ public class RestRoundHandler : IRoundHandler
         Debug.Log("Exiting Rest Round: " + Data.roundName);
     }
 }
+
+public class RelicRoundHandler : IRoundHandler
+{
+    private RelicRoundData Data;
+    public RelicRoundHandler(RelicRoundData data)
+    {
+        Data = data;
+    }
+
+    public void OnEnterRound(Roundmanager rm)
+    {
+        Debug.Log("Entering Relic Round: " + Data.roundName);
+        rm.OpenRelic(Data);
+    }
+
+    public void OnExitRound(Roundmanager rm)
+    {
+        Debug.Log("Exiting Relic Round: " + Data.roundName);
+    }
+}

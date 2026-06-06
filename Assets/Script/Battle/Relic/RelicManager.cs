@@ -37,6 +37,7 @@ namespace Battle.Relic
 
         private readonly List<RelicDef> _owned = new List<RelicDef>();
         public IReadOnlyList<RelicDef> OwnedRelics => _owned;
+        public IReadOnlyList<RelicDef> RelicDefinitions => relicDefinitions;
 
         void Awake()
         {
@@ -68,6 +69,57 @@ namespace Battle.Relic
             _owned.Add(relic);
             RelicHUD.Instance?.Refresh(_owned);
             Debug.Log($"[유물] 획득: {relic.displayName}");
+        }
+
+        public bool HasRelicId(string relicId)
+        {
+            if (string.IsNullOrWhiteSpace(relicId)) return false;
+            return _owned.Exists(r => r.id == relicId);
+        }
+
+        /// <summary>
+        /// 개발중(효과 미구현) 유물을 아이콘 기반으로 보유 목록에 추가한다.
+        /// </summary>
+        public bool TryAddSpriteOnlyRelic(Sprite sprite, out RelicDef granted)
+        {
+            granted = null;
+            if (sprite == null) return false;
+
+            string spriteName = string.IsNullOrWhiteSpace(sprite.name) ? "relic" : sprite.name.Trim();
+            string relicId = $"sprite_{SanitizeId(spriteName)}";
+
+            if (HasRelicId(relicId)) return false;
+
+            var relic = new RelicDef
+            {
+                id = relicId,
+                displayName = spriteName,
+                description = "개발중인 유물",
+                icon = sprite,
+                effect = RelicEffectType.None,
+            };
+
+            _owned.Add(relic);
+            RelicHUD.Instance?.Refresh(_owned);
+            Debug.Log($"[유물] 획득(이미지 전용): {relic.displayName}");
+
+            granted = relic;
+            return true;
+        }
+
+        static string SanitizeId(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return "relic";
+
+            char[] chars = raw.ToLowerInvariant().ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+            {
+                char c = chars[i];
+                bool allowed = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-';
+                if (!allowed) chars[i] = '_';
+            }
+
+            return new string(chars);
         }
 
         public bool HasEffect(RelicEffectType type)

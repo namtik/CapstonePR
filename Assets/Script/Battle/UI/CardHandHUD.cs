@@ -279,6 +279,20 @@ namespace Battle.UI
         }
 
         /// <summary>
+        /// 각성 게이지 표시 여부를 직접 제어.
+        /// 전투 외 구간(맵/상점/휴식 등)에서는 false로 두어 항상 숨긴다.
+        /// </summary>
+        public void SetAwakenGaugeVisible(bool visible)
+        {
+            if (visible) EnsureAwakenGauge();
+            if (awakenGauge != null)
+                awakenGauge.gameObject.SetActive(visible);
+
+            if (awakenGaugeLabel != null && awakenGaugeLabel.transform.parent != (awakenGauge != null ? awakenGauge.transform : null))
+                awakenGaugeLabel.gameObject.SetActive(visible);
+        }
+
+        /// <summary>
         /// 각성 상태에 따라 게이지를 갱신.
         /// chargeCur/chargeMax: 충전 단계(0~10) — active=false일 때 사용.
         /// active: 발동 중 — timeRemaining/timeMax로 fill 계산. timeMax는 콤보 보너스로 동적 증가.

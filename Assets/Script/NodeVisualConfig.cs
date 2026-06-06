@@ -11,7 +11,7 @@ public class NodeVisualConfig : ScriptableObject
         public Color fallbackColor = Color.white;
     }
 
-    [Header("³ëµå Å¸ÀÔº° ºñÁÖ¾ó ¼³Á¤")]
+    [Header("ï¿½ï¿½ï¿½ Å¸ï¿½Ôºï¿½ ï¿½ï¿½ï¿½Ö¾ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public NodeVisual[] nodeVisuals = new NodeVisual[]
     {
         new NodeVisual { nodeType = NodeType.Combat, fallbackColor = Color.red },
@@ -19,10 +19,11 @@ public class NodeVisualConfig : ScriptableObject
         new NodeVisual { nodeType = NodeType.Rest, fallbackColor = Color.cyan },
         new NodeVisual { nodeType = NodeType.Elite, fallbackColor = Color.yellow },
         new NodeVisual { nodeType = NodeType.Boss, fallbackColor = Color.magenta },
-        new NodeVisual { nodeType = NodeType.Event, fallbackColor = Color.blue }
+        new NodeVisual { nodeType = NodeType.Event, fallbackColor = Color.blue },
+        new NodeVisual { nodeType = NodeType.Relic, fallbackColor = new Color(1f, 0.65f, 0.1f) }
     };
 
-    [Header("»óÅÂº° »ö»ó")]
+    [Header("ï¿½ï¿½ï¿½Âºï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public Color clearedColor = Color.gray;
     
     public Sprite GetSpriteForType(NodeType type)

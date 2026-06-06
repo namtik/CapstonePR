@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.Serialization;
 using Battle.Card;
 using Battle.Deck;
@@ -313,9 +314,14 @@ namespace Battle
             _usedFireCardCount = 0;
             _recoverCooldown = 0;
 
-            // 각성 게이지를 Player.hpBar 아래에 자동 배치
-            if (handHud != null && _player != null && _player.hpBar != null)
-                handHud.SetAwakenGaugeAnchor(_player.hpBar.GetComponent<RectTransform>());
+            // 각성 게이지를 전투 UI의 활성 HP바 아래에 배치 (맵 HP바 오인식 방지)
+            if (handHud != null)
+            {
+                var hpRect = ResolveActiveCombatHpBarRect();
+                if (hpRect != null) handHud.SetAwakenGaugeAnchor(hpRect);
+            }
+            if (handHud != null)
+                handHud.SetAwakenGaugeVisible(true);
 
             _deck.Draw(START_DRAW);
             UpdateAwakenText();
@@ -335,6 +341,7 @@ namespace Battle
                 handHud.CancelCardUsePresentations();
                 handHud.UseCardCallback = null;
                 handHud.SelectionClosedCallback = null;
+                handHud.SetAwakenGaugeVisible(false);
             }
             Log("전투 종료");
         }
@@ -1330,12 +1337,10 @@ namespace Battle
         {
             if (handHud == null) return;
 
-            // Player.hpBar가 늦게 잡힐 수 있으므로 매 프레임 anchor 재시도 (이미 잡혔으면 CardHandHUD가 무시)
-            if (_player != null && _player.hpBar != null)
-            {
-                var hpRect = _player.hpBar.GetComponent<RectTransform>();
-                if (hpRect != null) handHud.SetAwakenGaugeAnchor(hpRect);
-            }
+            // 전투 UI의 활성 HP바가 늦게 켜질 수 있으므로 매 프레임 anchor 재시도
+            var activeCombatHpRect = ResolveActiveCombatHpBarRect();
+            if (activeCombatHpRect != null)
+                handHud.SetAwakenGaugeAnchor(activeCombatHpRect);
 
             // 각성은 N장 도달 시 즉시 발동되므로 'READY 대기' 상태가 없다. N은 바람326 등으로 가변.
             int awakenMax = EffectiveAwakenInput;
@@ -1409,6 +1414,44 @@ namespace Battle
                 if (c != null) return c;
             }
             return FindFirstObjectByType<Canvas>();
+        }
+
+        RectTransform ResolveActiveCombatHpBarRect()
+        {
+            GameObject combatStage = GameObject.Find("CombatStage");
+            if (combatStage != null)
+            {
+                var stageSliders = combatStage.GetComponentsInChildren<Slider>(true);
+                foreach (var slider in stageSliders)
+                {
+                    if (slider == null) continue;
+                    if (slider.gameObject.name != "PlayerHpBar") continue;
+                    if (!slider.gameObject.activeInHierarchy) continue;
+
+                    var rect = slider.GetComponent<RectTransform>();
+                    if (rect != null) return rect;
+                }
+            }
+
+            Canvas combatCanvas = ResolveCombatCanvas();
+            if (combatCanvas != null)
+            {
+                var canvasSliders = combatCanvas.GetComponentsInChildren<Slider>(true);
+                foreach (var slider in canvasSliders)
+                {
+                    if (slider == null) continue;
+                    if (slider.gameObject.name != "PlayerHpBar") continue;
+                    if (!slider.gameObject.activeInHierarchy) continue;
+
+                    var rect = slider.GetComponent<RectTransform>();
+                    if (rect != null) return rect;
+                }
+            }
+
+            if (_player != null && _player.hpBar != null && _player.hpBar.gameObject.activeInHierarchy)
+                return _player.hpBar.GetComponent<RectTransform>();
+
+            return null;
         }
 
         void EnsureEventSystem()

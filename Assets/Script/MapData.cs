@@ -14,7 +14,7 @@ public class MapData : ScriptableObject
         // ����: MapManager�� RectTransform.anchoredPosition�� �״�� ����մϴ�.
         public Vector2 anchoredPosition = Vector2.zero;
 
-        // ��� ���� (Combat, Shop, Rest, Elite)
+        // ��� ���� (Combat, Shop, Rest, Elite, Event, Relic)
         // MapNode ���� �� ������ �����ϴ� �⺻ ����
         public NodeType nodeType = NodeType.Combat;
 

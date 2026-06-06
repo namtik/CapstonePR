@@ -1,8 +1,8 @@
 using UnityEngine;
 
-public enum NodeType { Combat, Shop, Rest, Elite, Boss, Event }
+public enum NodeType { Combat, Shop, Rest, Elite, Boss, Event, Relic }
 
-// °³º° ³ëµåÀÇ »óÅÂ¿Í µ¿ÀÛÀ» °ü¸®ÇÏ´Â ÄÄÆ÷³ÍÆ®
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
 public class MapNode : MonoBehaviour
 {
     public int nodeIndex = -1;
@@ -10,14 +10,14 @@ public class MapNode : MonoBehaviour
     public bool isCleared = false;
     public RoundData roundData;
     
-    [Header("³ëµå Å¸ÀÔ (Á÷Á¢ ¼³Á¤ °¡´É)")]
+    [Header("ï¿½ï¿½ï¿½ Å¸ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)")]
     [SerializeField] private NodeType _nodeType = NodeType.Combat;
     
     public NodeType nodeType
     {
         get
         {
-            // roundData°¡ ÀÖÀ¸¸é ±×°Í »ç¿ë, ¾øÀ¸¸é _nodeType »ç¿ë
+            // roundDataï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½×°ï¿½ ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ _nodeType ï¿½ï¿½ï¿½
             if (roundData != null)
                 return roundData.roundType;
             return _nodeType;
@@ -28,19 +28,19 @@ public class MapNode : MonoBehaviour
         }
     }
 
-    [Header("ºñÁÖ¾ó ¼³Á¤")]
+    [Header("ï¿½ï¿½ï¿½Ö¾ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public NodeVisualConfig visualConfig;
 
     private UnityEngine.UI.Image img;
     private bool isHighlighted = false;
     private Color highlightColor = Color.white;
-    private bool isCurrentPosition = false; // °¢ÁÖ: ÇöÀç ÇÃ·¹ÀÌ¾î À§Ä¡ Ç¥½Ã
+    private bool isCurrentPosition = false; // ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½Ä¡ Ç¥ï¿½ï¿½
 
     void Awake()
     {
         img = GetComponent<UnityEngine.UI.Image>();
         
-        // ImageÀÇ raycastTarget È°¼ºÈ­
+        // Imageï¿½ï¿½ raycastTarget È°ï¿½ï¿½È­
         if (img != null && !img.raycastTarget)
         {
             img.raycastTarget = true;
@@ -52,16 +52,16 @@ public class MapNode : MonoBehaviour
         UpdateVisual();
     }
 
-    // °¢ÁÖ: È­¸é Ç¥½Ã ¾÷µ¥ÀÌÆ® (¿ì¼±¼øÀ§: Å¬¸®¾î > ÇöÀçÀ§Ä¡ > ÇÏÀÌ¶óÀÌÆ® > Å¸ÀÔ)
+    // ï¿½ï¿½ï¿½ï¿½: È­ï¿½ï¿½ Ç¥ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® (ï¿½ì¼±ï¿½ï¿½ï¿½ï¿½: Å¬ï¿½ï¿½ï¿½ï¿½ > ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¡ > ï¿½ï¿½ï¿½Ì¶ï¿½ï¿½ï¿½Æ® > Å¸ï¿½ï¿½)
     void UpdateVisual()
     {
         if (img == null) return;
         
-        // °¢ÁÖ: Å¬¸®¾îµÈ ³ëµå´Â È¸»ö
+        // ï¿½ï¿½ï¿½ï¿½: Å¬ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½
         if (isCleared)
         {
             img.color = visualConfig != null ? visualConfig.clearedColor : Color.gray;
-            // Å©±â´Â À¯Áö (Å¬¸®¾î ÈÄ¿¡µµ ÇöÀç À§Ä¡¸é Å©±â À¯Áö)
+            // Å©ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½Ä¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ Å©ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
             if (!isCurrentPosition)
             {
                 transform.localScale = Vector3.one;
@@ -69,10 +69,10 @@ public class MapNode : MonoBehaviour
             return;
         }
         
-        // °¢ÁÖ: ÇöÀç À§Ä¡´Â Å©±â¿Í OutlineÀ¸·Î¸¸ Ç¥½Ã (»ö»óÀº Å¸ÀÔº° À¯Áö)
-        // isCurrentPositionÀÏ ¶§µµ ¾Æ·¡ Å¸ÀÔº° »ö»ó/ÀÌ¹ÌÁö Àû¿ë
+        // ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ Å©ï¿½ï¿½ï¿½ Outlineï¿½ï¿½ï¿½Î¸ï¿½ Ç¥ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å¸ï¿½Ôºï¿½ ï¿½ï¿½ï¿½ï¿½)
+        // isCurrentPositionï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Æ·ï¿½ Å¸ï¿½Ôºï¿½ ï¿½ï¿½ï¿½ï¿½/ï¿½Ì¹ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         
-        // °¢ÁÖ: °­Á¶ »óÅÂ
+        // ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (isHighlighted)
         {
             img.color = Color.black;
@@ -83,8 +83,8 @@ public class MapNode : MonoBehaviour
             return;
         }
 
-        // °¢ÁÖ: ±âº» Å¸ÀÔº° ½ºÇÁ¶óÀÌÆ® ¶Ç´Â »ö»ó
-        // Å©±â´Â ÇöÀç À§Ä¡°¡ ¾Æ´Ï¸é 1.0À¸·Î ¸®¼Â
+        // ï¿½ï¿½ï¿½ï¿½: ï¿½âº» Å¸ï¿½Ôºï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ï¿½
+        // Å©ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½Æ´Ï¸ï¿½ 1.0ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (!isCurrentPosition)
         {
             img.color = Color.black;
@@ -106,7 +106,7 @@ public class MapNode : MonoBehaviour
         }
         else
         {
-            // Æú¹é: ±âº» »ö»ó
+            // ï¿½ï¿½ï¿½ï¿½: ï¿½âº» ï¿½ï¿½ï¿½ï¿½
             switch (nodeType)
             {
                 case NodeType.Combat: img.color = Color.red; break;
@@ -115,6 +115,7 @@ public class MapNode : MonoBehaviour
                 case NodeType.Elite: img.color = Color.yellow; break;
                 case NodeType.Boss: img.color = Color.magenta; break;
                 case NodeType.Event: img.color = Color.blue; break;
+                case NodeType.Relic: img.color = new Color(1f, 0.65f, 0.1f); break;
             }
         }
     }
@@ -137,8 +138,8 @@ public class MapNode : MonoBehaviour
     }
 
     /// <summary>
-    /// ÇöÀç ÇÃ·¹ÀÌ¾î À§Ä¡·Î Æ¯º° ÇÏÀÌ¶óÀÌÆ®
-    /// °¢ÁÖ: Å©±â È®´ë·Î¸¸ Ç¥½Ã (°¡Àå ±ò²û)
+    /// ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½ Æ¯ï¿½ï¿½ ï¿½ï¿½ï¿½Ì¶ï¿½ï¿½ï¿½Æ®
+    /// ï¿½ï¿½ï¿½ï¿½: Å©ï¿½ï¿½ È®ï¿½ï¿½Î¸ï¿½ Ç¥ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½)
     /// </summary>
     public void HighlightAsCurrentPosition(float scale)
     {
@@ -146,14 +147,14 @@ public class MapNode : MonoBehaviour
         
         isCurrentPosition = true;
         
-        // °¢ÁÖ: Å©±â È®´ë¸¸ Àû¿ë
+        // ï¿½ï¿½ï¿½ï¿½: Å©ï¿½ï¿½ È®ï¿½ë¸¸ ï¿½ï¿½ï¿½ï¿½
         transform.localScale = Vector3.one * scale;
         
         UpdateVisual();
     }
 
     /// <summary>
-    /// ÇöÀç À§Ä¡ ÇÏÀÌ¶óÀÌÆ® ÇØÁ¦
+    /// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½Ì¶ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     public void ClearCurrentPositionHighlight()
     {
@@ -161,7 +162,7 @@ public class MapNode : MonoBehaviour
         
         isCurrentPosition = false;
         
-        // Å©±â¸¦ ¿ø·¡´ë·Î º¹¿ø
+        // Å©ï¿½â¸¦ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         transform.localScale = Vector3.one;
         
         UpdateVisual();

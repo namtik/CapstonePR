@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
+using Battle.Relic;
 
 public class Roundmanager : MonoBehaviour
 {
@@ -304,6 +305,78 @@ public class Roundmanager : MonoBehaviour
 
         controller.BeginRest(data, this);
         Debug.Log("[Roundmanager] 휴식 스테이지 시작");
+    }
+
+    /// <summary>
+    /// 유물 스테이지 시작 (RelicRoundHandler)
+    /// </summary>
+    public void OpenRelic(RelicRoundData data)
+    {
+        RelicStageController controller = FindFirstObjectByType<RelicStageController>(FindObjectsInactive.Include);
+
+        if (controller == null)
+        {
+            var stateController = GameStateController.Instance;
+            if (stateController != null && stateController.relicStage != null)
+            {
+                controller = stateController.relicStage.GetComponentInChildren<RelicStageController>(true);
+                if (controller == null)
+                    controller = stateController.relicStage.AddComponent<RelicStageController>();
+            }
+        }
+
+        if (controller == null)
+        {
+            Debug.LogWarning("[Roundmanager] RelicStageController를 찾지 못해 유물 스테이지를 진행할 수 없습니다. 맵으로 복귀합니다.");
+            ReturnToMap();
+            return;
+        }
+
+        controller.BeginRelic(data, this);
+        Debug.Log("[Roundmanager] 유물 스테이지 시작");
+    }
+
+    /// <summary>
+    /// Relic 스테이지 보상 처리: 후보가 있으면 후보에서, 없으면 전체 효과에서 랜덤 지급.
+    /// </summary>
+    public void GrantRelicFromStage(IReadOnlyList<RelicEffectType> candidates)
+    {
+        if (RelicManager.Instance == null)
+        {
+            Debug.LogWarning("[Roundmanager] RelicManager가 없어 유물 지급을 건너뜁니다.");
+            return;
+        }
+
+        List<RelicEffectType> pool = new List<RelicEffectType>();
+
+        if (candidates != null)
+        {
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                var effect = candidates[i];
+                if (effect == RelicEffectType.None) continue;
+                if (!pool.Contains(effect)) pool.Add(effect);
+            }
+        }
+
+        if (pool.Count == 0)
+        {
+            foreach (RelicEffectType effect in System.Enum.GetValues(typeof(RelicEffectType)))
+            {
+                if (effect == RelicEffectType.None) continue;
+                pool.Add(effect);
+            }
+        }
+
+        if (pool.Count == 0)
+        {
+            Debug.LogWarning("[Roundmanager] 지급 가능한 유물 효과가 없습니다.");
+            return;
+        }
+
+        var picked = pool[Random.Range(0, pool.Count)];
+        RelicManager.Instance.GiveRelicByEffect(picked);
+        Debug.Log($"[Roundmanager] RelicStage 보상 지급: {picked}");
     }
 
     /// <summary>
