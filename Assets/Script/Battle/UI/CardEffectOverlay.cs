@@ -59,6 +59,8 @@ namespace Battle.UI
         [SerializeField] private List<EffectScaleOverride> particleScaleOverrides = new List<EffectScaleOverride>();
         [Tooltip("파티클 자동 소멸 시 추가 여유시간(초).")]
         [SerializeField] private float particleLifetimePadding = 0.5f;
+        [Tooltip("파티클 위치 오프셋 (effectName별) — 인스턴스를 래퍼 중심(0,0)으로 리셋한 뒤 이 값만큼 이동. 이펙트마다 위치 미세조정.")]
+        [SerializeField] private List<EffectPositionOverride> particlePositionOffsets = new List<EffectPositionOverride>();
 
         [System.Serializable]
         public struct EffectScaleOverride
@@ -112,7 +114,6 @@ namespace Battle.UI
             if (preferParticlePrefab)
             {
                 GameObject prefab = LoadPrefab(effectName);
-                Debug.Log($"[CardEffect][진단] effectName='{effectName}' prefab={(prefab != null ? prefab.name : "NULL")}");
                 if (prefab != null)
                 {
                     SpawnParticle(prefab, pos, effectName);
@@ -242,8 +243,17 @@ namespace Battle.UI
 
             var uip = go.AddComponent<UIParticle>();
             uip.scale = ResolveParticleScaleFor(effectName);
-            // 프리팹을 인스턴스화해 자식 ParticleSystem으로 등록(내부에서 RefreshParticles 수행).
-            uip.SetParticleSystemPrefab(prefab);
+
+            // 프리팹을 직접 인스턴스화해 래퍼의 자식으로 붙인다. localPosition을 0으로 리셋해
+            // 프리팹 원본 위치(씬 좌표)를 제거하고, effectName별 오프셋만큼만 미세 이동.
+            var inst = Instantiate(prefab);
+            inst.transform.SetParent(go.transform, false);
+            Vector2 off = ResolveParticleOffsetFor(effectName);
+            inst.transform.localPosition = new Vector3(off.x, off.y, 0f);
+            inst.transform.localRotation = Quaternion.identity;
+            inst.transform.localScale = Vector3.one;
+            uip.RefreshParticles();
+
             // UI(스크린) 공간에서 보이도록 모든 파티클을 Local 시뮬레이션으로 강제.
             // World 시뮬레이션이면 파티클이 캔버스 밖(월드 원점 근처)에서 터져 화면에 안 보인다.
             ForceLocalSimulation(uip);
@@ -251,7 +261,6 @@ namespace Battle.UI
 
             // 프리팹이 자동 파괴(stopAction) 설정이 없어도, 재생 길이만큼 뒤 안전하게 정리.
             float life = ComputeParticleLifetime(uip) + Mathf.Max(0f, particleLifetimePadding);
-            Debug.Log($"[CardEffect][진단] FX go={go.name} 부모={Rect.name} 자식수={go.transform.childCount} particles수={(uip.particles != null ? uip.particles.Count : -1)} scale={uip.scale} pos={anchoredPos} life={life}");
             Destroy(go, life);
         }
 
@@ -276,6 +285,16 @@ namespace Battle.UI
                     return particleScaleOverrides[i].scale;
             }
             return particleScale;
+        }
+
+        Vector2 ResolveParticleOffsetFor(string effectName)
+        {
+            for (int i = 0; i < particlePositionOffsets.Count; i++)
+            {
+                if (string.Equals(particlePositionOffsets[i].effectName, effectName, System.StringComparison.OrdinalIgnoreCase))
+                    return particlePositionOffsets[i].anchoredPos;
+            }
+            return Vector2.zero;
         }
 
         // 자식 파티클들의 (duration + 최대 수명) 중 가장 긴 시간 — 1회 재생 후 파괴 시점.
