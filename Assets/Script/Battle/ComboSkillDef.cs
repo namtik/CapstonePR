@@ -35,6 +35,8 @@ namespace Battle
         // ── DB 기반 런타임 필드 (Inspector 직렬화 대상 아님) ──
         [System.NonSerialized] public bool fromDatabase;
         [System.NonSerialized] public int refComboId;
+        [System.NonSerialized] public string skillImg;
+        [System.NonSerialized] public Sprite skillIcon;
         [System.NonSerialized] public string descriptionKR;
         [System.NonSerialized] public List<ComboEffectData> dbEffects;
         // 같은 refComboId를 공유하는 모든 슬롯 순서 키("FIRE,WIND,FIRE" 등). 순서무관 매칭용.

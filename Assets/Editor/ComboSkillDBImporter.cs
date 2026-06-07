@@ -114,6 +114,9 @@ namespace Battle.EditorTools
             int slot3Col   = RequireCol(hdr, "Slot3");
             int cooldownCol= TryCol(hdr, "Cooldown");
             int nameCol    = TryCol(hdr, "ComboName");
+            int imgCol     = TryCol(hdr, "Combo_Img");
+            if (imgCol < 0) imgCol = TryCol(hdr, "ComboImg");
+            if (imgCol < 0) imgCol = TryCol(hdr, "SkillImg");
             int descCol    = TryCol(hdr, "DescriptionKR");
             int refCol     = RequireCol(hdr, "RefComboID");
 
@@ -133,6 +136,7 @@ namespace Battle.EditorTools
                 sb.AppendFormat("      \"slot3\": {0},\n", JsonStr(GetCell(row, slot3Col).Trim().ToUpperInvariant()));
                 sb.AppendFormat("      \"cooldown\": {0},\n", ParseInt(GetCell(row, cooldownCol), 5));
                 sb.AppendFormat("      \"comboName\": {0},\n", JsonStr(GetCell(row, nameCol).Trim()));
+                sb.AppendFormat("      \"skillImg\": {0},\n", JsonStr(GetCell(row, imgCol).Trim()));
                 sb.AppendFormat("      \"description\": {0},\n", JsonStr(GetCell(row, descCol).Trim()));
                 sb.AppendFormat("      \"refComboId\": {0}\n", ParseInt(GetCell(row, refCol), id));
                 sb.Append("    }");

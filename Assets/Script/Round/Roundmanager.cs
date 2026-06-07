@@ -23,11 +23,6 @@ public class Roundmanager : MonoBehaviour
     [SerializeField, Range(12, 96)] private int cardRewardTitleFontSize = 40;
     [SerializeField] private Color cardRewardTitleColor = Color.white;
 
-    [Header("보상 상단 문구 - 콤보")]
-    [SerializeField] private Font comboRewardTitleFont;
-    [SerializeField, Range(12, 96)] private int comboRewardTitleFontSize = 42;
-    [SerializeField] private Color comboRewardTitleColor = Color.white;
-
     private RoundData currentRoundData;
     private int currentEnemyIndex = 0;
     private EnemyStat currentEnemy;
@@ -467,7 +462,6 @@ public class Roundmanager : MonoBehaviour
 
     /// <summary>
     /// 신규 시스템 카드 획득 보상 — 4장 중 1장을 런 덱에 추가.
-    /// 정예/보스는 이어서 콤보 스킬 3택1 보상을 진행하고, 일반 전투는 즉시 맵으로 복귀.
     /// </summary>
     void ShowCardReward()
     {
@@ -483,9 +477,9 @@ public class Roundmanager : MonoBehaviour
             if (pickedCardId > 0)
                 Battle.RunDeckState.EnsureExists().AddCard(pickedCardId);
 
-            if (ShouldChainComboSkillRewardAfterCard())
+            if (ShouldShowComboBookRewardAfterCard())
             {
-                ShowComboSkillRewardAfterCard();
+                ShowComboBookRewardAfterCard();
                 return;
             }
 
@@ -493,81 +487,41 @@ public class Roundmanager : MonoBehaviour
         });
     }
 
-    bool ShouldChainComboSkillRewardAfterCard()
+    bool ShouldShowComboBookRewardAfterCard()
     {
         return currentRoundData is EliteRoundData || currentRoundData is BossRoundData;
     }
 
-    void ShowComboSkillRewardAfterCard()
+    void ShowComboBookRewardAfterCard()
     {
-        var overlay = Battle.UI.ComboSkillRewardOverlayUI.EnsureExists();
-        overlay.SetTitleStyle(comboRewardTitleFont, comboRewardTitleFontSize, comboRewardTitleColor);
-        overlay.Present(pickedSkill =>
+        var panel = FindFirstObjectByType<Battle.UI.ComboBookRewardPanelUI>(FindObjectsInactive.Include);
+        if (panel == null)
         {
-            if (pickedSkill != null)
-            {
-                ComboSkillRepository.LearnSkill(pickedSkill);
+            Debug.LogWarning("[Roundmanager] ComboBookRewardPanelUI를 찾지 못해 콤보 보상을 생략하고 맵으로 복귀합니다.");
+            ReturnToMap();
+            return;
+        }
 
-                if (Battle.NewBattleController.Instance != null)
+        panel.Present(selected =>
+        {
+            if (selected != null)
+            {
+                var nb = Battle.NewBattleController.Instance;
+                if (nb != null)
                 {
-                    if (TryMapLegacySkillToRefComboId(pickedSkill, out int refComboId))
-                    {
-                        Battle.NewBattleController.Instance.AddOwnedCombo(refComboId);
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[Roundmanager] 콤보 매핑 실패: skill={pickedSkill.name}, combo={pickedSkill.combo}");
-                    }
+                    nb.AddOwnedCombo(selected.refComboId);
+                    Debug.Log($"[Roundmanager] 콤보 보상 획득: refComboId={selected.refComboId}, name={selected.displayName}");
+                }
+                else
+                {
+                    Debug.LogWarning("[Roundmanager] NewBattleController.Instance가 없어 콤보 보상 지급을 건너뜁니다.");
                 }
             }
 
             ReturnToMap();
         });
 
-        Debug.Log("[Roundmanager] 카드 보상 후 콤보 스킬 보상 표시");
-    }
-
-    bool TryMapLegacySkillToRefComboId(SkillDataParser.SkillData skill, out int refComboId)
-    {
-        refComboId = -1;
-        if (skill == null || string.IsNullOrWhiteSpace(skill.combo))
-            return false;
-
-        string combo = skill.combo.Trim().ToLowerInvariant();
-        if (combo.Length < 3)
-            return false;
-
-        if (!TryTokenToElement(combo[0], out Battle.Card.CardElement e1)) return false;
-        if (!TryTokenToElement(combo[1], out Battle.Card.CardElement e2)) return false;
-        if (!TryTokenToElement(combo[2], out Battle.Card.CardElement e3)) return false;
-
-        var all = Battle.ComboSkillDatabase.All;
-        for (int i = 0; i < all.Count; i++)
-        {
-            var c = all[i];
-            if (Battle.ComboSkillDatabase.ParseElement(c.slot1) != e1) continue;
-            if (Battle.ComboSkillDatabase.ParseElement(c.slot2) != e2) continue;
-            if (Battle.ComboSkillDatabase.ParseElement(c.slot3) != e3) continue;
-
-            refComboId = c.refComboId;
-            return true;
-        }
-
-        return false;
-    }
-
-    static bool TryTokenToElement(char token, out Battle.Card.CardElement element)
-    {
-        switch (char.ToLowerInvariant(token))
-        {
-            case 'q': element = Battle.Card.CardElement.Fire; return true;
-            case 'w': element = Battle.Card.CardElement.Water; return true;
-            case 'e': element = Battle.Card.CardElement.Wind; return true;
-            case 'r': element = Battle.Card.CardElement.Earth; return true;
-            default:
-                element = Battle.Card.CardElement.Neutral;
-                return false;
-        }
+        Debug.Log("[Roundmanager] 카드 보상 후 책 UI 콤보 보상 표시");
     }
 
     /// <summary>기획서 0.6v: 전투 등급별 골드 일괄 지급. 비전투 라운드는 지급하지 않는다.</summary>

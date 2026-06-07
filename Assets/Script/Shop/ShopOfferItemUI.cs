@@ -127,7 +127,7 @@ public class ShopOfferItemUI : MonoBehaviour
         if (!autoBindFieldsByName) return;
 
         if (iconImage == null)
-            iconImage = FindChildComponentByName<Image>("IconImage", "icon", "CardIcon");
+            iconImage = FindChildComponentByName<Image>("IconImage", "icon", "CardIcon", "RelicIcon", "ItemIcon", "Icon");
 
         if (titleText == null)
             titleText = FindChildComponentByName<TextMeshProUGUI>("Nametxt", "Title", "Name");
@@ -339,7 +339,7 @@ public class ShopOfferItemUI : MonoBehaviour
         if (externalPriceText != null)
             externalPriceText.text = string.Empty;
 
-        if (defaultPriceText != null && defaultPriceText != externalPriceText)
+        if (defaultPriceText != null && defaultPriceText != externalPriceText && !ShouldPreserveDefaultPriceText())
             defaultPriceText.text = string.Empty;
     }
 
@@ -367,8 +367,11 @@ public class ShopOfferItemUI : MonoBehaviour
             }
         }
 
-        // NewSkillCard 프리팹 호환: 기본 가격 텍스트 이름
-        defaultPriceText = FindChildComponentByName<TextMeshProUGUI>("guageCost", "GaugeCost", "Price");
+        // NewSkillCard 프리팹(카드 비주얼 재사용)에서는 guageCost를 카드 코스트로 사용하므로
+        // 가격 텍스트 자동 바인딩 우선순위를 Price로 두고, 없을 때만 기존 이름으로 폴백한다.
+        defaultPriceText = newCardView != null
+            ? FindChildComponentByName<TextMeshProUGUI>("Price", "price", "guageCost", "GaugeCost")
+            : FindChildComponentByName<TextMeshProUGUI>("guageCost", "GaugeCost", "Price");
         if (externalPriceText == null)
             priceText = defaultPriceText;
     }
@@ -382,7 +385,7 @@ public class ShopOfferItemUI : MonoBehaviour
             if (externalPriceText != null)
                 externalPriceText.text = done;
 
-            if (defaultPriceText != null)
+            if (defaultPriceText != null && !ShouldPreserveDefaultPriceText())
                 defaultPriceText.text = externalPriceText != null && defaultPriceText != externalPriceText ? string.Empty : done;
 
             if (priceText != null && priceText != defaultPriceText && priceText != externalPriceText)
@@ -396,11 +399,24 @@ public class ShopOfferItemUI : MonoBehaviour
         if (externalPriceText != null)
             externalPriceText.text = value;
 
-        if (defaultPriceText != null)
+        if (defaultPriceText != null && !ShouldPreserveDefaultPriceText())
             defaultPriceText.text = externalPriceText != null && defaultPriceText != externalPriceText ? string.Empty : value;
 
         if (priceText != null && priceText != defaultPriceText && priceText != externalPriceText)
             priceText.text = value;
+    }
+
+    bool ShouldPreserveDefaultPriceText()
+    {
+        if (defaultPriceText == null) return false;
+
+        // 카드 슬롯(NewCardView)에서 guageCost/GaugeCost는 카드 코스트 전용이므로
+        // 상점 가격 로직으로 덮어쓰지 않는다.
+        if (newCardView == null) return false;
+
+        string n = defaultPriceText.name;
+        return string.Equals(n, "guageCost", System.StringComparison.OrdinalIgnoreCase)
+            || string.Equals(n, "GaugeCost", System.StringComparison.OrdinalIgnoreCase);
     }
 
     void ApplyRelicIconOnlyMode()
@@ -419,6 +435,8 @@ public class ShopOfferItemUI : MonoBehaviour
             {
                 float scale = Mathf.Clamp(relicIconScale, 1f, 2f);
                 iconImage.rectTransform.localScale = iconBaseScale * scale;
+                // 배경/프레임 오브젝트가 많은 슬롯에서도 렐릭 아이콘이 최상단에 보이도록 보장한다.
+                iconImage.rectTransform.SetAsLastSibling();
             }
             else
             {

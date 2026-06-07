@@ -5,15 +5,15 @@ using static SkillDataParser;
 
 public class SkillCardUI : MonoBehaviour
 {
-    [Header("UI ÄÄÆ÷³ÍÆ® ¿¬°á")]
+    [Header("UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½")]
     public Image skillIcon;
     public TextMeshProUGUI Nametxt;
     public TextMeshProUGUI Combotxt;
     public TextMeshProUGUI Desctxt;
     public Button selectButton;
-    public Sprite nonimage; // ½ºÅ³ÀÌ ¾ø´Â °æ¿ì Ç¥½ÃÇÒ ÀÌ¹ÌÁö
+    public Sprite nonimage; // ï¿½ï¿½Å³ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ Ç¥ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½
 
-    // µ¥ÀÌÅÍ ¼¼ÆÃ ÇÔ¼ö
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½
     public void Setup(SkillData data, System.Action<SkillData> onClickAction)
     {
         // UI
@@ -27,11 +27,11 @@ public class SkillCardUI : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[SkillCardUI] ½ºÅ³ ¾ÆÀÌÄÜÀÌ ¾ø½À´Ï´Ù: {data.name}");
-            skillIcon.sprite = nonimage; // ±âº» ¾ÆÀÌÄÜÀ¸·Î ¼³Á¤ÇÏ°Å³ª ºó ÀÌ¹ÌÁö·Î À¯Áö
+            Debug.LogWarning($"[SkillCardUI] ï¿½ï¿½Å³ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½: {data.name}");
+            skillIcon.sprite = nonimage; // ï¿½âº» ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°Å³ï¿½ ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         }
 
-        //¹öÆ° Å¬¸¯ ÀÌº¥Æ®
+        //ï¿½ï¿½Æ° Å¬ï¿½ï¿½ ï¿½Ìºï¿½Æ®
         selectButton.onClick.RemoveAllListeners();
         selectButton.onClick.AddListener(() => onClickAction(data));
     }

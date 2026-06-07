@@ -81,6 +81,15 @@ public class ShopStageController : MonoBehaviour
     [Tooltip("상점 렐릭 가격 텍스트 폰트 크기")]
     [SerializeField, Range(12f, 72f)] private float shopRelicPriceFontSize = 36f;
 
+    [Header("콤보 책 표시 (Shop)")]
+    [SerializeField] private BookRewardItemUI comboBookItemPrefab;
+    [SerializeField] private string comboBookMountName = "Mid_Combo";
+    [SerializeField, Range(0.3f, 1.5f)] private float comboBookScale = 1f;
+    [SerializeField] private Sprite comboBookFireSprite;
+    [SerializeField] private Sprite comboBookWaterSprite;
+    [SerializeField] private Sprite comboBookWindSprite;
+    [SerializeField] private Sprite comboBookEarthSprite;
+
     private readonly List<CardOffer> cardOffers = new List<CardOffer>();
     private readonly List<RelicOffer> relicOffers = new List<RelicOffer>();
     private readonly List<ComboOffer> comboOffers = new List<ComboOffer>();
@@ -110,8 +119,9 @@ public class ShopStageController : MonoBehaviour
 
     class ComboOffer
     {
-        public SkillDataParser.SkillData skill;
+        public ComboSkillDef combo;
         public int price;
+        public bool purchased;
     }
 
     void Awake()
@@ -132,6 +142,7 @@ public class ShopStageController : MonoBehaviour
         shopMoneyIconScale = Mathf.Clamp(shopMoneyIconScale, 1f, 2.5f);
         shopRelicIconScale = Mathf.Clamp(shopRelicIconScale, 1f, 2.5f);
         shopRelicPriceFontSize = Mathf.Clamp(shopRelicPriceFontSize, 12f, 72f);
+        comboBookScale = Mathf.Clamp(comboBookScale, 0.3f, 1.5f);
     }
 
     public void BeginShop(Roundmanager manager)
@@ -346,25 +357,36 @@ public class ShopStageController : MonoBehaviour
     {
         comboOffers.Clear();
 
-        if (SkillDataParser.Instance == null) return;
+        List<ComboSkillDef> all = ComboSkillDatabase.BuildOwnedCombos();
+        if (all == null || all.Count == 0) return;
 
-        HashSet<int> learned = ComboSkillRepository.GetLearnedSkillIds();
-        var pool = new List<SkillDataParser.SkillData>();
-        var all = SkillDataParser.Instance.allSkills;
-        for (int i = 0; i < all.Count; i++)
+        var ownedRefIds = new HashSet<int>();
+        var nb = NewBattleController.Instance;
+        if (nb != null && nb.OwnedComboSkills != null)
         {
-            var skill = all[i];
-            if (skill == null) continue;
-            if (learned.Contains(skill.id)) continue;
-            pool.Add(skill);
+            for (int i = 0; i < nb.OwnedComboSkills.Count; i++)
+            {
+                ComboSkillDef owned = nb.OwnedComboSkills[i];
+                if (owned == null) continue;
+                ownedRefIds.Add(owned.refComboId);
+            }
         }
 
-        List<SkillDataParser.SkillData> picks = PickRandom(pool, comboOfferCount);
+        var pool = new List<ComboSkillDef>();
+        for (int i = 0; i < all.Count; i++)
+        {
+            ComboSkillDef combo = all[i];
+            if (combo == null) continue;
+            if (ownedRefIds.Contains(combo.refComboId)) continue;
+            pool.Add(combo);
+        }
+
+        List<ComboSkillDef> picks = PickRandom(pool, comboOfferCount);
         for (int i = 0; i < picks.Count; i++)
         {
             comboOffers.Add(new ComboOffer
             {
-                skill = picks[i],
+                combo = picks[i],
                 price = Random.Range(comboMinPrice, comboMaxPrice + 1),
             });
         }
@@ -437,20 +459,38 @@ public class ShopStageController : MonoBehaviour
     {
         if (comboOffersRoot == null) return;
 
+        var slots = new List<Transform>();
+
         if (useNamedSlots)
         {
-            var namedSlots = CollectNamedSlots(comboOffersRoot, comboSlotPrefix, comboOfferCount, false);
-            if (namedSlots.Count > 0)
+            for (int i = 1; i <= comboOfferCount; i++)
             {
-                BindComboOffersToDirectSlots(namedSlots);
-                return;
+                string slotName = $"{comboSlotPrefix}{i}";
+                Transform slotTf = FindChildRecursiveByName(comboOffersRoot, slotName);
+                if (slotTf != null)
+                    slots.Add(slotTf);
             }
         }
 
-        var directSlots = CollectDirectSlots(comboOffersRoot, false);
-        if (ShouldUseDirectSlots(directSlots.Count, comboOfferCount))
+        if (slots.Count == 0)
         {
-            BindComboOffersToDirectSlots(directSlots);
+            for (int i = 0; i < comboOffersRoot.childCount; i++)
+                slots.Add(comboOffersRoot.GetChild(i));
+        }
+
+        if (slots.Count > 0)
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                Transform slot = slots[i];
+                if (slot == null) continue;
+
+                bool visible = i < comboOffers.Count;
+                slot.gameObject.SetActive(visible);
+                if (!visible) continue;
+
+                BindComboOfferToObject(slot.gameObject, comboOffers[i]);
+            }
             return;
         }
 
@@ -461,18 +501,11 @@ public class ShopStageController : MonoBehaviour
         for (int i = 0; i < comboOffers.Count; i++)
         {
             ComboOffer offer = comboOffers[i];
-            if (offer == null || offer.skill == null) continue;
+            if (offer == null || offer.combo == null) continue;
 
             GameObject go = Instantiate(template.template, comboOffersRoot);
             go.SetActive(true);
-            ShopOfferItemUI ui = GetOrAttachOfferItemUI(go, false);
-            if (ui == null) continue;
-
-            string title = string.IsNullOrWhiteSpace(offer.skill.name) ? "콤보 스킬" : offer.skill.name;
-            string desc = string.IsNullOrWhiteSpace(offer.skill.description)
-                ? $"콤보: {offer.skill.combo}"
-                : $"콤보: {offer.skill.combo}\n{offer.skill.description}";
-            ui.Setup(title, desc, offer.skill.skillIcon, offer.price, () => TryBuyCombo(offer));
+            BindComboOfferToObject(go, offer);
         }
     }
 
@@ -513,10 +546,20 @@ public class ShopStageController : MonoBehaviour
 
     void TryBuyCombo(ComboOffer offer)
     {
-        if (offer == null || offer.skill == null) return;
+        if (offer == null || offer.combo == null) return;
+        if (offer.purchased) return;
+
+        NewBattleController nb = NewBattleController.Instance;
+        if (nb == null)
+        {
+            Debug.LogWarning("[ShopStageController] NewBattleController.Instance가 없어 콤보 구매를 적용할 수 없습니다.");
+            return;
+        }
+
         if (!TrySpendMoney(offer.price)) return;
 
-        ComboSkillRepository.LearnSkill(offer.skill);
+        nb.AddOwnedCombo(offer.combo.refComboId);
+        offer.purchased = true;
         RegenerateOffers();
         RefreshOfferViews();
     }
@@ -895,13 +938,57 @@ public class ShopStageController : MonoBehaviour
             if (!visible) continue;
 
             ComboOffer offer = comboOffers[i];
-            string title = string.IsNullOrWhiteSpace(offer.skill.name) ? "콤보 스킬" : offer.skill.name;
-            string desc = string.IsNullOrWhiteSpace(offer.skill.description)
-                ? $"콤보: {offer.skill.combo}"
-                : $"콤보: {offer.skill.combo}\n{offer.skill.description}";
-            ui.Setup(title, desc, offer.skill.skillIcon, offer.price, () => TryBuyCombo(offer));
+            string title = string.IsNullOrWhiteSpace(offer.combo.displayName) ? "콤보 스킬" : offer.combo.displayName;
+            string desc = string.IsNullOrWhiteSpace(offer.combo.descriptionKR)
+                ? $"콤보: {offer.combo.ComboString()}"
+                : $"콤보: {offer.combo.ComboString()}\n{offer.combo.descriptionKR}";
+            ui.Setup(title, desc, offer.combo.skillIcon, offer.price, () => TryBuyCombo(offer));
             ui.SetRelicIconOnlyMode(false);
+            ui.SetPurchasedState(offer.purchased);
         }
+    }
+
+    void BindComboOfferToObject(GameObject target, ComboOffer offer)
+    {
+        if (target == null || offer == null || offer.combo == null) return;
+
+        Transform mount = target.transform;
+        if (!string.IsNullOrWhiteSpace(comboBookMountName))
+        {
+            Transform namedMount = FindChildRecursiveByName(target.transform, comboBookMountName);
+            if (namedMount != null)
+                mount = namedMount;
+        }
+
+        BookRewardItemUI bookUI = mount.GetComponent<BookRewardItemUI>() ?? mount.GetComponentInChildren<BookRewardItemUI>(true);
+        if (bookUI == null && comboBookItemPrefab != null)
+        {
+            BookRewardItemUI instance = Instantiate(comboBookItemPrefab);
+            instance.transform.SetParent(mount, false);
+            instance.gameObject.SetActive(true);
+
+            bookUI = instance;
+        }
+
+        if (bookUI != null)
+        {
+            bookUI.transform.localScale = Vector3.one * comboBookScale;
+            bookUI.SetElementSprites(comboBookFireSprite, comboBookWaterSprite, comboBookWindSprite, comboBookEarthSprite);
+            bookUI.Bind(offer.combo, _ => TryBuyCombo(offer));
+            bookUI.SetSelected(false);
+            return;
+        }
+
+        ShopOfferItemUI ui = GetOrAttachOfferItemUI(target, false);
+        if (ui == null) return;
+
+        string title = string.IsNullOrWhiteSpace(offer.combo.displayName) ? "콤보 스킬" : offer.combo.displayName;
+        string desc = string.IsNullOrWhiteSpace(offer.combo.descriptionKR)
+            ? $"콤보: {offer.combo.ComboString()}"
+            : $"콤보: {offer.combo.ComboString()}\n{offer.combo.descriptionKR}";
+        ui.Setup(title, desc, offer.combo.skillIcon, offer.price, () => TryBuyCombo(offer));
+        ui.SetRelicIconOnlyMode(false);
+        ui.SetPurchasedState(offer.purchased);
     }
 
     TemplateBinding ResolveTemplate(Transform root, GameObject explicitTemplate, bool allowSharedPrefabFallback)

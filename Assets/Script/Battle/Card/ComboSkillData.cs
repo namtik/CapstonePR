@@ -17,6 +17,7 @@ namespace Battle.Card
         public string slot3;
         public int cooldown;      // 재사용까지 필요한 각성 입력 횟수
         public string comboName;  // 표시 이름 (현재 미정 가능)
+        public string skillImg;   // 카드와 동일한 규약: Resources/ComboSkillIcons/{skillImg}
         public string description;
         public int refComboId;    // 효과 정의 참조 ID (1000~1019)
     }

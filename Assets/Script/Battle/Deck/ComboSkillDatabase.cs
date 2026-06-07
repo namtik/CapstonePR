@@ -14,6 +14,7 @@ namespace Battle
     {
         const string SKILLS_RESOURCE_PATH  = "ComboDB/ComboSkills";
         const string EFFECTS_RESOURCE_PATH = "ComboDB/ComboEffects";
+        const string ICONS_RESOURCE_PATH   = "ComboSkillIcons";
 
         private static List<ComboSkillData> _all;
         private static Dictionary<int, ComboSkillData> _byId;
@@ -105,6 +106,8 @@ namespace Battle
                     slot1         = ParseElement(data.slot1),
                     slot2         = ParseElement(data.slot2),
                     slot3         = ParseElement(data.slot3),
+                    skillImg      = data.skillImg,
+                    skillIcon     = ResolveSkillIcon(data.skillImg),
                     descriptionKR = data.description,
                     dbEffects     = effects,
                     acceptedOrders = ordersByRef[refId],
@@ -130,6 +133,12 @@ namespace Battle
                 if (string.Equals(e.doAction, "DAMAGE", StringComparison.OrdinalIgnoreCase))
                     return true;
             return false;
+        }
+
+        static Sprite ResolveSkillIcon(string skillImg)
+        {
+            if (string.IsNullOrWhiteSpace(skillImg)) return null;
+            return Resources.Load<Sprite>($"{ICONS_RESOURCE_PATH}/{skillImg.Trim()}");
         }
 
         public static CardElement ParseElement(string s)
