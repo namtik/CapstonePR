@@ -8,7 +8,10 @@ public class GameStateController : MonoBehaviour
 
     [Header("Canvas References")]
     public Canvas mapCanvas;
-    
+
+    [Header("시작 화면")]
+    public GameObject mainMenuStage;     // MainMenu GameObject (게임 시작 시 가장 먼저 표시)
+
     [Header("Stage GameObjects")]
     public GameObject mapStage;          // MapStage GameObject
     public GameObject combatStage;       // CombatStage GameObject
@@ -42,8 +45,30 @@ public class GameStateController : MonoBehaviour
 
     void Start()
     {
-        // 게임 시작 시 초기화 및 맵 화면 표시
+        // 게임 시작 시 초기화
         InitializeGameState();
+
+        // 메인 화면이 지정되어 있으면 맵 대신 메인 화면을 먼저 표시한다.
+        // [게임 플레이] 버튼이 StartGame()을 호출하면 맵으로 진입.
+        if (mainMenuStage != null)
+        {
+            HideAllStages();
+            mainMenuStage.SetActive(true);
+        }
+        else
+        {
+            ShowMap();
+        }
+    }
+
+    /// <summary>
+    /// 메인 화면 [게임 플레이] 버튼에서 호출. 메인 화면을 닫고 맵으로 진입한다.
+    /// </summary>
+    public void StartGame()
+    {
+        if (mainMenuStage != null)
+            mainMenuStage.SetActive(false);
+
         ShowMap();
     }
 

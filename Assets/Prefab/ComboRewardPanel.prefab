@@ -96,11 +96,21 @@ MonoBehaviour:
   - {fileID: 5815065299477636023}
   - {fileID: 268310420226375800}
   choiceCount: 3
-  fireElementSprite: {fileID: 0}
-  waterElementSprite: {fileID: 0}
-  windElementSprite: {fileID: 0}
-  earthElementSprite: {fileID: 0}
+  fireElementSprite: {fileID: 21300000, guid: a0a5ff871e0fadc42b63cd7211b706a2, type: 3}
+  waterElementSprite: {fileID: 21300000, guid: f68250f15b3c78f4bba9776c3996310c, type: 3}
+  windElementSprite: {fileID: 21300000, guid: d462bff8d4dfb2443a46bb9272280886, type: 3}
+  earthElementSprite: {fileID: 21300000, guid: f009cdb146609244f8bb12cb2f9ecf53, type: 3}
   pauseTimeWhenOpen: 1
+  skipButtonStyle:
+    label: "\uC120\uD0DD\uD558\uC9C0 \uC54A\uACE0 \uB098\uAC00\uAE30"
+    font: {fileID: 12800000, guid: 5175f24c0e704b54db9f862115bd798f, type: 3}
+    fontSize: 28
+    textColor: {r: 1, g: 1, b: 1, a: 1}
+    buttonImage: {fileID: 21300000, guid: d139fe7fbf3e7a4408f689f8e7b865b7, type: 3}
+    buttonColor: {r: 0.15, g: 0.15, b: 0.18, a: 0.95}
+    sliced: 1
+    size: {x: 320, y: 80}
+    anchoredPosition: {x: 0, y: -340}
 --- !u!1 &3541671277150275341
 GameObject:
   m_ObjectHideFlags: 0

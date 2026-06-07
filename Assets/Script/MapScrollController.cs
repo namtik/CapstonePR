@@ -1,123 +1,142 @@
 using UnityEngine;
-using UnityEngine.UI;
 
-// UI Canvas ³» ¸Ê ³ëµå ½ºÅ©·Ñ ÄÁÆ®·Ñ·¯
-// RectTransformÀ» ÀÌµ¿½ÃÄÑ ÇöÀç ³ëµå¸¦ È­¸é Áß¾Ó¿¡ Ç¥½Ã
+// UI ë§µì˜ ì¢Œìš° ë‘˜ëŸ¬ë³´ê¸° ì»¨íŠ¸ë¡¤ëŸ¬
+// ë§ˆìš°ìŠ¤ë¡œ í™”ë©´ì„ ëˆ„ë¥¸ ì±„ ì¢Œìš°ë¡œ ë“œë˜ê·¸í•˜ë©´ ë§µ(nodesParent)ì´ ë”°ë¼ ì›€ì§ì¸ë‹¤.
+// ë…¸ë“œ ì„ íƒ ì‹œì—ëŠ” ScrollToNode/SnapToNodeë¡œ í•´ë‹¹ ë…¸ë“œë¥¼ í™”ë©´ ì¤‘ì•™ìœ¼ë¡œ ë§ì¶˜ë‹¤.
 public class MapScrollController : MonoBehaviour
 {
-    [Header("½ºÅ©·Ñ ¼³Á¤")]
-    [Tooltip("½ºÅ©·ÑÇÒ RectTransform (nodesParent)")]
+    [Header("ìŠ¤í¬ë¡¤ ëŒ€ìƒ")]
+    [Tooltip("ì›€ì§ì¼ RectTransform (nodesParent)")]
     public RectTransform scrollTarget;
 
-    [Tooltip("½ºÅ©·Ñ ¼Óµµ (³·À»¼ö·Ï ºÎµå·´°Ô)")]
+    [Tooltip("ìë™ ìŠ¤í¬ë¡¤ ì†ë„ (ë…¸ë“œ ì´ë™ ì‹œ ë¶€ë“œëŸ½ê²Œ)")]
     [Range(1f, 20f)]
     public float smoothSpeed = 8f;
 
-    [Header("½ºÅ©·Ñ¹Ù ¼³Á¤")]
-    [Tooltip("ÇÏ´Ü ½ºÅ©·Ñ¹Ù (Inspector¿¡¼­ ÇÒ´ç)")]
-    public Scrollbar horizontalScrollbar;
+    [Header("ë“œë˜ê·¸ ì„¤ì •")]
+    [Tooltip("ë§ˆìš°ìŠ¤ë¡œ í™”ë©´ì„ ëˆŒëŸ¬ ì¢Œìš°ë¡œ ë‘˜ëŸ¬ë³´ê¸°")]
+    public bool enableDrag = true;
 
-    [Header("½ºÅ©·Ñ Á¦ÇÑ")]
-    [Tooltip("XÃà ÃÖ¼Ò À§Ä¡ (¿ŞÂÊ ³¡)")]
+    [Tooltip("ë“œë˜ê·¸ ê°ë„ (1 = í™”ë©´ í”½ì…€ê³¼ 1:1)")]
+    [Range(0.1f, 3f)]
+    public float dragSensitivity = 1f;
+
+    [Header("ìŠ¤í¬ë¡¤ ë²”ìœ„")]
+    [Tooltip("Xì¶• ìµœì†Œ ìœ„ì¹˜ (ì™¼ìª½ ë)")]
     public float minX = -3000f;
 
-    [Tooltip("XÃà ÃÖ´ë À§Ä¡ (¿À¸¥ÂÊ ³¡)")]
+    [Tooltip("Xì¶• ìµœëŒ€ ìœ„ì¹˜ (ì˜¤ë¥¸ìª½ ë)")]
     public float maxX = 500f;
 
     private Vector2 targetPosition;
     private bool isMoving = false;
-    private bool isScrollbarDragging = false;
+
+    private Canvas _canvas;
+    private bool _dragging = false;
+    private Vector2 _lastPointerPos;
 
     void Start()
     {
         if (scrollTarget == null)
         {
-            Debug.LogWarning("MapScrollController: scrollTargetÀÌ ¼³Á¤µÇÁö ¾Ê¾Ò½À´Ï´Ù.");
+            Debug.LogWarning("MapScrollController: scrollTargetì´ ì„¤ì •ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
         }
         else
         {
             targetPosition = scrollTarget.anchoredPosition;
         }
-
-        if (horizontalScrollbar != null)
-        {
-            horizontalScrollbar.onValueChanged.AddListener(OnScrollbarValueChanged);
-            UpdateScrollbarValue();
-        }
     }
 
     void Update()
     {
+        HandleDrag();
+
         if (scrollTarget == null || !isMoving) return;
 
         scrollTarget.anchoredPosition = Vector2.Lerp(
             scrollTarget.anchoredPosition,
             targetPosition,
-            smoothSpeed * Time.deltaTime
+            smoothSpeed * Time.unscaledDeltaTime
         );
 
-        // ¸ñÇ¥¿¡ °ÅÀÇ µµ´ŞÇÏ¸é Á¤È®È÷ ¸ÂÃß°í Á¤Áö
+        // ëª©í‘œì— ê±°ì˜ ë„ë‹¬í•˜ë©´ ì •í™•íˆ ë§ì¶”ê³  ì •ì§€
         if (Vector2.Distance(scrollTarget.anchoredPosition, targetPosition) < 1f)
         {
             scrollTarget.anchoredPosition = targetPosition;
             isMoving = false;
         }
+    }
 
-        if (!isScrollbarDragging && horizontalScrollbar != null)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ë§ˆìš°ìŠ¤ ë“œë˜ê·¸ ë‘˜ëŸ¬ë³´ê¸°
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    void HandleDrag()
+    {
+        if (!enableDrag || scrollTarget == null) return;
+
+        if (Input.GetMouseButtonDown(0))
         {
-            UpdateScrollbarValue();
+            _dragging = true;
+            _lastPointerPos = Input.mousePosition;
         }
-    }
+        else if (Input.GetMouseButtonUp(0))
+        {
+            _dragging = false;
+        }
 
-    void OnScrollbarValueChanged(float value)
-    {
-        if (scrollTarget == null) return;
+        if (!_dragging || !Input.GetMouseButton(0)) return;
 
-        isScrollbarDragging = true;
+        Vector2 current = Input.mousePosition;
+        float deltaX = current.x - _lastPointerPos.x;
+        _lastPointerPos = current;
 
-        // ½ºÅ©·Ñ¹Ù °ª(0~1)À» ¸Ê XÃà À§Ä¡·Î º¯È¯
-        // value 0 = minX (¿ŞÂÊ ³¡), value 1 = maxX (¿À¸¥ÂÊ ³¡)
-        float targetX = Mathf.Lerp(maxX, minX, value);
+        if (Mathf.Abs(deltaX) < 0.01f) return;
 
-        targetPosition = new Vector2(targetX, scrollTarget.anchoredPosition.y);
-        scrollTarget.anchoredPosition = targetPosition;
+        // í™”ë©´ í”½ì…€ â†’ ìº”ë²„ìŠ¤ ì¢Œí‘œë¡œ ë³´ì •í•´ ì†ê°€ë½ê³¼ 1:1ë¡œ ë”°ë¼ì˜¤ê²Œ í•œë‹¤.
+        float scale = ResolveCanvasScale();
+        float newX = scrollTarget.anchoredPosition.x + (deltaX * dragSensitivity / scale);
+        newX = Mathf.Clamp(newX, minX, maxX);
 
+        scrollTarget.anchoredPosition = new Vector2(newX, scrollTarget.anchoredPosition.y);
+
+        // ë“œë˜ê·¸ ì¤‘ì—ëŠ” ìë™ ìŠ¤í¬ë¡¤ì„ ë©ˆì¶˜ë‹¤.
+        targetPosition = scrollTarget.anchoredPosition;
         isMoving = false;
-        isScrollbarDragging = false;
     }
 
-    void UpdateScrollbarValue()
+    float ResolveCanvasScale()
     {
-        if (horizontalScrollbar == null || scrollTarget == null) return;
+        if (_canvas == null && scrollTarget != null)
+            _canvas = scrollTarget.GetComponentInParent<Canvas>();
 
-        // ÇöÀç X À§Ä¡¸¦ ½ºÅ©·Ñ¹Ù °ª(0~1)À¸·Î º¯È¯
-        float currentX = scrollTarget.anchoredPosition.x;
-        float normalizedValue = Mathf.InverseLerp(maxX, minX, currentX);
-
-        horizontalScrollbar.SetValueWithoutNotify(normalizedValue);
+        float s = _canvas != null ? _canvas.scaleFactor : 1f;
+        return s <= 0f ? 1f : s;
     }
 
-    // Æ¯Á¤ ³ëµå À§Ä¡·Î ½ºÅ©·Ñ (ºÎµå·´°Ô)
-    // ³ëµåÀÇ anchoredPositionÀ» Áß½ÉÀ¸·Î ÀÌµ¿
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ë…¸ë“œ ìë™ ì¤‘ì•™ì •ë ¬ (MapManagerì—ì„œ í˜¸ì¶œ)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    // íŠ¹ì • ë…¸ë“œ ìœ„ì¹˜ë¡œ ìŠ¤í¬ë¡¤ (ë¶€ë“œëŸ½ê²Œ)
+    // ë…¸ë“œì˜ anchoredPositionì„ ì¤‘ì‹¬ìœ¼ë¡œ ì´ë™
     public void ScrollToNode(RectTransform nodeTransform)
     {
         if (scrollTarget == null || nodeTransform == null) return;
 
-        // ³ëµåÀÇ anchoredPositionÀ» ¹İ´ë·Î ÀÌµ¿
-        // (³ëµå°¡ ¿À¸¥ÂÊ¿¡ ÀÖÀ¸¸é scrollTargetÀ» ¿ŞÂÊÀ¸·Î ÀÌµ¿)
+        // ë…¸ë“œì˜ anchoredPositionì˜ ë°˜ëŒ€ë¡œ ì´ë™
+        // (ë…¸ë“œê°€ ì˜¤ë¥¸ìª½ì— ìˆìœ¼ë©´ scrollTargetì„ ì™¼ìª½ìœ¼ë¡œ ì´ë™)
         float targetX = -nodeTransform.anchoredPosition.x;
 
-        //°æ°è Á¦ÇÑ
+        // ë²”ìœ„ ì œí•œ
         targetX = Mathf.Clamp(targetX, minX, maxX);
 
         targetPosition = new Vector2(targetX, scrollTarget.anchoredPosition.y);
         isMoving = true;
 
-        Debug.Log($"½ºÅ©·Ñ ¸ñÇ¥: {targetPosition.x} (³ëµå À§Ä¡: {nodeTransform.anchoredPosition.x})");
+        Debug.Log($"ìŠ¤í¬ë¡¤ ëª©í‘œ: {targetPosition.x} (ë…¸ë“œ ìœ„ì¹˜: {nodeTransform.anchoredPosition.x})");
     }
 
-    // Æ¯Á¤ À§Ä¡·Î Áï½Ã ÀÌµ¿
-    //  ¸Ê »ı¼º Á÷ÈÄ ½ÃÀÛ ³ëµå·Î ÀÌµ¿ ½Ã »ç¿ë
+    // íŠ¹ì • ìœ„ì¹˜ë¡œ ì¦‰ì‹œ ì´ë™ (ìŠ¤ëƒ…)
     public void SnapToNode(RectTransform nodeTransform)
     {
         if (scrollTarget == null || nodeTransform == null) return;
@@ -129,10 +148,10 @@ public class MapScrollController : MonoBehaviour
         scrollTarget.anchoredPosition = targetPosition;
         isMoving = false;
 
-        Debug.Log($"½ºÅ©·Ñ Áï½Ã ÀÌµ¿: {targetPosition.x}");
+        Debug.Log($"ìŠ¤í¬ë¡¤ ì¦‰ì‹œ ì´ë™: {targetPosition.x}");
     }
 
-    // anchoredPositionÀ¸·Î Á÷Á¢ ½ºÅ©·Ñ
+    // anchoredPositionìœ¼ë¡œ ë¶€ë“œëŸ½ê²Œ ìŠ¤í¬ë¡¤
     public void ScrollToPosition(Vector2 anchoredPos)
     {
         if (scrollTarget == null) return;
@@ -144,7 +163,7 @@ public class MapScrollController : MonoBehaviour
         isMoving = true;
     }
 
-    // anchoredPositionÀ¸·Î Áï½Ã ÀÌµ¿
+    // anchoredPositionìœ¼ë¡œ ì¦‰ì‹œ ì´ë™
     public void SnapToPosition(Vector2 anchoredPos)
     {
         if (scrollTarget == null) return;

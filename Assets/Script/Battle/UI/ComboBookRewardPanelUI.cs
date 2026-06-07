@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using Battle.Card;
 using Random = UnityEngine.Random;
 
@@ -25,8 +26,12 @@ namespace Battle.UI
         [Header("Runtime")]
         [SerializeField] private bool pauseTimeWhenOpen = true;
 
+        [Header("선택하지 않고 나가기 버튼")]
+        [SerializeField] private RewardSkipButtonStyle skipButtonStyle = new RewardSkipButtonStyle { label = "선택하지 않고 나가기" };
+
         System.Action<ComboSkillDef> _onPicked;
         readonly List<ComboSkillDef> _choices = new List<ComboSkillDef>();
+        Button _skipButton;
 
         public void Present(System.Action<ComboSkillDef> onPicked)
         {
@@ -35,12 +40,32 @@ namespace Battle.UI
             BuildChoices();
             EnsureSlots(_choices.Count);
             BindSlots();
+            EnsureSkipButton();
 
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             if (pauseTimeWhenOpen) Time.timeScale = 0f;
 
             Debug.Log($"[ComboBookRewardPanelUI] 콤보 선택지 {_choices.Count}개 표시");
+        }
+
+        /// <summary>인스펙터 스타일대로 "선택하지 않고 나가기" 버튼을 (재)생성한다.</summary>
+        void EnsureSkipButton()
+        {
+            if (_skipButton != null) Destroy(_skipButton.gameObject);
+            if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
+            _skipButton = skipButtonStyle.Build(transform, Skip);
+            _skipButton.transform.SetAsLastSibling();
+        }
+
+        /// <summary>콤보를 고르지 않고 나가기 — 맵으로 복귀(콜백에 null 전달).</summary>
+        void Skip()
+        {
+            if (pauseTimeWhenOpen) Time.timeScale = 1f;
+            gameObject.SetActive(false);
+            var cb = _onPicked;
+            _onPicked = null;
+            cb?.Invoke(null);
         }
 
         public void Hide()

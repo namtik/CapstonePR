@@ -22,6 +22,9 @@ namespace Battle.UI
         [SerializeField, Range(12, 96)] private int titleFontSize = 40;
         [SerializeField] private Color titleColor = Color.white;
 
+        [Header("선택하지 않기 버튼")]
+        [SerializeField] private RewardSkipButtonStyle skipButtonStyle = new RewardSkipButtonStyle();
+
         private System.Action<int> _onPicked;
         private GameObject _panel;
         private static Font _builtinFont;
@@ -31,6 +34,12 @@ namespace Battle.UI
             titleFont = font;
             titleFontSize = Mathf.Clamp(fontSize, 12, 96);
             titleColor = color;
+        }
+
+        /// <summary>"선택하지 않기" 버튼 스타일을 외부(Roundmanager 인스펙터)에서 주입.</summary>
+        public void SetSkipButtonStyle(RewardSkipButtonStyle style)
+        {
+            if (style != null) skipButtonStyle = style;
         }
 
         void Awake()
@@ -225,12 +234,23 @@ namespace Battle.UI
                 int cardId = data.id;
                 btn.onClick.AddListener(() => Pick(cardId));
             }
+
+            // 선택하지 않기 버튼 — 카드를 고르지 않고 보상 종료.
+            // 일반 전투면 맵으로, 정예/보스면 콤보북 보상으로 분기(Roundmanager 콜백이 처리).
+            if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
+            skipButtonStyle.Build(prt, Skip);
         }
 
         void Pick(int cardId)
         {
             if (_panel == null) return; // 이미 선택됨 — 중복 클릭 무시
             Finish(cardId);
+        }
+
+        void Skip()
+        {
+            if (_panel == null) return; // 이미 처리됨 — 중복 클릭 무시
+            Finish(-1);
         }
 
         void Finish(int cardId)

@@ -23,6 +23,9 @@ public class Roundmanager : MonoBehaviour
     [SerializeField, Range(12, 96)] private int cardRewardTitleFontSize = 40;
     [SerializeField] private Color cardRewardTitleColor = Color.white;
 
+    [Header("보상 - 카드 선택하지 않기 버튼")]
+    [SerializeField] private Battle.UI.RewardSkipButtonStyle cardRewardSkipButtonStyle = new Battle.UI.RewardSkipButtonStyle();
+
     private RoundData currentRoundData;
     private int currentEnemyIndex = 0;
     private EnemyStat currentEnemy;
@@ -472,20 +475,23 @@ public class Roundmanager : MonoBehaviour
 
         var rewardUI = Battle.UI.CardRewardUI.EnsureExists();
         rewardUI.SetTitleStyle(cardRewardTitleFont, cardRewardTitleFontSize, cardRewardTitleColor);
+        rewardUI.SetSkipButtonStyle(cardRewardSkipButtonStyle);
         rewardUI.Present(cardPrefab, pickedCardId =>
+    {
+        // pickedCardId가 0보다 클 때만 추가하므로, -1을 전달받으면 추가되지 않음
+        if (pickedCardId > 0)
+            Battle.RunDeckState.EnsureExists().AddCard(pickedCardId);
+
+        // 이후 로직(콤보 보상 체크 등)은 동일하게 진행
+        if (ShouldShowComboBookRewardAfterCard())
         {
-            if (pickedCardId > 0)
-                Battle.RunDeckState.EnsureExists().AddCard(pickedCardId);
+            ShowComboBookRewardAfterCard();
+            return;
+        }
 
-            if (ShouldShowComboBookRewardAfterCard())
-            {
-                ShowComboBookRewardAfterCard();
-                return;
-            }
-
-            ReturnToMap();
-        });
-    }
+        ReturnToMap();
+    });
+}
 
     bool ShouldShowComboBookRewardAfterCard()
     {
