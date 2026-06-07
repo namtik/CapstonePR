@@ -1752,6 +1752,8 @@ MonoBehaviour:
   currentNode: {fileID: 0}
   currentStage: 0
   returnToMapAfterSelection: 1
+  rewardPanelName: SkillRewardUI
+  cardContainerName: CardContainer
 --- !u!4 &327698327
 Transform:
   m_ObjectHideFlags: 0
@@ -9514,15 +9516,15 @@ PrefabInstance:
       objectReference: {fileID: 799876078}
     - target: {fileID: 4654442579791755405, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.42953998
+      value: 808
       objectReference: {fileID: 0}
     - target: {fileID: 4654442579791755405, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.26419
+      value: 528
       objectReference: {fileID: 0}
     - target: {fileID: 4654442579791755405, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -26.81974
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4654442579791755405, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: m_LocalRotation.w
