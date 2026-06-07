@@ -1,5 +1,15 @@
 {
   "dependencies": {
+    "com.coffee.ui-particle": {
+      "version": "https://github.com/mob-sakai/ParticleEffectForUGUI.git?path=Packages/src#v4.12.1",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.particlesystem": "1.0.0"
+      },
+      "hash": "d89d394e046289dee39138a8feb6dce15c59cbca"
+    },
     "com.unity.2d.animation": {
       "version": "13.0.4",
       "depth": 0,
