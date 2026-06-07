@@ -76,6 +76,12 @@ namespace Battle.UI
         // 카드 풀 선정 (등급 가중)
         // ─────────────────────────────────────────────────────────────
 
+        // 보상 4자리의 담당 속성 (자리 0=불, 1=물, 2=바람, 3=땅).
+        static readonly CardElement[] SlotElements =
+            { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
+        // 각 자리가 담당 속성으로 나올 확률(나머지는 다른 속성에서 균등).
+        const float SLOT_ELEMENT_CHANCE = 0.8f;
+
         List<CardData> RollChoices(int count)
         {
             CardDatabase.EnsureInit();
@@ -99,38 +105,61 @@ namespace Battle.UI
             var result = new List<CardData>();
             var used = new HashSet<int>();
             int target = Mathf.Min(count, pool.Count);
-            int guard = 0;
-            while (result.Count < target && guard++ < 2000)
+            for (int i = 0; i < target; i++)
             {
-                CardData pick = WeightedPick(pool);
-                if (pick == null) break;
-                if (used.Add(pick.id)) result.Add(pick);
+                // 이 자리의 담당 속성: SLOT_ELEMENT_CHANCE 확률로 담당, 나머지는 다른 속성.
+                CardElement slotEl = SlotElements[i % SlotElements.Length];
+                CardElement want = Random.value < SLOT_ELEMENT_CHANCE ? slotEl : RandomOtherElement(slotEl);
+
+                // 원하는 속성에서 (미사용·등급가중) 1장. 그 속성이 동나면 속성 무관 폴백.
+                CardData pick = WeightedPick(pool, want, used) ?? WeightedPick(pool, null, used);
+                if (pick == null) break; // 더 뽑을 카드 없음
+                used.Add(pick.id);
+                result.Add(pick);
             }
             return result;
         }
 
+        // 4속성 중 except를 제외한 나머지에서 균등 무작위.
+        static CardElement RandomOtherElement(CardElement except)
+        {
+            CardElement e;
+            do { e = SlotElements[Random.Range(0, SlotElements.Length)]; }
+            while (e == except);
+            return e;
+        }
+
         static int RarityWeight(CardRarity r) => r switch
         {
-            CardRarity.Normal => 60,
-            CardRarity.Rare => 30,
-            CardRarity.Epic => 10,
-            _ => 30
+            CardRarity.Normal => 50,
+            CardRarity.Rare => 35,
+            CardRarity.Epic => 15,
+            _ => 35
         };
 
-        static CardData WeightedPick(List<CardData> pool)
+        // element가 지정되면 그 속성만, null이면 전체. used에 든 id는 제외. 등급 가중 랜덤.
+        static CardData WeightedPick(List<CardData> pool, CardElement? element, HashSet<int> used)
         {
-            if (pool.Count == 0) return null;
             int total = 0;
-            for (int i = 0; i < pool.Count; i++) total += RarityWeight(pool[i].rarity);
-            if (total <= 0) return pool[Random.Range(0, pool.Count)];
+            for (int i = 0; i < pool.Count; i++)
+            {
+                var c = pool[i];
+                if (used.Contains(c.id)) continue;
+                if (element.HasValue && c.element != element.Value) continue;
+                total += RarityWeight(c.rarity);
+            }
+            if (total <= 0) return null;
 
             int roll = Random.Range(0, total);
             for (int i = 0; i < pool.Count; i++)
             {
-                roll -= RarityWeight(pool[i].rarity);
-                if (roll < 0) return pool[i];
+                var c = pool[i];
+                if (used.Contains(c.id)) continue;
+                if (element.HasValue && c.element != element.Value) continue;
+                roll -= RarityWeight(c.rarity);
+                if (roll < 0) return c;
             }
-            return pool[pool.Count - 1];
+            return null;
         }
 
         // ─────────────────────────────────────────────────────────────
