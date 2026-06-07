@@ -560,7 +560,6 @@ public class ShopStageController : MonoBehaviour
 
         nb.AddOwnedCombo(offer.combo.refComboId);
         offer.purchased = true;
-        RegenerateOffers();
         RefreshOfferViews();
     }
 
@@ -952,6 +951,11 @@ public class ShopStageController : MonoBehaviour
     {
         if (target == null || offer == null || offer.combo == null) return;
 
+        // 1. 상점 기본 UI 스크립트 가져오기
+        ShopOfferItemUI ui = GetOrAttachOfferItemUI(target, false);
+        if (ui == null) return;
+
+        // 2. 콤보 책 비주얼(BookRewardItemUI)을 먼저 생성하고 위치시키기
         Transform mount = target.transform;
         if (!string.IsNullOrWhiteSpace(comboBookMountName))
         {
@@ -966,28 +970,39 @@ public class ShopStageController : MonoBehaviour
             BookRewardItemUI instance = Instantiate(comboBookItemPrefab);
             instance.transform.SetParent(mount, false);
             instance.gameObject.SetActive(true);
-
             bookUI = instance;
         }
 
-        if (bookUI != null)
-        {
-            bookUI.transform.localScale = Vector3.one * comboBookScale;
-            bookUI.SetElementSprites(comboBookFireSprite, comboBookWaterSprite, comboBookWindSprite, comboBookEarthSprite);
-            bookUI.Bind(offer.combo, _ => TryBuyCombo(offer));
-            bookUI.SetSelected(false);
-            return;
-        }
-
-        ShopOfferItemUI ui = GetOrAttachOfferItemUI(target, false);
-        if (ui == null) return;
-
+        // 3. 책이 생성된 '이후'에 상점 Setup을 실행 (그래야 스크립트가 책 이미지를 인식하고 구매 시 투명하게 숨길 수 있음)
         string title = string.IsNullOrWhiteSpace(offer.combo.displayName) ? "콤보 스킬" : offer.combo.displayName;
         string desc = string.IsNullOrWhiteSpace(offer.combo.descriptionKR)
             ? $"콤보: {offer.combo.ComboString()}"
             : $"콤보: {offer.combo.ComboString()}\n{offer.combo.descriptionKR}";
-        ui.Setup(title, desc, offer.combo.skillIcon, offer.price, () => TryBuyCombo(offer));
+        
+        Sprite icon = (bookUI != null) ? null : offer.combo.skillIcon;
+
+        ui.Setup(title, desc, icon, offer.price, () => TryBuyCombo(offer));
         ui.SetRelicIconOnlyMode(false);
+
+        // 4. 책의 비주얼 업데이트 및 구매 여부에 따른 '버튼 잠금'
+        if (bookUI != null)
+        {
+            bookUI.transform.localScale = Vector3.one * comboBookScale;
+            bookUI.SetElementSprites(comboBookFireSprite, comboBookWaterSprite, comboBookWindSprite, comboBookEarthSprite);
+            
+            Button bookBtn = bookUI.GetComponent<Button>();
+
+            if (!offer.purchased) {
+                // 구매 전: 정상적으로 동작하게 바인딩
+                bookUI.Bind(offer.combo, _ => TryBuyCombo(offer));
+                if (bookBtn != null) bookBtn.interactable = true;
+            } else {
+                if (bookBtn != null) bookBtn.interactable = false;
+            }
+            bookUI.SetSelected(false);
+        }
+
+        // 5. 최종 구매 상태 반영 (SOLD 텍스트 표시 및 비주얼 반투명화)
         ui.SetPurchasedState(offer.purchased);
     }
 

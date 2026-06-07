@@ -55,6 +55,7 @@ public class ShopOfferItemUI : MonoBehaviour
 
     public void Setup(string title, string description, Sprite icon, int offerPrice, System.Action onBuyClick)
     {
+        cardVisualGraphics.Clear();
         price = Mathf.Max(0, offerPrice);
         onBuy = onBuyClick;
 
@@ -577,6 +578,15 @@ public class ShopOfferItemUI : MonoBehaviour
         {
             Graphic graphic = graphics[i];
             if (graphic == null) continue;
+
+            // 카드의 코스트 텍스트(guageCost)는 상점 가격이 아니므로 구매 시 무조건 같이 숨깁니다!
+            if (graphic.name == "guageCost" || graphic.name == "GaugeCost")
+            {
+                cardVisualGraphics.Add(graphic);
+                continue;
+            }
+
+            // 실제 상점 가격 텍스트나 재화 아이콘은 숨기지 않고 남겨둡니다.
             if (graphic == priceText || graphic == defaultPriceText || graphic == externalPriceText || graphic == moneyIconImage)
                 continue;
 
