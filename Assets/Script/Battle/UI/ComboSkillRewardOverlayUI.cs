@@ -14,9 +14,21 @@ namespace Battle.UI
 
         const int DEFAULT_CHOICE_COUNT = 3;
 
+        [Header("상단 문구")]
+        [SerializeField] private Font titleFont;
+        [SerializeField, Range(12, 96)] private int titleFontSize = 42;
+        [SerializeField] private Color titleColor = Color.white;
+
         private System.Action<SkillDataParser.SkillData> _onPicked;
         private GameObject _panel;
         private static Font _builtinFont;
+
+        public void SetTitleStyle(Font font, int fontSize, Color color)
+        {
+            titleFont = font;
+            titleFontSize = Mathf.Clamp(fontSize, 12, 96);
+            titleColor = color;
+        }
 
         void Awake()
         {
@@ -97,10 +109,10 @@ namespace Battle.UI
             titleRt.sizeDelta = new Vector2(1000f, 90f);
             titleRt.anchoredPosition = new Vector2(0f, 300f);
             var title = titleRt.gameObject.AddComponent<Text>();
-            title.font = BuiltinFont();
-            title.fontSize = 42;
+            title.font = titleFont != null ? titleFont : BuiltinFont();
+            title.fontSize = titleFontSize;
             title.alignment = TextAnchor.MiddleCenter;
-            title.color = Color.white;
+            title.color = titleColor;
             title.text = "콤보 스킬 선택 - 한 개 획득";
 
             int n = choices.Count;

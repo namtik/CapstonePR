@@ -9,6 +9,15 @@ public class RelicStageController : MonoBehaviour
 {
     private const string DefaultSpriteOnlyRelicDescription = "개발중인 유물";
 
+    public struct ShopRelicCandidate
+    {
+        public bool isSpriteOnly;
+        public RelicDef relic;
+        public Sprite sprite;
+        public string displayName;
+        public string description;
+    }
+
     [System.Serializable]
     private struct SpriteOnlyRelicEntry
     {
@@ -558,6 +567,28 @@ public class RelicStageController : MonoBehaviour
                 sprite = sprite,
                 displayName = !string.IsNullOrWhiteSpace(entry.displayName) ? entry.displayName : sprite.name,
                 description = !string.IsNullOrWhiteSpace(entry.description) ? entry.description : DefaultSpriteOnlyRelicDescription,
+            });
+        }
+
+        return result;
+    }
+
+    public List<ShopRelicCandidate> GetShopRelicCandidates(RelicManager manager)
+    {
+        var result = new List<ShopRelicCandidate>();
+        if (manager == null) return result;
+
+        var raw = BuildCandidates(manager);
+        for (int i = 0; i < raw.Count; i++)
+        {
+            RewardCandidate candidate = raw[i];
+            result.Add(new ShopRelicCandidate
+            {
+                isSpriteOnly = candidate.isSpriteOnly,
+                relic = candidate.relic,
+                sprite = candidate.sprite,
+                displayName = candidate.displayName,
+                description = candidate.description,
             });
         }
 

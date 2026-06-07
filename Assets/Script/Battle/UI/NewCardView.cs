@@ -199,6 +199,56 @@ namespace Battle.UI
             Refresh();
         }
 
+        /// <summary>
+        /// 상점/보상 등 전투 외 UI에서 CardData만으로 NewSkillCard 비주얼을 갱신한다.
+        /// 드래그/사용 상태(Hud, CardInstance)는 건드리지 않고 카드 외형(아이콘/속성/타입/텍스트)만 반영한다.
+        /// </summary>
+        public void ApplyShopPreview(CardData cardData, Sprite iconOverride = null)
+        {
+            if (cardData == null) return;
+
+            if (nameText != null) nameText.text = cardData.displayName;
+            if (descText != null) descText.text = cardData.description;
+            if (gaugeText != null) gaugeText.text = cardData.gauge.ToString();
+
+            if (cardTypeText != null) cardTypeText.text = CardTypeName(cardData.type);
+            if (tintCardTypeBackground && cardTypeBackground != null)
+                cardTypeBackground.color = ColorForCardType(cardData.type);
+
+            ApplyAttributeSprite(cardData.element);
+            ApplyBackgroundSprite(cardData.element);
+
+            if (iconImage != null)
+            {
+                if (iconOverride != null)
+                {
+                    iconImage.sprite = iconOverride;
+                    iconImage.color = Color.white;
+                    iconImage.enabled = true;
+                }
+                else
+                {
+                    Sprite sp = null;
+                    if (!string.IsNullOrEmpty(cardData.skillImg))
+                        sp = Resources.Load<Sprite>($"CardIcons/{cardData.skillImg}");
+
+                    if (sp != null)
+                    {
+                        iconImage.sprite = sp;
+                        iconImage.color = Color.white;
+                        iconImage.enabled = true;
+                    }
+                    else
+                    {
+                        Sprite elementSprite = GetElementSprite(cardData.element);
+                        iconImage.sprite = elementSprite;
+                        iconImage.color = elementSprite != null ? Color.white : ColorForElement(cardData.element, false);
+                        iconImage.enabled = true;
+                    }
+                }
+            }
+        }
+
         public void Refresh()
         {
             if (Card == null)
@@ -549,7 +599,7 @@ namespace Battle.UI
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (Card == null) return;
+            if (Card == null || Hud == null) return;
 
             // PointerEventData.delta는 픽셀 이동량 → Canvas Scaler 보정 후 anchoredPosition에 누적
             RectTransform parentRect = _rect.parent as RectTransform;
@@ -564,7 +614,7 @@ namespace Battle.UI
 
         public void OnEndDrag(PointerEventData eventData)
         {
-            if (Card == null) return;
+            if (Card == null || Hud == null) return;
             _canvasGroup.blocksRaycasts = true;
             _isDragging = false;
 
@@ -589,6 +639,7 @@ namespace Battle.UI
 
         public void OnPointerEnter(PointerEventData eventData)
         {
+            if (Hud == null) return;
             _isHovering = true;
             if (Card == null || _isDragging) return;
             CancelDrawIntro(); // hover 시작하면 등장 연출을 끝내고 hover 표현으로 전환
@@ -605,6 +656,7 @@ namespace Battle.UI
 
         public void OnPointerExit(PointerEventData eventData)
         {
+            if (Hud == null) return;
             _isHovering = false;
             if (_isDragging) return;
             ApplyScale(1f);

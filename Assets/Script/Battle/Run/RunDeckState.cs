@@ -137,6 +137,46 @@ namespace Battle
             Debug.Log($"[RunDeck] 카드 추가: {data.displayName} (덱 {TotalCardCount}장)");
         }
 
+        /// <summary>현재 런 덱에 보유 중인 카드 ID 집합 반환.</summary>
+        public HashSet<int> GetOwnedCardIds()
+        {
+            EnsureSeeded();
+            var ids = new HashSet<int>();
+            for (int i = 0; i < _runDeck.Count; i++)
+            {
+                if (_runDeck[i].count > 0)
+                    ids.Add(_runDeck[i].cardId);
+            }
+            return ids;
+        }
+
+        /// <summary>지정 카드 ID 1장을 런 덱에서 제거. 수량이 0이면 엔트리 삭제.</summary>
+        public bool TryRemoveCard(int cardId)
+        {
+            EnsureSeeded();
+
+            for (int i = 0; i < _runDeck.Count; i++)
+            {
+                if (_runDeck[i].cardId != cardId) continue;
+
+                var entry = _runDeck[i];
+                if (entry.count <= 0) return false;
+
+                entry.count -= 1;
+                if (entry.count <= 0)
+                    _runDeck.RemoveAt(i);
+                else
+                    _runDeck[i] = entry;
+
+                var card = CardDatabase.GetById(cardId);
+                string name = card != null ? card.displayName : cardId.ToString();
+                Debug.Log($"[RunDeck] 카드 제거: {name} (덱 {TotalCardCount}장)");
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>런 재시작 — 덱을 기본값으로 되돌림.</summary>
         public void ResetRun()
         {

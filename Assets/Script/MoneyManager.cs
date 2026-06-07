@@ -1,22 +1,27 @@
 using UnityEngine;
 
-// ÀçÈ­ ½Ã½ºÅÛ °ü¸® ½Ì±ÛÅæ
-// ¸÷À» Ã³Ä¡ÇÒ ¶§¸¶´Ù 50¿ø¾¿ Áö±ÞÇÏ°í, ÀüÅõ-¸Ê ÀüÈ¯ ½Ã¿¡µµ ÀçÈ­°¡ À¯ÁöµË´Ï´Ù.
+// ï¿½ï¿½È­ ï¿½Ã½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì±ï¿½ï¿½ï¿½
+// ï¿½ï¿½ï¿½ï¿½ Ã³Ä¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 50ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½, ï¿½ï¿½ï¿½ï¿½-ï¿½ï¿½ ï¿½ï¿½È¯ ï¿½Ã¿ï¿½ï¿½ï¿½ ï¿½ï¿½È­ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ë´Ï´ï¿½.
 public class MoneyManager : MonoBehaviour
 {
     public static MoneyManager Instance { get; private set; }
 
-    [Header("ÀçÈ­ ¼³Á¤")]
+    [Header("ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½")]
     [SerializeField] private int moneyPerKill = 50;
-    [SerializeField] private Sprite moneyIconSprite;  // ÀçÈ­ ¾ÆÀÌÄÜ ½ºÇÁ¶óÀÌÆ®
+    [SerializeField] private Sprite moneyIconSprite;  // ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
+
+    [Header("ì‹ ê·œ ì „íˆ¬ ì‹œìŠ¤í…œ - ì „íˆ¬ ì¢…ë£Œ ê³¨ë“œ ë³´ìƒ")]
+    [SerializeField] private Vector2Int normalCombatGoldRange = new Vector2Int(30, 50);
+    [SerializeField] private Vector2Int eliteCombatGoldRange = new Vector2Int(100, 150);
+    [SerializeField] private Vector2Int bossCombatGoldRange = new Vector2Int(200, 250);
     
     private int currentMoney = 0;
 
     public int CurrentMoney => currentMoney;
     public int MoneyPerKill => moneyPerKill;
-    public Sprite MoneyIcon => moneyIconSprite;  // ÀçÈ­ ¾ÆÀÌÄÜ Á¢±ÙÀÚ
+    public Sprite MoneyIcon => moneyIconSprite;  // ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    // ÀçÈ­ º¯°æ ÀÌº¥Æ® (UI ¾÷µ¥ÀÌÆ®¿ë)
+    // ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìºï¿½Æ® (UI ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½)
     public event System.Action<int> OnMoneyChanged;
 
     void Awake()
@@ -32,7 +37,7 @@ public class MoneyManager : MonoBehaviour
         }
     }
 
-    // ÀçÈ­ Ãß°¡
+    // ï¿½ï¿½È­ ï¿½ß°ï¿½
     public void AddMoney(int amount)
     {
         if (amount <= 0) return;
@@ -41,7 +46,7 @@ public class MoneyManager : MonoBehaviour
         OnMoneyChanged?.Invoke(currentMoney);
     }
 
-    // ÀçÈ­ »ç¿ë (»óÁ¡ µî¿¡¼­ »ç¿ë)
+    // ï¿½ï¿½È­ ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½î¿¡ï¿½ï¿½ ï¿½ï¿½ï¿½)
     public bool SpendMoney(int amount)
     {
         if (amount <= 0) return false;
@@ -52,20 +57,35 @@ public class MoneyManager : MonoBehaviour
         return true;
     }
 
-    // Àû Ã³Ä¡ ½Ã È£ÃâµÇ´Â ¸Þ¼­µå
+    // ï¿½ï¿½ Ã³Ä¡ ï¿½ï¿½ È£ï¿½ï¿½Ç´ï¿½ ï¿½Þ¼ï¿½ï¿½ï¿½
     public void OnEnemyKilled()
     {
-        Debug.Log($"[MoneyManager.OnEnemyKilled] È£ÃâµÊ - moneyPerKill: {moneyPerKill}");
+        Debug.Log($"[MoneyManager.OnEnemyKilled] È£ï¿½ï¿½ï¿½ - moneyPerKill: {moneyPerKill}");
         AddMoney(moneyPerKill);
     }
 
-    // ÇöÀç ÀçÈ­·® ¹ÝÈ¯
+    public int RollCombatRewardGold(bool isBoss, bool isElite, bool isNormalCombat)
+    {
+        if (isBoss) return RollGoldInRange(bossCombatGoldRange);
+        if (isElite) return RollGoldInRange(eliteCombatGoldRange);
+        if (isNormalCombat) return RollGoldInRange(normalCombatGoldRange);
+        return 0;
+    }
+
+    static int RollGoldInRange(Vector2Int range)
+    {
+        int min = Mathf.Min(range.x, range.y);
+        int max = Mathf.Max(range.x, range.y);
+        return Random.Range(min, max + 1);
+    }
+
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È­ï¿½ï¿½ ï¿½ï¿½È¯
     public int GetMoney()
     {
         return currentMoney;
     }
 
-    // ÀçÈ­ Á÷Á¢ ¼³Á¤ (Ä¡Æ®, Å×½ºÆ®¿ë)
+    // ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (Ä¡Æ®, ï¿½×½ï¿½Æ®ï¿½ï¿½)
     public void SetMoney(int amount)
     {
         currentMoney = Mathf.Max(0, amount);

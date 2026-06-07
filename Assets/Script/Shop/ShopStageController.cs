@@ -1,219 +1,1012 @@
+using System.Collections;
+using System.Collections.Generic;
+using Battle;
+using Battle.Card;
+using Battle.Relic;
+using Battle.UI;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
-using static SkillDataParser;
 
-// ShopStage ÀüÃ¼¸¦ °ü¸®ÇÏ´Â ÄÁÆ®·Ñ·¯
-// - »óÁ¡ ÃÊ±âÈ­
-// - ÄŞº¸½ºÅ³ »óÁ¡ ÁøÀÔ/ÅğÃâ
-// - ¸ÊÀ¸·Î µ¹¾Æ°¡±â
 public class ShopStageController : MonoBehaviour
 {
-    [Header("ShopStage ¹öÆ° ÂüÁ¶")]
-    [SerializeField] private Button storeButton;        // ÄŞº¸½ºÅ³ »óÁ¡ ÁøÀÔ ¹öÆ°
-    [SerializeField] private Button removeButton;       // Ä«µå Á¦°Å ±â´É (¾ÆÁ÷ ¹Ì±¸Çö)
-    [SerializeField] private Button outButton;          // »óÁ¡ ³ª°¡±â ¹öÆ°
+    [Header("Canvas 1 (ìƒì  ì…êµ¬)")]
+    [SerializeField] private GameObject shopCanvas1;
+    [SerializeField] private Button shopOwnerButton;
+    [SerializeField] private Button leaveShopButton;
 
-    [Header("ÄŞº¸½ºÅ³ »óÁ¡ UI ÂüÁ¶")]
-    [SerializeField] private GameObject comboSkillShopPanel;  // ÄŞº¸½ºÅ³ »óÁ¡ UI ÆĞ³Î
-    [SerializeField] private Transform skillItemsParent;      // ½ºÅ³ ¾ÆÀÌÅÛµéÀÌ µé¾î°¥ ºÎ¸ğ (4°³ ½½·Ô)
+    [Header("Canvas 1 - ë§í’ì„  íƒ€ì´í•‘")]
+    [SerializeField] private TextMeshProUGUI shopBubbleText;
+    [SerializeField, TextArea(2, 4)] private string shopBubbleMessage = "ë¬´ì—‡ì„ ì›í•˜ì‹œì˜¤, ì—¬í–‰ìì—¬?";
+    [SerializeField, Min(1f)] private float shopBubbleCharsPerSecond = 28f;
+    [SerializeField] private bool completeTypingOnOwnerClick = true;
 
-    [Header("°¡°İ ¹üÀ§ ¼³Á¤")]
-    [SerializeField] private int minPrice = 100;
-    [SerializeField] private int maxPrice = 500;
+    [Header("Canvas 2 (ìƒí’ˆ í™”ë©´)")]
+    [SerializeField] private GameObject shopCanvas2;
+    [SerializeField] private Button backToCanvas1Button;
 
-    [Header("½ºÅ³ »óÁ¡ ¾ÆÀÌÅÛ ÇÁ¸®ÆÕ")]
-    [SerializeField] private GameObject skillShopItemPrefab;  // °¢ ½ºÅ³À» Ç¥½ÃÇÒ ÇÁ¸®ÆÕ
+    [Header("Canvas 2 - ìƒí’ˆ ë£¨íŠ¸")]
+    [SerializeField] private Transform cardOffersRoot;
+    [SerializeField] private Transform relicOffersRoot;
+    [SerializeField] private Transform comboOffersRoot;
 
-    private List<ComboSkillShopItem> currentShopItems = new List<ComboSkillShopItem>();
-    private ComboSystem comboSystem;
+    [Header("êµ¬ì¡° ê°•ì œ ë£¨íŠ¸ëª…")]
+    [SerializeField] private string topCardsRootName = "Top_Cards";
+    [SerializeField] private string bottomLeftRelicsRootName = "Bottom_LeftRelics";
 
-    void Start()
+    [Header("Canvas 2 - ì´ë¦„ ê¸°ë°˜ ìŠ¬ë¡¯ ì°¾ê¸°")]
+    [SerializeField] private bool useNamedSlots = true;
+    [SerializeField] private string cardSlotPrefix = "Card";
+    [SerializeField] private string relicSlotPrefix = "Relic";
+    [SerializeField] private string comboSlotPrefix = "ComboSkill";
+
+    [Header("Canvas 2 - ê³µìš© í”„ë¦¬íŒ¹")]
+    [SerializeField] private GameObject shopOfferItemPrefab;
+
+    [Header("Canvas 2 - ì»¨í…Œì´ë„ˆë³„ í…œí”Œë¦¿ (Optional)")]
+    [SerializeField] private GameObject cardOfferTemplate;
+    [SerializeField] private GameObject relicOfferTemplate;
+    [SerializeField] private GameObject comboOfferTemplate;
+
+    [Header("ë ë¦­ ì†ŒìŠ¤")]
+    [SerializeField] private RelicStageController relicStageController;
+
+    [Header("Canvas 2 - ì¹´ë“œ ì œê±°")]
+    [SerializeField] private Button removeCardButton;
+    [SerializeField] private TextMeshProUGUI removeCardCostText;
+    [SerializeField] private int removeCardCost = 120;
+
+    [Header("í‘œì‹œ ê°œìˆ˜")]
+    [SerializeField] private int cardOfferCount = 5;
+    [SerializeField] private int relicOfferCount = 3;
+    [SerializeField] private int comboOfferCount = 1;
+
+    [Header("ê°€ê²© ë²”ìœ„")]
+    [SerializeField] private int cardMinPrice = 60;
+    [SerializeField] private int cardMaxPrice = 150;
+    [SerializeField] private int relicMinPrice = 140;
+    [SerializeField] private int relicMaxPrice = 260;
+    [SerializeField] private int comboMinPrice = 180;
+    [SerializeField] private int comboMaxPrice = 320;
+
+    [Header("ì¹´ë“œ í‘œì‹œ (Shop)")]
+    [Tooltip("ìƒì  ì¹´ë“œ(NewSkillCard) ì „ì²´ ìŠ¤ì¼€ì¼")]
+    [SerializeField, Range(0.5f, 1.2f)] private float shopCardVisualScale = 1f;
+    [Tooltip("ìƒì  ì¹´ë“œ ê°€ê²© ì˜† ì¬í™” ì•„ì´ì½˜ ìŠ¤ì¼€ì¼")]
+    [SerializeField, Range(1f, 2.5f)] private float shopMoneyIconScale = 1.35f;
+
+    [Header("ë ë¦­ í‘œì‹œ (Shop)")]
+    [Tooltip("ìƒì  ë ë¦­ ì•„ì´ì½˜ ìŠ¤ì¼€ì¼")]
+    [SerializeField, Range(1f, 2.5f)] private float shopRelicIconScale = 1.45f;
+    [Tooltip("ìƒì  ë ë¦­ ê°€ê²© í…ìŠ¤íŠ¸ í°íŠ¸ í¬ê¸°")]
+    [SerializeField, Range(12f, 72f)] private float shopRelicPriceFontSize = 36f;
+
+    private readonly List<CardOffer> cardOffers = new List<CardOffer>();
+    private readonly List<RelicOffer> relicOffers = new List<RelicOffer>();
+    private readonly List<ComboOffer> comboOffers = new List<ComboOffer>();
+
+    private Roundmanager roundManager;
+    private bool bound;
+    private Coroutine bubbleTypingRoutine;
+    private bool isBubbleTyping;
+
+    class CardOffer
     {
-        // ÇÊ¿äÇÑ ÄÄÆ÷³ÍÆ® Ã£±â
-        comboSystem = FindFirstObjectByType<ComboSystem>();
-
-        // ¹öÆ° ÀÌº¥Æ® ¿¬°á
-        if (storeButton != null)
-            storeButton.onClick.AddListener(OnStoreButtonClicked);
-
-        if (removeButton != null)
-            removeButton.onClick.AddListener(OnRemoveButtonClicked);
-
-        if (outButton != null)
-            outButton.onClick.AddListener(OnOutButtonClicked);
-
-        // ÄŞº¸½ºÅ³ »óÁ¡ ÆĞ³ÎÀ» ±âº»ÀûÀ¸·Î ºñÈ°¼ºÈ­
-        if (comboSkillShopPanel != null)
-            comboSkillShopPanel.SetActive(false);
-
-        Debug.Log("[ShopStageController] ÃÊ±âÈ­ ¿Ï·á");
+        public CardData card;
+        public int price;
+        public bool purchased;
     }
 
-    // [ÄŞº¸½ºÅ³ »óÁ¡ ÁøÀÔ] ¹öÆ° Å¬¸¯ ÇÚµé·¯
-    void OnStoreButtonClicked()
+    class RelicOffer
     {
-        Debug.Log("[ShopStageController] ÄŞº¸½ºÅ³ »óÁ¡ ÁøÀÔ");
-        OpenComboSkillShop();
+        public RelicDef relic;
+        public bool isSpriteOnly;
+        public Sprite sprite;
+        public string displayName;
+        public string description;
+        public int price;
+        public bool purchased;
     }
 
-    // [Ä«µå Á¦°Å] ¹öÆ° Å¬¸¯ ÇÚµé·¯ (¾ÆÁ÷ ¹Ì±¸Çö)
-    void OnRemoveButtonClicked()
+    class ComboOffer
     {
-        Debug.Log("[ShopStageController] Ä«µå Á¦°Å ±â´É (¾ÆÁ÷ ¹Ì±¸Çö)");
-        // TODO: Ä«µå Á¦°Å ·ÎÁ÷ ±¸Çö
+        public SkillDataParser.SkillData skill;
+        public int price;
     }
 
-    // [»óÁ¡ ³ª°¡±â] ¹öÆ° Å¬¸¯ ÇÚµé·¯
-    void OnOutButtonClicked()
+    void Awake()
     {
-        Debug.Log("[ShopStageController] »óÁ¡¿¡¼­ ³ª°¡±â ¹öÆ° Å¬¸¯");
-        
-        // ÄŞº¸½ºÅ³ »óÁ¡ÀÌ ¿­·ÁÀÖÀ¸¸é ¸ÕÀú ´İ±â
-        if (comboSkillShopPanel != null && comboSkillShopPanel.activeInHierarchy)
+        BindRuntime();
+        CaptureBubbleFallbackText();
+    }
+
+    void OnEnable()
+    {
+        BindRuntime();
+        EnterShopStage();
+    }
+
+    void OnValidate()
+    {
+        shopCardVisualScale = Mathf.Clamp(shopCardVisualScale, 0.5f, 1.2f);
+        shopMoneyIconScale = Mathf.Clamp(shopMoneyIconScale, 1f, 2.5f);
+        shopRelicIconScale = Mathf.Clamp(shopRelicIconScale, 1f, 2.5f);
+        shopRelicPriceFontSize = Mathf.Clamp(shopRelicPriceFontSize, 12f, 72f);
+    }
+
+    public void BeginShop(Roundmanager manager)
+    {
+        roundManager = manager;
+        EnterShopStage();
+    }
+
+    void BindRuntime()
+    {
+        if (bound) return;
+
+        if (shopOwnerButton != null)
         {
-            Debug.Log("[ShopStageController] ÄŞº¸½ºÅ³ »óÁ¡ ´İ±â");
-            CloseComboSkillShop();
-            return; // »óÁ¡¸¸ ´İ°í ShopStage¿¡ ¸Ó¹°±â
+            shopOwnerButton.onClick.RemoveListener(OpenShopCanvas2);
+            shopOwnerButton.onClick.AddListener(OpenShopCanvas2);
         }
-        
-        // »óÁ¡ÀÌ ´İÇôÀÖÀ¸¸é ¸ÊÀ¸·Î º¹±Í
-        ReturnToMapFromShop();
+
+        if (backToCanvas1Button != null)
+        {
+            backToCanvas1Button.onClick.RemoveListener(ReturnToMapFromShop);
+            backToCanvas1Button.onClick.AddListener(ReturnToMapFromShop);
+        }
+
+        if (leaveShopButton != null)
+        {
+            leaveShopButton.onClick.RemoveListener(ReturnToMapFromShop);
+            leaveShopButton.onClick.AddListener(ReturnToMapFromShop);
+        }
+
+        if (removeCardButton != null)
+        {
+            removeCardButton.onClick.RemoveListener(OnRemoveCardButtonClicked);
+            removeCardButton.onClick.AddListener(OnRemoveCardButtonClicked);
+        }
+
+        bound = true;
     }
 
-    // ÄŞº¸½ºÅ³ »óÁ¡ ¿ÀÇÂ - 4°³ÀÇ ·£´ı ½ºÅ³ Ç¥½Ã
-    void OpenComboSkillShop()
+    void EnterShopStage()
     {
-        if (comboSkillShopPanel == null)
+        ShowCanvas1();
+        UpdateRemoveCardButtonText();
+    }
+
+    void ShowCanvas1()
+    {
+        if (shopCanvas1 != null) shopCanvas1.SetActive(true);
+        if (shopCanvas2 != null) shopCanvas2.SetActive(false);
+        PlayShopBubbleTyping();
+    }
+
+    void OpenShopCanvas2()
+    {
+        if (completeTypingOnOwnerClick && isBubbleTyping)
         {
-            Debug.LogError("[ShopStageController] comboSkillShopPanelÀÌ ÇÒ´çµÇÁö ¾Ê¾Ò½À´Ï´Ù!");
+            CompleteShopBubbleTyping();
             return;
         }
 
-        // ±âÁ¸ ¾ÆÀÌÅÛ Á¦°Å
-        currentShopItems.Clear();
-        foreach (Transform child in skillItemsParent)
-        {
-            Destroy(child.gameObject);
-        }
+        if (shopCanvas1 != null) shopCanvas1.SetActive(false);
+        if (shopCanvas2 != null) shopCanvas2.SetActive(true);
 
-        // ÇÃ·¹ÀÌ¾î°¡ ÀÌ¹Ì ¹è¿î ½ºÅ³ ID °¡Á®¿À±â
-        HashSet<int> learnedSkillIds = comboSystem.GetLearnedSkillIds();
-
-        // 4°³ÀÇ ·£´ı ½ºÅ³ ¼±ÅÃ
-        List<SkillData> randomSkills = SkillDataParser.Instance.GetRandomSkills(4, learnedSkillIds);
-
-        // °¢ ½ºÅ³¿¡ ´ëÇØ ComboSkillShopItem »ı¼º
-        foreach (SkillData skill in randomSkills)
-        {
-            ComboSkillShopItem item = new ComboSkillShopItem(skill);
-            currentShopItems.Add(item);
-
-            // °¡°İ ¹üÀ§ ¼³Á¤ Àû¿ë
-            ComboSkillShopItem.minPrice = minPrice;
-            ComboSkillShopItem.maxPrice = maxPrice;
-
-            item.PrintInfo();
-        }
-
-        // UI °»½Å
-        RefreshShopUI();
-
-        // »óÁ¡ ÆĞ³Î È°¼ºÈ­
-        comboSkillShopPanel.SetActive(true);
-
-        Debug.Log("[ShopStageController] ÄŞº¸½ºÅ³ »óÁ¡ ¿ÀÇÂ - 4°³ ½ºÅ³ Ç¥½Ã");
+        RegenerateOffers();
+        RefreshOfferViews();
     }
 
-    // ÄŞº¸½ºÅ³ »óÁ¡ UI °»½Å
-    void RefreshShopUI()
+    void OnDisable()
     {
-        foreach (Transform child in skillItemsParent)
+        StopShopBubbleTyping();
+    }
+
+    void CaptureBubbleFallbackText()
+    {
+        if (!string.IsNullOrWhiteSpace(shopBubbleMessage)) return;
+        if (shopBubbleText == null) return;
+        if (string.IsNullOrWhiteSpace(shopBubbleText.text)) return;
+
+        shopBubbleMessage = shopBubbleText.text;
+    }
+
+    void PlayShopBubbleTyping()
+    {
+        if (shopBubbleText == null) return;
+
+        CaptureBubbleFallbackText();
+        string message = string.IsNullOrWhiteSpace(shopBubbleMessage) ? shopBubbleText.text : shopBubbleMessage;
+
+        StopShopBubbleTyping();
+
+        shopBubbleText.text = message;
+        shopBubbleText.maxVisibleCharacters = 0;
+        bubbleTypingRoutine = StartCoroutine(TypeBubbleRoutine(message));
+    }
+
+    IEnumerator TypeBubbleRoutine(string message)
+    {
+        isBubbleTyping = true;
+
+        shopBubbleText.ForceMeshUpdate();
+        int total = shopBubbleText.textInfo.characterCount;
+        if (total <= 0)
         {
-            Destroy(child.gameObject);
+            isBubbleTyping = false;
+            yield break;
         }
 
-        for (int i = 0; i < currentShopItems.Count; i++)
+        float cps = Mathf.Max(1f, shopBubbleCharsPerSecond);
+        for (int i = 1; i <= total; i++)
         {
-            ComboSkillShopItem item = currentShopItems[i];
+            shopBubbleText.maxVisibleCharacters = i;
+            yield return new WaitForSeconds(1f / cps);
+        }
 
-            // ½ºÅ³ ¾ÆÀÌÅÛ UI »ı¼º (ÇÁ¸®ÆÕ »ç¿ë)
-            GameObject itemUI = Instantiate(skillShopItemPrefab, skillItemsParent);
+        isBubbleTyping = false;
+        bubbleTypingRoutine = null;
+    }
 
-            // ComboSkillShopItemUI ÄÄÆ÷³ÍÆ®¿¡ µ¥ÀÌÅÍ Àü´Ş
-            ComboSkillShopItemUI itemUIScript = itemUI.GetComponent<ComboSkillShopItemUI>();
-            if (itemUIScript != null)
+    void CompleteShopBubbleTyping()
+    {
+        if (shopBubbleText == null) return;
+
+        string message = string.IsNullOrWhiteSpace(shopBubbleMessage) ? shopBubbleText.text : shopBubbleMessage;
+        StopShopBubbleTyping();
+        shopBubbleText.text = message;
+        shopBubbleText.maxVisibleCharacters = int.MaxValue;
+    }
+
+    void StopShopBubbleTyping()
+    {
+        isBubbleTyping = false;
+        if (bubbleTypingRoutine == null) return;
+
+        StopCoroutine(bubbleTypingRoutine);
+        bubbleTypingRoutine = null;
+    }
+
+    void RegenerateOffers()
+    {
+        BuildCardOffers();
+        BuildRelicOffers();
+        BuildComboOffers();
+        UpdateRemoveCardButtonText();
+    }
+
+    void BuildCardOffers()
+    {
+        cardOffers.Clear();
+
+        var deckState = RunDeckState.EnsureExists();
+        deckState.EnsureSeeded();
+        HashSet<int> ownedIds = deckState.GetOwnedCardIds();
+
+        var pool = new List<CardData>();
+        var all = CardDatabase.All;
+        for (int i = 0; i < all.Count; i++)
+        {
+            CardData card = all[i];
+            if (card == null) continue;
+            if (!IsElementCard(card)) continue;
+            if (ownedIds.Contains(card.id)) continue;
+            pool.Add(card);
+        }
+
+        List<CardData> picks = PickRandom(pool, cardOfferCount);
+        for (int i = 0; i < picks.Count; i++)
+        {
+            cardOffers.Add(new CardOffer
             {
-                itemUIScript.Initialize(item, i, this);
+                card = picks[i],
+                price = Random.Range(cardMinPrice, cardMaxPrice + 1),
+            });
+        }
+    }
+
+    void BuildRelicOffers()
+    {
+        relicOffers.Clear();
+
+        var manager = RelicManager.Instance;
+        if (manager == null) return;
+
+        relicStageController = ResolveRelicStageController();
+
+        if (relicStageController != null)
+        {
+            List<RelicStageController.ShopRelicCandidate> candidates = relicStageController.GetShopRelicCandidates(manager);
+            candidates.RemoveAll(c => !c.isSpriteOnly || c.sprite == null);
+            List<RelicStageController.ShopRelicCandidate> selectedCandidates = PickRandom(candidates, relicOfferCount);
+            for (int i = 0; i < selectedCandidates.Count; i++)
+            {
+                RelicStageController.ShopRelicCandidate pick = selectedCandidates[i];
+                relicOffers.Add(new RelicOffer
+                {
+                    relic = pick.relic,
+                    isSpriteOnly = pick.isSpriteOnly,
+                    sprite = pick.sprite,
+                    displayName = pick.displayName,
+                    description = pick.description,
+                    price = Random.Range(relicMinPrice, relicMaxPrice + 1),
+                });
+            }
+
+            if (relicOffers.Count > 0)
+                return;
+        }
+
+        Debug.LogWarning("[ShopStageController] RelicStageControllerì˜ sprite-only í›„ë³´ë¥¼ ì°¾ì§€ ëª»í•´ ë ë¦­ ìƒì  ëª©ë¡ì´ ë¹„ì—ˆìŠµë‹ˆë‹¤.");
+    }
+
+    void BuildComboOffers()
+    {
+        comboOffers.Clear();
+
+        if (SkillDataParser.Instance == null) return;
+
+        HashSet<int> learned = ComboSkillRepository.GetLearnedSkillIds();
+        var pool = new List<SkillDataParser.SkillData>();
+        var all = SkillDataParser.Instance.allSkills;
+        for (int i = 0; i < all.Count; i++)
+        {
+            var skill = all[i];
+            if (skill == null) continue;
+            if (learned.Contains(skill.id)) continue;
+            pool.Add(skill);
+        }
+
+        List<SkillDataParser.SkillData> picks = PickRandom(pool, comboOfferCount);
+        for (int i = 0; i < picks.Count; i++)
+        {
+            comboOffers.Add(new ComboOffer
+            {
+                skill = picks[i],
+                price = Random.Range(comboMinPrice, comboMaxPrice + 1),
+            });
+        }
+    }
+
+    void RefreshOfferViews()
+    {
+        RefreshCardOfferViews();
+        RefreshRelicOfferViews();
+        RefreshComboOfferViews();
+        UpdateRemoveCardButtonText();
+    }
+
+    void RefreshCardOfferViews()
+    {
+        Transform strictCardRoot = ResolveStrictCardRoot();
+        if (strictCardRoot != null)
+            cardOffersRoot = strictCardRoot;
+
+        if (cardOffersRoot == null) return;
+
+        if (useNamedSlots)
+        {
+            var namedSlots = CollectCardNamedSlots(cardOffersRoot, cardSlotPrefix, cardOfferCount);
+            if (namedSlots.Count >= cardOfferCount)
+            {
+                BindCardOffersToNamedSlots(namedSlots);
+                return;
+            }
+
+            Debug.LogWarning($"[ShopStageController] Top_Cards/{cardSlotPrefix}1~{cardOfferCount} ìŠ¬ë¡¯ì„ ëª¨ë‘ ì°¾ì§€ ëª»í–ˆìŠµë‹ˆë‹¤. ({namedSlots.Count}/{cardOfferCount})");
+            return;
+        }
+
+        Debug.LogWarning("[ShopStageController] ì¹´ë“œ í‘œì‹œëŠ” named slot ëª¨ë“œì—ì„œë§Œ ì§€ì›ë©ë‹ˆë‹¤. useNamedSlotsë¥¼ ì¼œì£¼ì„¸ìš”.");
+    }
+
+    void RefreshRelicOfferViews()
+    {
+        Transform strictRelicRoot = ResolveStrictRelicRoot();
+        if (strictRelicRoot != null)
+            relicOffersRoot = strictRelicRoot;
+
+        if (relicOffersRoot == null) return;
+
+        if (useNamedSlots)
+        {
+            var namedSlots = CollectNamedSlots(relicOffersRoot, relicSlotPrefix, relicOfferCount, false);
+            if (namedSlots.Count >= relicOfferCount)
+            {
+                BindRelicOffersToDirectSlots(namedSlots);
+                return;
+            }
+
+            Debug.LogWarning($"[ShopStageController] Bottom_LeftRelics/{relicSlotPrefix}1~{relicOfferCount} ìŠ¬ë¡¯ì„ ëª¨ë‘ ì°¾ì§€ ëª»í–ˆìŠµë‹ˆë‹¤. ({namedSlots.Count}/{relicOfferCount})");
+            // named slot ì¼ë¶€ë§Œ ì°¾íŒ ê²½ìš° direct slotìœ¼ë¡œ í´ë°±í•´ 1~N ìŠ¬ë¡¯ì´ ëª¨ë‘ ë°”ì¸ë”©ë˜ë„ë¡ í•œë‹¤.
+        }
+
+        var directSlots = CollectDirectSlots(relicOffersRoot, false);
+        if (ShouldUseDirectSlots(directSlots.Count, relicOfferCount))
+        {
+            BindRelicOffersToDirectSlots(directSlots);
+            return;
+        }
+
+        Debug.LogWarning("[ShopStageController] ë ë¦­ ìŠ¬ë¡¯ ë°”ì¸ë”© ì‹¤íŒ¨: Bottom_LeftRelics í•˜ìœ„ Relic ìŠ¬ë¡¯ ìˆ˜ë¥¼ í™•ì¸í•˜ì„¸ìš”.");
+    }
+
+    void RefreshComboOfferViews()
+    {
+        if (comboOffersRoot == null) return;
+
+        if (useNamedSlots)
+        {
+            var namedSlots = CollectNamedSlots(comboOffersRoot, comboSlotPrefix, comboOfferCount, false);
+            if (namedSlots.Count > 0)
+            {
+                BindComboOffersToDirectSlots(namedSlots);
+                return;
             }
         }
-    }
 
-    // ½ºÅ³ ±¸¸Å Ã³¸® (ComboSkillShopItemUI¿¡¼­ È£Ãâ)
-    public bool TryBuySkill(int itemIndex)
-    {
-        if (itemIndex < 0 || itemIndex >= currentShopItems.Count)
+        var directSlots = CollectDirectSlots(comboOffersRoot, false);
+        if (ShouldUseDirectSlots(directSlots.Count, comboOfferCount))
         {
-            Debug.LogError("[ShopStageController] À¯È¿ÇÏÁö ¾ÊÀº ¾ÆÀÌÅÛ ÀÎµ¦½º");
-            return false;
+            BindComboOffersToDirectSlots(directSlots);
+            return;
         }
 
-        ComboSkillShopItem item = currentShopItems[itemIndex];
+        TemplateBinding template = ResolveTemplate(comboOffersRoot, comboOfferTemplate, false);
+        if (template.template == null) return;
 
-        // ÀçÈ­ È®ÀÎ ÈÄ ±¸¸Å
-        if (MoneyManager.Instance.SpendMoney(item.price))
+        ClearChildren(comboOffersRoot, template.keepObject);
+        for (int i = 0; i < comboOffers.Count; i++)
         {
-            // ½ºÅ³ È¹µæ
-            comboSystem.LearnSkill(item.skill);
+            ComboOffer offer = comboOffers[i];
+            if (offer == null || offer.skill == null) continue;
 
-            // ±¸¸ÅÇÑ ¾ÆÀÌÅÛÀº »óÁ¡ ¸ñ·Ï¿¡¼­ Á¦°Å
-            currentShopItems.RemoveAt(itemIndex);
-            RefreshShopUI();
+            GameObject go = Instantiate(template.template, comboOffersRoot);
+            go.SetActive(true);
+            ShopOfferItemUI ui = GetOrAttachOfferItemUI(go, false);
+            if (ui == null) continue;
 
-            Debug.Log($"[ShopStageController] {item.skill.name} ±¸¸Å ¿Ï·á! (-{item.price}¿ø)");
-            return true;
+            string title = string.IsNullOrWhiteSpace(offer.skill.name) ? "ì½¤ë³´ ìŠ¤í‚¬" : offer.skill.name;
+            string desc = string.IsNullOrWhiteSpace(offer.skill.description)
+                ? $"ì½¤ë³´: {offer.skill.combo}"
+                : $"ì½¤ë³´: {offer.skill.combo}\n{offer.skill.description}";
+            ui.Setup(title, desc, offer.skill.skillIcon, offer.price, () => TryBuyCombo(offer));
+        }
+    }
+
+    void TryBuyCard(CardOffer offer)
+    {
+        if (offer == null || offer.card == null) return;
+        if (offer.purchased) return;
+        if (!TrySpendMoney(offer.price)) return;
+
+        RunDeckState.EnsureExists().AddCard(offer.card.id);
+        offer.purchased = true;
+        RefreshOfferViews();
+    }
+
+    void TryBuyRelic(RelicOffer offer)
+    {
+        if (offer == null) return;
+        if (offer.purchased) return;
+        if (!TrySpendMoney(offer.price)) return;
+
+        RelicManager manager = RelicManager.Instance;
+        if (manager == null) return;
+
+        if (offer.isSpriteOnly)
+        {
+            if (offer.sprite == null) return;
+            if (!manager.TryAddSpriteOnlyRelic(offer.sprite, out _)) return;
         }
         else
         {
-            Debug.Log($"[ShopStageController] ÀçÈ­ ºÎÁ·! ÇÊ¿ä: {item.price}¿ø");
+            if (offer.relic == null) return;
+            manager.AddRelic(offer.relic);
+        }
+
+        offer.purchased = true;
+        RefreshOfferViews();
+    }
+
+    void TryBuyCombo(ComboOffer offer)
+    {
+        if (offer == null || offer.skill == null) return;
+        if (!TrySpendMoney(offer.price)) return;
+
+        ComboSkillRepository.LearnSkill(offer.skill);
+        RegenerateOffers();
+        RefreshOfferViews();
+    }
+
+    void OnRemoveCardButtonClicked()
+    {
+        Debug.Log($"[ShopStageController] ì¹´ë“œ ì œê±° ê¸°ëŠ¥ì€ ì•„ì§ ì¤€ë¹„ ì¤‘ì…ë‹ˆë‹¤. (ì˜ˆì • ë¹„ìš©: {removeCardCost})");
+    }
+
+    bool TryRemoveRandomElementCard(RunDeckState deckState, out int removedCardId)
+    {
+        removedCardId = -1;
+        if (deckState == null) return false;
+
+        var removable = new List<int>();
+        var deck = deckState.RunDeck;
+        for (int i = 0; i < deck.Count; i++)
+        {
+            int cardId = deck[i].cardId;
+            var card = CardDatabase.GetById(cardId);
+            if (card == null) continue;
+            if (!IsElementCard(card)) continue;
+            removable.Add(cardId);
+        }
+
+        if (removable.Count == 0) return false;
+
+        int pickId = removable[Random.Range(0, removable.Count)];
+        bool ok = deckState.TryRemoveCard(pickId);
+        if (!ok) return false;
+
+        removedCardId = pickId;
+        return true;
+    }
+
+    bool TrySpendMoney(int amount)
+    {
+        if (MoneyManager.Instance == null)
+        {
+            Debug.LogWarning("[ShopStageController] MoneyManager.Instanceê°€ ì—†ì–´ êµ¬ë§¤ë¥¼ ì§„í–‰í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             return false;
         }
-    }
 
-    // ÄŞº¸½ºÅ³ »óÁ¡ ´İ±â
-    void CloseComboSkillShop()
-    {
-        if (comboSkillShopPanel != null)
-            comboSkillShopPanel.SetActive(false);
-
-        Debug.Log("[ShopStageController] ÄŞº¸½ºÅ³ »óÁ¡ ´İÀ½");
-    }
-
-    // ÄŞº¸½ºÅ³ »óÁ¡ ´İ±â (¿ÜºÎ¿¡¼­ È£Ãâ °¡´É)
-    public void CloseShop()
-    {
-        CloseComboSkillShop();
-    }
-
-    // ShopStage¿¡¼­ ¸ÊÀ¸·Î º¹±Í
-    void ReturnToMapFromShop()
-    {
-        Debug.Log("[ShopStageController] ¸ÊÀ¸·Î º¹±Í ½ÃÀÛ");
-        
-        // GameStateController¸¦ ÅëÇØ ¸ÊÀ¸·Î º¹±Í
-        var stateController = GameStateController.Instance;
-        if (stateController == null)
+        bool spent = MoneyManager.Instance.SpendMoney(amount);
+        if (!spent)
         {
-            Debug.LogError("[ShopStageController] GameStateController.Instance¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù!");
+            Debug.Log($"[ShopStageController] êµ¬ë§¤ ì‹¤íŒ¨ - í•„ìš” ê³¨ë“œ:{amount}, ë³´ìœ  ê³¨ë“œ:{MoneyManager.Instance.CurrentMoney}");
+        }
+        return spent;
+    }
+
+    void UpdateRemoveCardButtonText()
+    {
+        if (removeCardCostText != null)
+            removeCardCostText.text = "ì¹´ë“œ ì œê±° (ì¤€ë¹„ì¤‘)";
+    }
+
+    static bool IsElementCard(CardData card)
+    {
+        if (card == null) return false;
+        return card.element == CardElement.Fire
+            || card.element == CardElement.Water
+            || card.element == CardElement.Wind
+            || card.element == CardElement.Earth;
+    }
+
+    static Sprite ResolveCardSprite(CardData card)
+    {
+        if (card == null || string.IsNullOrWhiteSpace(card.skillImg)) return null;
+        return Resources.Load<Sprite>($"CardIcons/{card.skillImg}");
+    }
+
+    static List<T> PickRandom<T>(List<T> source, int count)
+    {
+        var result = new List<T>();
+        if (source == null || source.Count == 0 || count <= 0)
+            return result;
+
+        var pool = new List<T>(source);
+        int pickCount = Mathf.Min(count, pool.Count);
+        for (int i = 0; i < pickCount; i++)
+        {
+            int idx = Random.Range(0, pool.Count);
+            result.Add(pool[idx]);
+            pool.RemoveAt(idx);
+        }
+
+        return result;
+    }
+
+    struct TemplateBinding
+    {
+        public GameObject template;
+        public GameObject keepObject;
+    }
+
+    struct CardSlotBinding
+    {
+        public Transform container;
+        public ShopOfferItemUI ui;
+        public TextMeshProUGUI priceText;
+    }
+
+    static List<ShopOfferItemUI> CollectDirectSlots(Transform root, bool allowNewCardViewAttach)
+    {
+        var slots = new List<ShopOfferItemUI>();
+        if (root == null) return slots;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var ui = GetOrAttachOfferItemUI(root.GetChild(i).gameObject, allowNewCardViewAttach);
+            if (ui == null) continue;
+            slots.Add(ui);
+        }
+
+        return slots;
+    }
+
+    static bool ShouldUseDirectSlots(int slotCount, int offerCount)
+    {
+        if (slotCount <= 0) return false;
+        if (offerCount <= 1) return true;
+        return slotCount >= offerCount;
+    }
+
+    static List<ShopOfferItemUI> CollectNamedSlots(Transform root, string prefix, int offerCount, bool allowNewCardViewAttach)
+    {
+        var slots = new List<ShopOfferItemUI>();
+        if (root == null || string.IsNullOrWhiteSpace(prefix) || offerCount <= 0)
+            return slots;
+
+        for (int i = 1; i <= offerCount; i++)
+        {
+            string slotName = $"{prefix}{i}";
+            Transform slotTf = FindChildRecursiveByName(root, slotName);
+            if (slotTf == null) continue;
+
+            var ui = GetOrAttachOfferItemUI(slotTf.gameObject, allowNewCardViewAttach);
+            if (ui == null) continue;
+
+            slots.Add(ui);
+        }
+
+        return slots;
+    }
+
+    List<CardSlotBinding> CollectCardNamedSlots(Transform root, string prefix, int offerCount)
+    {
+        var slots = new List<CardSlotBinding>();
+        if (root == null || string.IsNullOrWhiteSpace(prefix) || offerCount <= 0)
+            return slots;
+
+        for (int i = 1; i <= offerCount; i++)
+        {
+            string slotName = $"{prefix}{i}";
+            Transform container = FindChildRecursiveByName(root, slotName);
+            if (container == null) continue;
+
+            ShopOfferItemUI ui = ResolveOrCreateCardSlotContent(container);
+            if (ui == null) continue;
+
+            slots.Add(new CardSlotBinding
+            {
+                container = container,
+                ui = ui,
+                priceText = FindNamedText(container, $"{slotName}_Price") ?? FindNamedText(root, $"{slotName}_Price"),
+            });
+        }
+
+        return slots;
+    }
+
+    static Transform FindChildRecursiveByName(Transform root, string targetName)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(targetName)) return null;
+        if (IsSameNodeName(root.name, targetName)) return root;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (IsSameNodeName(child.name, targetName)) return child;
+
+            Transform found = FindChildRecursiveByName(child, targetName);
+            if (found != null) return found;
+        }
+
+        return null;
+    }
+
+    static bool IsSameNodeName(string actual, string expected)
+    {
+        if (string.IsNullOrWhiteSpace(actual) || string.IsNullOrWhiteSpace(expected)) return false;
+
+        string normalizedActual = actual.Trim().Replace(" ", string.Empty);
+        string normalizedExpected = expected.Trim().Replace(" ", string.Empty);
+        return string.Equals(normalizedActual, normalizedExpected, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    static ShopOfferItemUI GetOrAttachOfferItemUI(GameObject target, bool allowNewCardViewAttach = true)
+    {
+        if (target == null) return null;
+
+        ShopOfferItemUI ui = target.GetComponent<ShopOfferItemUI>();
+        if (ui != null) return ui;
+
+        ui = target.GetComponentInChildren<ShopOfferItemUI>(true);
+        if (ui != null) return ui;
+
+        if (!allowNewCardViewAttach)
+            return target.AddComponent<ShopOfferItemUI>();
+
+        // NewSkillCard(NewCardView) í”„ë¦¬íŒ¹ì„ ìƒì ì—ì„œ ì¬ì‚¬ìš©í•  ë•Œ ShopOfferItemUIë¥¼ ìë™ ë¶€ì°©.
+        NewCardView cardView = target.GetComponent<NewCardView>();
+        if (cardView != null)
+            return target.AddComponent<ShopOfferItemUI>();
+
+        cardView = target.GetComponentInChildren<NewCardView>(true);
+        if (cardView != null)
+            return cardView.gameObject.AddComponent<ShopOfferItemUI>();
+
+        return null;
+    }
+
+    ShopOfferItemUI ResolveOrCreateCardSlotContent(Transform container)
+    {
+        if (container == null) return null;
+
+        ShopOfferItemUI ui = GetOrAttachOfferItemUI(container.gameObject, true);
+        if (ui != null) return ui;
+
+        GameObject template = cardOfferTemplate != null ? cardOfferTemplate : shopOfferItemPrefab;
+        if (template == null) return null;
+
+        GameObject instance = Instantiate(template, container);
+        instance.name = template.name;
+        instance.SetActive(true);
+        return GetOrAttachOfferItemUI(instance, true);
+    }
+
+    static TextMeshProUGUI FindNamedText(Transform root, string targetName)
+    {
+        Transform found = FindChildRecursiveByName(root, targetName);
+        if (found == null) return null;
+
+        TextMeshProUGUI text = found.GetComponent<TextMeshProUGUI>();
+        if (text != null) return text;
+
+        // ì´ë¦„ ì˜¤ë¸Œì íŠ¸ ì•„ë˜ì— ì‹¤ì œ TMPê°€ ì¤‘ì²©ëœ ê²½ìš° ëŒ€ì‘
+        return found.GetComponentInChildren<TextMeshProUGUI>(true);
+    }
+
+    void BindCardOffersToDirectSlots(List<ShopOfferItemUI> slots)
+    {
+        if (slots == null) return;
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var ui = slots[i];
+            if (ui == null) continue;
+
+            bool visible = i < cardOffers.Count
+                && cardOffers[i] != null
+                && cardOffers[i].card != null;
+            ui.gameObject.SetActive(visible);
+            if (!visible) continue;
+
+            CardOffer offer = cardOffers[i];
+            string title = offer.card.displayName;
+            string desc = string.IsNullOrWhiteSpace(offer.card.description) ? "ì¹´ë“œ ì„¤ëª… ì—†ìŒ" : offer.card.description;
+            Sprite icon = ResolveCardSprite(offer.card);
+            ui.Setup(title, desc, icon, offer.price, () => TryBuyCard(offer));
+            ui.SetRelicIconOnlyMode(false);
+            ui.SetCardVisualScale(shopCardVisualScale);
+            ui.SetMoneyIconScale(shopMoneyIconScale);
+            ui.SetPurchasedState(offer.purchased);
+        }
+    }
+
+    void BindCardOffersToNamedSlots(List<CardSlotBinding> slots)
+    {
+        if (slots == null) return;
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            CardSlotBinding slot = slots[i];
+            if (slot.container == null || slot.ui == null) continue;
+
+            bool visible = i < cardOffers.Count
+                && cardOffers[i] != null
+                && cardOffers[i].card != null;
+            slot.container.gameObject.SetActive(true);
+            slot.ui.gameObject.SetActive(visible);
+            slot.ui.SetExternalPriceText(slot.priceText);
+
+            if (!visible)
+            {
+                slot.ui.ClearPriceText();
+                continue;
+            }
+
+            CardOffer offer = cardOffers[i];
+            string title = offer.card.displayName;
+            string desc = string.IsNullOrWhiteSpace(offer.card.description) ? "ì¹´ë“œ ì„¤ëª… ì—†ìŒ" : offer.card.description;
+            Sprite icon = ResolveCardSprite(offer.card);
+            slot.ui.Setup(title, desc, icon, offer.price, () => TryBuyCard(offer));
+            slot.ui.SetRelicIconOnlyMode(false);
+            slot.ui.SetCardVisualScale(shopCardVisualScale);
+            slot.ui.SetMoneyIconScale(shopMoneyIconScale);
+            slot.ui.SetupCardVisual(offer.card, icon);
+            slot.ui.SetPurchasedState(offer.purchased);
+        }
+    }
+
+    void BindRelicOffersToDirectSlots(List<ShopOfferItemUI> slots)
+    {
+        if (slots == null) return;
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var ui = slots[i];
+            if (ui == null) continue;
+
+            bool visible = i < relicOffers.Count;
+            ui.gameObject.SetActive(visible);
+            if (!visible)
+            {
+                ui.ClearPriceText();
+                continue;
+            }
+
+            RelicOffer offer = relicOffers[i];
+            string title = ResolveRelicTitle(offer);
+            string desc = ResolveRelicDescription(offer);
+            ui.Setup(title, desc, ResolveRelicIcon(offer), offer.price, () => TryBuyRelic(offer));
+            ui.SetPriceFontSize(shopRelicPriceFontSize);
+            ui.SetRelicIconScale(shopRelicIconScale);
+            ui.SetRelicIconOnlyMode(true);
+            ui.SetPurchasedState(offer != null && offer.purchased);
+        }
+    }
+
+    static string ResolveRelicTitle(RelicOffer offer)
+    {
+        if (offer == null) return "ìœ ë¬¼";
+        if (!string.IsNullOrWhiteSpace(offer.displayName)) return offer.displayName;
+        if (offer.relic != null && !string.IsNullOrWhiteSpace(offer.relic.displayName)) return offer.relic.displayName;
+        return offer.sprite != null ? offer.sprite.name : "ìœ ë¬¼";
+    }
+
+    static string ResolveRelicDescription(RelicOffer offer)
+    {
+        if (offer == null) return "ìœ ë¬¼ ì„¤ëª… ì—†ìŒ";
+        if (!string.IsNullOrWhiteSpace(offer.description)) return offer.description;
+        if (offer.relic != null && !string.IsNullOrWhiteSpace(offer.relic.description)) return offer.relic.description;
+        return "ìœ ë¬¼ ì„¤ëª… ì—†ìŒ";
+    }
+
+    static Sprite ResolveRelicIcon(RelicOffer offer)
+    {
+        if (offer == null) return null;
+        if (offer.sprite != null) return offer.sprite;
+        return offer.relic != null ? offer.relic.icon : null;
+    }
+
+    void BindComboOffersToDirectSlots(List<ShopOfferItemUI> slots)
+    {
+        if (slots == null) return;
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var ui = slots[i];
+            if (ui == null) continue;
+
+            bool visible = i < comboOffers.Count;
+            ui.gameObject.SetActive(visible);
+            if (!visible) continue;
+
+            ComboOffer offer = comboOffers[i];
+            string title = string.IsNullOrWhiteSpace(offer.skill.name) ? "ì½¤ë³´ ìŠ¤í‚¬" : offer.skill.name;
+            string desc = string.IsNullOrWhiteSpace(offer.skill.description)
+                ? $"ì½¤ë³´: {offer.skill.combo}"
+                : $"ì½¤ë³´: {offer.skill.combo}\n{offer.skill.description}";
+            ui.Setup(title, desc, offer.skill.skillIcon, offer.price, () => TryBuyCombo(offer));
+            ui.SetRelicIconOnlyMode(false);
+        }
+    }
+
+    TemplateBinding ResolveTemplate(Transform root, GameObject explicitTemplate, bool allowSharedPrefabFallback)
+    {
+        if (explicitTemplate != null)
+        {
+            return new TemplateBinding
+            {
+                template = explicitTemplate,
+                keepObject = explicitTemplate.transform.parent == root ? explicitTemplate : null,
+            };
+        }
+
+        if (allowSharedPrefabFallback && shopOfferItemPrefab != null)
+        {
+            return new TemplateBinding
+            {
+                template = shopOfferItemPrefab,
+                keepObject = null,
+            };
+        }
+
+        if (root != null)
+        {
+            for (int i = 0; i < root.childCount; i++)
+            {
+                var child = root.GetChild(i).gameObject;
+                if (child.GetComponent<ShopOfferItemUI>() == null) continue;
+
+                child.SetActive(false);
+                return new TemplateBinding
+                {
+                    template = child,
+                    keepObject = child,
+                };
+            }
+        }
+
+        Debug.LogWarning($"[ShopStageController] í…œí”Œë¦¿ì´ ì—†ì–´ ìƒí’ˆ UIë¥¼ ìƒì„±í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤. Root={root?.name}");
+        return default;
+    }
+
+    static void ClearChildren(Transform root, GameObject keepObject)
+    {
+        if (root == null) return;
+        for (int i = root.childCount - 1; i >= 0; i--)
+        {
+            GameObject child = root.GetChild(i).gameObject;
+            if (keepObject != null && child == keepObject) continue;
+            Destroy(child);
+        }
+    }
+
+    RelicStageController ResolveRelicStageController()
+    {
+        if (relicStageController != null)
+            return relicStageController;
+
+        GameStateController state = GameStateController.Instance;
+        if (state != null && state.relicStage != null)
+        {
+            relicStageController = state.relicStage.GetComponentInChildren<RelicStageController>(true);
+            if (relicStageController != null)
+                return relicStageController;
+        }
+
+        relicStageController = FindFirstObjectByType<RelicStageController>(FindObjectsInactive.Include);
+        return relicStageController;
+    }
+
+    Transform ResolveStrictCardRoot()
+    {
+        if (!string.IsNullOrWhiteSpace(topCardsRootName))
+        {
+            Transform byCanvas = FindChildRecursiveByName(shopCanvas2 != null ? shopCanvas2.transform : transform, topCardsRootName);
+            if (byCanvas != null) return byCanvas;
+        }
+
+        return cardOffersRoot;
+    }
+
+    Transform ResolveStrictRelicRoot()
+    {
+        if (!string.IsNullOrWhiteSpace(bottomLeftRelicsRootName))
+        {
+            Transform byCanvas = FindChildRecursiveByName(shopCanvas2 != null ? shopCanvas2.transform : transform, bottomLeftRelicsRootName);
+            if (byCanvas != null) return byCanvas;
+        }
+
+        return relicOffersRoot;
+    }
+
+    public void ReturnToMapFromShop()
+    {
+        if (roundManager != null)
+        {
+            roundManager.ReturnToMap();
             return;
         }
-        
-        // ÇöÀç ³ëµå Å¬¸®¾î Ã³¸®
+
+        var stateController = GameStateController.Instance;
+        if (stateController == null) return;
+
         stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
-        
-        // ¸ÊÀ¸·Î º¹±Í
         stateController.ShowMap();
-        Debug.Log("[ShopStageController] ¸ÊÀ¸·Î º¹±Í ¿Ï·á");
     }
+
 }

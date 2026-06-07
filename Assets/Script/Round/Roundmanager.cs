@@ -18,6 +18,16 @@ public class Roundmanager : MonoBehaviour
     [Header("보상 UI")]
     [SerializeField] private RewardHubUIController rewardHubUIController;
 
+    [Header("보상 상단 문구 - 카드")]
+    [SerializeField] private Font cardRewardTitleFont;
+    [SerializeField, Range(12, 96)] private int cardRewardTitleFontSize = 40;
+    [SerializeField] private Color cardRewardTitleColor = Color.white;
+
+    [Header("보상 상단 문구 - 콤보")]
+    [SerializeField] private Font comboRewardTitleFont;
+    [SerializeField, Range(12, 96)] private int comboRewardTitleFontSize = 42;
+    [SerializeField] private Color comboRewardTitleColor = Color.white;
+
     private RoundData currentRoundData;
     private int currentEnemyIndex = 0;
     private EnemyStat currentEnemy;
@@ -253,7 +263,28 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     public void OpenShop()
     {
-        Debug.Log($"상점 오픈: 아이템");
+        ShopStageController controller = FindFirstObjectByType<ShopStageController>(FindObjectsInactive.Include);
+
+        if (controller == null)
+        {
+            var stateController = GameStateController.Instance;
+            if (stateController != null && stateController.shopStage != null)
+            {
+                controller = stateController.shopStage.GetComponentInChildren<ShopStageController>(true);
+                if (controller == null)
+                    controller = stateController.shopStage.AddComponent<ShopStageController>();
+            }
+        }
+
+        if (controller == null)
+        {
+            Debug.LogError("[Roundmanager] ShopStageController를 찾지 못해 맵으로 복귀합니다.");
+            ReturnToMap();
+            return;
+        }
+
+        controller.BeginShop(this);
+        Debug.Log("[Roundmanager] 상점 스테이지 시작");
     }
 
     public void CloseShop()
@@ -446,6 +477,7 @@ public class Roundmanager : MonoBehaviour
         Battle.UI.NewCardView cardPrefab = hud != null ? hud.CardPrefab : null;
 
         var rewardUI = Battle.UI.CardRewardUI.EnsureExists();
+        rewardUI.SetTitleStyle(cardRewardTitleFont, cardRewardTitleFontSize, cardRewardTitleColor);
         rewardUI.Present(cardPrefab, pickedCardId =>
         {
             if (pickedCardId > 0)
@@ -469,6 +501,7 @@ public class Roundmanager : MonoBehaviour
     void ShowComboSkillRewardAfterCard()
     {
         var overlay = Battle.UI.ComboSkillRewardOverlayUI.EnsureExists();
+        overlay.SetTitleStyle(comboRewardTitleFont, comboRewardTitleFontSize, comboRewardTitleColor);
         overlay.Present(pickedSkill =>
         {
             if (pickedSkill != null)
@@ -541,11 +574,13 @@ public class Roundmanager : MonoBehaviour
     void GrantTieredCombatGold()
     {
         if (MoneyManager.Instance == null) return;
-        int gold;
-        if (currentRoundData is BossRoundData)        gold = Random.Range(200, 251); // 보스 200~250
-        else if (currentRoundData is EliteRoundData)  gold = Random.Range(100, 151); // 정예 100~150
-        else if (currentRoundData is CombatRoundData) gold = Random.Range(30, 51);   // 일반 30~50
-        else return;
+
+        bool isBoss = currentRoundData is BossRoundData;
+        bool isElite = currentRoundData is EliteRoundData;
+        bool isNormalCombat = currentRoundData is CombatRoundData;
+        int gold = MoneyManager.Instance.RollCombatRewardGold(isBoss, isElite, isNormalCombat);
+        if (gold <= 0) return;
+
         MoneyManager.Instance.AddMoney(gold);
         Debug.Log($"[보상] 전투 골드 +{gold}");
     }

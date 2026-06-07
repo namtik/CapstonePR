@@ -17,9 +17,21 @@ namespace Battle.UI
 
         const int CHOICE_COUNT = 4;
 
+        [Header("상단 문구")]
+        [SerializeField] private Font titleFont;
+        [SerializeField, Range(12, 96)] private int titleFontSize = 40;
+        [SerializeField] private Color titleColor = Color.white;
+
         private System.Action<int> _onPicked;
         private GameObject _panel;
         private static Font _builtinFont;
+
+        public void SetTitleStyle(Font font, int fontSize, Color color)
+        {
+            titleFont = font;
+            titleFontSize = Mathf.Clamp(fontSize, 12, 96);
+            titleColor = color;
+        }
 
         void Awake()
         {
@@ -166,10 +178,10 @@ namespace Battle.UI
             titleRt.sizeDelta = new Vector2(900f, 80f);
             titleRt.anchoredPosition = new Vector2(0f, 320f);
             var titleText = titleRt.gameObject.AddComponent<Text>();
-            titleText.font = BuiltinFont();
-            titleText.fontSize = 40;
+            titleText.font = titleFont != null ? titleFont : BuiltinFont();
+            titleText.fontSize = titleFontSize;
             titleText.alignment = TextAnchor.MiddleCenter;
-            titleText.color = Color.white;
+            titleText.color = titleColor;
             titleText.text = "카드 획득 — 한 장 선택";
             titleText.raycastTarget = false;
 

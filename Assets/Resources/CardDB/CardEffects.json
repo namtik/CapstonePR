@@ -3179,6 +3179,26 @@
       "repeat": "",
       "extra": "",
       "runtimeKey": ""
+    },
+    {
+      "cardId": 500,
+      "index": 1,
+      "when": "ON_USE",
+      "ifCond": "",
+      "doAction": "No_EFFECT",
+      "target": "CURRENT_CARD",
+      "amount": 0,
+      "formula": "",
+      "hits": 0,
+      "hitFormula": "",
+      "status": "",
+      "cardFilter": "",
+      "fromZone": "",
+      "toZone": "",
+      "select": "",
+      "repeat": "",
+      "extra": "",
+      "runtimeKey": ""
     }
   ]
 }

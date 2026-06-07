@@ -206,7 +206,7 @@
       "slot2": "WIND",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "청룡파천무",
       "description": "무작위 적 하나에게 피해를 30 준다. 연쇄를 10 얻는다.",
       "refComboId": 1008
     },
@@ -216,7 +216,7 @@
       "slot2": "WIND",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "열풍 난무",
       "description": "모든 적에게 피해를 10 준다. 이번 각성 때 발동한 콤보 스킬 만큼 반복한다.",
       "refComboId": 1009
     },
@@ -226,7 +226,7 @@
       "slot2": "FIRE",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "열풍 난무",
       "description": "모든 적에게 피해를 10 준다. 이번 각성 때 발동한 콤보 스킬 만큼 반복한다.",
       "refComboId": 1009
     },
@@ -236,7 +236,7 @@
       "slot2": "WIND",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "열풍 난무",
       "description": "모든 적에게 피해를 10 준다. 이번 각성 때 발동한 콤보 스킬 만큼 반복한다.",
       "refComboId": 1009
     },
@@ -276,7 +276,7 @@
       "slot2": "WIND",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "태풍 쇄도",
       "description": "무작위 적에게 피해를 3 준다. 연쇄를 보유한 수 만큼 반복한다.",
       "refComboId": 1011
     },
@@ -286,7 +286,7 @@
       "slot2": "EARTH",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "태풍 쇄도",
       "description": "무작위 적에게 피해를 3 준다. 연쇄를 보유한 수 만큼 반복한다.",
       "refComboId": 1011
     },
@@ -296,7 +296,7 @@
       "slot2": "WIND",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "태풍 쇄도",
       "description": "무작위 적에게 피해를 3 준다. 연쇄를 보유한 수 만큼 반복한다.",
       "refComboId": 1011
     },
@@ -406,7 +406,7 @@
       "slot2": "WATER",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "연무 산개",
       "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
@@ -416,7 +416,7 @@
       "slot2": "WIND",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "연무 산개",
       "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
@@ -426,7 +426,7 @@
       "slot2": "FIRE",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "연무 산개",
       "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
@@ -436,7 +436,7 @@
       "slot2": "WIND",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "연무 산개",
       "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
@@ -446,7 +446,7 @@
       "slot2": "FIRE",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "연무 산개",
       "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
@@ -456,7 +456,7 @@
       "slot2": "WATER",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "연무 산개",
       "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
@@ -466,7 +466,7 @@
       "slot2": "WATER",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "원기 해방",
       "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
       "refComboId": 1017
     },
@@ -476,7 +476,7 @@
       "slot2": "EARTH",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "원기 해방",
       "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
       "refComboId": 1017
     },
@@ -486,7 +486,7 @@
       "slot2": "FIRE",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "원기 해방",
       "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
       "refComboId": 1017
     },
@@ -496,7 +496,7 @@
       "slot2": "EARTH",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "원기 해방",
       "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
       "refComboId": 1017
     },
@@ -506,7 +506,7 @@
       "slot2": "FIRE",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "원기 해방",
       "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
       "refComboId": 1017
     },
@@ -516,7 +516,7 @@
       "slot2": "WATER",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "원기 해방",
       "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
       "refComboId": 1017
     },

@@ -2,7 +2,7 @@
   "cards": [
     {
       "id": 100,
-      "name": "불 기본 공격",
+      "name": "공격",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 1,
@@ -15,7 +15,7 @@
     },
     {
       "id": 101,
-      "name": "불 기본 방어",
+      "name": "방어",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 1,
@@ -28,7 +28,7 @@
     },
     {
       "id": 102,
-      "name": "불공격_102",
+      "name": "화염격",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 1,
@@ -41,7 +41,7 @@
     },
     {
       "id": 103,
-      "name": "불공격_103",
+      "name": "불태우기",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 1,
@@ -54,7 +54,7 @@
     },
     {
       "id": 104,
-      "name": "불공격_104",
+      "name": "날뛰는 염화",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 1,
@@ -67,7 +67,7 @@
     },
     {
       "id": 105,
-      "name": "불공격_105",
+      "name": "작열",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 2,
@@ -76,11 +76,11 @@
       "comboSlot": true,
       "effectName": "Fire_ATK",
       "skillImg": "105Img",
-      "description": "피해를 n 만큼 준다. (n = 화상 보유량)"
+      "description": "적이 보유한 화상 스택 만큼 피해를 준다."
     },
     {
       "id": 106,
-      "name": "불공격_106",
+      "name": "소각",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 3,
@@ -93,7 +93,7 @@
     },
     {
       "id": 107,
-      "name": "불공격_107",
+      "name": "업화의 불꽃",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 2,
@@ -106,7 +106,7 @@
     },
     {
       "id": 108,
-      "name": "불공격_108",
+      "name": "",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 3,
@@ -119,7 +119,7 @@
     },
     {
       "id": 109,
-      "name": "불공격_109",
+      "name": "",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 3,
@@ -132,7 +132,7 @@
     },
     {
       "id": 110,
-      "name": "불공격_110",
+      "name": "",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 3,
@@ -145,7 +145,7 @@
     },
     {
       "id": 111,
-      "name": "불공격_111",
+      "name": "",
       "element": "FIRE",
       "type": "ATTACK",
       "gauge": 1,
@@ -158,7 +158,7 @@
     },
     {
       "id": 112,
-      "name": "불스킬_112",
+      "name": "",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 1,
@@ -171,7 +171,7 @@
     },
     {
       "id": 113,
-      "name": "불스킬_113",
+      "name": "",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 2,
@@ -184,7 +184,7 @@
     },
     {
       "id": 114,
-      "name": "불스킬_114",
+      "name": "",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 1,
@@ -197,7 +197,7 @@
     },
     {
       "id": 115,
-      "name": "불스킬_115",
+      "name": "",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 2,
@@ -210,7 +210,7 @@
     },
     {
       "id": 116,
-      "name": "불스킬_116",
+      "name": "화상 폭발",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 2,
@@ -223,7 +223,7 @@
     },
     {
       "id": 117,
-      "name": "불스킬_117",
+      "name": "",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 3,
@@ -236,7 +236,7 @@
     },
     {
       "id": 118,
-      "name": "불스킬_118",
+      "name": "",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 2,
@@ -249,7 +249,7 @@
     },
     {
       "id": 119,
-      "name": "불스킬_119",
+      "name": "",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 1,
@@ -262,7 +262,7 @@
     },
     {
       "id": 120,
-      "name": "불스킬_120",
+      "name": "화염 벽",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 1,
@@ -275,7 +275,7 @@
     },
     {
       "id": 121,
-      "name": "불스킬_121",
+      "name": "타오르는 희생",
       "element": "FIRE",
       "type": "SKILL",
       "gauge": 1,
@@ -288,7 +288,7 @@
     },
     {
       "id": 122,
-      "name": "불파워_122",
+      "name": "수라의 길",
       "element": "FIRE",
       "type": "POWER",
       "gauge": 3,
@@ -301,7 +301,7 @@
     },
     {
       "id": 123,
-      "name": "불파워_123",
+      "name": "",
       "element": "FIRE",
       "type": "POWER",
       "gauge": 5,
@@ -314,7 +314,7 @@
     },
     {
       "id": 124,
-      "name": "불파워_124",
+      "name": "천지작열",
       "element": "FIRE",
       "type": "POWER",
       "gauge": 5,
@@ -327,7 +327,7 @@
     },
     {
       "id": 125,
-      "name": "불파워_125",
+      "name": "",
       "element": "FIRE",
       "type": "POWER",
       "gauge": 5,
@@ -340,7 +340,7 @@
     },
     {
       "id": 126,
-      "name": "불파워_126",
+      "name": "영겁의 고통",
       "element": "FIRE",
       "type": "POWER",
       "gauge": 5,
@@ -353,7 +353,7 @@
     },
     {
       "id": 200,
-      "name": "기본 공격",
+      "name": "공격",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 1,
@@ -366,7 +366,7 @@
     },
     {
       "id": 201,
-      "name": "기본 방어",
+      "name": "방어",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 1,
@@ -379,7 +379,7 @@
     },
     {
       "id": 202,
-      "name": "물공격_202",
+      "name": "",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 1,
@@ -392,7 +392,7 @@
     },
     {
       "id": 203,
-      "name": "물공격_203",
+      "name": "",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 2,
@@ -405,7 +405,7 @@
     },
     {
       "id": 204,
-      "name": "물공격_204",
+      "name": "서리 칼날",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 2,
@@ -418,7 +418,7 @@
     },
     {
       "id": 205,
-      "name": "물공격_205",
+      "name": "낙수격",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 3,
@@ -431,7 +431,7 @@
     },
     {
       "id": 206,
-      "name": "물공격_206",
+      "name": "",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 2,
@@ -444,7 +444,7 @@
     },
     {
       "id": 207,
-      "name": "물공격_207",
+      "name": "치유의 물결",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 2,
@@ -457,7 +457,7 @@
     },
     {
       "id": 208,
-      "name": "물공격_208",
+      "name": "",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 2,
@@ -470,7 +470,7 @@
     },
     {
       "id": 209,
-      "name": "물공격_209",
+      "name": "",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 3,
@@ -483,7 +483,7 @@
     },
     {
       "id": 210,
-      "name": "물공격_210",
+      "name": "",
       "element": "WATER",
       "type": "ATTACK",
       "gauge": 1,
@@ -496,7 +496,7 @@
     },
     {
       "id": 211,
-      "name": "물공격_211",
+      "name": "",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 1,
@@ -509,7 +509,7 @@
     },
     {
       "id": 212,
-      "name": "물스킬_212",
+      "name": "",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 1,
@@ -522,7 +522,7 @@
     },
     {
       "id": 213,
-      "name": "물스킬_213",
+      "name": "",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 1,
@@ -535,7 +535,7 @@
     },
     {
       "id": 214,
-      "name": "물스킬_214",
+      "name": "",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 1,
@@ -548,7 +548,7 @@
     },
     {
       "id": 215,
-      "name": "물스킬_215",
+      "name": "치유의 정수",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 1,
@@ -561,7 +561,7 @@
     },
     {
       "id": 216,
-      "name": "물스킬_216",
+      "name": "얼음 방패",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 1,
@@ -574,7 +574,7 @@
     },
     {
       "id": 217,
-      "name": "물스킬_217",
+      "name": "",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 1,
@@ -587,7 +587,7 @@
     },
     {
       "id": 218,
-      "name": "물스킬_218",
+      "name": "눈보라",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 2,
@@ -600,7 +600,7 @@
     },
     {
       "id": 219,
-      "name": "물스킬_219",
+      "name": "진눈꺠비",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 2,
@@ -613,7 +613,7 @@
     },
     {
       "id": 220,
-      "name": "물스킬_220",
+      "name": "급속 빙결",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 2,
@@ -626,7 +626,7 @@
     },
     {
       "id": 221,
-      "name": "물스킬_221",
+      "name": "",
       "element": "WATER",
       "type": "SKILL",
       "gauge": 2,
@@ -639,7 +639,7 @@
     },
     {
       "id": 222,
-      "name": "물파워_222",
+      "name": "생명의 샘",
       "element": "WATER",
       "type": "POWER",
       "gauge": 3,
@@ -652,7 +652,7 @@
     },
     {
       "id": 223,
-      "name": "물파워_223",
+      "name": "",
       "element": "WATER",
       "type": "POWER",
       "gauge": 3,
@@ -665,7 +665,7 @@
     },
     {
       "id": 224,
-      "name": "물파워_224",
+      "name": "순환심법",
       "element": "WATER",
       "type": "POWER",
       "gauge": 5,
@@ -678,7 +678,7 @@
     },
     {
       "id": 225,
-      "name": "물파워_225",
+      "name": "",
       "element": "WATER",
       "type": "POWER",
       "gauge": 3,
@@ -691,7 +691,7 @@
     },
     {
       "id": 226,
-      "name": "물파워_226",
+      "name": "",
       "element": "WATER",
       "type": "POWER",
       "gauge": 3,
@@ -704,7 +704,7 @@
     },
     {
       "id": 300,
-      "name": "기본 공격",
+      "name": "공격",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 1,
@@ -717,7 +717,7 @@
     },
     {
       "id": 301,
-      "name": "기본 방어",
+      "name": "방어",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 1,
@@ -730,7 +730,7 @@
     },
     {
       "id": 302,
-      "name": "바람공격_302",
+      "name": "",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 0,
@@ -743,7 +743,7 @@
     },
     {
       "id": 303,
-      "name": "바람공격_303",
+      "name": "삼연격",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 1,
@@ -756,7 +756,7 @@
     },
     {
       "id": 304,
-      "name": "바람공격_304",
+      "name": "순풍격",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 1,
@@ -769,7 +769,7 @@
     },
     {
       "id": 305,
-      "name": "바람공격_305",
+      "name": "질풍격",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 1,
@@ -782,7 +782,7 @@
     },
     {
       "id": 306,
-      "name": "바람공격_306",
+      "name": "",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 2,
@@ -795,7 +795,7 @@
     },
     {
       "id": 307,
-      "name": "바람공격_307",
+      "name": "무차별난격",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 2,
@@ -808,7 +808,7 @@
     },
     {
       "id": 308,
-      "name": "바람공격_308",
+      "name": "",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 2,
@@ -821,7 +821,7 @@
     },
     {
       "id": 309,
-      "name": "바람공격_309",
+      "name": "",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 2,
@@ -830,11 +830,11 @@
       "comboSlot": true,
       "effectName": "Wind_ATK",
       "skillImg": "309Img",
-      "description": "피해를 1 X n 준다. (n = 이번 전투에서 사용한 공격 카드의 수)"
+      "description": "피해를 1 준다. 이번 전투에서 사용한 공격 카드 수 만큼 반복한다."
     },
     {
       "id": 310,
-      "name": "바람공격_310",
+      "name": "연쇄폭풍",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 3,
@@ -843,11 +843,11 @@
       "comboSlot": true,
       "effectName": "Wind_ATK",
       "skillImg": "310Img",
-      "description": "피해를 n 준다. (n = 이번 전투에서 소모한 연쇄)"
+      "description": "이번 전투에서 소모한 연쇄 만큼 피해를 준다."
     },
     {
       "id": 311,
-      "name": "바람공격_311",
+      "name": "",
       "element": "WIND",
       "type": "ATTACK",
       "gauge": 1,
@@ -860,7 +860,7 @@
     },
     {
       "id": 312,
-      "name": "바람스킬_312",
+      "name": "",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 0,
@@ -873,7 +873,7 @@
     },
     {
       "id": 313,
-      "name": "바람스킬_313",
+      "name": "숨고르기",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 0,
@@ -886,7 +886,7 @@
     },
     {
       "id": 314,
-      "name": "바람스킬_314",
+      "name": "",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 1,
@@ -899,7 +899,7 @@
     },
     {
       "id": 315,
-      "name": "바람스킬_315",
+      "name": "순보",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 1,
@@ -912,7 +912,7 @@
     },
     {
       "id": 316,
-      "name": "바람스킬_316",
+      "name": "축지",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 1,
@@ -925,7 +925,7 @@
     },
     {
       "id": 317,
-      "name": "바람스킬_317",
+      "name": "",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 1,
@@ -938,7 +938,7 @@
     },
     {
       "id": 318,
-      "name": "바람스킬_318",
+      "name": "",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 1,
@@ -951,7 +951,7 @@
     },
     {
       "id": 319,
-      "name": "바람스킬_319",
+      "name": "",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 1,
@@ -964,7 +964,7 @@
     },
     {
       "id": 320,
-      "name": "바람스킬_320",
+      "name": "",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 1,
@@ -977,7 +977,7 @@
     },
     {
       "id": 321,
-      "name": "바람스킬_321",
+      "name": "",
       "element": "WIND",
       "type": "SKILL",
       "gauge": 3,
@@ -990,7 +990,7 @@
     },
     {
       "id": 322,
-      "name": "바람파워_322",
+      "name": "",
       "element": "WIND",
       "type": "POWER",
       "gauge": 3,
@@ -1003,7 +1003,7 @@
     },
     {
       "id": 323,
-      "name": "바람파워_323",
+      "name": "",
       "element": "WIND",
       "type": "POWER",
       "gauge": 3,
@@ -1016,7 +1016,7 @@
     },
     {
       "id": 324,
-      "name": "바람파워_324",
+      "name": "",
       "element": "WIND",
       "type": "POWER",
       "gauge": 3,
@@ -1029,7 +1029,7 @@
     },
     {
       "id": 325,
-      "name": "바람파워_325",
+      "name": "",
       "element": "WIND",
       "type": "POWER",
       "gauge": 3,
@@ -1042,7 +1042,7 @@
     },
     {
       "id": 326,
-      "name": "바람파워_326",
+      "name": "깨달음",
       "element": "WIND",
       "type": "POWER",
       "gauge": 3,
@@ -1055,7 +1055,7 @@
     },
     {
       "id": 400,
-      "name": "기본 공격",
+      "name": "공격",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 1,
@@ -1068,7 +1068,7 @@
     },
     {
       "id": 401,
-      "name": "기본 방어",
+      "name": "방어",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 1,
@@ -1081,7 +1081,7 @@
     },
     {
       "id": 402,
-      "name": "땅공격_402",
+      "name": "",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 1,
@@ -1094,7 +1094,7 @@
     },
     {
       "id": 403,
-      "name": "땅공격_403",
+      "name": "",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 1,
@@ -1107,7 +1107,7 @@
     },
     {
       "id": 404,
-      "name": "땅공격_404",
+      "name": "철산고",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 2,
@@ -1116,11 +1116,11 @@
       "comboSlot": true,
       "effectName": "Earth_ATK",
       "skillImg": "404Img",
-      "description": "피해를 n 만큼 준다. (n = 현재 보유한 방어도)"
+      "description": "플레이어가 현재 보유한 방어도 만큼 피해를 준다."
     },
     {
       "id": 405,
-      "name": "땅공격_405",
+      "name": "",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 2,
@@ -1129,11 +1129,11 @@
       "comboSlot": true,
       "effectName": "Earth_ATK",
       "skillImg": "405Img",
-      "description": "피해를 n 만큼 준다. (n = 이번 전투에서 사용한 파편 카드 수)"
+      "description": "이번 전투에서 사용한 파편 카드 수만큼 피해를 준다."
     },
     {
       "id": 406,
-      "name": "땅공격_406",
+      "name": "",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 3,
@@ -1142,11 +1142,11 @@
       "comboSlot": true,
       "effectName": "Earth_ATK",
       "skillImg": "406Img",
-      "description": "모든 적에게 피해를 n 만큼 준다. (n = 패로 들어온 이후 진행된 게이지 수)"
+      "description": "이 카드가 패에 들어온 후 진행된 행동 게이지 만큼 피해를 준다."
     },
     {
       "id": 407,
-      "name": "땅공격_407",
+      "name": "",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 3,
@@ -1155,11 +1155,11 @@
       "comboSlot": true,
       "effectName": "Earth_ATK",
       "skillImg": "407Img",
-      "description": "피해를 10 준다. 패에 있는 무작위 적을 대상으로 파편 카드를 모두 발동 시킨다."
+      "description": "피해를 10 준다. 패에 있는  무작위 대상에게 패에 존재하는 파편 카드를 모두 발동 시킨다."
     },
     {
       "id": 408,
-      "name": "땅공격_408",
+      "name": "",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 2,
@@ -1172,7 +1172,7 @@
     },
     {
       "id": 409,
-      "name": "땅공격_409",
+      "name": "대지 파열",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 3,
@@ -1185,7 +1185,7 @@
     },
     {
       "id": 410,
-      "name": "땅공격_410",
+      "name": "",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 1,
@@ -1198,7 +1198,7 @@
     },
     {
       "id": 411,
-      "name": "땅공격_411",
+      "name": "",
       "element": "EARTH",
       "type": "ATTACK",
       "gauge": 2,
@@ -1211,7 +1211,7 @@
     },
     {
       "id": 412,
-      "name": "땅스킬_412",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 1,
@@ -1224,7 +1224,7 @@
     },
     {
       "id": 413,
-      "name": "땅스킬_413",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 1,
@@ -1237,7 +1237,7 @@
     },
     {
       "id": 414,
-      "name": "땅스킬_414",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 1,
@@ -1250,7 +1250,7 @@
     },
     {
       "id": 415,
-      "name": "땅스킬_415",
+      "name": "철벽",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 2,
@@ -1263,7 +1263,7 @@
     },
     {
       "id": 416,
-      "name": "땅스킬_416",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 1,
@@ -1276,7 +1276,7 @@
     },
     {
       "id": 417,
-      "name": "땅스킬_417",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 1,
@@ -1289,7 +1289,7 @@
     },
     {
       "id": 418,
-      "name": "땅스킬_418",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 2,
@@ -1302,7 +1302,7 @@
     },
     {
       "id": 419,
-      "name": "땅스킬_419",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 2,
@@ -1315,7 +1315,7 @@
     },
     {
       "id": 420,
-      "name": "땅스킬_420",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 2,
@@ -1328,7 +1328,7 @@
     },
     {
       "id": 421,
-      "name": "땅스킬_421",
+      "name": "",
       "element": "EARTH",
       "type": "SKILL",
       "gauge": 3,
@@ -1341,7 +1341,7 @@
     },
     {
       "id": 422,
-      "name": "땅파워_422",
+      "name": "",
       "element": "EARTH",
       "type": "POWER",
       "gauge": 3,
@@ -1354,7 +1354,7 @@
     },
     {
       "id": 423,
-      "name": "땅파워_423",
+      "name": "",
       "element": "EARTH",
       "type": "POWER",
       "gauge": 3,
@@ -1367,7 +1367,7 @@
     },
     {
       "id": 424,
-      "name": "땅파워_424",
+      "name": "금강불괴",
       "element": "EARTH",
       "type": "POWER",
       "gauge": 3,
@@ -1380,7 +1380,7 @@
     },
     {
       "id": 425,
-      "name": "땅파워_425",
+      "name": "",
       "element": "EARTH",
       "type": "POWER",
       "gauge": 4,
@@ -1393,7 +1393,7 @@
     },
     {
       "id": 426,
-      "name": "땅파워_426",
+      "name": "",
       "element": "EARTH",
       "type": "POWER",
       "gauge": 5,
@@ -1406,7 +1406,7 @@
     },
     {
       "id": 500,
-      "name": "무속성 카드",
+      "name": "탈진",
       "element": "NEUTRAL",
       "type": "SKILL",
       "gauge": 1,
@@ -1419,7 +1419,7 @@
     },
     {
       "id": 501,
-      "name": "파편스킬_501",
+      "name": "금속 파편",
       "element": "FRAGMENT",
       "type": "SKILL",
       "gauge": 1,
@@ -1432,7 +1432,7 @@
     },
     {
       "id": 502,
-      "name": "파편공격_502",
+      "name": "모래 파편",
       "element": "FRAGMENT",
       "type": "ATTACK",
       "gauge": 1,
@@ -1445,7 +1445,7 @@
     },
     {
       "id": 503,
-      "name": "파편공격_503",
+      "name": "암석 파편",
       "element": "FRAGMENT",
       "type": "ATTACK",
       "gauge": 1,
@@ -1455,6 +1455,19 @@
       "effectName": "Earth_ATK",
       "skillImg": "503Img",
       "description": "소멸, 피해를 10 준다. 방어도를 5 얻는다."
+    },
+    {
+      "id": 504,
+      "name": "오염된 원소",
+      "element": "NEUTRAL",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Normal",
+      "tags": ["NO_COMBO_SLOT"],
+      "comboSlot": false,
+      "effectName": "",
+      "skillImg": "504Img",
+      "description": "오염된 원소다. 사용해도 아무 일도 일어나지 않는다."
     }
   ]
 }
