@@ -22,7 +22,9 @@ namespace Battle
         /// <summary>각성 발동에 필요한 속성 카드 사용 횟수 — 도달 시 즉시 발동.</summary>
         public const int AWAKEN_ACTIVATION_INPUT = 10;
         /// <summary>각성 발동 시 기본 지속 시간(초).</summary>
-        public const float AWAKEN_DURATION_SECONDS = 10f;
+        public const float AWAKEN_DURATION_SECONDS = 4f;
+        /// <summary>각성 발동 시 보유 콤보 1개당 추가되는 지속 시간(초).</summary>
+        public const float AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS = 1f;
         /// <summary>콤보 1회 성공 시 추가되는 시간(초).</summary>
         public const float COMBO_BONUS_SECONDS = 0.1f;
         /// <summary>콤보 스킬 발동 후 재사용까지 필요한 속성 카드 입력 횟수(발동 이후 카드부터 카운트).</summary>
@@ -38,6 +40,8 @@ namespace Battle
         [SerializeField] private CardEffectOverlay effectOverlay;
         [Tooltip("플레이어 피격 시 화면 빨간 플래시. 비우면 자동 생성.")]
         [SerializeField] private PlayerDamageOverlay damageOverlay;
+        [Tooltip("각성 동안 화면 상단에 남은 시간을 표시할 전용 게이지. 씬에 직접 만들어 연결(코드로 생성하지 않음). 비우면 표시 생략.")]
+        [SerializeField] private AwakenTimerGauge awakenTimerGauge;
 
         [Header("보유 콤보 스킬 (각성 전용 / Inspector 편집)")]
         [SerializeField] private List<ComboSkillDef> ownedComboSkills = new List<ComboSkillDef>();
@@ -236,7 +240,10 @@ namespace Battle
             {
                 _awakenTimeRemaining = 0f;
                 EndAwaken();
+                return;
             }
+            // 상단 각성 타이머 게이지 — 각성 중 매 프레임 남은 시간 갱신(콤보 매칭 보너스도 반영됨)
+            if (awakenTimerGauge != null) awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -312,6 +319,7 @@ namespace Battle
             _awakenPending = false;
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
+            if (awakenTimerGauge != null) awakenTimerGauge.Hide(); // 각성 전까지 상단 타이머 숨김
             _usedFireCardCount = 0;
             _recoverCooldown = 0;
 
@@ -344,6 +352,7 @@ namespace Battle
                 handHud.SelectionClosedCallback = null;
                 handHud.SetAwakenGaugeVisible(false);
             }
+            if (awakenTimerGauge != null) awakenTimerGauge.Hide(); // 상단 각성 타이머 숨김
             // 재생 중이던 카드 이펙트 잔여물 제거 — 보상 화면(timeScale=0)에서 멈춘 뒤 다음 스테이지로 이월되는 것 방지
             if (effectOverlay != null) effectOverlay.ClearAll();
             Log("전투 종료");
@@ -953,8 +962,11 @@ namespace Battle
             _awakenActive = true;
             RunDeckState.Instance?.RecordAwakenActivation(); // 적 AI 런 프로파일: 피버사이클(f7)
             _elementInputCount = 0;
-            _awakenTimeRemaining = AWAKEN_DURATION_SECONDS;
-            _awakenMaxTime = AWAKEN_DURATION_SECONDS;
+            // 지속 시간 = 기본 4초 + 보유 콤보 1개당 1초 (발동 시점에 계산)
+            int ownedComboCount = ownedComboSkills != null ? ownedComboSkills.Count : 0;
+            float awakenDuration = AWAKEN_DURATION_SECONDS + ownedComboCount * AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS;
+            _awakenTimeRemaining = awakenDuration;
+            _awakenMaxTime = awakenDuration;
 
             // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 그대로 복원.
             _awakenSnapshotHand = new List<CardInstance>(_deck.Hand);
@@ -988,7 +1000,14 @@ namespace Battle
                 handHud.UpdateAwakenInputHistory(_awakenInputHistory);
             }
 
-            Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={AWAKEN_DURATION_SECONDS}s (콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
+            // 상단 각성 타이머 게이지 표시 + 초기값 세팅
+            if (awakenTimerGauge != null)
+            {
+                awakenTimerGauge.Show();
+                awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
+            }
+
+            Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
         }
 
         void EndAwaken()
@@ -996,6 +1015,7 @@ namespace Battle
             _awakenActive = false;
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
+            if (awakenTimerGauge != null) awakenTimerGauge.Hide(); // 상단 각성 타이머 숨김
 
             // 각성 직전 상태로 패/뽑을 더미/버린 더미 복원 (각성 중의 드로우·사용 churn 되돌림).
             // 격리했던 무속성/파편 카드도 스냅샷에 포함돼 있으므로 함께 복원됨.
@@ -1345,19 +1365,11 @@ namespace Battle
             if (activeCombatHpRect != null)
                 handHud.SetAwakenGaugeAnchor(activeCombatHpRect);
 
-            // 각성은 N장 도달 시 즉시 발동되므로 'READY 대기' 상태가 없다. N은 바람326 등으로 가변.
+            // HP바 아래 기존 게이지는 '충전(0/10)'만 담당 — 각성 중 '시간 표시'는 상단 타이머 게이지가 담당.
+            // (각성 발동 시 _elementInputCount=0으로 리셋되므로 각성 중에는 0/10으로 표시됨)
             int awakenMax = EffectiveAwakenInput;
-            string label = _awakenActive
-                ? $"각성 {_awakenTimeRemaining:F1}s"
-                : $"{_elementInputCount}/{awakenMax}";
-            handHud.SetAwakenText(label);
-            handHud.UpdateAwakenGauge(
-                _elementInputCount,
-                awakenMax,
-                _awakenActive,
-                _awakenTimeRemaining,
-                _awakenMaxTime
-            );
+            handHud.SetAwakenText($"{_elementInputCount}/{awakenMax}");
+            handHud.UpdateAwakenGauge(_elementInputCount, awakenMax, false, 0f, 0f);
         }
 
         void Log(string msg)
