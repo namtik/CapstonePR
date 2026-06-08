@@ -871,6 +871,7 @@ namespace Battle.UI
         /// </summary>
         public void PlayCardUsePresentation(CardInstance card, System.Action onDisappear, bool interruptable = false)
         {
+            if (card != null) SfxManager.Instance?.PlayCardUse(); // 카드 사용 효과음(연출 on/off와 무관하게)
             if (!cardUsePresentEnabled || card == null || cardPrefab == null || !isActiveAndEnabled)
             {
                 onDisappear?.Invoke();

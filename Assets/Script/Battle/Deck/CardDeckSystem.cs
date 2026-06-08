@@ -91,7 +91,11 @@ namespace Battle.Deck
                 if (!TryDrawOne()) break;
                 drawn++;
             }
-            if (drawn > 0) OnPileChanged?.Invoke();
+            if (drawn > 0)
+            {
+                OnPileChanged?.Invoke();
+                SfxManager.Instance?.PlayDraw(); // 드로우 효과음(배치 드로우도 1회)
+            }
 
             // 손패가 한도에 안 찼는데 못 뽑은 경우 — 더미 고갈 진단 로그
             if (drawn < count && _hand.Count < HandLimit

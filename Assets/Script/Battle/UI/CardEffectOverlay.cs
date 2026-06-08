@@ -110,6 +110,8 @@ namespace Battle.UI
         {
             if (string.IsNullOrEmpty(effectName)) return;
 
+            SfxManager.Instance?.PlayEffect(effectName); // 이펙트 효과음(effectName별 매핑/기본 클립)
+
             Vector2 pos = ResolvePositionFor(effectName) + offsetFromDefault;
 
             // 1순위 — 파티클 프리팹(Resources/CardEffects/{effectName}.prefab)

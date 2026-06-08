@@ -182,13 +182,18 @@ namespace Battle.UI
 
         public void SetCard(CardInstance card)
         {
-            // 카드가 바뀌면 hover/drag 같은 transient 상태 리셋 — 카드 사용 후 잔여 상태로
+            // 뷰가 슬롯에 재배치될 때마다 상호작용 상태를 항상 정상화한다.
+            // 드래그 중 손패가 줄어 뷰가 비활성화되면 OnEndDrag가 안 불려 blocksRaycasts=false로
+            // 굳을 수 있는데, 이 경우 재사용된 카드가 클릭되지 않는다(손패 카드 선택 실패 원인). → 매번 복구.
+            _isDragging = false;
+            if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
+
+            // 카드가 바뀌면 hover 같은 transient 상태 리셋 — 카드 사용 후 잔여 상태로
             // 인한 손패 정렬 어긋남 방지(특히 더블클릭 사용 직후 마우스가 같은 위치에 있을 때).
             if (Card != card)
             {
                 CancelDrawIntro(); // 재사용되는 뷰에 남아있던 등장 연출 정리
                 _isHovering = false;
-                _isDragging = false;
                 if (_hoverSlotOriginalSibling >= 0 && transform.parent != null)
                 {
                     transform.parent.SetSiblingIndex(_hoverSlotOriginalSibling);
