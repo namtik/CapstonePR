@@ -621,6 +621,8 @@ public class Roundmanager : MonoBehaviour
         if (enemyStatusPanel != null && controller != null)
         {
             enemyStatusPanel.SetTarget(controller);
+            // 상태 패널이 적 피격 흔들림을 함께 따라가도록 흔들림 대상 연결
+            if (view != null) enemyStatusPanel.SetFollowTarget(view.ShakeTarget);
         }
         Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}");
         

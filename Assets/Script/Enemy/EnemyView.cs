@@ -398,6 +398,9 @@ public class EnemyView : MonoBehaviour
     /// <summary>현재 진행 중인 피격 연출(플래시+흔들기)이 끝날 때까지 남은 시간(초). 없으면 0.</summary>
     public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time);
 
+    /// <summary>피격 흔들림이 적용되는 RectTransform(미지정 시 본체). 상태 패널이 흔들림을 따라갈 때 사용.</summary>
+    public RectTransform ShakeTarget => shakeTarget != null ? shakeTarget : (transform as RectTransform);
+
     // EnemyStat.OnDamaged 구독 핸들러 — 데미지 크기로 단계를 골라 연출 재생.
     void HandleDamaged(float damage)
     {

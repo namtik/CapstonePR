@@ -3,22 +3,28 @@ using UnityEngine;
 
 public class StatusPanelUI : MonoBehaviour
 {
-    [Header("UI ¼³Á¤")]
-    [SerializeField] private StatusIconUI iconPrefab; // ¾ÆÀÌÄÜ+¼ıÀÚ ÇÁ¸®ÆÕ
-    [SerializeField] private StatusIconDatabase iconDatabase; // ¸¸µé¾îµĞ SO µ¥ÀÌÅÍº£ÀÌ½º 1°³
+    [Header("UI ï¿½ï¿½ï¿½ï¿½")]
+    [SerializeField] private StatusIconUI iconPrefab; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½+ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    [SerializeField] private StatusIconDatabase iconDatabase; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ SO ï¿½ï¿½ï¿½ï¿½ï¿½Íºï¿½ï¿½Ì½ï¿½ 1ï¿½ï¿½
 
-    // ÇöÀç È­¸é¿¡ »ı¼ºµÈ ¾ÆÀÌÄÜµéÀ» °ü¸®ÇÏ´Â µñ¼Å³Ê¸®
+    // ï¿½ï¿½ï¿½ï¿½ È­ï¿½é¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Üµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½Å³Ê¸ï¿½
     private Dictionary<string, StatusIconUI> activeIcons = new Dictionary<string, StatusIconUI>();
 
-    // µ¥ÀÌÅÍº£ÀÌ½º¸¦ ±â¹İÀ¸·Î Å°°ª(string)°ú ÀÌ¹ÌÁö(Sprite)¸¦ ºü¸£°Ô Ã£±â À§ÇÑ ¸Ê
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Íºï¿½ï¿½Ì½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å°ï¿½ï¿½(string)ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½(Sprite)ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã£ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
     private Dictionary<string, Sprite> dataMap = new Dictionary<string, Sprite>();
 
-    // ÀÌ ÆĞ³ÎÀÌ »óÅÂ¸¦ ÃßÀûÇÒ À¯´Ö (Player ¶Ç´Â EnemyController)
+    // ï¿½ï¿½ ï¿½Ğ³ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (Player ï¿½Ç´ï¿½ EnemyController)
     private IBattleUnit targetUnit;
+
+    // ì  í”¼ê²© í”ë“¤ë¦¼ì„ í•¨ê»˜ ë”°ë¼ê°€ê¸° ìœ„í•œ ì¶”ì  ëŒ€ìƒ(ì ì˜ shakeTarget)ê³¼ ì´ˆê¸° ì›”ë“œ ì˜¤í”„ì…‹
+    private Transform followTarget;
+    private Vector3 followWorldOffset;
+    private bool following;
+    private bool followOffsetCaptured;
 
     void Awake()
     {
-        // SO µ¥ÀÌÅÍº£ÀÌ½º ¾È¿¡ ÀÖ´Â ¸®½ºÆ®¸¦ µñ¼Å³Ê¸®·Î º¯È¯
+        // SO ï¿½ï¿½ï¿½ï¿½ï¿½Íºï¿½ï¿½Ì½ï¿½ ï¿½È¿ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½Å³Ê¸ï¿½ï¿½ï¿½ ï¿½ï¿½È¯
         if (iconDatabase != null)
         {
             foreach (var info in iconDatabase.icons)
@@ -31,62 +37,98 @@ public class StatusPanelUI : MonoBehaviour
         }
         else
         {
-            Debug.LogError("StatusIconDatabase°¡ ÆĞ³Î¿¡ ¿¬°áµÇÁö ¾Ê¾Ò½À´Ï´Ù!");
+            Debug.LogError("StatusIconDatabaseï¿½ï¿½ ï¿½Ğ³Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¾Ò½ï¿½ï¿½Ï´ï¿½!");
         }
     }
 
-    // ÀüÅõ ½ÃÀÛ ½Ã ¾î¶² À¯´ÖÀÇ UI¸¦ ¶ç¿ïÁö ¿¬°áÇØÁÖ´Â ÇÔ¼ö
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½î¶² ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ UIï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ ï¿½Ô¼ï¿½
     public void SetTarget(IBattleUnit unit)
     {
-        // ±âÁ¸ Å¸°ÙÀÌ ÀÖ¾ú´Ù¸é ¿¬°á(±¸µ¶) ÇØÁ¦
+        // ï¿½ï¿½ï¿½ï¿½ Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¾ï¿½ï¿½Ù¸ï¿½ ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½) ï¿½ï¿½ï¿½ï¿½
         if (targetUnit != null)
         {
             targetUnit.OnStatusChanged -= UpdateStatusUI;
         }
 
         targetUnit = unit;
-        ClearAllIcons(); // È­¸é ÃÊ±âÈ­
+        ClearAllIcons(); // È­ï¿½ï¿½ ï¿½Ê±ï¿½È­
 
         if (targetUnit != null)
         {
-            // »õ·Î¿î Å¸°ÙÀÇ »óÅÂÀÌ»ó º¯°æ ÀÌº¥Æ® ±¸µ¶ (°ªÀÌ º¯ÇÒ ¶§¸¶´Ù UpdateStatusUI ½ÇÇà)
+            // ï¿½ï¿½ï¿½Î¿ï¿½ Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ì»ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ UpdateStatusUI ï¿½ï¿½ï¿½ï¿½)
             targetUnit.OnStatusChanged += UpdateStatusUI;
 
-            // ½ÃÀÛÇÏÀÚ¸¶ÀÚ ±âº» ¼öÄ¡°¡ 0ÀÌ ¾Æ´Ñ »óÅÂÀÌ»óÀÌ ÀÖ´Ù¸é ¿©±â¼­ ÃÊ±âÈ­
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¸ï¿½ï¿½ï¿½ ï¿½âº» ï¿½ï¿½Ä¡ï¿½ï¿½ 0ï¿½ï¿½ ï¿½Æ´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ì»ï¿½ï¿½ï¿½ ï¿½Ö´Ù¸ï¿½ ï¿½ï¿½ï¿½â¼­ ï¿½Ê±ï¿½È­
         }
     }
 
-    // Å¸°ÙÀÇ »óÅÂÀÌ»óÀÌ º¯ÇÒ ¶§¸¶´Ù ÀÚµ¿À¸·Î È£ÃâµÇ´Â ÇÔ¼ö
+    /// <summary>
+    /// ì´ íŒ¨ë„ì´ ë”°ë¼ê°ˆ ëŒ€ìƒ(ì ì˜ í”ë“¤ë¦¼ RectTransform)ì„ ì§€ì •. ì ì´ í”¼ê²©ìœ¼ë¡œ í”ë“¤ë¦´ ë•Œ
+    /// ìƒíƒœì´ìƒ ì•„ì´ì½˜ë„ ê°™ì€ ì˜¤í”„ì…‹ìœ¼ë¡œ í•¨ê»˜ í”ë“¤ë¦¬ê²Œ í•œë‹¤. nullì´ë©´ ì¶”ì  í•´ì œ.
+    /// </summary>
+    public void SetFollowTarget(Transform target)
+    {
+        followTarget = target;
+        following = target != null;
+        followOffsetCaptured = false; // ë ˆì´ì•„ì›ƒ ì •ì°© í›„(ì²« LateUpdate) ì˜¤í”„ì…‹ ìº¡ì²˜
+    }
+
+    void LateUpdate()
+    {
+        // 1) íƒ€ê²Ÿ(ì )ì´ íŒŒê´´ëëŠ”ë° ì•„ì´ì½˜ì´ ë‚¨ì•„ ìˆìœ¼ë©´ ì •ë¦¬ â€” ì‚¬ë§ ì‹œ ìƒíƒœì´ìƒì´ í™”ë©´ì— ë‚¨ëŠ” ë¬¸ì œ ë°©ì§€.
+        if (targetUnit != null && (targetUnit as UnityEngine.Object) == null)
+        {
+            targetUnit = null;
+            following = false;
+            followTarget = null;
+            ClearAllIcons();
+            return;
+        }
+
+        // 2) ì  í”¼ê²© í”ë“¤ë¦¼ ì¶”ì  â€” ì ì˜ í˜„ì¬ ìœ„ì¹˜ + ì´ˆê¸° ì˜¤í”„ì…‹ìœ¼ë¡œ íŒ¨ë„ì„ í•¨ê»˜ ì´ë™(í”ë“¤ë¦¼ ë™ê¸°í™”).
+        if (following && followTarget != null)
+        {
+            if (!followOffsetCaptured)
+            {
+                // ì  ê¸°ë³¸ ìœ„ì¹˜(ì•„ì§ í”ë“¤ë¦¬ê¸° ì „) ê¸°ì¤€ìœ¼ë¡œ íŒ¨ë„ê³¼ì˜ ì›”ë“œ ì˜¤í”„ì…‹ì„ 1íšŒ ìº¡ì²˜
+                followWorldOffset = transform.position - followTarget.position;
+                followOffsetCaptured = true;
+            }
+            transform.position = followTarget.position + followWorldOffset;
+        }
+    }
+
+    // Å¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ì»ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½Ç´ï¿½ ï¿½Ô¼ï¿½
     public void UpdateStatusUI(string key, int count)
     {
-        // µ¥ÀÌÅÍº£ÀÌ½º¿¡ µî·ÏµÇÁö ¾ÊÀº »óÅÂÀÌ»ó Å°¸é ¹«½Ã
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Íºï¿½ï¿½Ì½ï¿½ï¿½ï¿½ ï¿½ï¿½Ïµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ì»ï¿½ Å°ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (!dataMap.ContainsKey(key)) return;
 
-        // ÀÌ¹Ì È­¸é¿¡ ¶ç¿öÁø ¾ÆÀÌÄÜÀÌ ÀÖ´Ù¸é?
+        // ï¿½Ì¹ï¿½ È­ï¿½é¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Ù¸ï¿½?
         if (activeIcons.ContainsKey(key))
         {
             if (count > 0)
             {
-                activeIcons[key].UpdateCount(count); // ¼ıÀÚ¸¸ °»½Å
+                activeIcons[key].UpdateCount(count); // ï¿½ï¿½ï¿½Ú¸ï¿½ ï¿½ï¿½ï¿½ï¿½
             }
             else
             {
-                // ¼öÄ¡°¡ 0 ÀÌÇÏ°¡ µÇ¸é ¾ÆÀÌÄÜ »èÁ¦
+                // ï¿½ï¿½Ä¡ï¿½ï¿½ 0 ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½Ç¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
                 Destroy(activeIcons[key].gameObject);
                 activeIcons.Remove(key);
             }
         }
-        // È­¸é¿¡ ¾ÆÀÌÄÜÀÌ ¾ø´Âµ¥, ¼öÄ¡°¡ 0º¸´Ù Ä¿Á³´Ù¸é?
+        // È­ï¿½é¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Âµï¿½, ï¿½ï¿½Ä¡ï¿½ï¿½ 0ï¿½ï¿½ï¿½ï¿½ Ä¿ï¿½ï¿½ï¿½Ù¸ï¿½?
         else if (count > 0)
         {
-            // »õ ¾ÆÀÌÄÜ ÇÁ¸®ÆÕÀ» »ı¼ºÇØ¼­ È­¸é(ÆĞ³Î ³»ºÎ)¿¡ ¶ç¿ò
+            // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ È­ï¿½ï¿½(ï¿½Ğ³ï¿½ ï¿½ï¿½ï¿½ï¿½)ï¿½ï¿½ ï¿½ï¿½ï¿½
             StatusIconUI newIcon = Instantiate(iconPrefab, transform);
             newIcon.SetStatus(dataMap[key], count, key);
             activeIcons.Add(key, newIcon);
         }
     }
 
-    // ÆĞ³Î ¾ÈÀÇ ¸ğµç ¾ÆÀÌÄÜ Áö¿ì±â
+    // ï¿½Ğ³ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
     private void ClearAllIcons()
     {
         foreach (var icon in activeIcons.Values)
