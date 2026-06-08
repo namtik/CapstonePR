@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BearEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: bear
-  enemySprite: {fileID: 21300000, guid: 4724dfd9e9792144ab2b8b772c7b40fd, type: 3}
+  enemySprite: {fileID: 21300000, guid: e463821c280ef9846a6ad6d6d922b9a4, type: 3}
   maxHp: 1
   attackDamage: 10
   gaugeSpeed: 10

@@ -12,7 +12,11 @@
       "PowerShell(pip install pypdf -q 2>&1)",
       "PowerShell($tmp = \"C:\\\\Users\\\\hp\\\\Desktop\\\\CapstonePR\\\\Temp\\\\combo_xlsx\"; if \\(Test-Path $tmp\\) { Remove-Item $tmp -Recurse -Force }; New-Item -ItemType Directory -Force $tmp | Out-Null; Copy-Item \"C:\\\\Users\\\\hp\\\\Downloads\\\\ComboSkill_DB_\\(1\\).xlsx\" \"$tmp\\\\book.zip\"; Expand-Archive \"$tmp\\\\book.zip\" -DestinationPath \"$tmp\\\\ext\" -Force; Get-ChildItem \"$tmp\\\\ext\" -Recurse | Select-Object FullName)",
       "PowerShell(python --version 2>&1)",
-      "PowerShell(python -c \"import openpyxl; print\\('openpyxl ok'\\)\" 2>&1)"
+      "PowerShell(python -c \"import openpyxl; print\\('openpyxl ok'\\)\" 2>&1)",
+      "Bash(Get-ChildItem -Path \"E:\\\\Unity\\\\CapstonePR\\\\Assets\" -Directory)",
+      "Bash(Select-Object Name)",
+      "mcp__UnityMCP__find_gameobjects",
+      "mcp__UnityMCP__manage_scene"
     ]
   }
 }
