@@ -576,6 +576,40 @@ public class Roundmanager : MonoBehaviour
         stateController.ShowMap();
     }
 
+    /// <summary>
+    /// 플레이어 사망 후 런 재시작(또는 강제 재시작) 시 호출 — 진행 중이던 전투를 정리한다.
+    /// 적은 자기가 죽을 때만 스스로 파괴되므로, 플레이어 사망으로 전투가 중단되면
+    /// 살아있는 적 GameObject(+HP/행동게이지/스프라이트/데미지 표시)가 그대로 남는다.
+    /// 다음 전투 진입 시 새 적과 겹쳐 보이는 것을 막기 위해 여기서 명시적으로 제거한다.
+    /// </summary>
+    public void AbortActiveCombat()
+    {
+        // 진행 중이던 전투 종료(덱/손패/이펙트 잔여물 정리)
+        if (IsNewBattleSystemActive())
+            Battle.NewBattleController.Instance?.EndBattle();
+        else
+            ElementSlotSystem.Instance?.EndBattle();
+
+        // 적 사망 이벤트 구독 해지
+        if (currentEnemy != null)
+        {
+            currentEnemy.OnDied -= HandleEnemyDied;
+            currentEnemy = null;
+        }
+
+        // 진행 중이던 스폰 대기 코루틴(SpawnNextAfterDelay 등) 취소
+        StopAllCoroutines();
+
+        // 스폰 지점에 남아있는 모든 적 제거(자가 파괴되지 않은 적)
+        if (enemySpawnPoint != null)
+        {
+            for (int i = enemySpawnPoint.childCount - 1; i >= 0; i--)
+                Destroy(enemySpawnPoint.GetChild(i).gameObject);
+        }
+
+        currentEnemyIndex = 0;
+    }
+
     // ── 내부 몬스터 스폰 ───
 
     void SpawnNextEnemy(List<EnemyData> enemies, int columnIndex, NodeType nodeType)

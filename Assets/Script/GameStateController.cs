@@ -262,6 +262,10 @@ public class GameStateController : MonoBehaviour
     {
         Time.timeScale = 1f;
 
+        // 사망 등으로 중단된 전투의 잔여 적/상태 정리 (살아있는 적이 다음 전투로 이월되는 것 방지)
+        if (roundManager != null)
+            roundManager.AbortActiveCombat();
+
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
 

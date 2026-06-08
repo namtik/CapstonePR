@@ -16,7 +16,8 @@
       "Bash(Get-ChildItem -Path \"E:\\\\Unity\\\\CapstonePR\\\\Assets\" -Directory)",
       "Bash(Select-Object Name)",
       "mcp__UnityMCP__find_gameobjects",
-      "mcp__UnityMCP__manage_scene"
+      "mcp__UnityMCP__manage_scene",
+      "mcp__UnityMCP__manage_components"
     ]
   }
 }

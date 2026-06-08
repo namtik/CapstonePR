@@ -113,6 +113,19 @@ namespace Battle.UI
             if (_hpBarOriginCaptured && hpBarFillImage != null) hpBarFillImage.color = _hpBarOriginColor;
         }
 
+        void OnEnable()
+        {
+            // 스테이지(combatStage)가 SetActive로 다시 켜질 때 잔상 제거.
+            // 사망 시 timeScale=0으로 멈췄던 코루틴이 비활성화로 중단되면
+            // flashImage 알파 / 흔들기 위치가 stale로 남아 빨간 필터처럼 보이는 것을 방지.
+            if (_activeFlash != null) { StopCoroutine(_activeFlash); _activeFlash = null; }
+            if (_activeShake != null) { StopCoroutine(_activeShake); _activeShake = null; }
+            if (_activeHpFlash != null) { StopCoroutine(_activeHpFlash); _activeHpFlash = null; }
+            SetAlpha(0f);
+            RestoreShakeOrigins();
+            if (_hpBarOriginCaptured && hpBarFillImage != null) hpBarFillImage.color = _hpBarOriginColor;
+        }
+
         Canvas ResolveTargetCanvas()
         {
             // CombatStage 우선 (NewBattleController도 같은 패턴)
@@ -191,7 +204,7 @@ namespace Battle.UI
 
             while (timer < shakeDuration)
             {
-                timer += Time.deltaTime;
+                timer += Time.unscaledDeltaTime; // 사망 시 timeScale=0이어도 정상 진행되도록
                 float decay = 1f - (timer / shakeDuration); // 시간이 흐를수록 감쇠
                 // 같은 프레임 안에서 모든 target에 동일 오프셋 적용 (함께 흔들리도록)
                 float x = Random.Range(-1f, 1f) * strength * decay;
@@ -217,7 +230,7 @@ namespace Battle.UI
 
             while (timer < hpBarFlashDuration)
             {
-                timer += Time.deltaTime;
+                timer += Time.unscaledDeltaTime; // 사망 시 timeScale=0이어도 정상 진행되도록
                 float t = timer / hpBarFlashDuration;
                 if (hpBarFillImage != null)
                     hpBarFillImage.color = Color.Lerp(start, end, t);
@@ -236,7 +249,7 @@ namespace Battle.UI
 
             while (timer < flashDuration)
             {
-                timer += Time.deltaTime;
+                timer += Time.unscaledDeltaTime; // 사망 시 timeScale=0이어도 정상 진행되도록
                 float t = timer / flashDuration;
                 // 빠르게 풀강도 → 부드럽게 페이드
                 float a = startAlpha * (1f - t);
