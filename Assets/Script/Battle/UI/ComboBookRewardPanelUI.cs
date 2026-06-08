@@ -29,6 +29,12 @@ namespace Battle.UI
         [Header("선택하지 않고 나가기 버튼")]
         [SerializeField] private RewardSkipButtonStyle skipButtonStyle = new RewardSkipButtonStyle { label = "선택하지 않고 나가기" };
 
+        [Header("상단 문구 위치 (선택)")]
+        [Tooltip("패널 제목 텍스트가 있으면 그 RectTransform을 연결. 보상 표시 시 아래 위치로 이동시킨다. 비우면 무시.")]
+        [SerializeField] private RectTransform titleTransform;
+        [Tooltip("titleTransform 연결 시 적용할 위치(부모 중앙 기준 anchoredPosition).")]
+        [SerializeField] private Vector2 titlePosition = new Vector2(0f, 320f);
+
         System.Action<ComboSkillDef> _onPicked;
         readonly List<ComboSkillDef> _choices = new List<ComboSkillDef>();
         Button _skipButton;
@@ -41,6 +47,7 @@ namespace Battle.UI
             EnsureSlots(_choices.Count);
             BindSlots();
             EnsureSkipButton();
+            ApplyTitlePosition();
 
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
@@ -56,6 +63,13 @@ namespace Battle.UI
             if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
             _skipButton = skipButtonStyle.Build(transform, Skip);
             _skipButton.transform.SetAsLastSibling();
+        }
+
+        /// <summary>제목 텍스트가 연결돼 있으면 인스펙터 지정 위치로 정렬한다.</summary>
+        void ApplyTitlePosition()
+        {
+            if (titleTransform != null)
+                titleTransform.anchoredPosition = titlePosition;
         }
 
         /// <summary>콤보를 고르지 않고 나가기 — 맵으로 복귀(콜백에 null 전달).</summary>

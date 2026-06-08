@@ -21,6 +21,8 @@ namespace Battle.UI
         [SerializeField] private Font titleFont;
         [SerializeField, Range(12, 96)] private int titleFontSize = 40;
         [SerializeField] private Color titleColor = Color.white;
+        [Tooltip("상단 문구 위치(화면 중앙 기준 anchoredPosition). 기본 (0, 320).")]
+        [SerializeField] private Vector2 titlePosition = new Vector2(0f, 320f);
 
         [Header("선택하지 않기 버튼")]
         [SerializeField] private RewardSkipButtonStyle skipButtonStyle = new RewardSkipButtonStyle();
@@ -35,11 +37,12 @@ namespace Battle.UI
         private GameObject _panel;
         private static Font _builtinFont;
 
-        public void SetTitleStyle(Font font, int fontSize, Color color)
+        public void SetTitleStyle(Font font, int fontSize, Color color, Vector2 position)
         {
             titleFont = font;
             titleFontSize = Mathf.Clamp(fontSize, 12, 96);
             titleColor = color;
+            titlePosition = position;
         }
 
         /// <summary>"선택하지 않기" 버튼 스타일을 외부(Roundmanager 인스펙터)에서 주입.</summary>
@@ -198,7 +201,7 @@ namespace Battle.UI
             var titleRt = NewRect("Title", prt);
             CenterAnchor(titleRt);
             titleRt.sizeDelta = new Vector2(900f, 80f);
-            titleRt.anchoredPosition = new Vector2(0f, 320f);
+            titleRt.anchoredPosition = titlePosition;
             var titleText = titleRt.gameObject.AddComponent<Text>();
             titleText.font = titleFont != null ? titleFont : BuiltinFont();
             titleText.fontSize = titleFontSize;

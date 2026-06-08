@@ -10,14 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
-  m_Name: BossFoxData
+  m_Name: FireSpritEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: "\uAD6C\uBBF8\uD638"
-  enemySprite: {fileID: 21300000, guid: 0f914bd9197354642be38bd994845796, type: 3}
+  enemyName: "\uD654\uB839"
+  enemySprite: {fileID: 21300000, guid: a504ff74272164e4ca048a76d5e8a305, type: 3}
   maxHp: 1
-  attackDamage: 10
-  gaugeSpeed: 20
+  attackDamage: 5
+  gaugeSpeed: 10
   baseAttackCount: 3
   actionGaugeMax: 20
   backgroundSprites:
-  - {fileID: 21300000, guid: e2aeaab8b1bd0f94a8851ef72bf690df, type: 3}
+  - {fileID: 21300000, guid: 2ed17f46569e7834eb0fe28e8cee9c99, type: 3}
+  - {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}

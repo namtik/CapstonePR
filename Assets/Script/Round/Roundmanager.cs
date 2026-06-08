@@ -22,6 +22,8 @@ public class Roundmanager : MonoBehaviour
     [SerializeField] private Font cardRewardTitleFont;
     [SerializeField, Range(12, 96)] private int cardRewardTitleFontSize = 40;
     [SerializeField] private Color cardRewardTitleColor = Color.white;
+    [Tooltip("상단 문구 위치(화면 중앙 기준). 기본 (0, 320).")]
+    [SerializeField] private Vector2 cardRewardTitlePosition = new Vector2(0f, 320f);
 
     [Header("보상 - 카드 선택하지 않기 버튼")]
     [SerializeField] private Battle.UI.RewardSkipButtonStyle cardRewardSkipButtonStyle = new Battle.UI.RewardSkipButtonStyle();
@@ -480,7 +482,7 @@ public class Roundmanager : MonoBehaviour
         Battle.UI.NewCardView cardPrefab = hud != null ? hud.CardPrefab : null;
 
         var rewardUI = Battle.UI.CardRewardUI.EnsureExists();
-        rewardUI.SetTitleStyle(cardRewardTitleFont, cardRewardTitleFontSize, cardRewardTitleColor);
+        rewardUI.SetTitleStyle(cardRewardTitleFont, cardRewardTitleFontSize, cardRewardTitleColor, cardRewardTitlePosition);
         rewardUI.SetSkipButtonStyle(cardRewardSkipButtonStyle);
         rewardUI.SetCardLayout(cardRewardCardScale, cardRewardCardSpacing);
         rewardUI.Present(cardPrefab, pickedCardId =>
@@ -624,6 +626,10 @@ public class Roundmanager : MonoBehaviour
         
         if (view != null && data.enemySprite != null)
             view.SetSprite(data.enemySprite);
+
+        // 몬스터 종류에 맞는 전투 배경 적용(적별 배경 풀에서 랜덤). 풀이 비면 라운드 타입 기본 배경 유지.
+        if (combatStageController != null)
+            combatStageController.ApplyEnemyBackground(data);
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
 
