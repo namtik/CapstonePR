@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections;
 using UnityEngine;
+using Coffee.UIExtensions;
 
 public class EnemyController : MonoBehaviour, IBattleUnit
 {
     [Header("공격 설정")]
     [SerializeField] private int fallbackGaugeFullDamage = 10;
     [SerializeField] private ParticleSystem hitVFX;
+    [Tooltip("적 공격 파티클(hitVFX)을 UI 위에 렌더(UIParticle)할 때 배율. 안 보이면 키우고, 너무 크면 줄이세요(플레이로 튜닝).")]
+    [SerializeField] private float hitVfxUiScale = 100f;
 
     [Header("새 전투 시스템 공격 시퀀스 (PDF: 16-18-40 순환)")]
     [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 };
@@ -38,6 +41,29 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnGaugeFull   += HandleGaugeFull;
         stat.OnGaugeStepChanged += view.UpdateActionGauge;
         midPattern = GetComponent<MonsterMidPattern>();
+
+        // 적 공격 파티클(hitVFX)이 Screen Space - Overlay UI 뒤로 가려지지 않도록 UIParticle로
+        // UI 레이어 안에서 렌더한다. (월드 ParticleSystem은 어떤 sortingOrder로도 Overlay UI 위로 못 올라옴 →
+        // CardEffectOverlay와 동일하게 UIParticle 사용)
+        if (hitVFX != null)
+        {
+            var uip = hitVFX.GetComponent<UIParticle>();
+            if (uip == null) uip = hitVFX.gameObject.AddComponent<UIParticle>();
+            uip.scale = hitVfxUiScale;
+            uip.RefreshParticles();
+            // UI 공간에서 보이도록 모든 파티클을 Local 시뮬레이션으로 강제(World면 화면 밖에서 터질 수 있음)
+            var plist = uip.particles;
+            if (plist != null)
+            {
+                for (int i = 0; i < plist.Count; i++)
+                {
+                    var ps = plist[i];
+                    if (ps == null) continue;
+                    var m = ps.main;
+                    m.simulationSpace = ParticleSystemSimulationSpace.Local;
+                }
+            }
+        }
     }
 
     void OnDestroy()
@@ -256,6 +282,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
             if (hitVFX != null)
             {
+                // VFX 오브젝트가 비활성 상태면 Play()해도 보이지 않으므로 먼저 활성화 보장(공격 이펙트 누락 방지)
+                if (!hitVFX.gameObject.activeSelf) hitVFX.gameObject.SetActive(true);
                 hitVFX.Stop();
                 hitVFX.Play();
             }

@@ -29,6 +29,10 @@ namespace Battle.UI
         [SerializeField] private float healEffBottomY = 0f;
         [Tooltip("재생 FPS — 시트 프레임 수에 맞춰 조정. 보통 12~24.")]
         [SerializeField] private float defaultFps = 24f;
+        [Tooltip("재생 속도 배율 — 스프라이트 FPS와 파티클 시뮬레이션 속도에 함께 곱해진다. 1=원본, 1.5=1.5배 빠름.")]
+        [SerializeField, Range(0.25f, 5f)] private float playbackSpeed = 1.5f;
+        [Tooltip("이펙트를 손패 등 다른 UI보다 앞에 그리기 위한 Sort Order. 자체 Canvas+Override Sorting을 자동 설정한다. 손패보다 뒤면 값을 키우세요.")]
+        [SerializeField] private int foregroundSortingOrder = 1000;
 
         [Header("개별 효과 위치 오버라이드 (Inspector에서 effectName 매핑)")]
         [SerializeField] private List<EffectPositionOverride> positionOverrides = new List<EffectPositionOverride>();
@@ -83,6 +87,20 @@ namespace Battle.UI
 
         private RectTransform _selfRect;
         public RectTransform Rect => _selfRect != null ? _selfRect : _selfRect = (RectTransform)transform;
+
+        void Awake()
+        {
+            EnsureForegroundCanvas();
+        }
+
+        /// <summary>이펙트가 손패 등 다른 UI보다 앞에 그려지도록 자체 Canvas + Override Sorting을 보장.</summary>
+        void EnsureForegroundCanvas()
+        {
+            var canvas = GetComponent<Canvas>();
+            if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = foregroundSortingOrder;
+        }
 
         /// <summary>
         /// 카드 사용 시 호출. effectName에 해당하는 시트가 있으면 적절한 위치에 1회 재생.
@@ -241,7 +259,7 @@ namespace Battle.UI
 
             var anim = go.GetComponent<CardEffectAnimator>();
             // 풀폭 띠 모드에선 sprite를 RectTransform에 맞게 늘려야 함 (aspect 보존 X)
-            anim.Play(frames, defaultFps, loop: false, preserveAspect: !bottomStretch);
+            anim.Play(frames, defaultFps * Mathf.Max(0.01f, playbackSpeed), loop: false, preserveAspect: !bottomStretch);
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -281,7 +299,7 @@ namespace Battle.UI
             uip.Play();
 
             // 프리팹이 자동 파괴(stopAction) 설정이 없어도, 재생 길이만큼 뒤 안전하게 정리.
-            float life = ComputeParticleLifetime(uip) + Mathf.Max(0f, particleLifetimePadding);
+            float life = ComputeParticleLifetime(uip) / Mathf.Max(0.01f, playbackSpeed) + Mathf.Max(0f, particleLifetimePadding);
             Destroy(go, life);
         }
 
@@ -295,6 +313,7 @@ namespace Battle.UI
                 if (ps == null) continue;
                 var main = ps.main;
                 main.simulationSpace = ParticleSystemSimulationSpace.Local;
+                main.simulationSpeed = main.simulationSpeed * Mathf.Max(0.01f, playbackSpeed); // 재생 속도 배율
             }
         }
 
