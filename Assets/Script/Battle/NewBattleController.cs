@@ -300,6 +300,7 @@ namespace Battle
 
             // 카드 효과 이펙트 오버레이 — 비어 있으면 자동 생성
             if (effectOverlay == null) effectOverlay = ResolveOrCreateEffectOverlay();
+            if (effectOverlay != null) effectOverlay.ClearAll(); // 이전 전투의 잔여 이펙트 제거(다음 스테이지 시작 시 재생 방지)
             if (damageOverlay == null) damageOverlay = ResolveOrCreateDamageOverlay();
 
             EnsureEventSystem();
@@ -343,6 +344,8 @@ namespace Battle
                 handHud.SelectionClosedCallback = null;
                 handHud.SetAwakenGaugeVisible(false);
             }
+            // 재생 중이던 카드 이펙트 잔여물 제거 — 보상 화면(timeScale=0)에서 멈춘 뒤 다음 스테이지로 이월되는 것 방지
+            if (effectOverlay != null) effectOverlay.ClearAll();
             Log("전투 종료");
         }
 

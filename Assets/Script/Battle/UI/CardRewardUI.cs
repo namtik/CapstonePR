@@ -33,6 +33,14 @@ namespace Battle.UI
         [Tooltip("카드 사이 가로 간격(px).")]
         [SerializeField] private float cardSpacing = 360f;
 
+        [Header("카드 호버 확대 (ButtonHoverScale)")]
+        [Tooltip("마우스를 올린 카드를 확대할지 여부.")]
+        [SerializeField] private bool enableHoverScale = true;
+        [Tooltip("호버 시 카드 배율(1 = 그대로). 1.08이면 8% 확대.")]
+        [SerializeField, Range(1f, 1.5f)] private float hoverScale = 1.08f;
+        [Tooltip("확대/복귀 보간 속도(클수록 빠름). 보상 화면(timeScale=0)에서도 동작.")]
+        [SerializeField] private float hoverLerpSpeed = 14f;
+
         private System.Action<int> _onPicked;
         private GameObject _panel;
         private static Font _builtinFont;
@@ -121,6 +129,8 @@ namespace Battle.UI
             foreach (var c in CardDatabase.All)
             {
                 if (c == null) continue;
+                // 기본(시작 덱) 카드는 보상에서 제외 — BASIC 태그
+                if (c.HasTag("BASIC")) continue;
                 // 덱 적격 = 4속성 카드만 (무속성 필러 500 / 파편 501~503 제외)
                 switch (c.element)
                 {
@@ -250,6 +260,15 @@ namespace Battle.UI
                 btn.transition = Selectable.Transition.None;
                 int cardId = data.id;
                 btn.onClick.AddListener(() => Pick(cardId));
+
+                // 마우스 호버 시 카드 확대 — 슬롯에 부착. 자식 ClickCatcher가 raycast 대상이라
+                // pointerEnter/Exit가 슬롯까지 전파되어 카드 전체(비주얼+클릭영역)가 함께 확대된다.
+                // (slot.localScale = cardScale을 baseScale로 캡처하므로 cardScale에 비례해 확대)
+                if (enableHoverScale)
+                {
+                    var hover = slot.gameObject.AddComponent<ButtonHoverScale>();
+                    hover.Configure(hoverScale, hoverScale, hoverLerpSpeed);
+                }
             }
 
             // 선택하지 않기 버튼 — 카드를 고르지 않고 보상 종료.

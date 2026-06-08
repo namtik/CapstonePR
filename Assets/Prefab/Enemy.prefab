@@ -449,21 +449,21 @@ MonoBehaviour:
   flashTarget: {fileID: 0}
   hitFlashColor: {r: 1, g: 0, b: 0, a: 1}
   mediumDamageThreshold: 20
-  strongDamageThreshold: 60
+  strongDamageThreshold: 30
   weakHit:
-    shakeDuration: 0.15
-    shakeMagnitude: 6
-    flashDuration: 0.1
+    shakeDuration: 0.3
+    shakeMagnitude: 15
+    flashDuration: 0.3
     flashStrength: 0.5
   mediumHit:
-    shakeDuration: 0.22
-    shakeMagnitude: 14
-    flashDuration: 0.13
+    shakeDuration: 0.5
+    shakeMagnitude: 30
+    flashDuration: 0.5
     flashStrength: 0.75
   strongHit:
-    shakeDuration: 0.32
-    shakeMagnitude: 26
-    flashDuration: 0.16
+    shakeDuration: 0.7
+    shakeMagnitude: 60
+    flashDuration: 0.7
     flashStrength: 1
 --- !u!114 &6565592369561984746
 MonoBehaviour:

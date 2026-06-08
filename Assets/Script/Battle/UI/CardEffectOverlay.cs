@@ -78,6 +78,8 @@ namespace Battle.UI
         private readonly Dictionary<string, GameObject> _prefabCache = new Dictionary<string, GameObject>();
         // 누락 경고 1회만 출력
         private readonly HashSet<string> _warned = new HashSet<string>();
+        // 재생 중/예약 파괴 대기 중인 FX 인스턴스 — 전투 종료/시작 시 일괄 정리(다음 스테이지로 이월 방지)
+        private readonly List<GameObject> _activeFx = new List<GameObject>();
 
         private RectTransform _selfRect;
         public RectTransform Rect => _selfRect != null ? _selfRect : _selfRect = (RectTransform)transform;
@@ -132,6 +134,21 @@ namespace Battle.UI
 
             Vector2 size = ResolveSizeFor(effectName);
             SpawnEffect(frames, pos, size, effectName);
+        }
+
+        /// <summary>
+        /// 재생 중이거나 예약 파괴 대기 중인 모든 FX를 즉시 제거.
+        /// 전투 종료/시작 시 호출 — timeScale=0(보상 화면)으로 멈춘 이펙트가
+        /// 다음 스테이지 시작 때 재생되어 보이는 문제를 방지한다.
+        /// </summary>
+        public void ClearAll()
+        {
+            for (int i = 0; i < _activeFx.Count; i++)
+            {
+                var go = _activeFx[i];
+                if (go != null) Destroy(go);
+            }
+            _activeFx.Clear();
         }
 
         Sprite[] LoadFrames(string effectName)
@@ -218,6 +235,7 @@ namespace Battle.UI
             rt.localRotation = Quaternion.identity;
             rt.localScale = Vector3.one;
             rt.SetAsLastSibling();
+            _activeFx.Add(go);
 
             var anim = go.GetComponent<CardEffectAnimator>();
             // 풀폭 띠 모드에선 sprite를 RectTransform에 맞게 늘려야 함 (aspect 보존 X)
@@ -240,6 +258,7 @@ namespace Battle.UI
             rt.localScale = Vector3.one;
             rt.localRotation = Quaternion.identity;
             rt.SetAsLastSibling();
+            _activeFx.Add(go);
 
             var uip = go.AddComponent<UIParticle>();
             uip.scale = ResolveParticleScaleFor(effectName);
