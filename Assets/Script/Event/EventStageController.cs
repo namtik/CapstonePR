@@ -30,6 +30,35 @@ public class EventStageController : MonoBehaviour
         [TextArea] public string event2Choice2Body;  // 복귀
     }
 
+    // 선택지 결과 본문에만 적용할 텍스트 스타일 (스토리 본문과 컴포넌트를 공유하므로 결과 표시 시 덮어쓰고, 스토리 복귀 시 원복한다)
+    [System.Serializable]
+    public class ResultTextStyle
+    {
+        [Tooltip("비워 두면 스토리 본문의 폰트를 그대로 사용한다.")]
+        public TMP_FontAsset font;
+        public float fontSize = 30f;
+        public Color color = Color.black;
+        public FontStyles fontStyle = FontStyles.Normal;
+        public TextAlignmentOptions alignment = TextAlignmentOptions.TopLeft;
+        [Tooltip("자간")] public float characterSpacing = 0f;
+        [Tooltip("줄 간격")] public float lineSpacing = 0f;
+        [Tooltip("문단 간격")] public float paragraphSpacing = 0f;
+    }
+
+    // 결과 표시 직전 스토리 본문의 원래 스타일을 1회 보관 — 스토리 재진입 시 복원용
+    private struct BodyStyleSnapshot
+    {
+        public bool captured;
+        public TMP_FontAsset font;
+        public float fontSize;
+        public Color color;
+        public FontStyles fontStyle;
+        public TextAlignmentOptions alignment;
+        public float characterSpacing;
+        public float lineSpacing;
+        public float paragraphSpacing;
+    }
+
     private enum EventPhase { Idle, Story, ResultTyping, ResultDone }
 
     [Header("Event Canvases")]
@@ -73,6 +102,11 @@ public class EventStageController : MonoBehaviour
     [Header("선택지 결과 텍스트")]
     [SerializeField] private EventResultTexts resultTexts = new EventResultTexts();
 
+    [Header("선택지 결과 텍스트 스타일 (스토리 본문과 별도로 지정)")]
+    [Tooltip("켜면 결과 본문에 아래 스타일을 적용하고, 스토리로 돌아가면 원래 스타일로 복원한다.")]
+    [SerializeField] private bool overrideResultTextStyle = true;
+    [SerializeField] private ResultTextStyle resultTextStyle = new ResultTextStyle();
+
     private Roundmanager roundManager;
     private int currentEventIndex;
     private EventPhase phase = EventPhase.Idle;
@@ -83,6 +117,8 @@ public class EventStageController : MonoBehaviour
     private string event2TitleCached;
     private string event1StoryCached;
     private string event2StoryCached;
+    private BodyStyleSnapshot event1BodyStyleBackup;
+    private BodyStyleSnapshot event2BodyStyleBackup;
 
     void Awake()
     {
@@ -167,6 +203,9 @@ public class EventStageController : MonoBehaviour
         TextMeshProUGUI bodyTarget = currentEventIndex == 0 ? event1StoryBodyText : event2StoryBodyText;
         if (titleTarget == null && bodyTarget == null)
             return;
+
+        // 이전에 결과 스타일로 덮어썼다면 스토리 본문 원래 스타일로 복원
+        RestoreStoryBodyStyle(bodyTarget);
 
         if (currentEventIndex == 0)
         {
@@ -325,6 +364,9 @@ public class EventStageController : MonoBehaviour
 
         TextMeshProUGUI bodyTarget = currentEventIndex == 0 ? event1StoryBodyText : event2StoryBodyText;
         activeResultBody = bodyTarget;
+
+        // 결과 본문 전용 스타일 적용 (스토리 본문과 컴포넌트를 공유하므로 원래 스타일을 보관 후 덮어쓴다)
+        ApplyResultTextStyle(bodyTarget);
 
         if (typingRoutine != null)
         {
@@ -509,6 +551,59 @@ public class EventStageController : MonoBehaviour
             return -1;
 
         return candidates[Random.Range(0, candidates.Count)];
+    }
+
+    // 결과 본문에 인스펙터 지정 스타일 적용 (원래 스토리 스타일은 1회 보관)
+    void ApplyResultTextStyle(TextMeshProUGUI bodyTarget)
+    {
+        if (!overrideResultTextStyle || bodyTarget == null) return;
+
+        if (currentEventIndex == 0) CaptureBodyStyle(bodyTarget, ref event1BodyStyleBackup);
+        else CaptureBodyStyle(bodyTarget, ref event2BodyStyleBackup);
+
+        if (resultTextStyle.font != null) bodyTarget.font = resultTextStyle.font;
+        bodyTarget.fontSize = resultTextStyle.fontSize;
+        bodyTarget.color = resultTextStyle.color;
+        bodyTarget.fontStyle = resultTextStyle.fontStyle;
+        bodyTarget.alignment = resultTextStyle.alignment;
+        bodyTarget.characterSpacing = resultTextStyle.characterSpacing;
+        bodyTarget.lineSpacing = resultTextStyle.lineSpacing;
+        bodyTarget.paragraphSpacing = resultTextStyle.paragraphSpacing;
+    }
+
+    // 스토리 본문을 원래(인스펙터 작성) 스타일로 복원
+    void RestoreStoryBodyStyle(TextMeshProUGUI bodyTarget)
+    {
+        if (!overrideResultTextStyle || bodyTarget == null) return;
+        if (currentEventIndex == 0) ApplyBodyStyle(bodyTarget, event1BodyStyleBackup);
+        else ApplyBodyStyle(bodyTarget, event2BodyStyleBackup);
+    }
+
+    void CaptureBodyStyle(TextMeshProUGUI t, ref BodyStyleSnapshot s)
+    {
+        if (s.captured || t == null) return;
+        s.font = t.font;
+        s.fontSize = t.fontSize;
+        s.color = t.color;
+        s.fontStyle = t.fontStyle;
+        s.alignment = t.alignment;
+        s.characterSpacing = t.characterSpacing;
+        s.lineSpacing = t.lineSpacing;
+        s.paragraphSpacing = t.paragraphSpacing;
+        s.captured = true;
+    }
+
+    void ApplyBodyStyle(TextMeshProUGUI t, BodyStyleSnapshot s)
+    {
+        if (t == null || !s.captured) return;
+        t.font = s.font;
+        t.fontSize = s.fontSize;
+        t.color = s.color;
+        t.fontStyle = s.fontStyle;
+        t.alignment = s.alignment;
+        t.characterSpacing = s.characterSpacing;
+        t.lineSpacing = s.lineSpacing;
+        t.paragraphSpacing = s.paragraphSpacing;
     }
 
     TextMeshProUGUI CurrentTitleTarget()

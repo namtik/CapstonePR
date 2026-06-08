@@ -275,4 +275,28 @@ public class GameStateController : MonoBehaviour
         ShowMap();
     }
 
+    /// <summary>
+    /// 설정창의 [메인화면으로 돌아가기]에서 호출. 진행 중이던 런/전투를 정리하고 메인 메뉴 화면을 표시한다.
+    /// </summary>
+    public void ReturnToMainMenu()
+    {
+        Time.timeScale = 1f;
+
+        // 진행 중이던 전투의 잔여 적/상태 정리
+        if (roundManager != null)
+            roundManager.AbortActiveCombat();
+
+        // 런 상태 초기화 (메인으로 나가면 현재 런을 포기)
+        lastVisitedNodeIndex = -1;
+        clearedNodes.Clear();
+        Battle.RunDeckState.Instance?.ResetRun();
+
+        HideAllStages();
+
+        if (mainMenuStage != null)
+            mainMenuStage.SetActive(true);
+        else
+            Debug.LogWarning("[GameState] mainMenuStage가 지정되지 않아 메인 화면으로 돌아갈 수 없습니다.");
+    }
+
 }
