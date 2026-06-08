@@ -130,6 +130,12 @@ namespace Battle.UI
             // 비활성화되면 Unity가 코루틴을 멈추므로 등장 연출 상태를 정리 — 다음 활성화 시 깨끗한 상태 보장
             if (_drawIntroCo != null) { StopCoroutine(_drawIntroCo); _drawIntroCo = null; }
             _playingIntro = false;
+
+            // 드래그 도중 비활성화되면(손패가 바뀌어 이 뷰가 꺼지는 경우) OnEndDrag가 호출되지 않아
+            // blocksRaycasts=false로 굳는다 → 이 뷰가 풀에서 재사용될 때 '그 자리'가 영구히 클릭 안 되는
+            // 버그의 직접 원인. 비활성화 시점에 즉시 복구해 둔다(재활성화 시 클릭 가능 보장).
+            _isDragging = false;
+            if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
         }
 
         /// <summary>외부(콤보 슬롯 UI 등)에서 prefab의 element sprite를 공유받기 위한 접근자.</summary>

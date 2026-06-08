@@ -377,7 +377,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   fallbackGaugeFullDamage: 10
   hitVFX: {fileID: 8616831555898945098}
-  newSystemAttackSequence: e80300000900000014000000
+  newSystemAttackSequence: 080000000900000014000000
 --- !u!114 &5858952286309725067
 MonoBehaviour:
   m_ObjectHideFlags: 0
