@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ecabe9552fdb9144bff4b9221db6e7b, type: 3}
+  m_Name: Normal_Landmus
+  m_EditorClassIdentifier: Assembly-CSharp::CombatRoundData
+  roundName: Normal_Landmus
+  roundType: 0
+  enemies:
+  - {fileID: 11400000, guid: ce576f1c3c1894c418e2beb7d28c0b6f, type: 2}
+  columnIndex: 0

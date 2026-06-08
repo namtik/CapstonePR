@@ -6,7 +6,7 @@
       "slot2": "FIRE",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "염화 작렬",
       "skillImg": "1000Img",
       "description": "모든 적에게 피해 20, 모든 적에게 화상을 10 부여한다.",
       "refComboId": 1000
@@ -17,7 +17,7 @@
       "slot2": "FIRE",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "잔염 환생",
       "skillImg": "1001Img",
       "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 카드 1장을 선택하여 뽑을 카드 더미에 넣는다.",
       "refComboId": 1001
@@ -28,7 +28,7 @@
       "slot2": "WATER",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "잔염 환생",
       "skillImg": "1001Img",
       "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 카드 1장을 선택하여 뽑을 카드 더미에 넣는다.",
       "refComboId": 1001
@@ -39,7 +39,7 @@
       "slot2": "FIRE",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "잔염 환생",
       "skillImg": "1001Img",
       "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 카드 1장을 선택하여 뽑을 카드 더미에 넣는다.",
       "refComboId": 1001
@@ -50,7 +50,7 @@
       "slot2": "FIRE",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "풍염 전파",
       "skillImg": "1002Img",
       "description": "무작위 적에게 피해를 30 준다. 그 적이 보유한 화상 만큼 모든 적에게 화상을 부여한다.",
       "refComboId": 1002
@@ -61,7 +61,7 @@
       "slot2": "WIND",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "풍염 전파",
       "skillImg": "1002Img",
       "description": "무작위 적에게 피해를 30 준다. 그 적이 보유한 화상 만큼 모든 적에게 화상을 부여한다.",
       "refComboId": 1002
@@ -72,7 +72,7 @@
       "slot2": "FIRE",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "풍염 전파",
       "skillImg": "1002Img",
       "description": "무작위 적에게 피해를 30 준다. 그 적이 보유한 화상 만큼 모든 적에게 화상을 부여한다.",
       "refComboId": 1002
@@ -83,7 +83,7 @@
       "slot2": "FIRE",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "축화 일격",
       "skillImg": "1003Img",
       "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 카드 수 만큼 피해를 준다.",
       "refComboId": 1003
@@ -94,7 +94,7 @@
       "slot2": "EARTH",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "축화 일격",
       "skillImg": "1003Img",
       "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 카드 수 만큼 피해를 준다.",
       "refComboId": 1003
@@ -105,7 +105,7 @@
       "slot2": "FIRE",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "축화 일격",
       "skillImg": "1003Img",
       "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 카드 수 만큼 피해를 준다.",
       "refComboId": 1003
@@ -116,7 +116,7 @@
       "slot2": "WATER",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "감로 세례",
       "skillImg": "1004Img",
       "description": "모든 적에게 피해를 10 준다. 최대 체력의 10%만큼 회복한다.",
       "refComboId": 1004
@@ -127,7 +127,7 @@
       "slot2": "WATER",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "수화 상생",
       "skillImg": "1005Img",
       "description": "무작위 적에게 피해를 20 준다. 최대 체력의 10%만큼 회복한다.",
       "refComboId": 1005
@@ -138,7 +138,7 @@
       "slot2": "FIRE",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "수화 상생",
       "skillImg": "1005Img",
       "description": "무작위 적에게 피해를 20 준다. 최대 체력의 10%만큼 회복한다.",
       "refComboId": 1005
@@ -149,7 +149,7 @@
       "slot2": "WATER",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "수화 상생",
       "skillImg": "1005Img",
       "description": "무작위 적에게 피해를 20 준다. 최대 체력의 10%만큼 회복한다.",
       "refComboId": 1005
@@ -160,7 +160,7 @@
       "slot2": "WATER",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "동빙 강설",
       "skillImg": "1006Img",
       "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 5 부여한다.",
       "refComboId": 1006
@@ -171,7 +171,7 @@
       "slot2": "WIND",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "동빙 강설",
       "skillImg": "1006Img",
       "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 5 부여한다.",
       "refComboId": 1006
@@ -182,7 +182,7 @@
       "slot2": "WATER",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "동빙 강설",
       "skillImg": "1006Img",
       "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 5 부여한다.",
       "refComboId": 1006
@@ -193,7 +193,7 @@
       "slot2": "WATER",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "반석 가호",
       "skillImg": "1007Img",
       "description": "최대 체력의 10%만큼 회복한다. 방어도를 10 얻는다.",
       "refComboId": 1007
@@ -204,7 +204,7 @@
       "slot2": "EARTH",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "반석 가호",
       "skillImg": "1007Img",
       "description": "최대 체력의 10%만큼 회복한다. 방어도를 10 얻는다.",
       "refComboId": 1007
@@ -215,7 +215,7 @@
       "slot2": "WATER",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "반석 가호",
       "skillImg": "1007Img",
       "description": "최대 체력의 10%만큼 회복한다. 방어도를 10 얻는다.",
       "refComboId": 1007
@@ -270,7 +270,7 @@
       "slot2": "WIND",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "선풍 환류",
       "skillImg": "1010Img",
       "description": "모든 적에게 피해를 20 준다. 패에 있는 카드를 모두 버리고 버린 만큼 다시 뽑는다.",
       "refComboId": 1010
@@ -281,7 +281,7 @@
       "slot2": "WATER",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "선풍 환류",
       "skillImg": "1010Img",
       "description": "모든 적에게 피해를 20 준다. 패에 있는 카드를 모두 버리고 버린 만큼 다시 뽑는다.",
       "refComboId": 1010
@@ -292,7 +292,7 @@
       "slot2": "WIND",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "선풍 환류",
       "skillImg": "1010Img",
       "description": "모든 적에게 피해를 20 준다. 패에 있는 카드를 모두 버리고 버린 만큼 다시 뽑는다.",
       "refComboId": 1010
@@ -336,7 +336,7 @@
       "slot2": "EARTH",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "지각 붕괴",
       "skillImg": "1012Img",
       "description": "모든 적에게 피해를 15 준다. 추가로 현재 보유한 방어도 만큼 피해를 준다.",
       "refComboId": 1012
@@ -347,7 +347,7 @@
       "slot2": "EARTH",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "용암 파열",
       "skillImg": "1013Img",
       "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 카드 만큼 피해를 준다.",
       "refComboId": 1013
@@ -358,7 +358,7 @@
       "slot2": "FIRE",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "용암 파열",
       "skillImg": "1013Img",
       "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 카드 만큼 피해를 준다.",
       "refComboId": 1013
@@ -369,7 +369,7 @@
       "slot2": "EARTH",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "용암 파열",
       "skillImg": "1013Img",
       "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 카드 만큼 피해를 준다.",
       "refComboId": 1013
@@ -380,7 +380,7 @@
       "slot2": "EARTH",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "토석 붕류",
       "skillImg": "1014Img",
       "description": "모든 적에게 피해를 30 준다. 방어도를 10 얻는다.",
       "refComboId": 1014
@@ -391,7 +391,7 @@
       "slot2": "WATER",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "토석 붕류",
       "skillImg": "1014Img",
       "description": "모든 적에게 피해를 30 준다. 방어도를 10 얻는다.",
       "refComboId": 1014
@@ -402,7 +402,7 @@
       "slot2": "EARTH",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "토석 붕류",
       "skillImg": "1014Img",
       "description": "모든 적에게 피해를 30 준다. 방어도를 10 얻는다.",
       "refComboId": 1014
@@ -413,7 +413,7 @@
       "slot2": "EARTH",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "황진 연타",
       "skillImg": "1015Img",
       "description": "무작위 적에게 피해를 5 준다. 각성 돌입 시 사라진 파편 카드 수 만큼 반복한다.",
       "refComboId": 1015
@@ -424,7 +424,7 @@
       "slot2": "WIND",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "황진 연타",
       "skillImg": "1015Img",
       "description": "무작위 적에게 피해를 5 준다. 각성 돌입 시 사라진 파편 카드 수 만큼 반복한다.",
       "refComboId": 1015
@@ -435,7 +435,7 @@
       "slot2": "EARTH",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "황진 연타",
       "skillImg": "1015Img",
       "description": "무작위 적에게 피해를 5 준다. 각성 돌입 시 사라진 파편 카드 수 만큼 반복한다.",
       "refComboId": 1015
@@ -578,7 +578,7 @@
       "slot2": "WIND",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "삼원 연환",
       "skillImg": "1018Img",
       "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
@@ -589,7 +589,7 @@
       "slot2": "EARTH",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "삼원 연환",
       "skillImg": "1018Img",
       "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
@@ -600,7 +600,7 @@
       "slot2": "FIRE",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "삼원 연환",
       "skillImg": "1018Img",
       "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
@@ -611,7 +611,7 @@
       "slot2": "EARTH",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "삼원 연환",
       "skillImg": "1018Img",
       "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
@@ -622,7 +622,7 @@
       "slot2": "FIRE",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "삼원 연환",
       "skillImg": "1018Img",
       "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
@@ -633,7 +633,7 @@
       "slot2": "WIND",
       "slot3": "FIRE",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "삼원 연환",
       "skillImg": "1018Img",
       "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
@@ -644,7 +644,7 @@
       "slot2": "WIND",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "절명 추격",
       "skillImg": "1019Img",
       "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
       "refComboId": 1019
@@ -655,7 +655,7 @@
       "slot2": "EARTH",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "절명 추격",
       "skillImg": "1019Img",
       "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
       "refComboId": 1019
@@ -666,7 +666,7 @@
       "slot2": "WATER",
       "slot3": "EARTH",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "절명 추격",
       "skillImg": "1019Img",
       "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
       "refComboId": 1019
@@ -677,7 +677,7 @@
       "slot2": "EARTH",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "절명 추격",
       "skillImg": "1019Img",
       "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
       "refComboId": 1019
@@ -688,7 +688,7 @@
       "slot2": "WATER",
       "slot3": "WIND",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "절명 추격",
       "skillImg": "1019Img",
       "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
       "refComboId": 1019
@@ -699,7 +699,7 @@
       "slot2": "WIND",
       "slot3": "WATER",
       "cooldown": 5,
-      "comboName": "",
+      "comboName": "절명 추격",
       "skillImg": "1019Img",
       "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
       "refComboId": 1019
