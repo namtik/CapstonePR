@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uC544\uADC0\uBAA9"
   enemySprite: {fileID: 21300000, guid: a661dce3f2c44534f81f5b67d4096cc7, type: 3}
-  maxHp: 1
+  maxHp: 100
   attackDamage: 100
   gaugeSpeed: 10
   baseAttackCount: 3
