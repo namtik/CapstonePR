@@ -472,6 +472,15 @@ public class Player : MonoBehaviour, IBattleUnit
     void Die()
     {
         Debug.Log("플레이어 사망!");
+
+        GameOverController controller = GameOverController.Instance;
+        if (controller == null)
+            controller = FindFirstObjectByType<GameOverController>(FindObjectsInactive.Include);
+
+        if (controller != null)
+            controller.PlayDeathSequence();
+        else
+            Debug.LogWarning("[Player] GameOverController를 찾지 못해 사망 연출을 재생하지 못했습니다.");
     }
 
     public void Heal(int amount)

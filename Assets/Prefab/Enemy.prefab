@@ -444,6 +444,27 @@ MonoBehaviour:
   eEffect: {fileID: 8692929278469968464}
   rEffect: {fileID: 6238317005164205120}
   LEffect: {fileID: 4471725691487156464}
+  hitReactionEnabled: 1
+  shakeTarget: {fileID: 0}
+  flashTarget: {fileID: 0}
+  hitFlashColor: {r: 1, g: 0, b: 0, a: 1}
+  mediumDamageThreshold: 20
+  strongDamageThreshold: 60
+  weakHit:
+    shakeDuration: 0.15
+    shakeMagnitude: 6
+    flashDuration: 0.1
+    flashStrength: 0.5
+  mediumHit:
+    shakeDuration: 0.22
+    shakeMagnitude: 14
+    flashDuration: 0.13
+    flashStrength: 0.75
+  strongHit:
+    shakeDuration: 0.32
+    shakeMagnitude: 26
+    flashDuration: 0.16
+    flashStrength: 1
 --- !u!114 &6565592369561984746
 MonoBehaviour:
   m_ObjectHideFlags: 0

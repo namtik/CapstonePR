@@ -8,6 +8,30 @@ using UnityEngine.UI;
 
 public class EventStageController : MonoBehaviour
 {
+    // 결과 텍스트(확률 분기)
+    [System.Serializable]
+    public class GambleResultText
+    {
+        [TextArea] public string successBody;   // 성공 시 본문
+        [TextArea] public string failureBody;   // 실패 시 본문
+    }
+
+    // 선택지별 결과 본문 모음 (추후 Excel→JSON 로더가 이 구조를 채워줄 예정)
+    [System.Serializable]
+    public class EventResultTexts
+    {
+        [Header("이벤트1")]
+        public GambleResultText event1Choice1;   // 도박: 성공/실패
+        [TextArea] public string event1Choice2Body;  // 회복
+        [TextArea] public string event1Choice3Body;  // 속성+탈진 카드
+
+        [Header("이벤트2")]
+        [TextArea] public string event2Choice1Body;  // 속성카드
+        [TextArea] public string event2Choice2Body;  // 복귀
+    }
+
+    private enum EventPhase { Idle, Story, ResultTyping, ResultDone }
+
     [Header("Event Canvases")]
     [SerializeField] private GameObject event1Canvas;
     [SerializeField] private GameObject event2Canvas;
@@ -29,7 +53,6 @@ public class EventStageController : MonoBehaviour
     [Header("Event 2 Buttons")]
     [SerializeField] private Button event2Choice1Button;
     [SerializeField] private Button event2Choice2Button;
-    [SerializeField] private Button event2Choice3Button;
 
     [Header("Button Entrance Animation")]
     [SerializeField] private bool useButtonEntranceAnimation = false;
@@ -47,10 +70,15 @@ public class EventStageController : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float event1Button2HealPercent = 0.2f;
 
+    [Header("선택지 결과 텍스트")]
+    [SerializeField] private EventResultTexts resultTexts = new EventResultTexts();
+
     private Roundmanager roundManager;
     private int currentEventIndex;
-    private bool rewardResolved;
+    private EventPhase phase = EventPhase.Idle;
+    private int phaseEnteredFrame;
     private Coroutine typingRoutine;
+    private TextMeshProUGUI activeResultBody;
     private string event1TitleCached;
     private string event2TitleCached;
     private string event1StoryCached;
@@ -64,18 +92,36 @@ public class EventStageController : MonoBehaviour
 
         BindButton(event2Choice1Button, OnChoice1Clicked);
         BindButton(event2Choice2Button, OnChoice2Clicked);
-        BindButton(event2Choice3Button, OnChoice3Clicked);
 
         SetCanvasState(-1);
+    }
+
+    void Update()
+    {
+        if (phase != EventPhase.ResultTyping && phase != EventPhase.ResultDone)
+            return;
+
+        // 상태 전환을 유발한 그 클릭이 즉시 다음 액션까지 트리거하지 않도록 가드
+        if (Time.frameCount <= phaseEnteredFrame)
+            return;
+
+        if (!Input.GetMouseButtonDown(0))
+            return;
+
+        if (phase == EventPhase.ResultTyping)
+            SkipResultTyping();
+        else
+            ReturnToMap();
     }
 
     public void BeginEvent(EventRoundData data, Roundmanager manager)
     {
         roundManager = manager;
-        rewardResolved = false;
 
         currentEventIndex = Random.Range(0, 2);
         SetCanvasState(currentEventIndex);
+        RestoreStoryVisuals();
+        SetPhase(EventPhase.Story);
         PlayStoryTypewriter();
     }
 
@@ -93,6 +139,20 @@ public class EventStageController : MonoBehaviour
 
         if (event2Canvas != null)
             event2Canvas.SetActive(eventIndex == 1);
+    }
+
+    // 스토리 단계 진입 시 제목/선택지 버튼을 다시 보이게 복원
+    void RestoreStoryVisuals()
+    {
+        TextMeshProUGUI title = CurrentTitleTarget();
+        if (title != null)
+            title.gameObject.SetActive(true);
+
+        foreach (Button button in CurrentChoiceButtons())
+        {
+            if (button != null)
+                button.gameObject.SetActive(true);
+        }
     }
 
     void PlayStoryTypewriter()
@@ -220,68 +280,148 @@ public class EventStageController : MonoBehaviour
 
     public void OnChoice1Clicked()
     {
-        if (rewardResolved) return;
-        rewardResolved = true;
+        if (phase != EventPhase.Story) return;
 
-        if (currentEventIndex == 0)
-        {
-            ExecuteEvent1Choice1();
-        }
-        else
-        {
-            ExecuteEvent2Choice1();
-        }
+        string resultBody = currentEventIndex == 0
+            ? ExecuteEvent1Choice1()
+            : ExecuteEvent2Choice1();
 
-        ReturnToMap();
+        PlayResultText(resultBody);
     }
 
     public void OnChoice2Clicked()
     {
-        if (rewardResolved) return;
-        rewardResolved = true;
+        if (phase != EventPhase.Story) return;
 
-        if (currentEventIndex == 0)
-        {
-            ExecuteEvent1Choice2();
-        }
-        else
-        {
-            ExecuteEvent2Choice2();
-        }
+        string resultBody = currentEventIndex == 0
+            ? ExecuteEvent1Choice2()
+            : ExecuteEvent2Choice2();
 
-        ReturnToMap();
+        PlayResultText(resultBody);
     }
 
     public void OnChoice3Clicked()
     {
-        if (rewardResolved) return;
-        rewardResolved = true;
+        if (phase != EventPhase.Story) return;
+        // 이벤트2에는 버튼3이 없음. 이벤트1 전용.
+        if (currentEventIndex != 0) return;
 
-        if (currentEventIndex == 0)
-        {
-            ExecuteEvent1Choice3();
-        }
-        else
-        {
-            Debug.Log("[EventStage] Event2 버튼3: 현재는 맵 복귀만 수행");
-        }
-
-        ReturnToMap();
+        string resultBody = ExecuteEvent1Choice3();
+        PlayResultText(resultBody);
     }
 
-    void ExecuteEvent1Choice1()
+    // 선택 후: 제목/선택지 숨기고 결과 본문을 새로 타이핑
+    void PlayResultText(string body)
+    {
+        TextMeshProUGUI title = CurrentTitleTarget();
+        if (title != null)
+            title.gameObject.SetActive(false);
+
+        foreach (Button button in CurrentChoiceButtons())
+        {
+            if (button != null)
+                button.gameObject.SetActive(false);
+        }
+
+        TextMeshProUGUI bodyTarget = currentEventIndex == 0 ? event1StoryBodyText : event2StoryBodyText;
+        activeResultBody = bodyTarget;
+
+        if (typingRoutine != null)
+        {
+            StopCoroutine(typingRoutine);
+            typingRoutine = null;
+        }
+
+        if (bodyTarget == null)
+        {
+            EnterResultDone();
+            return;
+        }
+
+        bodyTarget.text = body ?? string.Empty;
+
+        if (!useTypewriter)
+        {
+            bodyTarget.maxVisibleCharacters = int.MaxValue;
+            EnterResultDone();
+            return;
+        }
+
+        SetPhase(EventPhase.ResultTyping);
+        typingRoutine = StartCoroutine(ResultTypeRoutine(bodyTarget));
+    }
+
+    System.Collections.IEnumerator ResultTypeRoutine(TextMeshProUGUI bodyTarget)
+    {
+        bodyTarget.ForceMeshUpdate();
+        int total = bodyTarget.textInfo.characterCount;
+        bodyTarget.maxVisibleCharacters = 0;
+
+        if (total <= 0)
+        {
+            bodyTarget.maxVisibleCharacters = int.MaxValue;
+            typingRoutine = null;
+            EnterResultDone();
+            yield break;
+        }
+
+        float cps = Mathf.Max(1f, bodyCharactersPerSecond);
+        float progress = 0f;
+
+        while (bodyTarget.maxVisibleCharacters < total)
+        {
+            float dt = Time.unscaledDeltaTime;
+            if (dt <= 0f)
+                dt = 1f / 60f;
+
+            progress += cps * dt;
+            bodyTarget.maxVisibleCharacters = Mathf.Min(Mathf.FloorToInt(progress), total);
+            yield return null;
+        }
+
+        bodyTarget.maxVisibleCharacters = int.MaxValue;
+        typingRoutine = null;
+        EnterResultDone();
+    }
+
+    void SkipResultTyping()
+    {
+        if (typingRoutine != null)
+        {
+            StopCoroutine(typingRoutine);
+            typingRoutine = null;
+        }
+
+        if (activeResultBody != null)
+            activeResultBody.maxVisibleCharacters = int.MaxValue;
+
+        EnterResultDone();
+    }
+
+    void EnterResultDone()
+    {
+        SetPhase(EventPhase.ResultDone);
+    }
+
+    void SetPhase(EventPhase next)
+    {
+        phase = next;
+        phaseEnteredFrame = Time.frameCount;
+    }
+
+    string ExecuteEvent1Choice1()
     {
         if (MoneyManager.Instance == null)
         {
             Debug.LogWarning("[EventStage] MoneyManager가 없어 이벤트1 버튼1 보상을 처리하지 못했습니다.");
-            return;
+            return resultTexts.event1Choice1.failureBody;
         }
 
         bool spent = MoneyManager.Instance.SpendMoney(event1Button1Cost);
         if (!spent)
         {
             Debug.Log($"[EventStage] 재화 부족으로 이벤트1 버튼1 실패 (필요: {event1Button1Cost})");
-            return;
+            return resultTexts.event1Choice1.failureBody;
         }
 
         float chance = Mathf.Clamp01(event1Button1WinChance);
@@ -290,43 +430,47 @@ public class EventStageController : MonoBehaviour
         {
             MoneyManager.Instance.AddMoney(event1Button1Reward);
             Debug.Log($"[EventStage] 이벤트1 버튼1 성공: -{event1Button1Cost}, +{event1Button1Reward}");
+            return resultTexts.event1Choice1.successBody;
         }
-        else
-        {
-            Debug.Log($"[EventStage] 이벤트1 버튼1 실패: -{event1Button1Cost}, 획득 없음");
-        }
+
+        Debug.Log($"[EventStage] 이벤트1 버튼1 실패: -{event1Button1Cost}, 획득 없음");
+        return resultTexts.event1Choice1.failureBody;
     }
 
-    void ExecuteEvent1Choice2()
+    string ExecuteEvent1Choice2()
     {
         Player player = Player.Resolve(true);
         if (player == null)
         {
             Debug.LogWarning("[EventStage] Player를 찾지 못해 회복을 수행하지 못했습니다.");
-            return;
+            return resultTexts.event1Choice2Body;
         }
 
         int healAmount = Mathf.Max(1, Mathf.RoundToInt(player.maxHp * Mathf.Clamp01(event1Button2HealPercent)));
         player.Heal(healAmount);
         Debug.Log($"[EventStage] 이벤트1 버튼2: 최대체력 비율 회복 +{healAmount}");
+        return resultTexts.event1Choice2Body;
     }
 
-    void ExecuteEvent1Choice3()
+    string ExecuteEvent1Choice3()
     {
         int elementalId = PickRandomCardId(elementalCardPool);
         AddCardToRunDeck(elementalId, "이벤트1 버튼3 속성카드");
         AddCardToRunDeck(exhaustionCardId, "이벤트1 버튼3 탈진카드");
+        return resultTexts.event1Choice3Body;
     }
 
-    void ExecuteEvent2Choice1()
+    string ExecuteEvent2Choice1()
     {
         int elementalId = PickRandomCardId(elementalCardPool);
         AddCardToRunDeck(elementalId, "이벤트2 버튼1 속성카드");
+        return resultTexts.event2Choice1Body;
     }
 
-    void ExecuteEvent2Choice2()
+    string ExecuteEvent2Choice2()
     {
         Debug.Log("[EventStage] 이벤트2 버튼2: 맵으로 복귀");
+        return resultTexts.event2Choice2Body;
     }
 
     void AddCardToRunDeck(int cardId, string context)
@@ -367,8 +511,30 @@ public class EventStageController : MonoBehaviour
         return candidates[Random.Range(0, candidates.Count)];
     }
 
+    TextMeshProUGUI CurrentTitleTarget()
+    {
+        return currentEventIndex == 0 ? event1StoryTitleText : event2StoryTitleText;
+    }
+
+    IEnumerable<Button> CurrentChoiceButtons()
+    {
+        if (currentEventIndex == 0)
+        {
+            yield return event1Choice1Button;
+            yield return event1Choice2Button;
+            yield return event1Choice3Button;
+        }
+        else
+        {
+            yield return event2Choice1Button;
+            yield return event2Choice2Button;
+        }
+    }
+
     void ReturnToMap()
     {
+        phase = EventPhase.Idle;
+
         if (roundManager != null)
             roundManager.ReturnToMap();
         else
