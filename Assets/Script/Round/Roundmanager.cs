@@ -26,6 +26,12 @@ public class Roundmanager : MonoBehaviour
     [Header("보상 - 카드 선택하지 않기 버튼")]
     [SerializeField] private Battle.UI.RewardSkipButtonStyle cardRewardSkipButtonStyle = new Battle.UI.RewardSkipButtonStyle();
 
+    [Header("보상 - 카드 크기/배치")]
+    [Tooltip("제시 카드 배율(1 = 기본). 키우면 간격도 함께 올려 겹침 방지.")]
+    [SerializeField, Range(0.3f, 2f)] private float cardRewardCardScale = 1f;
+    [Tooltip("카드 사이 가로 간격(px). 기본 360.")]
+    [SerializeField] private float cardRewardCardSpacing = 360f;
+
     private RoundData currentRoundData;
     private int currentEnemyIndex = 0;
     private EnemyStat currentEnemy;
@@ -476,6 +482,7 @@ public class Roundmanager : MonoBehaviour
         var rewardUI = Battle.UI.CardRewardUI.EnsureExists();
         rewardUI.SetTitleStyle(cardRewardTitleFont, cardRewardTitleFontSize, cardRewardTitleColor);
         rewardUI.SetSkipButtonStyle(cardRewardSkipButtonStyle);
+        rewardUI.SetCardLayout(cardRewardCardScale, cardRewardCardSpacing);
         rewardUI.Present(cardPrefab, pickedCardId =>
     {
         // pickedCardId가 0보다 클 때만 추가하므로, -1을 전달받으면 추가되지 않음

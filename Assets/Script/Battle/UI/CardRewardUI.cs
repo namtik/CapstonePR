@@ -25,6 +25,12 @@ namespace Battle.UI
         [Header("선택하지 않기 버튼")]
         [SerializeField] private RewardSkipButtonStyle skipButtonStyle = new RewardSkipButtonStyle();
 
+        [Header("카드 크기/배치")]
+        [Tooltip("제시 카드 배율(1 = 기본 300x400). 키우면 간격도 함께 올려 겹침 방지.")]
+        [SerializeField, Range(0.3f, 2f)] private float cardScale = 1f;
+        [Tooltip("카드 사이 가로 간격(px).")]
+        [SerializeField] private float cardSpacing = 360f;
+
         private System.Action<int> _onPicked;
         private GameObject _panel;
         private static Font _builtinFont;
@@ -40,6 +46,13 @@ namespace Battle.UI
         public void SetSkipButtonStyle(RewardSkipButtonStyle style)
         {
             if (style != null) skipButtonStyle = style;
+        }
+
+        /// <summary>카드 배율과 카드 간 간격을 외부(Roundmanager 인스펙터)에서 주입.</summary>
+        public void SetCardLayout(float scale, float spacing)
+        {
+            cardScale = Mathf.Clamp(scale, 0.3f, 2f);
+            cardSpacing = Mathf.Max(0f, spacing);
         }
 
         void Awake()
@@ -196,7 +209,7 @@ namespace Battle.UI
 
             // 카드 행
             int n = choices.Count;
-            const float spacing = 360f;
+            float spacing = cardSpacing;
             float startX = -spacing * (n - 1) / 2f;
             for (int i = 0; i < n; i++)
             {
@@ -206,6 +219,7 @@ namespace Battle.UI
                 CenterAnchor(slot);
                 slot.sizeDelta = new Vector2(300f, 400f);
                 slot.anchoredPosition = new Vector2(startX + spacing * i, 0f);
+                slot.localScale = Vector3.one * cardScale; // 카드 비주얼 + 클릭영역 동시 스케일
 
                 // 카드 비주얼 — NewCardView 프리팹 재사용
                 var view = Instantiate(cardPrefab, slot);
