@@ -121,6 +121,9 @@ namespace Battle.UI
             sizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
+            // 유물이 하나도 없으면 컨테이너(배경 패널)를 숨긴다 — 첫 유물을 얻는 순간부터 보이게 된다.
+            containerGo.SetActive(_relics.Count > 0);
+
             // 툴팁 패널: 캔버스 좌상단 앵커 (아이콘 컨테이너와 동일 기준)
             var tooltipGo = new GameObject("RelicTooltip", typeof(RectTransform));
             tooltipGo.transform.SetParent(canvasT, false);
@@ -194,6 +197,9 @@ namespace Battle.UI
 
             for (int i = 0; i < _relics.Count; i++)
                 _iconItems.Add(CreateIconItem(_relics[i], i));
+
+            // 유물 보유 여부에 따라 컨테이너 표시/숨김 — 0개면 맵에서 빈 박스가 보이지 않게 한다.
+            _iconContainer.gameObject.SetActive(_relics.Count > 0);
         }
 
         GameObject CreateIconItem(RelicDef relic, int index)
