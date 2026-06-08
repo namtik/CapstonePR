@@ -137,6 +137,27 @@ namespace Battle
             Debug.Log($"[RunDeck] 카드 추가: {data.displayName} (덱 {TotalCardCount}장)");
         }
 
+        /// <summary>[테스트] 런 덱을 주어진 엔트리들로 통째로 교체한다. 유효하지 않은 ID/수량은 무시하고, 시드 완료로 표시.</summary>
+        public void ReplaceDeck(IEnumerable<CardDatabase.DeckEntry> entries)
+        {
+            _runDeck.Clear();
+            if (entries != null)
+            {
+                foreach (var e in entries)
+                {
+                    if (e.count <= 0) continue;
+                    if (CardDatabase.GetById(e.cardId) == null)
+                    {
+                        Debug.LogWarning($"[RunDeck] 알 수 없는 카드 ID {e.cardId} 무시(ReplaceDeck).");
+                        continue;
+                    }
+                    _runDeck.Add(e);
+                }
+            }
+            _seeded = true; // 이후 EnsureSeeded가 기본 덱으로 덮어쓰지 않도록
+            Debug.Log($"[RunDeck] 덱 교체 — {TotalCardCount}장 ({_runDeck.Count}종)");
+        }
+
         /// <summary>현재 런 덱에 보유 중인 카드 ID 집합 반환.</summary>
         public HashSet<int> GetOwnedCardIds()
         {

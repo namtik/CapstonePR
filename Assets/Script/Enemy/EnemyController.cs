@@ -273,6 +273,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         // OnDied 이벤트로 인해 Roundmanager.HandleEnemyDied가 호출됨
         // 여기서 직접 호출하지 않음 (중복 호출 방지)
 
+        // 피격 연출(빨강 플래시 + 흔들기)이 끝난 뒤에 사라지도록 대기 후 제거.
+        StartCoroutine(DestroyAfterHitReaction());
+    }
+
+    IEnumerator DestroyAfterHitReaction()
+    {
+        float wait = view != null ? view.HitReactionRemaining : 0f;
+        if (wait > 0f) yield return new WaitForSeconds(wait);
         Destroy(gameObject);
     }
 

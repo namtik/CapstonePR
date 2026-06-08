@@ -40,6 +40,7 @@ public class EnemyStat : MonoBehaviour
     public event Action OnMidPattern;              // 50% step reached
     public event Action OnGaugeFull;               // 100% - enemy attacks
     public event Action<float> OnGaugeStepChanged; // gauge ratio 0~1
+    public event Action<float> OnDamaged; // fired on every damage > 0; EnemyView plays hit flash/shake
     public bool isNewlyFrozen = false;
 
     public int CurrentAttackCount => currentAttackCount;
@@ -82,6 +83,7 @@ public class EnemyStat : MonoBehaviour
 
         currentHp -= damage;
         OnHpChanged?.Invoke(currentHp, maxHp);
+        if (damage > 0f) OnDamaged?.Invoke(damage); // trigger hit reaction (flash/shake)
 
         // ��� �÷��׸� Ȯ���Ͽ� OnDied �̺�Ʈ�� �� ���� �߻��ϵ��� ��
         if (!IsAlive && !hasDied)

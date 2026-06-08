@@ -54,6 +54,35 @@ public class EnemyView : MonoBehaviour
     public ParticleSystem rEffect;
     public ParticleSystem LEffect;
 
+    [Header("피격 반응 (빨강 플래시 + 흔들기)")]
+    [SerializeField] private bool hitReactionEnabled = true;
+    [Tooltip("흔들 대상. 비우면 몬스터 본체(이 오브젝트)의 RectTransform 사용.")]
+    [SerializeField] private RectTransform shakeTarget;
+    [Tooltip("플래시(색 변경) 대상 Image. 비우면 enemyImage 사용.")]
+    [SerializeField] private Image flashTarget;
+    [Tooltip("피격 시 잠깐 번쩍이는 색(기본 빨강).")]
+    [SerializeField] private Color hitFlashColor = Color.red;
+
+    [Header("피격 반응 — 데미지 3단계 경계")]
+    [Tooltip("데미지가 이 값 미만이면 '약'. 기본 20.")]
+    [SerializeField] private float mediumDamageThreshold = 20f;
+    [Tooltip("데미지가 이 값 이상이면 '강'. 기본 60. (그 사이는 '중')")]
+    [SerializeField] private float strongDamageThreshold = 60f;
+
+    [Header("피격 반응 — 단계별 세기 (약/중/강)")]
+    [SerializeField] private HitReactionTier weakHit = new HitReactionTier(0.15f, 6f, 0.10f, 0.5f);
+    [SerializeField] private HitReactionTier mediumHit = new HitReactionTier(0.22f, 14f, 0.13f, 0.75f);
+    [SerializeField] private HitReactionTier strongHit = new HitReactionTier(0.32f, 26f, 0.16f, 1f);
+
+    // 피격 반응 런타임 상태
+    private Image _flashImage;
+    private Color _flashBaseColor;
+    private Coroutine _flashCo;
+    private RectTransform _shakeRt;
+    private Vector2 _shakeBasePos;
+    private Coroutine _shakeCo;
+    private float _hitReactionEndTime; // 마지막 피격 연출이 끝나는 시각(Time.time 기준)
+
     private EnemyStat stat;
     private Vector3 damageTextOriginLocalPos;
     private Color damageTextOriginColor;
@@ -130,6 +159,7 @@ public class EnemyView : MonoBehaviour
         stat = GetComponent<EnemyStat>();
         stat.OnHpChanged += UpdateHpBar;
         stat.OnAttackCountChanged += UpdateAttackPreview;
+        stat.OnDamaged += HandleDamaged;
 
         if (patternNoticeObject != null)
             patternNoticeObject.SetActive(false);
@@ -170,6 +200,7 @@ public class EnemyView : MonoBehaviour
     {
         stat.OnHpChanged -= UpdateHpBar;
         stat.OnAttackCountChanged -= UpdateAttackPreview;
+        stat.OnDamaged -= HandleDamaged;
         delDamageText();
     }
 
@@ -359,6 +390,128 @@ public class EnemyView : MonoBehaviour
             case "L":
                 if (LEffect != null) LEffect.Play();
                 break;
+        }
+    }
+
+    // ───────────── 피격 반응: 빨강 플래시 + 흔들기 (데미지 3단계) ─────────────
+
+    /// <summary>현재 진행 중인 피격 연출(플래시+흔들기)이 끝날 때까지 남은 시간(초). 없으면 0.</summary>
+    public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time);
+
+    // EnemyStat.OnDamaged 구독 핸들러 — 데미지 크기로 단계를 골라 연출 재생.
+    void HandleDamaged(float damage)
+    {
+        if (!hitReactionEnabled || damage <= 0f) return;
+
+        HitReactionTier tier =
+            damage >= strongDamageThreshold ? strongHit :
+            damage >= mediumDamageThreshold ? mediumHit :
+            weakHit;
+
+        // 사망 시 EnemyController가 이 시간만큼 기다렸다가 적을 제거한다(피격 연출 후 사라짐).
+        _hitReactionEndTime = Time.time + Mathf.Max(tier.flashDuration, tier.shakeDuration);
+
+        PlayFlash(tier);
+        PlayShake(tier);
+    }
+
+    void PlayFlash(HitReactionTier tier)
+    {
+        if (tier == null || tier.flashDuration <= 0f || tier.flashStrength <= 0f) return;
+
+        Image img = flashTarget != null ? flashTarget : enemyImage;
+        if (img == null) return;
+
+        // 진행 중이 아닐 때만 기준색 캡처 — 연속 피격에도 원래 색을 잃지 않음.
+        if (_flashCo == null)
+        {
+            _flashImage = img;
+            _flashBaseColor = img.color;
+        }
+        else
+        {
+            StopCoroutine(_flashCo);
+        }
+        _flashCo = StartCoroutine(FlashRoutine(tier));
+    }
+
+    IEnumerator FlashRoutine(HitReactionTier tier)
+    {
+        if (_flashImage == null) { _flashCo = null; yield break; }
+
+        Color target = Color.Lerp(_flashBaseColor, hitFlashColor, Mathf.Clamp01(tier.flashStrength));
+        _flashImage.color = target;
+
+        float t = 0f;
+        while (t < tier.flashDuration)
+        {
+            if (_flashImage == null) { _flashCo = null; yield break; }
+            t += Time.deltaTime;
+            _flashImage.color = Color.Lerp(target, _flashBaseColor, t / tier.flashDuration);
+            yield return null;
+        }
+
+        if (_flashImage != null) _flashImage.color = _flashBaseColor;
+        _flashCo = null;
+    }
+
+    void PlayShake(HitReactionTier tier)
+    {
+        if (tier == null || tier.shakeDuration <= 0f || tier.shakeMagnitude <= 0f) return;
+
+        RectTransform rt = shakeTarget != null ? shakeTarget : (transform as RectTransform);
+        if (rt == null) return;
+
+        // 진행 중이 아닐 때만 기준 위치 캡처. 진행 중이면 기준 위치로 되돌린 뒤 새로 시작.
+        if (_shakeCo == null)
+        {
+            _shakeRt = rt;
+            _shakeBasePos = rt.anchoredPosition;
+        }
+        else
+        {
+            StopCoroutine(_shakeCo);
+            if (_shakeRt != null) _shakeRt.anchoredPosition = _shakeBasePos;
+        }
+        _shakeCo = StartCoroutine(ShakeRoutine(tier));
+    }
+
+    IEnumerator ShakeRoutine(HitReactionTier tier)
+    {
+        if (_shakeRt == null) { _shakeCo = null; yield break; }
+
+        float t = 0f;
+        while (t < tier.shakeDuration)
+        {
+            if (_shakeRt == null) { _shakeCo = null; yield break; }
+            t += Time.deltaTime;
+            float damp = 1f - (t / tier.shakeDuration);   // 점점 약해지는 감쇠
+            float mag = tier.shakeMagnitude * damp;
+            Vector2 offset = new Vector2(Random.Range(-mag, mag), Random.Range(-mag, mag));
+            _shakeRt.anchoredPosition = _shakeBasePos + offset;
+            yield return null;
+        }
+
+        if (_shakeRt != null) _shakeRt.anchoredPosition = _shakeBasePos;
+        _shakeCo = null;
+    }
+
+    /// <summary>피격 반응 한 단계의 세기 묶음(인스펙터 노출).</summary>
+    [System.Serializable]
+    public class HitReactionTier
+    {
+        [Tooltip("흔들림 지속시간(초).")] public float shakeDuration;
+        [Tooltip("흔들림 세기(픽셀).")] public float shakeMagnitude;
+        [Tooltip("빨강 플래시 지속시간(초).")] public float flashDuration;
+        [Range(0f, 1f)] [Tooltip("플래시 강도(0=변화 없음, 1=완전히 플래시 색).")] public float flashStrength;
+
+        public HitReactionTier() { }
+        public HitReactionTier(float shakeDuration, float shakeMagnitude, float flashDuration, float flashStrength)
+        {
+            this.shakeDuration = shakeDuration;
+            this.shakeMagnitude = shakeMagnitude;
+            this.flashDuration = flashDuration;
+            this.flashStrength = flashStrength;
         }
     }
 }
