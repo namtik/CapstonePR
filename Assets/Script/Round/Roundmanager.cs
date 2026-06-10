@@ -667,6 +667,10 @@ public class Roundmanager : MonoBehaviour
         if (view != null)
             view.SetHitSprite(data.hitSprite);
 
+        // 공격 모션 프레임 주입(EnemyData.attackSprites). 비어 있으면 EnemyView에 직접 지정한 프레임 사용.
+        if (view != null)
+            view.SetAttackSprites(data.attackSprites);
+
         // 몬스터 종류에 맞는 전투 배경 적용(적별 배경 풀에서 랜덤). 풀이 비면 라운드 타입 기본 배경 유지.
         if (combatStageController != null)
             combatStageController.ApplyEnemyBackground(data);

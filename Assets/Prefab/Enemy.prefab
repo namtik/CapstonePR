@@ -471,6 +471,9 @@ MonoBehaviour:
   hitSpriteSwapEnabled: 1
   hitSpriteDuration: 0.5
   hitSprite: {fileID: 0}
+  attackMotionEnabled: 1
+  attackFrameDuration: 0.4
+  attackSprites: []
 --- !u!114 &6565592369561984746
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -150,6 +150,7 @@ GameObject:
   - component: {fileID: 349314858454114081}
   - component: {fileID: 3537660377707960430}
   - component: {fileID: 1611260772475182421}
+  - component: {fileID: 8868761400520163225}
   m_Layer: 5
   m_Name: ComboBook
   m_TagString: Untagged
@@ -280,6 +281,21 @@ MonoBehaviour:
   - {fileID: 4368880928938144365}
   - {fileID: 4012476428664421111}
   - {fileID: 5353454044997984205}
+--- !u!114 &8868761400520163225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508118524899797681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ad2f4a8a6f8b5248bd0a8422fda0ddd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ButtonHoverScale
+  hoverScale: 1.06
+  pressedScale: 1
+  lerpSpeed: 14
 --- !u!1 &717239857815451281
 GameObject:
   m_ObjectHideFlags: 0

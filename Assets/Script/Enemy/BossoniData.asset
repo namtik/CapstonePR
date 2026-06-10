@@ -10,11 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
-  m_Name: BossoniData
+  m_Name: BossOniData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uB3C4\uAE68\uBE44"
   enemySprite: {fileID: 21300000, guid: 9a625cb65a6263f4fb2bdde7ec3f2c7b, type: 3}
   hitSprite: {fileID: 21300000, guid: 3fc1e03892bf5f34dab57a1d0e22f547, type: 3}
+  attackSprites:
+  - {fileID: 21300000, guid: e60dfc40e1ce6de4ab8aa509741c6cc3, type: 3}
+  - {fileID: 21300000, guid: 9c611d716ead3014a932bd603b45217d, type: 3}
   maxHp: 100
   attackDamage: 100
   gaugeSpeed: 20

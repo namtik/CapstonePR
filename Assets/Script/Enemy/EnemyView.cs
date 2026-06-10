@@ -85,6 +85,14 @@ public class EnemyView : MonoBehaviour
     [Tooltip("피격 당한 이미지. 보통 EnemyData.hitSprite로 주입되며, 비우면 교체하지 않는다.")]
     [SerializeField] private Sprite hitSprite;
 
+    [Header("공격 모션 (이미지 교체 — 여러 프레임)")]
+    [Tooltip("적 공격 시 attackSprites를 순서대로 잠깐 재생한 뒤 평상시 이미지로 복귀할지 여부.")]
+    [SerializeField] private bool attackMotionEnabled = true;
+    [Tooltip("프레임당 표시 시간(초). 여러 장이면 이 간격으로 순차 재생. 0이면 모션 없음.")]
+    [SerializeField] private float attackFrameDuration = 0.08f;
+    [Tooltip("공격 모션 프레임들. 보통 EnemyData.attackSprites로 주입되며, 비우면 모션이 재생되지 않는다.")]
+    [SerializeField] private Sprite[] attackSprites;
+
     // 피격 반응 런타임 상태
     private Image _flashImage;
     private Color _flashBaseColor;
@@ -95,8 +103,12 @@ public class EnemyView : MonoBehaviour
     private float _hitReactionEndTime; // 마지막 피격 연출이 끝나는 시각(Time.time 기준)
 
     // 피격 이미지 교체 런타임 상태
-    private Sprite _normalSprite;      // 평상시 스프라이트(피격 후 복귀 대상)
+    private Sprite _normalSprite;      // 평상시 스프라이트(피격/공격 모션 후 복귀 대상)
     private Coroutine _hitSpriteCo;
+
+    // 공격 모션 런타임 상태
+    private Coroutine _attackSpriteCo;
+    private float _attackMotionEndTime; // 진행 중 공격 모션이 끝나는 시각(Time.time 기준)
 
     private EnemyStat stat;
     private Vector3 damageTextOriginLocalPos;
@@ -328,13 +340,19 @@ public class EnemyView : MonoBehaviour
         Debug.Log($"[EnemyView] enemyImage={enemyImage != null}, sprite={sprite?.name}");
         if (enemyImage != null) enemyImage.sprite = sprite;
         // 피격 이미지에서 되돌릴 기준 스프라이트로 기억(피격 연출 진행 중이 아닐 때만 갱신).
-        if (_hitSpriteCo == null) _normalSprite = sprite;
+        if (_hitSpriteCo == null && _attackSpriteCo == null) _normalSprite = sprite;
     }
 
     /// <summary>EnemyData에서 피격 당한 이미지를 주입. null이면 교체하지 않는다.</summary>
     public void SetHitSprite(Sprite sprite)
     {
         hitSprite = sprite;
+    }
+
+    /// <summary>EnemyData에서 공격 모션 프레임들을 주입. 비거나 null이면 기존(인스펙터) 값 유지.</summary>
+    public void SetAttackSprites(Sprite[] sprites)
+    {
+        if (sprites != null && sprites.Length > 0) attackSprites = sprites;
     }
 
 
@@ -454,6 +472,8 @@ public class EnemyView : MonoBehaviour
     {
         if (!hitSpriteSwapEnabled || hitSprite == null || hitSpriteDuration <= 0f) return;
         if (enemyImage == null) return;
+        // 공격 모션 중에는 피격 이미지 교체를 건너뜀 — 공격 프레임이 우선(둘이 sprite를 다투지 않게). 플래시/흔들기는 그대로 적용됨.
+        if (_attackSpriteCo != null) return;
 
         // 진행 중이 아닐 때만 평상시 스프라이트 캡처 — 연속 피격에도 원본을 잃지 않음.
         if (_hitSpriteCo == null)
@@ -483,6 +503,61 @@ public class EnemyView : MonoBehaviour
 
         if (enemyImage != null) enemyImage.sprite = _normalSprite;
         _hitSpriteCo = null;
+    }
+
+    // ───────────── 공격 모션: attackSprites를 순서대로 재생 후 평상시 이미지로 복귀 ─────────────
+
+    /// <summary>진행 중인 공격 모션이 끝날 때까지 남은 시간(초). 없으면 0.</summary>
+    public float AttackMotionRemaining => _attackMotionEndTime > 0f ? Mathf.Max(0f, _attackMotionEndTime - Time.time) : 0f;
+
+    /// <summary>적 공격 시 호출 — attackSprites를 프레임마다 잠깐 보여준 뒤 평상시 이미지로 복귀.</summary>
+    public void PlayAttackMotion()
+    {
+        if (!attackMotionEnabled || attackSprites == null || attackSprites.Length == 0) return;
+        if (attackFrameDuration <= 0f || enemyImage == null) return;
+
+        // 공격 모션이 sprite를 독점 — 진행 중인 피격 이미지 교체를 멈춤(그 복귀가 공격 프레임 사이에 기본을 끼워넣는 것 방지).
+        if (_hitSpriteCo != null)
+        {
+            StopCoroutine(_hitSpriteCo);
+            _hitSpriteCo = null;
+        }
+
+        // 진행 중이 아닐 때만 평상시 스프라이트 캡처 — 연속 호출에도 원본을 잃지 않음.
+        if (_attackSpriteCo == null)
+        {
+            if (_normalSprite == null) _normalSprite = enemyImage.sprite;
+        }
+        else
+        {
+            StopCoroutine(_attackSpriteCo);
+        }
+        _attackSpriteCo = StartCoroutine(AttackMotionRoutine());
+    }
+
+    IEnumerator AttackMotionRoutine()
+    {
+        if (enemyImage == null) { _attackSpriteCo = null; yield break; }
+
+        _attackMotionEndTime = Time.time + attackFrameDuration * attackSprites.Length;
+
+        for (int i = 0; i < attackSprites.Length; i++)
+        {
+            if (enemyImage == null) { _attackSpriteCo = null; yield break; }
+            if (attackSprites[i] != null) enemyImage.sprite = attackSprites[i];
+
+            float t = 0f;
+            while (t < attackFrameDuration)
+            {
+                if (enemyImage == null) { _attackSpriteCo = null; yield break; }
+                t += Time.deltaTime;
+                yield return null;
+            }
+        }
+
+        if (enemyImage != null) enemyImage.sprite = _normalSprite;
+        _attackMotionEndTime = 0f;
+        _attackSpriteCo = null;
     }
 
     void PlayFlash(HitReactionTier tier)

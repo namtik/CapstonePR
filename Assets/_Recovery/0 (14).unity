@@ -18448,7 +18448,6 @@ MonoBehaviour:
   toggleKey: 9
   displayDuration: 4
   alwaysVisible: 0
-  overlayEnabled: 0
   koreanFont: {fileID: 11400000, guid: 9963c0f83d2a95641a8a9fb171db72d1, type: 2}
   uiScale: 1.4
 --- !u!4 &1958806591
@@ -18877,7 +18876,7 @@ MonoBehaviour:
     count: 1
   - cardId: 114
     count: 2
-  useAsStartingDeck: 0
+  useAsStartingDeck: 1
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:
