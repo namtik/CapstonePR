@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
+  m_Name: BossoniData
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyData
+  enemyName: "\uB3C4\uAE68\uBE44"
+  enemySprite: {fileID: 21300000, guid: 9a625cb65a6263f4fb2bdde7ec3f2c7b, type: 3}
+  hitSprite: {fileID: 21300000, guid: 3fc1e03892bf5f34dab57a1d0e22f547, type: 3}
+  maxHp: 100
+  attackDamage: 100
+  gaugeSpeed: 20
+  baseAttackCount: 3
+  actionGaugeMax: 20
+  backgroundSprites:
+  - {fileID: 21300000, guid: b334bf84c8f049848b52d2676c8c7206, type: 3}

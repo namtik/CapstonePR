@@ -31,6 +31,12 @@ public class MapManager : MonoBehaviour
 
     public Roundmanager roundManager;  // : ���� �Ŵ��� ����
 
+    [Header("디버그 — 보스방 바로 진입 (테스트용)")]
+    [Tooltip("ON이면 맵에서 아래 키를 눌러 보스방으로 즉시 진입한다.")]
+    [SerializeField] private bool debugBossShortcut = true;
+    [Tooltip("보스방 바로 진입 단축키.")]
+    [SerializeField] private KeyCode debugBossKey = KeyCode.B;
+
     private bool isMapGenerated = false;  // ���� �̹� �����Ǿ����� ����
 
     void Awake()
@@ -406,7 +412,62 @@ public class MapManager : MonoBehaviour
         }
     }
 
-    // ��� Ÿ�Կ� �´� RoundData�� ���� ����
-    
+    void Update()
+    {
+        // [디버그] 맵 화면에서 단축키로 보스방 즉시 진입 (MapManager가 활성일 때만 동작 = 맵 보기 중).
+        if (debugBossShortcut && Input.GetKeyDown(debugBossKey))
+            JumpToBoss();
+    }
 
+    /// <summary>[디버그] 맵을 거치지 않고 보스방 전투로 즉시 진입. OnNodeSelected의 보스 분기와 동일하게 동작하되 노드 클릭 게이팅을 우회한다.</summary>
+    [ContextMenu("보스방 바로 진입")]
+    public void JumpToBoss()
+    {
+        if (mapData == null || mapData.nodes == null)
+        {
+            Debug.LogWarning("[MapManager] mapData가 없어 보스방 진입 불가 (맵 생성 후 시도).");
+            return;
+        }
+
+        int bossIndex = mapData.bossIndex;
+        if (bossIndex < 0 || bossIndex >= mapData.nodes.Count)
+        {
+            Debug.LogWarning($"[MapManager] 보스 노드 인덱스가 유효하지 않음 (bossIndex={bossIndex}, nodes={mapData.nodes.Count}).");
+            return;
+        }
+
+        var stateController = GameStateController.Instance;
+        if (stateController == null)
+        {
+            Debug.LogWarning("[MapManager] GameStateController가 없습니다.");
+            return;
+        }
+
+        var bossEntry = mapData.nodes[bossIndex];
+
+        stateController.lastVisitedNodeIndex = bossIndex;
+        stateController.ShowCanvasForNodeType(NodeType.Boss, true);
+
+        RoundData roundData = bossEntry.roundData;
+        if (roundData == null)
+        {
+            Debug.LogWarning("[MapManager] 보스 노드에 roundData가 없습니다 (RoundDataConfig 확인).");
+            return;
+        }
+
+        // 난이도 스케일링 컬럼 인덱스 주입 (OnNodeSelected와 동일).
+        int col = bossEntry.column;
+        if (roundData is BossRoundData boss) boss.columnIndex = col;
+        else if (roundData is EliteRoundData elite) elite.columnIndex = col;
+        else if (roundData is CombatRoundData combat) combat.columnIndex = col;
+
+        if (roundManager == null)
+        {
+            Debug.LogWarning("[MapManager] roundManager가 미연결입니다.");
+            return;
+        }
+
+        roundManager.StartRound(roundData);
+        Debug.Log($"[MapManager] 보스방 바로 진입 (nodeIndex={bossIndex}, col={col}).");
+    }
 }
