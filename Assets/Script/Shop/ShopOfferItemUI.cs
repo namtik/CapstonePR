@@ -434,14 +434,28 @@ public class ShopOfferItemUI : MonoBehaviour
 
             if (relicIconOnlyMode)
             {
-                float scale = Mathf.Clamp(relicIconScale, 1f, 2f);
-                iconImage.rectTransform.localScale = iconBaseScale * scale;
+                float scale = Mathf.Clamp(relicIconScale, 1f, 2.5f);
+                Vector3 desiredScale = iconBaseScale * scale;
+
+                // 렐릭 슬롯 루트에 ButtonHoverScale이 붙어 있으면 매 프레임 localScale을 자신의 base로
+                // 되돌리기 때문에 여기서 직접 scale을 줘도 곧바로 덮어써진다. 그 경우 호버 컴포넌트의
+                // 기준 스케일 자체를 갱신해, 아이콘 스케일이 유지되고 호버는 그 위에 곱해지도록 한다.
+                var hover = iconImage.GetComponent<ButtonHoverScale>();
+                if (hover != null)
+                    hover.SetBaseScale(desiredScale);
+                else
+                    iconImage.rectTransform.localScale = desiredScale;
+
                 // 배경/프레임 오브젝트가 많은 슬롯에서도 렐릭 아이콘이 최상단에 보이도록 보장한다.
                 iconImage.rectTransform.SetAsLastSibling();
             }
             else
             {
-                iconImage.rectTransform.localScale = iconBaseScale;
+                var hover = iconImage.GetComponent<ButtonHoverScale>();
+                if (hover != null)
+                    hover.SetBaseScale(iconBaseScale);
+                else
+                    iconImage.rectTransform.localScale = iconBaseScale;
                 iconImage.rectTransform.sizeDelta = iconBaseSizeDelta;
             }
         }

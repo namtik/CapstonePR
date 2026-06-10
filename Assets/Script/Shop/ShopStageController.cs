@@ -984,10 +984,24 @@ public class ShopStageController : MonoBehaviour
         ui.Setup(title, desc, icon, offer.price, () => TryBuyCombo(offer));
         ui.SetRelicIconOnlyMode(false);
 
+        // 슬롯(ComboSkill 슬롯)에도 ButtonHoverScale이 있으면, 카드/렐릭 구매 후 RefreshOfferViews로
+        // 다시 바인딩될 때 직전 호버 상태가 남아 "콤보 아이콘이 계속 확대된 채 호버됨"이 발생한다.
+        // 매 바인딩마다 슬롯 호버 상태를 초기화한다.
+        var slotHover = target.GetComponent<ButtonHoverScale>();
+        if (slotHover != null)
+            slotHover.ResetHoverState();
+
         // 4. 책의 비주얼 업데이트 및 구매 여부에 따른 '버튼 잠금'
         if (bookUI != null)
         {
-            bookUI.transform.localScale = Vector3.one * comboBookScale;
+            // 책 루트의 ButtonHoverScale이 매 프레임 localScale을 base로 되돌리므로 직접 대입하면 무시된다.
+            // 호버 컴포넌트의 기준 스케일 자체를 comboBookScale로 갱신한다(없으면 직접 대입 폴백).
+            var bookHover = bookUI.GetComponent<ButtonHoverScale>();
+            if (bookHover != null)
+                bookHover.SetBaseScale(comboBookScale);
+            else
+                bookUI.transform.localScale = Vector3.one * comboBookScale;
+
             bookUI.SetElementSprites(comboBookFireSprite, comboBookWaterSprite, comboBookWindSprite, comboBookEarthSprite);
             
             Button bookBtn = bookUI.GetComponent<Button>();
