@@ -453,8 +453,8 @@ Canvas:
   m_GameObject: {fileID: 19061628}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 0
-  m_Camera: {fileID: 0}
+  m_RenderMode: 1
+  m_Camera: {fileID: 330585545}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
@@ -13094,6 +13094,8 @@ MonoBehaviour:
   awakenDamageEffectSpread: {x: 220, y: 80}
   awakenShakeIntensityPerHit: 0.6
   awakenShakeIntensityMax: 2
+  awakenScreenEffectPrefab: {fileID: 3942825033974895155, guid: 7297fe0a5e06fb644a731296af23d579, type: 3}
+  awakenScreenEffectScale: 110
   logVerbose: 1
   useAiDisruption: 1
   aiExplorationEpsilon: 0.15

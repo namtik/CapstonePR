@@ -303,6 +303,108 @@ namespace Battle.UI
             Destroy(go, life);
         }
 
+        /// <summary>
+        /// 임의의 파티클 프리팹을 화면 중앙에 UIParticle로 1회 재생(전투 UI 위에 렌더).
+        /// 각성 발동 등 전체 화면 연출용. Hovl 'Screen wind'처럼 카메라에 자식으로 붙는
+        /// 풀스크린 스크립트(HS_ScreenEffect)는 UIParticle 경로와 충돌하므로 자동 비활성한다.
+        /// </summary>
+        /// <param name="prefab">재생할 파티클 프리팹.</param>
+        /// <param name="scale">UIParticle 스케일(0 이하면 기본 particleScale 사용).</param>
+        /// <param name="duration">표시 시간(초). 0 이하면 파티클 길이에서 자동 계산.</param>
+        public void PlayPrefab(GameObject prefab, float scale = 0f, float duration = 0f)
+        {
+            if (prefab == null) return;
+
+            GameObject go = SpawnPrefabFx(prefab, scale, loop: false, out var uip);
+            float life = duration > 0f
+                ? duration
+                : ComputeParticleLifetime(uip) / Mathf.Max(0.01f, playbackSpeed) + Mathf.Max(0f, particleLifetimePadding);
+            Destroy(go, life);
+        }
+
+        /// <summary>
+        /// 프리팹을 루프 재생해 명시적으로 멈출 때까지 화면에 유지(각성 지속 동안 등).
+        /// 반환된 핸들을 <see cref="StopPersistent"/>에 넘겨 정지한다. 비-루프 프리팹도 강제로 루프시킨다.
+        /// </summary>
+        public GameObject PlayPrefabPersistent(GameObject prefab, float scale = 0f)
+        {
+            if (prefab == null) return null;
+            return SpawnPrefabFx(prefab, scale, loop: true, out _);
+        }
+
+        /// <summary>지속 재생 중인 프리팹을 즉시 정지 — 남은 입자까지 모두 비우고 래퍼를 바로 제거(각성 종료 시 잔상 없음).</summary>
+        public void StopPersistent(GameObject handle)
+        {
+            if (handle == null) return;
+
+            // 남은 입자를 즉시 비워(Clear) 다음 프레임 잔상까지 제거한 뒤 래퍼 파괴.
+            var systems = handle.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                if (systems[i] == null) continue;
+                systems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+            _activeFx.Remove(handle);
+            Destroy(handle);
+        }
+
+        /// <summary>PlayPrefab/PlayPrefabPersistent 공통 — UIParticle 래퍼 생성·프리팹 부착·재생.</summary>
+        GameObject SpawnPrefabFx(GameObject prefab, float scale, bool loop, out UIParticle uip)
+        {
+            var go = new GameObject($"FX_{prefab.name}", typeof(RectTransform));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(Rect, false);
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.localScale = Vector3.one;
+            rt.localRotation = Quaternion.identity;
+            rt.SetAsLastSibling();
+            _activeFx.Add(go);
+
+            uip = go.AddComponent<UIParticle>();
+            uip.scale = scale > 0f ? scale : particleScale;
+
+            var inst = Instantiate(prefab);
+            DisableCameraReparenting(inst); // 카메라 자식화 스크립트 차단(UIParticle 안에서 재생되도록)
+            inst.transform.SetParent(go.transform, false);
+            inst.transform.localPosition = Vector3.zero;
+            inst.transform.localRotation = Quaternion.identity;
+            inst.transform.localScale = Vector3.one;
+
+            if (loop)
+            {
+                // 비-루프 프리팹도 각성 동안 끊기지 않도록 모든 파티클을 루프로.
+                var systems = inst.GetComponentsInChildren<ParticleSystem>(true);
+                for (int i = 0; i < systems.Length; i++)
+                {
+                    if (systems[i] == null) continue;
+                    var main = systems[i].main;
+                    main.loop = true;
+                }
+            }
+
+            uip.RefreshParticles();
+            ForceLocalSimulation(uip);
+            uip.Play();
+            return go;
+        }
+
+        /// <summary>인스턴스(및 자식)의 카메라 재부모화 스크립트(HS_ScreenEffect 등)를 끈다 — UIParticle 경로와 충돌 방지.</summary>
+        static void DisableCameraReparenting(GameObject inst)
+        {
+            var behaviours = inst.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var b = behaviours[i];
+                if (b == null) continue;
+                // Start()에서 transform.SetParent(camera)를 호출하는 Hovl 풀스크린 스크립트.
+                // enabled=false면 아직 호출 전인 Start가 실행되지 않아 카메라로 빠져나가지 않는다.
+                if (b.GetType().Name == "HS_ScreenEffect") b.enabled = false;
+            }
+        }
+
         void ForceLocalSimulation(UIParticle uip)
         {
             var list = uip != null ? uip.particles : null;

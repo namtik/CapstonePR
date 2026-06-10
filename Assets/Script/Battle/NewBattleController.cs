@@ -74,6 +74,14 @@ namespace Battle
         [FormerlySerializedAs("feverShakeIntensityMax")]
         [SerializeField] private float awakenShakeIntensityMax = 2.0f;
 
+        [Header("각성 화면 효과 (Screen wind 등)")]
+        [Tooltip("각성 동안 화면 전체에 유지될 프리팹(예: Hovl 'Screen wind'). 각성 발동 시 루프 재생되고 종료 시 정지된다. " +
+                 "UIParticle로 전투 UI 위에 렌더되며, 프리팹의 카메라 부착 스크립트(HS_ScreenEffect)는 자동 비활성된다. " +
+                 "비우면 화면 효과 없음.")]
+        [SerializeField] private GameObject awakenScreenEffectPrefab;
+        [Tooltip("각성 화면 효과 UIParticle 스케일 — 화면을 덮도록 플레이로 튜닝(클수록 큼). 0 이하면 오버레이 기본 스케일 사용.")]
+        [SerializeField] private float awakenScreenEffectScale = 100f;
+
         [Header("디버그")]
         [SerializeField] private bool logVerbose = true;
 
@@ -107,6 +115,7 @@ namespace Battle
         private float _awakenTimeRemaining; // 활성화 시 남은 시간(초). 0 이하가 되면 종료
         private float _awakenMaxTime;       // 콤보 보너스로 늘어나는 동적 최대치 (게이지 fill 계산용)
         private List<CardInstance> _awakenStoredNeutralCards = new List<CardInstance>();
+        private GameObject _awakenScreenEffectInstance; // 각성 동안 유지되는 화면 효과 핸들(종료 시 정지)
 
         // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 복원용
         private List<CardInstance> _awakenSnapshotHand;
@@ -355,6 +364,7 @@ namespace Battle
             if (awakenTimerGauge != null) awakenTimerGauge.Hide(); // 상단 각성 타이머 숨김
             // 재생 중이던 카드 이펙트 잔여물 제거 — 보상 화면(timeScale=0)에서 멈춘 뒤 다음 스테이지로 이월되는 것 방지
             if (effectOverlay != null) effectOverlay.ClearAll();
+            _awakenScreenEffectInstance = null; // ClearAll이 이미 파괴 — 핸들만 정리
             Log("전투 종료");
         }
 
@@ -1007,6 +1017,10 @@ namespace Battle
                 awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
             }
 
+            // 각성 화면 효과(Screen wind 등) — UI 위에 루프 재생, 각성 종료(EndAwaken) 시 정지
+            if (effectOverlay != null && awakenScreenEffectPrefab != null)
+                _awakenScreenEffectInstance = effectOverlay.PlayPrefabPersistent(awakenScreenEffectPrefab, awakenScreenEffectScale);
+
             Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
         }
 
@@ -1016,6 +1030,10 @@ namespace Battle
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
             if (awakenTimerGauge != null) awakenTimerGauge.Hide(); // 상단 각성 타이머 숨김
+
+            // 각성 화면 효과 즉시 정지(잔상 없이 바로 제거)
+            if (effectOverlay != null) effectOverlay.StopPersistent(_awakenScreenEffectInstance);
+            _awakenScreenEffectInstance = null;
 
             // 각성 직전 상태로 패/뽑을 더미/버린 더미 복원 (각성 중의 드로우·사용 churn 되돌림).
             // 격리했던 무속성/파편 카드도 스냅샷에 포함돼 있으므로 함께 복원됨.
