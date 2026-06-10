@@ -7153,6 +7153,8 @@ MonoBehaviour:
   scrollController: {fileID: 0}
   nodeVisualConfig: {fileID: 11400000, guid: 5a67e7f40b9ea014d8c56bf8b199f59e, type: 2}
   roundManager: {fileID: 610804760}
+  debugBossShortcut: 1
+  debugBossKey: 98
 --- !u!114 &829038372
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13088,7 +13090,7 @@ MonoBehaviour:
   awakenTimerGauge: {fileID: 2033277085}
   ownedComboSkills: []
   useComboDatabase: 1
-  ownedComboRefIds: f2030000
+  ownedComboRefIds: e8030000e9030000f8030000f2030000
   debugAddComboRefId: 1000
   awakenDamageEffectName: Fire_ATK
   awakenDamageEffectSpread: {x: 220, y: 80}
@@ -18843,8 +18845,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f54753f6f9d38e4e92f4fe6d08a7099, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.DeckDebugTool
-  deckEntries: []
-  useAsStartingDeck: 0
+  deckEntries:
+  - cardId: 105
+    count: 1
+  - cardId: 116
+    count: 2
+  - cardId: 104
+    count: 2
+  - cardId: 313
+    count: 1
+  - cardId: 315
+    count: 2
+  - cardId: 415
+    count: 2
+  - cardId: 406
+    count: 1
+  - cardId: 215
+    count: 1
+  - cardId: 308
+    count: 2
+  - cardId: 207
+    count: 1
+  - cardId: 224
+    count: 1
+  - cardId: 224
+    count: 1
+  - cardId: 114
+    count: 2
+  useAsStartingDeck: 1
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:
