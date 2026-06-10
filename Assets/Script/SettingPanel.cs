@@ -67,6 +67,10 @@ public class SettingPanel : MonoBehaviour
     const string MasterVolumeKey = "MasterVolume";
     const string VolumeKeyPrefix = "Volume_";
 
+    // 사운드 설정을 닫을 때 돌아갈 캔버스. 인게임에서 열면 settingCanvas, 메인 메뉴에서 열면
+    // MainMenuSettingCanvas 등 외부에서 지정한 캔버스로 복귀한다. (공용 SoundMenu/뒤로 버튼 대응)
+    GameObject soundReturnCanvas;
+
     void Start()
     {
         // 설정 캔버스 비활성화
@@ -106,11 +110,16 @@ public class SettingPanel : MonoBehaviour
         var allButtons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var btn in allButtons)
         {
-            if (btn.gameObject.name == "SettingButton")
-            {
-                btn.onClick.RemoveAllListeners();
-                btn.onClick.AddListener(OpenSettings);
-            }
+            if (btn.gameObject.name != "SettingButton")
+                continue;
+
+            // 메인 메뉴의 설정 버튼은 MainMenuController가 전용 캔버스를 열도록 처리하므로
+            // 여기서 공용 SettingCanvas에 묶지 않는다. (안 그러면 한 번 클릭에 두 캔버스가 같이 열림)
+            if (btn.GetComponentInParent<MainMenuController>(true) != null)
+                continue;
+
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(OpenSettings);
         }
     }
 
@@ -211,19 +220,40 @@ public class SettingPanel : MonoBehaviour
     /// <summary>설정창 [사운드] — 설정 패널을 숨기고 사운드 설정 캔버스를 연다. (일시정지 유지)</summary>
     public void OpenSoundSettings()
     {
+        // 인게임 설정에서 열었으므로 닫을 때 인게임 설정 패널로 복귀한다.
+        soundReturnCanvas = settingCanvas;
+
         if (soundCanvas != null)
             soundCanvas.SetActive(true);
         if (settingCanvas != null)
             settingCanvas.SetActive(false);
     }
 
-    /// <summary>사운드 설정 [뒤로] — 사운드 캔버스를 닫고 설정 패널로 복귀.</summary>
+    /// <summary>
+    /// 외부(예: 메인 메뉴)에서 공용 사운드 설정 캔버스를 연다.
+    /// 닫을 때 returnCanvas로 복귀하므로, 공용 [뒤로] 버튼이 맥락에 맞게 동작한다.
+    /// </summary>
+    public void OpenSoundFromExternal(GameObject returnCanvas)
+    {
+        soundReturnCanvas = returnCanvas;
+
+        if (soundCanvas != null)
+            soundCanvas.SetActive(true);
+        if (returnCanvas != null)
+            returnCanvas.SetActive(false);
+    }
+
+    /// <summary>사운드 설정 [뒤로] — 사운드 캔버스를 닫고, 열었던 맥락의 캔버스로 복귀.</summary>
     public void CloseSoundSettings()
     {
         if (soundCanvas != null)
             soundCanvas.SetActive(false);
-        if (settingCanvas != null)
-            settingCanvas.SetActive(true);
+
+        GameObject ret = soundReturnCanvas != null ? soundReturnCanvas : settingCanvas;
+        if (ret != null)
+            ret.SetActive(true);
+
+        soundReturnCanvas = null;
     }
 
     // 저장된 마스터 볼륨을 적용하고 슬라이더/숫자입력을 동기화한다.

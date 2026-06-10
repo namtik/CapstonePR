@@ -23,6 +23,8 @@ public class GameOverController : MonoBehaviour
     [SerializeField] private GameObject buttonGroup;
     [SerializeField] private Button retryButton;
     [SerializeField] private Button quitButton;
+    [Tooltip("클릭 시 진행 중이던 런을 정리하고 메인 메뉴로 돌아간다.")]
+    [SerializeField] private Button mainMenuButton;
 
     [Header("연출 설정")]
     [SerializeField] private float closeDuration = 1.4f;
@@ -56,6 +58,12 @@ public class GameOverController : MonoBehaviour
         {
             quitButton.onClick.RemoveListener(OnQuitClicked);
             quitButton.onClick.AddListener(OnQuitClicked);
+        }
+
+        if (mainMenuButton != null)
+        {
+            mainMenuButton.onClick.RemoveListener(OnMainMenuClicked);
+            mainMenuButton.onClick.AddListener(OnMainMenuClicked);
         }
     }
 
@@ -199,6 +207,33 @@ public class GameOverController : MonoBehaviour
             state.RestartRunToMap();
         else
             Debug.LogError("[GameOver] GameStateController.Instance가 null이라 런 재시작을 수행할 수 없습니다.");
+    }
+
+    /// <summary>게임오버 화면에서 [메인 메뉴]로 — 진행 중이던 런을 정리하고 메인 메뉴를 표시한다.</summary>
+    public void OnMainMenuClicked()
+    {
+        if (!isDead) return;
+
+        if (animRoutine != null)
+        {
+            StopCoroutine(animRoutine);
+            animRoutine = null;
+        }
+
+        Time.timeScale = 1f;
+
+        if (buttonGroup != null)
+            buttonGroup.SetActive(false);
+        if (gameOverCanvas != null)
+            gameOverCanvas.SetActive(false);
+
+        isDead = false;
+
+        GameStateController state = GameStateController.Instance;
+        if (state != null)
+            state.ReturnToMainMenu();
+        else
+            Debug.LogError("[GameOver] GameStateController.Instance가 null이라 메인 메뉴로 돌아갈 수 없습니다.");
     }
 
     public void OnQuitClicked()

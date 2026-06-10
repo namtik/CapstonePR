@@ -571,7 +571,16 @@ public class Roundmanager : MonoBehaviour
         
         // 현재 노드 클리어 처리
         stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
-        
+
+        // 보스 라운드를 클리어하면 맵으로 돌아가는 대신 게임 클리어 화면을 표시한다.
+        if (currentRoundData is BossRoundData
+            && GameClearController.Instance != null
+            && GameClearController.Instance.IsReady)
+        {
+            GameClearController.Instance.ShowGameClear();
+            return;
+        }
+
         // 맵으로 복귀
         stateController.ShowMap();
     }
@@ -723,6 +732,9 @@ public class Roundmanager : MonoBehaviour
             SpawnNextEnemy(combatData.enemies, combatData.columnIndex, combatData.roundType);
         else if (currentRoundData is EliteRoundData eliteData)
             SpawnNextEnemy(eliteData.enemies, eliteData.columnIndex, eliteData.roundType);
+        else if (currentRoundData is BossRoundData)
+            // 보스는 단일 적이므로 처치 시 곧바로 라운드 종료 → 보상/게임 클리어 흐름으로 진입.
+            EndRound();
     }
 }
 

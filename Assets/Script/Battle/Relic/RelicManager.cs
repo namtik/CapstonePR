@@ -71,6 +71,20 @@ namespace Battle.Relic
             Debug.Log($"[유물] 획득: {relic.displayName}");
         }
 
+        /// <summary>보유 유물을 모두 비운다. (런 종료/재시작 시 호출 — 다음 런은 유물 0개로 시작)</summary>
+        public void ClearOwnedRelics()
+        {
+            if (_owned.Count == 0)
+            {
+                RelicHUD.Instance?.Refresh(_owned);
+                return;
+            }
+
+            _owned.Clear();
+            RelicHUD.Instance?.Refresh(_owned);
+            Debug.Log("[유물] 보유 목록 초기화");
+        }
+
         public bool HasRelicId(string relicId)
         {
             if (string.IsNullOrWhiteSpace(relicId)) return false;

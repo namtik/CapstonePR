@@ -91,4 +91,10 @@ public class MoneyManager : MonoBehaviour
         currentMoney = Mathf.Max(0, amount);
         OnMoneyChanged?.Invoke(currentMoney);
     }
+
+    /// <summary>보유 골드를 런 시작값(0)으로 초기화한다. (런 종료/재시작 시 호출)</summary>
+    public void ResetMoney()
+    {
+        SetMoney(0);
+    }
 }

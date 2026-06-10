@@ -272,6 +272,12 @@ public class GameStateController : MonoBehaviour
         // 신규 전투 시스템: 런 덱을 기본값으로 리셋
         Battle.RunDeckState.Instance?.ResetRun();
 
+        // 유물 보유 현황도 초기화 (다음 런은 유물 0개로 시작)
+        Battle.Relic.RelicManager.Instance?.ClearOwnedRelics();
+
+        // 골드도 초기화 (다음 런은 0골드로 시작)
+        MoneyManager.Instance?.ResetMoney();
+
         ShowMap();
     }
 
@@ -290,6 +296,12 @@ public class GameStateController : MonoBehaviour
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
         Battle.RunDeckState.Instance?.ResetRun();
+
+        // 유물 보유 현황도 초기화 (메인으로 나가면 현재 런을 포기 → 다음 런은 유물 0개로 시작)
+        Battle.Relic.RelicManager.Instance?.ClearOwnedRelics();
+
+        // 골드도 초기화 (다음 런은 0골드로 시작)
+        MoneyManager.Instance?.ResetMoney();
 
         HideAllStages();
 
