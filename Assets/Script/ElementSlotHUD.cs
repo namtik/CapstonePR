@@ -8,7 +8,6 @@ public class ElementSlotHUD : MonoBehaviour
     [SerializeField] private string rootObjectName = "ElementSlotRoot";
     [SerializeField] private string combatStageName = "CombatStage";
     [SerializeField] private string combatCanvasName = "Canvas";
-    [SerializeField] private string comboSlotName = "Comboslot";
     [SerializeField] private GameObject qwerCardPrefab;
     [SerializeField] private Sprite neutralCardSprite;
     [SerializeField] private Vector2 rootAnchoredPosition = new Vector2(0f, 26f);

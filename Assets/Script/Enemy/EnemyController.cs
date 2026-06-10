@@ -23,7 +23,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private EnemyStat stat;
     private EnemyView view;
     private Player player;
-    private Roundmanager roundmanager;
+    private RoundManager roundManager;
     private bool isDead = false;
     private MonsterMidPattern midPattern;
     private bool _attackPreviewInitialized;
@@ -37,7 +37,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private void Start()
     {
         player = Player.Resolve(true);
-        roundmanager = FindFirstObjectByType<Roundmanager>();
+        roundManager = FindFirstObjectByType<RoundManager>();
 
         stat.OnDied += HandleDeath;
         stat.OnMidPattern  += HandleMidPattern;
@@ -161,7 +161,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     }
     public float GetAttackDamage()
     {
-        return stat.AttackDamage;
+        return stat.attackDamage;
     }
 
     public void AddGuard(float amount)
@@ -230,7 +230,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
         else
         {
-            damagePerHit = Mathf.RoundToInt(stat.AttackDamage);
+            damagePerHit = Mathf.RoundToInt(stat.attackDamage);
             if (damagePerHit <= 0) damagePerHit = fallbackGaugeFullDamage;
             hitCount = Mathf.Max(0, stat.CurrentAttackCount);
         }
@@ -313,7 +313,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (isDead) return;
         isDead = true;
         midPattern?.OnBattleEnd();
-        // OnDied 이벤트로 인해 Roundmanager.HandleEnemyDied가 호출됨
+        // OnDied 이벤트로 인해 RoundManager.HandleEnemyDied가 호출됨
         // 여기서 직접 호출하지 않음 (중복 호출 방지)
 
         // 피격 연출(빨강 플래시 + 흔들기)이 끝난 뒤에 사라지도록 대기 후 제거.

@@ -17,7 +17,6 @@ namespace Battle
         const string ICONS_RESOURCE_PATH   = "ComboSkillIcons";
 
         private static List<ComboSkillData> _all;
-        private static Dictionary<int, ComboSkillData> _byId;
         private static Dictionary<int, List<ComboEffectData>> _effectsByRef;
 
         public static void EnsureInit()
@@ -30,7 +29,6 @@ namespace Battle
         public static void ResetCache()
         {
             _all = null;
-            _byId = null;
             _effectsByRef = null;
         }
 
@@ -160,7 +158,6 @@ namespace Battle
         static void LoadAll()
         {
             _all = new List<ComboSkillData>();
-            _byId = new Dictionary<int, ComboSkillData>();
             _effectsByRef = new Dictionary<int, List<ComboEffectData>>();
 
             var skillsAsset = Resources.Load<TextAsset>(SKILLS_RESOURCE_PATH);
@@ -179,7 +176,6 @@ namespace Battle
                     foreach (var c in payload.combos)
                     {
                         _all.Add(c);
-                        _byId[c.id] = c;
                     }
                 }
             }

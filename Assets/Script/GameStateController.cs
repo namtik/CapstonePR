@@ -24,7 +24,7 @@ public class GameStateController : MonoBehaviour
 
     [Header("Managers")]
     public MapManager mapManager;
-    public Roundmanager roundManager;  // 라운드 관리자 추가
+    public RoundManager roundManager;  // 라운드 관리자 추가
 
     [Header("Game State")]
     public int lastVisitedNodeIndex = -1;

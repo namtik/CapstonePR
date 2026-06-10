@@ -129,7 +129,7 @@ public class RelicStageController : MonoBehaviour
     [SerializeField] private Color tooltipDescriptionFontColor = new Color(0.92f, 0.92f, 0.92f, 1f);
     [SerializeField] private TextAlignmentOptions tooltipDescriptionAlignment = TextAlignmentOptions.Top;
 
-    private Roundmanager roundManager;
+    private RoundManager roundManager;
     private RelicRoundData currentData;
 
     private Vector3 chestInitialLocalPos;
@@ -176,7 +176,7 @@ public class RelicStageController : MonoBehaviour
         ResetStageForEntry();
     }
 
-    public void BeginRelic(RelicRoundData data, Roundmanager manager)
+    public void BeginRelic(RelicRoundData data, RoundManager manager)
     {
         currentData = data;
         roundManager = manager;

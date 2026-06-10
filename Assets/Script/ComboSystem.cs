@@ -14,7 +14,7 @@ public class ComboSystem : MonoBehaviour
     [Header("콤보 슬롯 설정")]
     public Transform comboSlotParent;
     public GameObject cardPrefab;
-    public GameObject EleslotPrefab;
+    public GameObject eleslotPrefab;
     public Sprite[] cardSprites;
 
     private string[] cardTypes = { "Q", "W", "E", "R" };
@@ -53,7 +53,7 @@ public class ComboSystem : MonoBehaviour
 
     private Player player;
     private EnemyController enemyController;
-    private Roundmanager roundManager;
+    private RoundManager roundManager;
 
     private readonly Dictionary<string, TMP_Text> nextHintTexts = new Dictionary<string, TMP_Text>();
     private static readonly string[] hintKeys = { "q", "w", "e", "r" };

@@ -94,7 +94,7 @@ public class ShopStageController : MonoBehaviour
     private readonly List<RelicOffer> relicOffers = new List<RelicOffer>();
     private readonly List<ComboOffer> comboOffers = new List<ComboOffer>();
 
-    private Roundmanager roundManager;
+    private RoundManager roundManager;
     private bool bound;
     private Coroutine bubbleTypingRoutine;
     private bool isBubbleTyping;
@@ -145,7 +145,7 @@ public class ShopStageController : MonoBehaviour
         comboBookScale = Mathf.Clamp(comboBookScale, 0.3f, 1.5f);
     }
 
-    public void BeginShop(Roundmanager manager)
+    public void BeginShop(RoundManager manager)
     {
         roundManager = manager;
         EnterShopStage();
@@ -568,32 +568,6 @@ public class ShopStageController : MonoBehaviour
         Debug.Log($"[ShopStageController] 카드 제거 기능은 아직 준비 중입니다. (예정 비용: {removeCardCost})");
     }
 
-    bool TryRemoveRandomElementCard(RunDeckState deckState, out int removedCardId)
-    {
-        removedCardId = -1;
-        if (deckState == null) return false;
-
-        var removable = new List<int>();
-        var deck = deckState.RunDeck;
-        for (int i = 0; i < deck.Count; i++)
-        {
-            int cardId = deck[i].cardId;
-            var card = CardDatabase.GetById(cardId);
-            if (card == null) continue;
-            if (!IsElementCard(card)) continue;
-            removable.Add(cardId);
-        }
-
-        if (removable.Count == 0) return false;
-
-        int pickId = removable[Random.Range(0, removable.Count)];
-        bool ok = deckState.TryRemoveCard(pickId);
-        if (!ok) return false;
-
-        removedCardId = pickId;
-        return true;
-    }
-
     bool TrySpendMoney(int amount)
     {
         if (MoneyManager.Instance == null)
@@ -810,33 +784,6 @@ public class ShopStageController : MonoBehaviour
         return found.GetComponentInChildren<TextMeshProUGUI>(true);
     }
 
-    void BindCardOffersToDirectSlots(List<ShopOfferItemUI> slots)
-    {
-        if (slots == null) return;
-
-        for (int i = 0; i < slots.Count; i++)
-        {
-            var ui = slots[i];
-            if (ui == null) continue;
-
-            bool visible = i < cardOffers.Count
-                && cardOffers[i] != null
-                && cardOffers[i].card != null;
-            ui.gameObject.SetActive(visible);
-            if (!visible) continue;
-
-            CardOffer offer = cardOffers[i];
-            string title = offer.card.displayName;
-            string desc = string.IsNullOrWhiteSpace(offer.card.description) ? "카드 설명 없음" : offer.card.description;
-            Sprite icon = ResolveCardSprite(offer.card);
-            ui.Setup(title, desc, icon, offer.price, () => TryBuyCard(offer));
-            ui.SetRelicIconOnlyMode(false);
-            ui.SetCardVisualScale(shopCardVisualScale);
-            ui.SetMoneyIconScale(shopMoneyIconScale);
-            ui.SetPurchasedState(offer.purchased);
-        }
-    }
-
     void BindCardOffersToNamedSlots(List<CardSlotBinding> slots)
     {
         if (slots == null) return;
@@ -921,30 +868,6 @@ public class ShopStageController : MonoBehaviour
         if (offer == null) return null;
         if (offer.sprite != null) return offer.sprite;
         return offer.relic != null ? offer.relic.icon : null;
-    }
-
-    void BindComboOffersToDirectSlots(List<ShopOfferItemUI> slots)
-    {
-        if (slots == null) return;
-
-        for (int i = 0; i < slots.Count; i++)
-        {
-            var ui = slots[i];
-            if (ui == null) continue;
-
-            bool visible = i < comboOffers.Count;
-            ui.gameObject.SetActive(visible);
-            if (!visible) continue;
-
-            ComboOffer offer = comboOffers[i];
-            string title = string.IsNullOrWhiteSpace(offer.combo.displayName) ? "콤보 스킬" : offer.combo.displayName;
-            string desc = string.IsNullOrWhiteSpace(offer.combo.descriptionKR)
-                ? $"콤보: {offer.combo.ComboString()}"
-                : $"콤보: {offer.combo.ComboString()}\n{offer.combo.descriptionKR}";
-            ui.Setup(title, desc, offer.combo.skillIcon, offer.price, () => TryBuyCombo(offer));
-            ui.SetRelicIconOnlyMode(false);
-            ui.SetPurchasedState(offer.purchased);
-        }
     }
 
     void BindComboOfferToObject(GameObject target, ComboOffer offer)

@@ -6,8 +6,8 @@ public class EnemyStat : MonoBehaviour
 {
     public float maxHp;
     public float currentHp;
-    public float AttackDamage;
-    public float GaugeSpeed;
+    public float attackDamage;
+    public float gaugeSpeed;
     public bool IsAlive => currentHp > 0;
 
     public float guard = 0f;
@@ -61,8 +61,8 @@ public class EnemyStat : MonoBehaviour
         this.config = config;
 
         maxHp = data.maxHp * config.GetHpMultiplier(columnIndex, nodeType);
-        AttackDamage = data.attackDamage;
-        GaugeSpeed = data.gaugeSpeed;
+        attackDamage = data.attackDamage;
+        gaugeSpeed = data.gaugeSpeed;
         currentHp = maxHp;
         hasDied = false;
         gaugeStep = 0;
@@ -74,7 +74,7 @@ public class EnemyStat : MonoBehaviour
 
         RollNewAttackPlan();
 
-        Debug.Log($"[{data.enemyName}] �÷�{columnIndex} / HP:{maxHp} / DMG:{AttackDamage} / Speed:{GaugeSpeed} / ����Ƚ��:{currentAttackCount}");
+        Debug.Log($"[{data.enemyName}] �÷�{columnIndex} / HP:{maxHp} / DMG:{attackDamage} / Speed:{gaugeSpeed} / ����Ƚ��:{currentAttackCount}");
     }
 
     public void TakeDamage(float damage)

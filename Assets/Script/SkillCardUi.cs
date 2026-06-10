@@ -1,25 +1,30 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Serialization;
 using static SkillDataParser;
 
 public class SkillCardUI : MonoBehaviour
 {
     [Header("UI ������Ʈ ����")]
     public Image skillIcon;
-    public TextMeshProUGUI Nametxt;
-    public TextMeshProUGUI Combotxt;
-    public TextMeshProUGUI Desctxt;
+    [FormerlySerializedAs("Nametxt")]
+    public TextMeshProUGUI nameText;
+    [FormerlySerializedAs("Combotxt")]
+    public TextMeshProUGUI comboText;
+    [FormerlySerializedAs("Desctxt")]
+    public TextMeshProUGUI descText;
     public Button selectButton;
-    public Sprite nonimage; // ��ų�� ���� ��� ǥ���� �̹���
+    [FormerlySerializedAs("nonimage")]
+    public Sprite noneImage; // ��ų�� ���� ��� ǥ���� �̹���
 
     // ������ ���� �Լ�
     public void Setup(SkillData data, System.Action<SkillData> onClickAction)
     {
         // UI
-        Nametxt.text = data.name;
-        Desctxt.text = data.description;
-        Combotxt.text = $"Combo: {data.combo}";
+        nameText.text = data.name;
+        descText.text = data.description;
+        comboText.text = $"Combo: {data.combo}";
 
         if (data.skillIcon != null)
         {
@@ -28,7 +33,7 @@ public class SkillCardUI : MonoBehaviour
         else
         {
             Debug.LogWarning($"[SkillCardUI] ��ų �������� �����ϴ�: {data.name}");
-            skillIcon.sprite = nonimage; // �⺻ ���������� �����ϰų� �� �̹����� ����
+            skillIcon.sprite = noneImage; // �⺻ ���������� �����ϰų� �� �̹����� ����
         }
 
         //��ư Ŭ�� �̺�Ʈ

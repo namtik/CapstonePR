@@ -14,7 +14,7 @@ public class RestStageController : MonoBehaviour
     [SerializeField] private float hoverLerpSpeed = 14f;
 
     private RestRoundData currentData;
-    private Roundmanager currentRoundManager;
+    private RoundManager currentRoundManager;
 
     private void Awake()
     {
@@ -28,7 +28,7 @@ public class RestStageController : MonoBehaviour
         UnregisterButtonCallbacks();
     }
 
-    public void BeginRest(RestRoundData data, Roundmanager roundmanager)
+    public void BeginRest(RestRoundData data, RoundManager roundmanager)
     {
         currentData = data;
         currentRoundManager = roundmanager;
@@ -42,7 +42,7 @@ public class RestStageController : MonoBehaviour
     {
         if (currentRoundManager == null)
         {
-            Debug.LogWarning("[RestStage] Roundmanager 참조가 없어 버튼1 처리를 건너뜁니다.");
+            Debug.LogWarning("[RestStage] RoundManager 참조가 없어 버튼1 처리를 건너뜁니다.");
             return;
         }
 

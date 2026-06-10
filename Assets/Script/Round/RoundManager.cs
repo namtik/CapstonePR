@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Battle.Relic;
 
-public class Roundmanager : MonoBehaviour
+public class RoundManager : MonoBehaviour
 {
     [SerializeField] private DifficultyConfig difficultyConfig;
     [SerializeField] private GameObject enemyPrefab;
@@ -284,13 +284,13 @@ public class Roundmanager : MonoBehaviour
 
         if (controller == null)
         {
-            Debug.LogError("[Roundmanager] ShopStageController를 찾지 못해 맵으로 복귀합니다.");
+            Debug.LogError("[RoundManager] ShopStageController를 찾지 못해 맵으로 복귀합니다.");
             ReturnToMap();
             return;
         }
 
         controller.BeginShop(this);
-        Debug.Log("[Roundmanager] 상점 스테이지 시작");
+        Debug.Log("[RoundManager] 상점 스테이지 시작");
     }
 
     public void CloseShop()
@@ -306,13 +306,13 @@ public class Roundmanager : MonoBehaviour
         EventStageController controller = FindFirstObjectByType<EventStageController>(FindObjectsInactive.Include);
         if (controller == null)
         {
-            Debug.LogError("[Roundmanager] EventStageController를 찾지 못해 맵으로 복귀합니다.");
+            Debug.LogError("[RoundManager] EventStageController를 찾지 못해 맵으로 복귀합니다.");
             ReturnToMap();
             return;
         }
 
         controller.BeginEvent(data, this);
-        Debug.Log("[Roundmanager] 이벤트 스테이지 시작");
+        Debug.Log("[RoundManager] 이벤트 스테이지 시작");
     }
 
     /// <summary>
@@ -335,13 +335,13 @@ public class Roundmanager : MonoBehaviour
 
         if (controller == null)
         {
-            Debug.LogError("[Roundmanager] RestStageController를 찾지 못해 맵으로 복귀합니다.");
+            Debug.LogError("[RoundManager] RestStageController를 찾지 못해 맵으로 복귀합니다.");
             ReturnToMap();
             return;
         }
 
         controller.BeginRest(data, this);
-        Debug.Log("[Roundmanager] 휴식 스테이지 시작");
+        Debug.Log("[RoundManager] 휴식 스테이지 시작");
     }
 
     /// <summary>
@@ -364,13 +364,13 @@ public class Roundmanager : MonoBehaviour
 
         if (controller == null)
         {
-            Debug.LogWarning("[Roundmanager] RelicStageController를 찾지 못해 유물 스테이지를 진행할 수 없습니다. 맵으로 복귀합니다.");
+            Debug.LogWarning("[RoundManager] RelicStageController를 찾지 못해 유물 스테이지를 진행할 수 없습니다. 맵으로 복귀합니다.");
             ReturnToMap();
             return;
         }
 
         controller.BeginRelic(data, this);
-        Debug.Log("[Roundmanager] 유물 스테이지 시작");
+        Debug.Log("[RoundManager] 유물 스테이지 시작");
     }
 
     /// <summary>
@@ -380,7 +380,7 @@ public class Roundmanager : MonoBehaviour
     {
         if (RelicManager.Instance == null)
         {
-            Debug.LogWarning("[Roundmanager] RelicManager가 없어 유물 지급을 건너뜁니다.");
+            Debug.LogWarning("[RoundManager] RelicManager가 없어 유물 지급을 건너뜁니다.");
             return;
         }
 
@@ -407,13 +407,13 @@ public class Roundmanager : MonoBehaviour
 
         if (pool.Count == 0)
         {
-            Debug.LogWarning("[Roundmanager] 지급 가능한 유물 효과가 없습니다.");
+            Debug.LogWarning("[RoundManager] 지급 가능한 유물 효과가 없습니다.");
             return;
         }
 
         var picked = pool[Random.Range(0, pool.Count)];
         RelicManager.Instance.GiveRelicByEffect(picked);
-        Debug.Log($"[Roundmanager] RelicStage 보상 지급: {picked}");
+        Debug.Log($"[RoundManager] RelicStage 보상 지급: {picked}");
     }
 
     /// <summary>
@@ -452,22 +452,22 @@ public class Roundmanager : MonoBehaviour
         if (rewardHubUIController == null)
             rewardHubUIController = FindFirstObjectByType<RewardHubUIController>(FindObjectsInactive.Include);
 
-        Debug.Log($"[Roundmanager] rewardHubUIController={(rewardHubUIController != null ? rewardHubUIController.name : "NULL")}");
+        Debug.Log($"[RoundManager] rewardHubUIController={(rewardHubUIController != null ? rewardHubUIController.name : "NULL")}");
 
         if (rewardHubUIController != null)
         {
-            Debug.Log("[Roundmanager] Opening RewardHubUIController.OpenHub()");
+            Debug.Log("[RoundManager] Opening RewardHubUIController.OpenHub()");
             rewardHubUIController.OpenHub();
             return;
         }
 
         if (SkillDataParser.Instance != null && SkillDataParser.Instance.SkillRewardUI != null)
         {
-            Debug.Log("[Roundmanager] Fallback -> SkillRewardUI.ShowRewardOptions()");
+            Debug.Log("[RoundManager] Fallback -> SkillRewardUI.ShowRewardOptions()");
             SkillDataParser.Instance.SkillRewardUI.ShowRewardOptions();
         }
         else
-            Debug.LogError("[Roundmanager] RewardHubUIController와 SkillRewardUI가 모두 없습니다.");
+            Debug.LogError("[RoundManager] RewardHubUIController와 SkillRewardUI가 모두 없습니다.");
     }
 
 
@@ -476,7 +476,7 @@ public class Roundmanager : MonoBehaviour
     /// </summary>
     void ShowCardReward()
     {
-        Debug.Log("[Roundmanager] 카드 획득 보상 표시");
+        Debug.Log("[RoundManager] 카드 획득 보상 표시");
 
         var hud = FindFirstObjectByType<Battle.UI.CardHandHUD>(FindObjectsInactive.Include);
         Battle.UI.NewCardView cardPrefab = hud != null ? hud.CardPrefab : null;
@@ -512,7 +512,7 @@ public class Roundmanager : MonoBehaviour
         var panel = FindFirstObjectByType<Battle.UI.ComboBookRewardPanelUI>(FindObjectsInactive.Include);
         if (panel == null)
         {
-            Debug.LogWarning("[Roundmanager] ComboBookRewardPanelUI를 찾지 못해 콤보 보상을 생략하고 맵으로 복귀합니다.");
+            Debug.LogWarning("[RoundManager] ComboBookRewardPanelUI를 찾지 못해 콤보 보상을 생략하고 맵으로 복귀합니다.");
             ReturnToMap();
             return;
         }
@@ -525,18 +525,18 @@ public class Roundmanager : MonoBehaviour
                 if (nb != null)
                 {
                     nb.AddOwnedCombo(selected.refComboId);
-                    Debug.Log($"[Roundmanager] 콤보 보상 획득: refComboId={selected.refComboId}, name={selected.displayName}");
+                    Debug.Log($"[RoundManager] 콤보 보상 획득: refComboId={selected.refComboId}, name={selected.displayName}");
                 }
                 else
                 {
-                    Debug.LogWarning("[Roundmanager] NewBattleController.Instance가 없어 콤보 보상 지급을 건너뜁니다.");
+                    Debug.LogWarning("[RoundManager] NewBattleController.Instance가 없어 콤보 보상 지급을 건너뜁니다.");
                 }
             }
 
             ReturnToMap();
         });
 
-        Debug.Log("[Roundmanager] 카드 보상 후 책 UI 콤보 보상 표시");
+        Debug.Log("[RoundManager] 카드 보상 후 책 UI 콤보 보상 표시");
     }
 
     /// <summary>기획서 0.6v: 전투 등급별 골드 일괄 지급. 비전투 라운드는 지급하지 않는다.</summary>

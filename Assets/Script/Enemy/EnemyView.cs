@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using UnityEngine.Serialization;
 
 public class EnemyView : MonoBehaviour
 {
@@ -55,7 +56,8 @@ public class EnemyView : MonoBehaviour
     public ParticleSystem wEffect;
     public ParticleSystem eEffect;
     public ParticleSystem rEffect;
-    public ParticleSystem LEffect;
+    [FormerlySerializedAs("LEffect")]
+    public ParticleSystem lEffect;
 
     [Header("피격 반응 (빨강 플래시 + 흔들기)")]
     [SerializeField] private bool hitReactionEnabled = true;
@@ -296,7 +298,7 @@ public class EnemyView : MonoBehaviour
     {
         if (attackPreviewText == null) return;
 
-        int damagePerHit = Mathf.RoundToInt(stat.AttackDamage);
+        int damagePerHit = Mathf.RoundToInt(stat.attackDamage);
         if (damagePerHit < 0)
             damagePerHit = 0;
 
@@ -423,7 +425,7 @@ public class EnemyView : MonoBehaviour
             case "W": PlayHitParticle(wEffect); break;
             case "E": PlayHitParticle(eEffect); break;
             case "R": PlayHitParticle(rEffect); break;
-            case "L": PlayHitParticle(LEffect); break;
+            case "L": PlayHitParticle(lEffect); break;
         }
     }
 

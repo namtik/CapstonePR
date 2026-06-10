@@ -8,11 +8,11 @@ namespace Battle
     /// <summary>
     /// SampleScene(본 게임)에서 신규 카드 전투 시스템을 "항상" 활성화하는 부트스트랩.
     ///
-    /// Awake에서 NewBattleController를 먼저 생성해 Roundmanager의
+    /// Awake에서 NewBattleController를 먼저 생성해 RoundManager의
     /// IsNewBattleSystemActive()(= Instance != null) 가드가 라운드 시작 전에 true가 되도록 보장한다.
     /// 동시에 레거시(ElementSlotSystem/ComboSystem 등)를 비활성화하고 유물/HUD/런덱을 준비한다.
     ///
-    /// 전투 시작(StartBattle)/종료(EndBattle)는 Roundmanager가 노드 진입/종료 시 호출한다(여기선 안 함).
+    /// 전투 시작(StartBattle)/종료(EndBattle)는 RoundManager가 노드 진입/종료 시 호출한다(여기선 안 함).
     /// BattleTestController의 격리 셋업과 동일 패턴이되, 단일 전투가 아니라 런 전체를 전제로 한다.
     /// </summary>
     [DefaultExecutionOrder(-1000)]

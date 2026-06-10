@@ -4,7 +4,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 보스 스테이지를 클리어하면 게임 클리어 화면을 표시한다.
 /// 이 스크립트는 항상 활성화된 오브젝트(예: GameStateController)에 붙인다.
-/// gameClearCanvas는 비활성 상태로 시작하고, 보스 클리어 시 Roundmanager가 활성화한다.
+/// gameClearCanvas는 비활성 상태로 시작하고, 보스 클리어 시 RoundManager가 활성화한다.
 /// 화면(캔버스)과 버튼 배치는 직접 구성한 뒤 아래 필드에 연결하면 된다.
 /// 버튼은 [메인 메뉴], [게임 종료] 2개.
 /// </summary>
@@ -53,7 +53,7 @@ public class GameClearController : MonoBehaviour
             Instance = null;
     }
 
-    /// <summary>게임 클리어 화면을 표시한다. (보스 클리어 시 Roundmanager가 호출)</summary>
+    /// <summary>게임 클리어 화면을 표시한다. (보스 클리어 시 RoundManager가 호출)</summary>
     public void ShowGameClear()
     {
         if (gameClearCanvas == null)

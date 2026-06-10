@@ -267,12 +267,6 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
-    void CreateUITexts()
-    {
-        // Runtime auto-creation is disabled.
-        // Assign resultText in inspector if this UI is needed.
-    }
-
     public void ResetStatusForNewBattle()
     {
         // 방어도 초기화
@@ -352,31 +346,6 @@ public class Player : MonoBehaviour, IBattleUnit
     //        StartCooldown();
     //    }
     //}
-
-    public void OnProjectileHit(float damage)
-    {
-        //if (isDodging)
-        //{
-        //    ShowResult("회피 성공!", Color.green);
-        //    isDodging = false;
-        //    inputTimer = 0f;
-        //    damage = 0f; // 회피 성공
-        //    return;
-        //}
-
-        //if (isDefending)
-        //{
-        //    float reducedDamage = damage * 0.5f;
-        //    ShowResult("방어 성공!", Color.cyan);
-        //    isDefending = false;
-        //    inputTimer = 0f;
-        //    damage=0f; // 방어 성공
-        //    return;
-        //}
-
-        //ShowResult("피격!", Color.red);
-        //TakeDamage(damage);
-    }
 
     public void TakeDamage(float damage, string cardtype = "normal")
     {

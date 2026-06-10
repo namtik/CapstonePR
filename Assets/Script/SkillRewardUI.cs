@@ -8,7 +8,7 @@ public class SkillRewardUI : MonoBehaviour
     public GameObject rewardPanel;     // 전체 패널
     public Transform cardContainer;    // 카드가 생성될 부모
     public GameObject cardPrefab;      // 선택지 카드 프리팹 (버튼 포함)
-    public Roundmanager roundManager;          // 라운드 매니저 참조
+    public RoundManager roundManager;          // 라운드 매니저 참조
     public MapNode currentNode;                      // 현재 노드 참조
 
     public int currentStage;
@@ -219,7 +219,7 @@ public class SkillRewardUI : MonoBehaviour
             Debug.Log($"[SkillRewardUI] cardContainer resolved: {cardContainer.name}");
 
         if (roundManager == null)
-            roundManager = FindFirstObjectByType<Roundmanager>(FindObjectsInactive.Include);
+            roundManager = FindFirstObjectByType<RoundManager>(FindObjectsInactive.Include);
     }
 
     static GameObject FindGameObjectByNameIncludingInactive(string targetName)

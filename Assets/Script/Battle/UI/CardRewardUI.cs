@@ -53,13 +53,13 @@ namespace Battle.UI
             titlePosition = position;
         }
 
-        /// <summary>"선택하지 않기" 버튼 스타일을 외부(Roundmanager 인스펙터)에서 주입.</summary>
+        /// <summary>"선택하지 않기" 버튼 스타일을 외부(RoundManager 인스펙터)에서 주입.</summary>
         public void SetSkipButtonStyle(RewardSkipButtonStyle style)
         {
             if (style != null) skipButtonStyle = style;
         }
 
-        /// <summary>카드 배율과 카드 간 간격을 외부(Roundmanager 인스펙터)에서 주입.</summary>
+        /// <summary>카드 배율과 카드 간 간격을 외부(RoundManager 인스펙터)에서 주입.</summary>
         public void SetCardLayout(float scale, float spacing)
         {
             cardScale = Mathf.Clamp(scale, 0.3f, 2f);
@@ -272,7 +272,7 @@ namespace Battle.UI
             }
 
             // 선택하지 않기 버튼 — 카드를 고르지 않고 보상 종료.
-            // 일반 전투면 맵으로, 정예/보스면 콤보북 보상으로 분기(Roundmanager 콜백이 처리).
+            // 일반 전투면 맵으로, 정예/보스면 콤보북 보상으로 분기(RoundManager 콜백이 처리).
             if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
             skipButtonStyle.Build(prt, Skip);
         }

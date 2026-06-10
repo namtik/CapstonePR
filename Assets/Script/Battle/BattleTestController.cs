@@ -9,7 +9,7 @@ using Battle.UI;
 /// <summary>
 /// 전투 단일 라운드 테스트용 진입점.
 /// GameStateController/MapManager 흐름을 우회하고 Inspector 값으로
-/// Player/Enemy/Round를 직접 세팅한 뒤 Roundmanager를 호출한다.
+/// Player/Enemy/Round를 직접 세팅한 뒤 RoundManager를 호출한다.
 /// 새 카드슬롯/콤보 시스템 프로토타입을 격리된 환경에서 시험할 때 사용.
 /// </summary>
 [DefaultExecutionOrder(-1000)]
@@ -65,7 +65,7 @@ public class BattleTestController : MonoBehaviour
     [Tooltip("Play 시작 시 씬의 GameStateController를 비활성화하여 맵 자동 표시를 막는다.")]
     [SerializeField] private bool disableGameStateController = true;
 
-    private Roundmanager cachedRoundManager;
+    private RoundManager cachedRoundManager;
 
     void Awake()
     {
@@ -122,10 +122,10 @@ public class BattleTestController : MonoBehaviour
         RoundData data = BuildRoundData();
         if (data == null) return;
 
-        Roundmanager rm = ResolveRoundManager();
+        RoundManager rm = ResolveRoundManager();
         if (rm == null)
         {
-            Debug.LogError("[BattleTest] Roundmanager가 씬에 없습니다.");
+            Debug.LogError("[BattleTest] RoundManager가 씬에 없습니다.");
             return;
         }
 
@@ -138,7 +138,7 @@ public class BattleTestController : MonoBehaviour
 
     System.Collections.IEnumerator StartNewBattleAfterFrame()
     {
-        // Roundmanager가 적을 스폰할 시간을 한 프레임 줌
+        // RoundManager가 적을 스폰할 시간을 한 프레임 줌
         yield return null;
         yield return null;
 
@@ -298,10 +298,10 @@ public class BattleTestController : MonoBehaviour
         return null;
     }
 
-    Roundmanager ResolveRoundManager()
+    RoundManager ResolveRoundManager()
     {
         if (cachedRoundManager != null) return cachedRoundManager;
-        cachedRoundManager = FindFirstObjectByType<Roundmanager>();
+        cachedRoundManager = FindFirstObjectByType<RoundManager>();
         return cachedRoundManager;
     }
 

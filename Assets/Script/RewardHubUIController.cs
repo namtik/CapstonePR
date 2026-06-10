@@ -9,7 +9,7 @@ public class RewardHubUIController : MonoBehaviour
     [SerializeField] private GameObject cardUpgradeRoot;
 
     [Header("References")]
-    [SerializeField] private Roundmanager roundManager;
+    [SerializeField] private RoundManager roundManager;
     [SerializeField] private SkillRewardUI skillRewardUI;
     [SerializeField] private CardUpgradeUIController cardUpgradeUIController;
     [SerializeField] private Button comboSkillButton;
@@ -140,7 +140,7 @@ public class RewardHubUIController : MonoBehaviour
         if (roundManager != null)
             roundManager.ReturnToMap();
         else
-            Debug.LogWarning("[RewardHubUIController] Roundmanager reference is missing.");
+            Debug.LogWarning("[RewardHubUIController] RoundManager reference is missing.");
     }
 
     void HandleSkillSelected(SkillDataParser.SkillData _)
@@ -196,7 +196,7 @@ public class RewardHubUIController : MonoBehaviour
         }
 
         if (roundManager == null)
-            roundManager = FindFirstObjectByType<Roundmanager>(FindObjectsInactive.Include);
+            roundManager = FindFirstObjectByType<RoundManager>(FindObjectsInactive.Include);
 
         if (cardUpgradeUIController == null && cardUpgradeRoot != null)
             cardUpgradeUIController = cardUpgradeRoot.GetComponent<CardUpgradeUIController>();

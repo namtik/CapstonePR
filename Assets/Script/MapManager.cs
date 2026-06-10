@@ -29,7 +29,7 @@ public class MapManager : MonoBehaviour
     private List<GameObject> pathLines = new List<GameObject>();
     private Sprite lineSprite;
 
-    public Roundmanager roundManager;  // : ���� �Ŵ��� ����
+    public RoundManager roundManager;  // : ���� �Ŵ��� ����
 
     [Header("디버그 — 보스방 바로 진입 (테스트용)")]
     [Tooltip("ON이면 맵에서 아래 키를 눌러 보스방으로 즉시 진입한다.")]
@@ -470,7 +470,7 @@ public class MapManager : MonoBehaviour
 
         if (roundManager == null)
         {
-            Debug.LogWarning("[MapManager] roundManager가 미연결입니다.");
+            Debug.LogWarning("[MapManager] RoundManager가 미연결입니다.");
             return;
         }
 

@@ -107,7 +107,7 @@ public class EventStageController : MonoBehaviour
     [SerializeField] private bool overrideResultTextStyle = true;
     [SerializeField] private ResultTextStyle resultTextStyle = new ResultTextStyle();
 
-    private Roundmanager roundManager;
+    private RoundManager roundManager;
     private int currentEventIndex;
     private EventPhase phase = EventPhase.Idle;
     private int phaseEnteredFrame;
@@ -150,7 +150,7 @@ public class EventStageController : MonoBehaviour
             ReturnToMap();
     }
 
-    public void BeginEvent(EventRoundData data, Roundmanager manager)
+    public void BeginEvent(EventRoundData data, RoundManager manager)
     {
         roundManager = manager;
 
