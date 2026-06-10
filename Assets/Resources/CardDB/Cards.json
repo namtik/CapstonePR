@@ -27,6 +27,19 @@
       "description": "방어도를 3 얻는다."
     },
     {
+      "id": 102,
+      "name": "화염격",
+      "element": "FIRE",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "102Img",
+      "description": "피해를 5 준다, 화상을 5 부여한다."
+    },
+    {
       "id": 103,
       "name": "불태우기",
       "element": "FIRE",
@@ -92,6 +105,84 @@
       "description": "피해를 30 준다. 자신에게 피해를 5 준다."
     },
     {
+      "id": 108,
+      "name": "잿불",
+      "element": "FIRE",
+      "type": "ATTACK",
+      "gauge": 3,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "108Img",
+      "description": "모든 적에게 피해를 25 준다. 이 카드가 소멸될 시에도 발동한다."
+    },
+    {
+      "id": 109,
+      "name": "전소",
+      "element": "FIRE",
+      "type": "ATTACK",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "109Img",
+      "description": "모든 적에게 피해를 30 준다. 손에 있는 모든 카드를 소멸 시킨다."
+    },
+    {
+      "id": 110,
+      "name": "겁화",
+      "element": "FIRE",
+      "type": "ATTACK",
+      "gauge": 3,
+      "rarity": "Epic",
+      "tags": ["EXHAUST"],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "110Img",
+      "description": "소멸, 피해를 100 준다. 패를 제외한 모든 카드를 소멸시킨다."
+    },
+    {
+      "id": 111,
+      "name": "연소",
+      "element": "FIRE",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "111Img",
+      "description": "무작위 적에게 피해를 20 준다. 적을 처치했다면 한 번 더 발동한다."
+    },
+    {
+      "id": 112,
+      "name": "발화",
+      "element": "FIRE",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "112Img",
+      "description": "화상을 10 부여한다."
+    },
+    {
+      "id": 113,
+      "name": "비화",
+      "element": "FIRE",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "113Img",
+      "description": "화상을 15 부여한다. 이 카드가 소멸될 시 모든 적에게 화상을 20 부여한다."
+    },
+    {
       "id": 114,
       "name": "소신",
       "element": "FIRE",
@@ -100,9 +191,22 @@
       "rarity": "Normal",
       "tags": [],
       "comboSlot": true,
-      "effectName": "",
+      "effectName": "Fire_ATK",
       "skillImg": "114Img",
       "description": "화상을 20 부여한다. 자신에게 피해를 5 준다."
+    },
+    {
+      "id": 115,
+      "name": "잿더미",
+      "element": "FIRE",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "115Img",
+      "description": "소멸한 카드 수 만큼 화상 부여한다."
     },
     {
       "id": 116,
@@ -113,9 +217,48 @@
       "rarity": "Epic",
       "tags": [],
       "comboSlot": true,
-      "effectName": "",
+      "effectName": "Fire_ATK",
       "skillImg": "116Img",
       "description": "적이 보유한 화상 모두 소모하고 소모한 화상 2배만큼 피해를 준다."
+    },
+    {
+      "id": 117,
+      "name": "맹화",
+      "element": "FIRE",
+      "type": "SKILL",
+      "gauge": 3,
+      "rarity": "Epic",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Fire_ATK",
+      "skillImg": "117Img",
+      "description": "적이 보유한 화상 만큼 화상 부여한다."
+    },
+    {
+      "id": 118,
+      "name": "혈제",
+      "element": "FIRE",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "118Img",
+      "description": "자신의 체력을 절반으로 만들고 잃은 만큼 모든 적에게 화상을 부여한다."
+    },
+    {
+      "id": 119,
+      "name": "불지피기",
+      "element": "FIRE",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "119Img",
+      "description": "자신에게 피해를 3 준다. 카드를 2장 드로우한다."
     },
     {
       "id": 120,
@@ -157,6 +300,19 @@
       "description": "카드의 효과로 체력을 잃을 때 마다 카드의 피해량이 1 늘어난다."
     },
     {
+      "id": 123,
+      "name": "윤회",
+      "element": "FIRE",
+      "type": "POWER",
+      "gauge": 5,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Fire_POW",
+      "skillImg": "123Img",
+      "description": "소멸 카드 사용 시 그 카드의 효과가 한 번 더 발동한다."
+    },
+    {
       "id": 124,
       "name": "천지작열",
       "element": "FIRE",
@@ -168,6 +324,19 @@
       "effectName": "Fire_POW",
       "skillImg": "124Img",
       "description": "화상을 부여 하는 스킬 카드가 적 전체를 대상으로 하게한다."
+    },
+    {
+      "id": 125,
+      "name": "다비",
+      "element": "FIRE",
+      "type": "POWER",
+      "gauge": 5,
+      "rarity": "Epic",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Fire_POW",
+      "skillImg": "125Img",
+      "description": "카드가 소멸될 때 마다 무작위 적에게 화상을 5 부여한다."
     },
     {
       "id": 126,
@@ -209,6 +378,32 @@
       "description": "방어도를 3 얻는다."
     },
     {
+      "id": 202,
+      "name": "청류",
+      "element": "WATER",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Water_ATK",
+      "skillImg": "202Img",
+      "description": "피해를 5 준다. 체력이 가득차 있다면 카드를 2장 뽑는다."
+    },
+    {
+      "id": 203,
+      "name": "역류",
+      "element": "WATER",
+      "type": "ATTACK",
+      "gauge": 2,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Water_ATK",
+      "skillImg": "203Img",
+      "description": "피해를 10 준다. 버린 카드 더미에 있는 카드 중 1장을 선택하여 패로 가져온다."
+    },
+    {
       "id": 204,
       "name": "서리 칼날",
       "element": "WATER",
@@ -233,6 +428,19 @@
       "effectName": "Water_ATK",
       "skillImg": "205Img",
       "description": "모든 적에게 피해를 20 준다. 이 카드가 버려질 시에도 발동한다."
+    },
+    {
+      "id": 206,
+      "name": "파문",
+      "element": "WATER",
+      "type": "ATTACK",
+      "gauge": 2,
+      "rarity": "Epic",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Water_ATK",
+      "skillImg": "206Img",
+      "description": "무작위 적에게 피해를 15 준다. 이 카드를 복사하여 버린 카드 더미에 추가한다. 이 카드가 버려질 때에도 발동한다."
     },
     {
       "id": 207,
@@ -261,6 +469,84 @@
       "description": "소멸, 모든 적에게 1의 피해를 준다. 적 빙결이 10 이상일 시 즉사한다. (보스, 정예는 예외)"
     },
     {
+      "id": 209,
+      "name": "한파",
+      "element": "WATER",
+      "type": "ATTACK",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Water_ATK",
+      "skillImg": "209Img",
+      "description": "모든 적에게 피해를 20 준다. 빙결 중인 적에게는 2배의 피해를 준다."
+    },
+    {
+      "id": 210,
+      "name": "결빙",
+      "element": "WATER",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Water_ATK",
+      "skillImg": "210Img",
+      "description": "피해를 5 준다. 적 빙결 보유 시 빙결 스택이 2배가 된다."
+    },
+    {
+      "id": 211,
+      "name": "급류",
+      "element": "WATER",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Water_ATk",
+      "skillImg": "211Img",
+      "description": "피해를 12 준다. 패에서 카드를 1장 선택하여 버린다."
+    },
+    {
+      "id": 212,
+      "name": "물갈이",
+      "element": "WATER",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "212Img",
+      "description": "카드를 1장 드로우한다. 패에서 카드를 1장 선택하여 버린다."
+    },
+    {
+      "id": 213,
+      "name": "역행",
+      "element": "WATER",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "213Img",
+      "description": "버린 카드 더미에 있는 카드 중 하나를 선택하여 뽑을 카드 더미 맨위로 올린다."
+    },
+    {
+      "id": 214,
+      "name": "서릿발",
+      "element": "WATER",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "214Img",
+      "description": "패를 모두 버리고 버린 수 만큼 모든 적에게 빙결을 부여한다."
+    },
+    {
       "id": 215,
       "name": "치유의 정수",
       "element": "WATER",
@@ -285,6 +571,19 @@
       "effectName": "Water_DEF",
       "skillImg": "216Img",
       "description": "방어도를 5 얻는다. 무작위 적에게 빙결을 2 부여한다."
+    },
+    {
+      "id": 217,
+      "name": "물길",
+      "element": "WATER",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "217Img",
+      "description": "뽑을 카드 더미에 있는 카드를 1장 선택하여 패로 가져온다."
     },
     {
       "id": 218,
@@ -326,6 +625,19 @@
       "description": "적에게 빙결을 5 부여한다."
     },
     {
+      "id": 221,
+      "name": "범람",
+      "element": "WATER",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Epic",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "221Img",
+      "description": "패에 있는 카드를 모두 버리고 버린 만큼 카드를 뽑는다."
+    },
+    {
       "id": 222,
       "name": "생명의 샘",
       "element": "WATER",
@@ -339,6 +651,19 @@
       "description": "물 속성 카드를 사용할 때 마다 체력을 1 회복한다."
     },
     {
+      "id": 223,
+      "name": "감로",
+      "element": "WATER",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Epic",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Water_POW",
+      "skillImg": "223Img",
+      "description": "플레이어가 회복될 때 마다 카드를 1장 드로우한다."
+    },
+    {
       "id": 224,
       "name": "순환심법",
       "element": "WATER",
@@ -350,6 +675,32 @@
       "effectName": "Water_POW",
       "skillImg": "224Img",
       "description": "카드의 효과로 카드를 버릴 때 마다 카드를 1장 드로우한다."
+    },
+    {
+      "id": 225,
+      "name": "혹한",
+      "element": "WATER",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Water_POW",
+      "skillImg": "225Img",
+      "description": "카드의 효과로 빙결이 부여될 때 마다 추가로 1 더 부여한다."
+    },
+    {
+      "id": 226,
+      "name": "낙숫물",
+      "element": "WATER",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Water_POW",
+      "skillImg": "226Img",
+      "description": "물 속성 카드를 3번 사용할 때마다 빙결을 1 부여한다."
     },
     {
       "id": 300,
@@ -376,6 +727,19 @@
       "effectName": "Wind_DEF",
       "skillImg": "301Img",
       "description": "방어도를 3 얻는다."
+    },
+    {
+      "id": 302,
+      "name": "미풍",
+      "element": "WIND",
+      "type": "ATTACK",
+      "gauge": 0,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Wind_ATK",
+      "skillImg": "302Img",
+      "description": "피해를 5 준다."
     },
     {
       "id": 303,
@@ -415,6 +779,19 @@
       "effectName": "Wind_ATK",
       "skillImg": "305Img",
       "description": "무작위 적에게 4만큼 피해를 준다. 5번 반복한다."
+    },
+    {
+      "id": 306,
+      "name": "쾌풍격",
+      "element": "WIND",
+      "type": "ATTACK",
+      "gauge": 2,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Wind_ATK",
+      "skillImg": "306Img",
+      "description": "피해를 5 x 3 준다. 이전 턴에 스킬 카드를 사용했다면 행동 게이지를 소모하지 않는다."
     },
     {
       "id": 307,
@@ -469,6 +846,32 @@
       "description": "이번 전투에서 소모한 연쇄 만큼 피해를 준다."
     },
     {
+      "id": 311,
+      "name": "잔상",
+      "element": "WIND",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Wind_ATK",
+      "skillImg": "311Img",
+      "description": "피해를 4 준다. 이 카드와 같은 이름의 카드를 사용한 수 만큼 반복한다."
+    },
+    {
+      "id": 312,
+      "name": "흘리기",
+      "element": "WIND",
+      "type": "SKILL",
+      "gauge": 0,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Wind_DEF",
+      "skillImg": "312Img",
+      "description": "방어도를 5 얻는다."
+    },
+    {
       "id": 313,
       "name": "숨고르기",
       "element": "WIND",
@@ -480,6 +883,19 @@
       "effectName": "",
       "skillImg": "313Img",
       "description": "카드를 1장 드로우한다."
+    },
+    {
+      "id": 314,
+      "name": "회풍",
+      "element": "WIND",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "314Img",
+      "description": "이 카드는 사용 시 버린 카드 더미로 이동하지 않고 패로 이동한다. 5번 사용 시 소멸한다."
     },
     {
       "id": 315,
@@ -521,6 +937,110 @@
       "description": "방어도를 5 얻는다. 연쇄를 10 얻는다."
     },
     {
+      "id": 318,
+      "name": "낙엽",
+      "element": "WIND",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Wind_ATK",
+      "skillImg": "318Img",
+      "description": "연쇄를 5 얻는다. 이 카드가 버린 카드 더미로 이동 할 때 무작위 적에게 피해를 10 준다."
+    },
+    {
+      "id": 319,
+      "name": "선풍",
+      "element": "WIND",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "319Img",
+      "description": "연쇄를 5 얻는다. 이 카드가 패에 들어올 때 모든 적에게 피해를 10 준다."
+    },
+    {
+      "id": 320,
+      "name": "바람막이",
+      "element": "WIND",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Wind_DEF",
+      "skillImg": "320Img",
+      "description": "보유한 연쇄를 방어도로 바꾼다."
+    },
+    {
+      "id": 321,
+      "name": "광풍",
+      "element": "WIND",
+      "type": "SKILL",
+      "gauge": 3,
+      "rarity": "Epic",
+      "tags": ["EXHAUST"],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "321Img",
+      "description": "소멸, 패에 있는 바람 카드 효과를 모두 발동 시킨다."
+    },
+    {
+      "id": 322,
+      "name": "칼바람",
+      "element": "WIND",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Wind_POW",
+      "skillImg": "322Img",
+      "description": "연쇄의 피해량이 1 증가한다."
+    },
+    {
+      "id": 323,
+      "name": "기세",
+      "element": "WIND",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Wind_POW",
+      "skillImg": "323Img",
+      "description": "피해를 줄 때 마다 연쇄를 1 획득한다."
+    },
+    {
+      "id": 324,
+      "name": "풍인",
+      "element": "WIND",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Wind_POW",
+      "skillImg": "324Img",
+      "description": "카드를 사용할 때 마다 무작위 적에게 피해를 5 준다."
+    },
+    {
+      "id": 325,
+      "name": "선회",
+      "element": "WIND",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Wind_POW",
+      "skillImg": "325Img",
+      "description": "카드를 사용할 때 마다 연쇄를 1 얻는다."
+    },
+    {
       "id": 326,
       "name": "깨달음",
       "element": "WIND",
@@ -560,6 +1080,32 @@
       "description": "방어도를 3 얻는다."
     },
     {
+      "id": 402,
+      "name": "채석",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Earth_ATK",
+      "skillImg": "402Img",
+      "description": "피해를 5 준다. 무작위 파편 카드 1장을 패로 가져온다."
+    },
+    {
+      "id": 403,
+      "name": "암격",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Earth_ATK",
+      "skillImg": "403Img",
+      "description": "피해를 5 준다, 방어도를 3 얻는다."
+    },
+    {
       "id": 404,
       "name": "철산고",
       "element": "EARTH",
@@ -571,6 +1117,19 @@
       "effectName": "Earth_ATK",
       "skillImg": "404Img",
       "description": "플레이어가 현재 보유한 방어도 만큼 피해를 준다."
+    },
+    {
+      "id": 405,
+      "name": "쇄석",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 2,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Earth_ATK",
+      "skillImg": "405Img",
+      "description": "이번 전투에서 사용한 파편 카드 수만큼 피해를 준다."
     },
     {
       "id": 406,
@@ -586,6 +1145,32 @@
       "description": "이 카드가 패에 들어온 후 진행된 행동 게이지 만큼 피해를 준다."
     },
     {
+      "id": 407,
+      "name": "분쇄",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Earth_ATK",
+      "skillImg": "407Img",
+      "description": "피해를 10 준다. 패에 있는  무작위 대상에게 패에 존재하는 파편 카드를 모두 발동 시킨다."
+    },
+    {
+      "id": 408,
+      "name": "모래폭풍",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 2,
+      "rarity": "Epic",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Earth_ATK",
+      "skillImg": "408Img",
+      "description": "무작위 적에게 피해를 1 준다. 뽑을 카드 더미에 있는 파편 카드 만큼 반복한다."
+    },
+    {
       "id": 409,
       "name": "대지 파열",
       "element": "EARTH",
@@ -597,6 +1182,71 @@
       "effectName": "Earth_ATK",
       "skillImg": "409Img",
       "description": "모든 적에게 피해를 20 준다. 피해를 받은 적 1명 당 무작위 파편 카드를 버린 카드 더미에 섞어 넣는다."
+    },
+    {
+      "id": 410,
+      "name": "연마",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Earth_ATK",
+      "skillImg": "410Img",
+      "description": "피해를 3 준다. 이 카드로 적 처치 시 영구적으로 피해 3 씩 증가한다."
+    },
+    {
+      "id": 411,
+      "name": "각인",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 2,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Earth_ATK",
+      "skillImg": "411Img",
+      "description": "피해를 10 준다. 패에 있는 카드를 1장 선택하여 복사한다."
+    },
+    {
+      "id": 412,
+      "name": "퇴적",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "412Img",
+      "description": "무작위 파편 카드 3장을 뽑을 카드 더미에 추가한다."
+    },
+    {
+      "id": 413,
+      "name": "채집",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "413Img",
+      "description": "파편 카드 1장을 선택하여 패에 추가한다."
+    },
+    {
+      "id": 414,
+      "name": "매장",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "414Img",
+      "description": "무작위 파편 카드 3장을 버린 카드 더미에 추가한다."
     },
     {
       "id": 415,
@@ -612,6 +1262,110 @@
       "description": "방어도를 10 얻는다."
     },
     {
+      "id": 416,
+      "name": "토성",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "Earth_DEF",
+      "skillImg": "416Img",
+      "description": "필드에 있는 적 수 만큼 방어도를 5 얻는다."
+    },
+    {
+      "id": 417,
+      "name": "풍화",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "417Img",
+      "description": "패를 모두 버리고 버린 수 만큼 무작위 파편 카드를 획득한다."
+    },
+    {
+      "id": 418,
+      "name": "주형",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Epic",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "418Img",
+      "description": "패에 있는 카드를 모두 복사하여 버린 카드 더미에 섞어 넣는다."
+    },
+    {
+      "id": 419,
+      "name": "융기",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Epic",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "419Img",
+      "description": "뽑을 카드 더미에 있는 파편 카드를 모두 사용한다."
+    },
+    {
+      "id": 420,
+      "name": "채굴",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "420Img",
+      "description": "각 종류별 파편 카드를 손에 추가한다."
+    },
+    {
+      "id": 421,
+      "name": "광맥",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 3,
+      "rarity": "Epic",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "421Img",
+      "description": "파편을 하나 선택하여 같은 이름의 카드를 버린 카드 더미에 5장 섞어 넣는다."
+    },
+    {
+      "id": 422,
+      "name": "지반",
+      "element": "EARTH",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Normal",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Earth_POW",
+      "skillImg": "422Img",
+      "description": "패 최대 한도가 1 늘어난다."
+    },
+    {
+      "id": 423,
+      "name": "축성",
+      "element": "EARTH",
+      "type": "POWER",
+      "gauge": 3,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Earth_POW",
+      "skillImg": "423Img",
+      "description": "카드를 사용할 때 마다 방어도를 1 얻는다."
+    },
+    {
       "id": 424,
       "name": "금강불괴",
       "element": "EARTH",
@@ -625,6 +1379,32 @@
       "description": "적 공격 이후 방어도를 5 얻는다."
     },
     {
+      "id": 425,
+      "name": "낙석",
+      "element": "EARTH",
+      "type": "POWER",
+      "gauge": 4,
+      "rarity": "Rare",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Earth_POW",
+      "skillImg": "425Img",
+      "description": "파편 카드 사용 시 무작위 적에게 피해를 5 준다."
+    },
+    {
+      "id": 426,
+      "name": "광상",
+      "element": "EARTH",
+      "type": "POWER",
+      "gauge": 5,
+      "rarity": "Epic",
+      "tags": ["POWER"],
+      "comboSlot": true,
+      "effectName": "Earth_POW",
+      "skillImg": "426Img",
+      "description": "파편 카드 사용 시 버린 카드 더미에 무작위 파편 카드를 1장을 추가한다."
+    },
+    {
       "id": 500,
       "name": "탈진",
       "element": "NEUTRAL",
@@ -636,6 +1416,45 @@
       "effectName": "",
       "skillImg": "500Img",
       "description": "효과 X"
+    },
+    {
+      "id": 501,
+      "name": "금속 파편",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": ["EXHAUST", "FRAGMENT", "NO_COMBO_SLOT", "TEMPORARY_ON_CREATE"],
+      "comboSlot": false,
+      "effectName": "Earth_DEF",
+      "skillImg": "501Img",
+      "description": "소멸, 방어도를 5 얻는다."
+    },
+    {
+      "id": 502,
+      "name": "모래 파편",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": ["EXHAUST", "FRAGMENT", "NO_COMBO_SLOT", "TEMPORARY_ON_CREATE"],
+      "comboSlot": false,
+      "effectName": "Earth_ATK",
+      "skillImg": "502Img",
+      "description": "소멸, 피해를 8 준다. 카드를 1장 드로우한다."
+    },
+    {
+      "id": 503,
+      "name": "암석 파편",
+      "element": "EARTH",
+      "type": "ATTACK",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": ["EXHAUST", "FRAGMENT", "NO_COMBO_SLOT", "TEMPORARY_ON_CREATE"],
+      "comboSlot": false,
+      "effectName": "Earth_ATK",
+      "skillImg": "503Img",
+      "description": "소멸, 피해를 10 준다. 방어도를 5 얻는다."
     },
     {
       "id": 504,
