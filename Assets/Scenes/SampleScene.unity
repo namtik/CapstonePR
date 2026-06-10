@@ -7446,7 +7446,7 @@ MonoBehaviour:
   healEffSize: {x: 16000, y: 1024}
   healEffBottomY: 0
   defaultFps: 24
-  playbackSpeed: 1.5
+  playbackSpeed: 1
   foregroundSortingOrder: 30000
   positionOverrides:
   - effectName: Burn_EFF
@@ -7455,7 +7455,7 @@ MonoBehaviour:
     anchoredPos: {x: 0, y: -100}
   sizeOverrides: []
   preferParticlePrefab: 1
-  particleScale: 100
+  particleScale: 200
   particleScaleOverrides: []
   particleLifetimePadding: 0.5
   particlePositionOffsets: []

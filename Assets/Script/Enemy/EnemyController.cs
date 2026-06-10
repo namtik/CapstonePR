@@ -10,6 +10,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [SerializeField] private ParticleSystem hitVFX;
     [Tooltip("적 공격 파티클(hitVFX)을 UI 위에 렌더(UIParticle)할 때 배율. 안 보이면 키우고, 너무 크면 줄이세요(플레이로 튜닝).")]
     [SerializeField] private float hitVfxUiScale = 100f;
+    [Tooltip("적 공격 파티클(hitVFX) 재생 속도 배율 — 1 미만이면 더 천천히(=더 오래) 보인다. 순식간에 사라질 때 낮춰라.")]
+    [Range(0.2f, 2f)]
+    [SerializeField] private float hitVfxPlaybackSpeed = 0.7f;
 
     [Header("새 전투 시스템 공격 시퀀스 (PDF: 16-18-40 순환)")]
     [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 };
@@ -61,6 +64,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
                     if (ps == null) continue;
                     var m = ps.main;
                     m.simulationSpace = ParticleSystemSimulationSpace.Local;
+                    m.simulationSpeed = Mathf.Max(0.01f, hitVfxPlaybackSpeed); // 더 천천히 재생해 오래 보이게
                 }
             }
         }

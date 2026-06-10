@@ -29,8 +29,8 @@ namespace Battle.UI
         [SerializeField] private float healEffBottomY = 0f;
         [Tooltip("재생 FPS — 시트 프레임 수에 맞춰 조정. 보통 12~24.")]
         [SerializeField] private float defaultFps = 24f;
-        [Tooltip("재생 속도 배율 — 스프라이트 FPS와 파티클 시뮬레이션 속도에 함께 곱해진다. 1=원본, 1.5=1.5배 빠름.")]
-        [SerializeField, Range(0.25f, 5f)] private float playbackSpeed = 1.5f;
+        [Tooltip("재생 속도 배율 — 스프라이트 FPS와 파티클 시뮬레이션 속도에 함께 곱해진다. 1=원본, 0.8=더 천천히(오래 보임). 순식간에 사라지면 낮춰라.")]
+        [SerializeField, Range(0.25f, 5f)] private float playbackSpeed = 1.0f;
         [Tooltip("이펙트를 손패 등 다른 UI보다 앞에 그리기 위한 Sort Order. 자체 Canvas+Override Sorting을 자동 설정한다. 손패보다 뒤면 값을 키우세요.")]
         [SerializeField] private int foregroundSortingOrder = 1000;
 

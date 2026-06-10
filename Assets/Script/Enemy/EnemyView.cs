@@ -48,6 +48,9 @@ public class EnemyView : MonoBehaviour
     [SerializeField] private string damagePrefix = "-";
 
     [Header("피격 이펙트 (파티클)")]
+    [Tooltip("피격 파티클 재생 속도 배율 — 1 미만이면 더 천천히(=더 오래) 보인다. 순식간에 사라질 때 낮춰라.")]
+    [Range(0.2f, 2f)]
+    [SerializeField] private float hitEffectPlaybackSpeed = 0.7f;
     public ParticleSystem qEffect;
     public ParticleSystem wEffect;
     public ParticleSystem eEffect;
@@ -74,6 +77,14 @@ public class EnemyView : MonoBehaviour
     [SerializeField] private HitReactionTier mediumHit = new HitReactionTier(0.22f, 14f, 0.13f, 0.75f);
     [SerializeField] private HitReactionTier strongHit = new HitReactionTier(0.32f, 26f, 0.16f, 1f);
 
+    [Header("피격 이미지 교체")]
+    [Tooltip("피격 시 hitSprite로 잠깐 바꿨다가 원래 이미지로 되돌릴지 여부.")]
+    [SerializeField] private bool hitSpriteSwapEnabled = true;
+    [Tooltip("피격 이미지를 유지하는 시간(초). 이 시간이 지나면 원래 이미지로 복귀.")]
+    [SerializeField] private float hitSpriteDuration = 0.25f;
+    [Tooltip("피격 당한 이미지. 보통 EnemyData.hitSprite로 주입되며, 비우면 교체하지 않는다.")]
+    [SerializeField] private Sprite hitSprite;
+
     // 피격 반응 런타임 상태
     private Image _flashImage;
     private Color _flashBaseColor;
@@ -82,6 +93,10 @@ public class EnemyView : MonoBehaviour
     private Vector2 _shakeBasePos;
     private Coroutine _shakeCo;
     private float _hitReactionEndTime; // 마지막 피격 연출이 끝나는 시각(Time.time 기준)
+
+    // 피격 이미지 교체 런타임 상태
+    private Sprite _normalSprite;      // 평상시 스프라이트(피격 후 복귀 대상)
+    private Coroutine _hitSpriteCo;
 
     private EnemyStat stat;
     private Vector3 damageTextOriginLocalPos;
@@ -312,6 +327,14 @@ public class EnemyView : MonoBehaviour
     {
         Debug.Log($"[EnemyView] enemyImage={enemyImage != null}, sprite={sprite?.name}");
         if (enemyImage != null) enemyImage.sprite = sprite;
+        // 피격 이미지에서 되돌릴 기준 스프라이트로 기억(피격 연출 진행 중이 아닐 때만 갱신).
+        if (_hitSpriteCo == null) _normalSprite = sprite;
+    }
+
+    /// <summary>EnemyData에서 피격 당한 이미지를 주입. null이면 교체하지 않는다.</summary>
+    public void SetHitSprite(Sprite sprite)
+    {
+        hitSprite = sprite;
     }
 
 
@@ -375,22 +398,28 @@ public class EnemyView : MonoBehaviour
     {
         switch (cardType)
         {
-            case "Q":
-                if (qEffect != null) qEffect.Play();
-                break;
-            case "W":
-                if (wEffect != null) wEffect.Play();
-                break;
-            case "E":
-                if (eEffect != null) eEffect.Play();
-                break;
-            case "R":
-                if (rEffect != null) rEffect.Play();
-                break;
-            case "L":
-                if (LEffect != null) LEffect.Play();
-                break;
+            case "Q": PlayHitParticle(qEffect); break;
+            case "W": PlayHitParticle(wEffect); break;
+            case "E": PlayHitParticle(eEffect); break;
+            case "R": PlayHitParticle(rEffect); break;
+            case "L": PlayHitParticle(LEffect); break;
         }
+    }
+
+    /// <summary>피격 파티클 재생 — hitEffectPlaybackSpeed로 시뮬레이션 속도를 낮춰 더 오래 보이게 한다.</summary>
+    void PlayHitParticle(ParticleSystem ps)
+    {
+        if (ps == null) return;
+
+        float spd = Mathf.Max(0.01f, hitEffectPlaybackSpeed);
+        // 하위 파티클까지 모두 같은 속도로 — 직접 set이라 반복 호출에도 누적되지 않음(멱등).
+        var systems = ps.GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < systems.Length; i++)
+        {
+            var main = systems[i].main;
+            main.simulationSpeed = spd;
+        }
+        ps.Play();
     }
 
     // ───────────── 피격 반응: 빨강 플래시 + 흔들기 (데미지 3단계) ─────────────
@@ -416,6 +445,44 @@ public class EnemyView : MonoBehaviour
 
         PlayFlash(tier);
         PlayShake(tier);
+        PlayHitSpriteSwap();
+    }
+
+    // ───────────── 피격 이미지 교체: hitSprite로 잠깐 바꿨다가 원래대로 복귀 ─────────────
+
+    void PlayHitSpriteSwap()
+    {
+        if (!hitSpriteSwapEnabled || hitSprite == null || hitSpriteDuration <= 0f) return;
+        if (enemyImage == null) return;
+
+        // 진행 중이 아닐 때만 평상시 스프라이트 캡처 — 연속 피격에도 원본을 잃지 않음.
+        if (_hitSpriteCo == null)
+        {
+            if (_normalSprite == null) _normalSprite = enemyImage.sprite;
+        }
+        else
+        {
+            StopCoroutine(_hitSpriteCo);
+        }
+        _hitSpriteCo = StartCoroutine(HitSpriteRoutine());
+    }
+
+    IEnumerator HitSpriteRoutine()
+    {
+        if (enemyImage == null) { _hitSpriteCo = null; yield break; }
+
+        enemyImage.sprite = hitSprite;
+
+        float t = 0f;
+        while (t < hitSpriteDuration)
+        {
+            if (enemyImage == null) { _hitSpriteCo = null; yield break; }
+            t += Time.deltaTime;
+            yield return null;
+        }
+
+        if (enemyImage != null) enemyImage.sprite = _normalSprite;
+        _hitSpriteCo = null;
     }
 
     void PlayFlash(HitReactionTier tier)

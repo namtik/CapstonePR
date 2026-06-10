@@ -663,6 +663,10 @@ public class Roundmanager : MonoBehaviour
         if (view != null && data.enemySprite != null)
             view.SetSprite(data.enemySprite);
 
+        // 피격 당한 이미지 주입(EnemyData.hitSprite). 비어 있으면 교체 없이 기존 연출만 적용.
+        if (view != null)
+            view.SetHitSprite(data.hitSprite);
+
         // 몬스터 종류에 맞는 전투 배경 적용(적별 배경 풀에서 랜덤). 풀이 비면 라운드 타입 기본 배경 유지.
         if (combatStageController != null)
             combatStageController.ApplyEnemyBackground(data);

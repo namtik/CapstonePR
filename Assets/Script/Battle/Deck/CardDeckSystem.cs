@@ -48,6 +48,8 @@ namespace Battle.Deck
         public event System.Action<CardInstance> OnCardDrawn;
         /// <summary>패에서 버린 더미로 '버려질' 때(사용 아님) 발생 — ON_SELF_DISCARDED 트리거용.</summary>
         public event System.Action<CardInstance> OnCardDiscarded;
+        /// <summary>버린 더미가 뽑을 더미로 리셔플될 때 발생(인자=되돌아간 카드 수). 덱 카운트업 연출용.</summary>
+        public event System.Action<int> OnReshuffled;
 
         // ─────────────────────────────────────────────────────────────
         // 초기화
@@ -160,10 +162,12 @@ namespace Battle.Deck
         void ReshuffleDiscardIntoDraw()
         {
             if (_discardPile.Count == 0) return;
+            int moved = _discardPile.Count;
             _drawPile.AddRange(_discardPile);
             _discardPile.Clear();
             Shuffle(_drawPile);
             Debug.Log("[DeckSystem] 버린 더미 → 뽑을 더미로 셔플");
+            OnReshuffled?.Invoke(moved); // 덱 카운트업 연출 신호(되돌아간 카드 수)
         }
 
         // ─────────────────────────────────────────────────────────────

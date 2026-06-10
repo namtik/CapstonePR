@@ -5,6 +5,8 @@ public class EnemyData : ScriptableObject
 {
     public string enemyName; // 적 이름
     public Sprite enemySprite; // 적 스프라이트
+    [Tooltip("피격 시 잠깐 바뀌는 이미지. 비우면 이미지 교체 없이 기존 피격 연출만 적용된다.")]
+    public Sprite hitSprite; // 피격 당한 이미지
 
     public float maxHp = 1000f; // 최대 체력
     public float attackDamage= 10f; // 공격력

@@ -74,6 +74,28 @@ namespace Battle.UI
         [FormerlySerializedAs("feverCountText")]
         [SerializeField] private TMP_Text awakenCountText;
 
+        [Header("버린 더미 카운트 강조 (숫자 변할 때 팝)")]
+        [Tooltip("버린 더미 숫자가 바뀔 때 잠깐 커졌다 줄어드는 팝 연출.")]
+        [SerializeField] private bool discardPopEnabled = true;
+        [Tooltip("팝 시 최대 확대 배율(원본 스케일 기준). 1.6 = 60% 더 커졌다 돌아옴.")]
+        [SerializeField] private float discardPopScale = 1.6f;
+        [Tooltip("커졌다 원래대로 돌아오는 전체 시간(초).")]
+        [SerializeField] private float discardPopDuration = 0.35f;
+
+        [Header("리셔플 카운트업 (묘지→덱 복귀 시 덱 숫자 1,2,3 떨어짐)")]
+        [Tooltip("버린 더미가 덱으로 돌아갈 때 덱 숫자가 1씩 위에서 떨어지며 올라가는 연출.")]
+        [SerializeField] private bool reshuffleCountUpEnabled = true;
+        [Tooltip("숫자 하나가 위에서 제자리로 떨어지는 시간(초).")]
+        [SerializeField] private float reshuffleStepDuration = 0.12f;
+        [Tooltip("숫자와 숫자 사이 간격(초). 0이면 끊김 없이 연속.")]
+        [SerializeField] private float reshuffleStepGap = 0.04f;
+        [Tooltip("숫자가 떨어지기 시작하는 높이(px, 제자리 기준 위쪽).")]
+        [SerializeField] private float reshuffleDropHeight = 36f;
+        [Tooltip("착지 시 살짝 커지는 팝 배율(1=없음).")]
+        [SerializeField] private float reshuffleLandScale = 1.35f;
+        [Tooltip("카운트업으로 표시할 최대 단계 수 — 너무 많으면 길어지므로 상한(이상은 마지막에 실제값으로 정착).")]
+        [SerializeField] private int reshuffleMaxSteps = 12;
+
         [Header("각성 게이지 (HP바 아래)")]
         [Tooltip("게이지 슬라이더 — 비우면 SetAwakenGaugeAnchor 호출 또는 첫 갱신 시 자동 생성.")]
         [FormerlySerializedAs("feverGauge")]
@@ -128,6 +150,19 @@ namespace Battle.UI
         private readonly HashSet<CardInstance> _prevHandSet = new HashSet<CardInstance>();
         private CardDeckSystem _deck;
         public System.Func<CardInstance, bool> UseCardCallback;
+
+        // ── 버린 더미 카운트 팝 강조 상태 ──
+        private int _prevDiscardCount = int.MinValue; // 직전 표시한 버린 더미 수(변화 감지용)
+        private Coroutine _discardPopCo;
+        private Vector3 _discardCountBaseScale = Vector3.one;
+        private bool _discardCountBaseCaptured;
+
+        // ── 덱(뽑을 더미) 리셔플 카운트업 상태 ──
+        private Coroutine _drawCountCo;
+        private bool _drawCountAnimating;          // 카운트업 중엔 Refresh가 덱 숫자를 덮어쓰지 않음
+        private Vector2 _drawCountHomePos;
+        private Vector3 _drawCountBaseScale = Vector3.one;
+        private bool _drawCountBaseCaptured;
         /// <summary>카드 선택/픽커 모드가 완료(선택 동작까지 수행)된 직후 호출 — 보류된 각성 발동 등에 사용.</summary>
         public System.Action SelectionClosedCallback;
 
@@ -248,15 +283,27 @@ namespace Battle.UI
 
         public void Bind(CardDeckSystem deck)
         {
-            if (_deck != null) _deck.OnPileChanged -= Refresh;
+            if (_deck != null)
+            {
+                _deck.OnPileChanged -= Refresh;
+                _deck.OnReshuffled -= HandleReshuffled;
+            }
             _deck = deck;
-            if (_deck != null) _deck.OnPileChanged += Refresh;
+            if (_deck != null)
+            {
+                _deck.OnPileChanged += Refresh;
+                _deck.OnReshuffled += HandleReshuffled;
+            }
             Refresh();
         }
 
         void OnDestroy()
         {
-            if (_deck != null) _deck.OnPileChanged -= Refresh;
+            if (_deck != null)
+            {
+                _deck.OnPileChanged -= Refresh;
+                _deck.OnReshuffled -= HandleReshuffled;
+            }
         }
 
         public void SetAwakenText(string text)
@@ -815,8 +862,132 @@ namespace Battle.UI
             for (int i = 0; i < hand.Count; i++)
                 if (hand[i] != null) _prevHandSet.Add(hand[i]);
 
-            if (drawCountText != null) drawCountText.text = $"{_deck.DrawCount}";
-            if (discardCountText != null) discardCountText.text = $"{_deck.DiscardCount}";
+            // 리셔플 카운트업 중에는 코루틴이 덱 숫자 텍스트를 직접 제어 — 여기서 덮어쓰지 않음.
+            if (drawCountText != null && !_drawCountAnimating) drawCountText.text = $"{_deck.DrawCount}";
+            if (discardCountText != null)
+            {
+                int discardCount = _deck.DiscardCount;
+                discardCountText.text = $"{discardCount}";
+                // 값이 실제로 바뀌었을 때만 팝 강조 (첫 표시는 강조 생략).
+                if (_prevDiscardCount != int.MinValue && discardCount != _prevDiscardCount)
+                    PlayDiscardPop();
+                _prevDiscardCount = discardCount;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 버린 더미 카운트 팝 강조 — 숫자가 바뀔 때 잠깐 커졌다 줄며 색이 번쩍임
+        // ─────────────────────────────────────────────────────────────
+
+        void PlayDiscardPop()
+        {
+            if (!discardPopEnabled || discardCountText == null) return;
+
+            // 기준 스케일은 최초 1회만 캡처 — 연속 팝에도 원본을 잃지 않음.
+            if (!_discardCountBaseCaptured)
+            {
+                _discardCountBaseScale = discardCountText.transform.localScale;
+                _discardCountBaseCaptured = true;
+            }
+
+            if (_discardPopCo != null) StopCoroutine(_discardPopCo);
+            _discardPopCo = StartCoroutine(DiscardPopRoutine());
+        }
+
+        System.Collections.IEnumerator DiscardPopRoutine()
+        {
+            if (discardCountText == null) { _discardPopCo = null; yield break; }
+
+            Transform tr = discardCountText.transform;
+            Vector3 peak = _discardCountBaseScale * Mathf.Max(1f, discardPopScale);
+            float dur = Mathf.Max(0.01f, discardPopDuration);
+            const float upPortion = 0.35f; // 앞 35% 동안 커지고, 나머지 65% 동안 원래대로
+
+            float t = 0f;
+            while (t < dur)
+            {
+                if (discardCountText == null) { _discardPopCo = null; yield break; }
+                t += Time.deltaTime;
+                float n = Mathf.Clamp01(t / dur);
+
+                // 0→peak (ease-out) 후 peak→base (선형). env 0~1. (색 강조 없이 스케일만)
+                float env = n < upPortion
+                    ? 1f - (1f - n / upPortion) * (1f - n / upPortion)
+                    : 1f - (n - upPortion) / (1f - upPortion);
+                env = Mathf.Clamp01(env);
+
+                tr.localScale = Vector3.Lerp(_discardCountBaseScale, peak, env);
+                yield return null;
+            }
+
+            tr.localScale = _discardCountBaseScale;
+            _discardPopCo = null;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 리셔플 카운트업 — 묘지→덱 복귀 시 덱 숫자가 1,2,3… 위에서 떨어지며 올라감
+        // ─────────────────────────────────────────────────────────────
+
+        void HandleReshuffled(int count)
+        {
+            if (!reshuffleCountUpEnabled || drawCountText == null || count <= 0) return;
+            if (_drawCountCo != null) StopCoroutine(_drawCountCo);
+            _drawCountCo = StartCoroutine(DrawCountUpRoutine(count));
+        }
+
+        System.Collections.IEnumerator DrawCountUpRoutine(int count)
+        {
+            var rt = drawCountText.transform as RectTransform;
+            if (rt == null) { _drawCountCo = null; yield break; }
+
+            // 홈 위치/스케일은 최초 1회만 캡처 — 연속 연출에도 기준을 잃지 않음.
+            if (!_drawCountBaseCaptured)
+            {
+                _drawCountHomePos = rt.anchoredPosition;
+                _drawCountBaseScale = rt.localScale;
+                _drawCountBaseCaptured = true;
+            }
+
+            _drawCountAnimating = true; // 진행 중엔 Refresh가 덱 숫자를 덮어쓰지 않음
+
+            int steps = Mathf.Min(count, Mathf.Max(1, reshuffleMaxSteps));
+            Vector3 landPeak = _drawCountBaseScale * Mathf.Max(1f, reshuffleLandScale);
+            float stepDur = Mathf.Max(0.01f, reshuffleStepDuration);
+            Vector2 dropStart = _drawCountHomePos + Vector2.up * reshuffleDropHeight;
+
+            for (int v = 1; v <= steps; v++)
+            {
+                if (drawCountText == null) break;
+                drawCountText.text = v.ToString();
+
+                float t = 0f;
+                while (t < stepDur)
+                {
+                    if (drawCountText == null) break;
+                    t += Time.deltaTime;
+                    float n = Mathf.Clamp01(t / stepDur);
+                    float ease = 1f - (1f - n) * (1f - n); // ease-out — 빠르게 내려와 사뿐히 착지
+                    rt.anchoredPosition = Vector2.Lerp(dropStart, _drawCountHomePos, ease);
+
+                    // 착지 직전(마지막 25%)에 살짝 팝: base→peak→base 삼각 엔벨로프.
+                    float popEnv = 0f;
+                    if (n >= 0.75f) { float m = (n - 0.75f) / 0.25f; popEnv = 1f - Mathf.Abs(2f * m - 1f); }
+                    rt.localScale = Vector3.Lerp(_drawCountBaseScale, landPeak, Mathf.Clamp01(popEnv));
+                    yield return null;
+                }
+
+                rt.anchoredPosition = _drawCountHomePos;
+                rt.localScale = _drawCountBaseScale;
+
+                if (reshuffleStepGap > 0f) yield return new WaitForSeconds(reshuffleStepGap);
+            }
+
+            // 연출 종료 — 실제 현재 덱 수로 정착(그동안 드로우로 줄었을 수 있음).
+            if (drawCountText != null) drawCountText.text = $"{(_deck != null ? _deck.DrawCount : steps)}";
+            rt.anchoredPosition = _drawCountHomePos;
+            rt.localScale = _drawCountBaseScale;
+            _drawCountAnimating = false;
+            _drawCountCo = null;
         }
 
         public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
