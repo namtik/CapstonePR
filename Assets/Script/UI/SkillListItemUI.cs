@@ -9,17 +9,18 @@ using static SkillDataParser;
 public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("UI 참조")]
-    public TextMeshProUGUI nameText;
-    public Transform commandIconContainer; // 속성 아이콘들이 들어갈 부모
+    public TextMeshProUGUI nameText;   // 스킬 이름 텍스트
+    public Transform commandIconContainer;   // 속성 아이콘이 들어갈 부모
 
     [Header("커맨드 속성 아이콘 매핑 (Q/W/E/R)")]
-    public Sprite iconQ; // Q
-    public Sprite iconW; // W
-    public Sprite iconE; // E
-    public Sprite iconR; // R
+    public Sprite iconQ;   // Q 속성 아이콘
+    public Sprite iconW;   // W 속성 아이콘
+    public Sprite iconE;   // E 속성 아이콘
+    public Sprite iconR;   // R 속성 아이콘
 
-    private GameObject tooltipObj;
+    private GameObject tooltipObj;   // 생성된 툴팁 오브젝트
 
+    // 기존 SkillData로 이름/아이콘/툴팁을 구성한다
     public void Setup(SkillData skill)
     {
         if (nameText != null) nameText.text = skill.name;
@@ -27,15 +28,7 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         CreateTooltip(skill);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // 새 전투 시스템: ComboSkillDef 전용 셋업
-    // ─────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// 새 전투 시스템의 ComboSkillDef 표시용. 속성별 sprite는 호출자가 전달.
-    /// cooldownRemaining = 재사용까지 남은 속성 입력 횟수(0=재사용 가능).
-    /// 쿨다운 중이면 반투명 + 이름 옆에 남은 횟수를 표시하고, 0이면 정상 표시.
-    /// </summary>
+    // 새 전투 시스템의 ComboSkillDef로 표시를 구성하고 쿨다운 상태를 반영한다
     public void SetupForCombo(ComboSkillDef combo, int cooldownRemaining,
         Sprite fireSp, Sprite waterSp, Sprite windSp, Sprite earthSp)
     {
@@ -55,6 +48,7 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         canvasGroup.alpha = onCooldown ? 0.4f : 1f;
     }
 
+    // 콤보의 3슬롯 속성에 맞춰 아이콘들을 생성해 컨테이너에 배치한다
     void CreateComboElementIcons(ComboSkillDef combo,
         Sprite fireSp, Sprite waterSp, Sprite windSp, Sprite earthSp)
     {
@@ -94,6 +88,7 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
     }
 
+    // 속성에 대응하는 기본 색상을 반환한다(스프라이트 없을 때 대체용)
     static Color ColorForElement(CardElement element) => element switch
     {
         CardElement.Fire    => new Color(0.95f, 0.55f, 0.40f, 1f),
@@ -104,10 +99,7 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         _ => new Color(0.5f, 0.5f, 0.5f, 1f)
     };
 
-    // ─────────────────────────────────────────────────────────────
-    // 기존 ComboSystem용 (Q/W/E/R 문자 기반)
-    // ─────────────────────────────────────────────────────────────
-
+    // 기존 콤보 문자열(Q/W/E/R)에 맞춰 속성 아이콘들을 생성한다
     private void CreateCommandIcons(string combo)
     {
         if (commandIconContainer == null || string.IsNullOrEmpty(combo)) return;
@@ -139,6 +131,7 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
     }
 
+    // 콤보 문자에 대응하는 속성 아이콘 스프라이트를 반환한다
     private Sprite GetElementSprite(char c)
     {
         switch (c)
@@ -151,16 +144,19 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
     }
 
+    // 포인터 진입 시 툴팁을 표시한다
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (tooltipObj != null) tooltipObj.SetActive(true);
     }
 
+    // 포인터 이탈 시 툴팁을 숨긴다
     public void OnPointerExit(PointerEventData eventData)
     {
         if (tooltipObj != null) tooltipObj.SetActive(false);
     }
 
+    // 스킬 정보를 담은 툴팁 UI를 동적으로 생성한다
     private void CreateTooltip(SkillData skillData)
     {
         tooltipObj = new GameObject("Tooltip");

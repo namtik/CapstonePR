@@ -1,20 +1,17 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+// 플레이어 체력을 하트 아이콘으로 표시하는 UI
 public class HeartUI : MonoBehaviour
 {
     [Header("하트 스프라이트")]
-    public Sprite fullHeartSprite;
-    public Sprite emptyHeartSprite;
+    public Sprite fullHeartSprite; // 채워진 하트 이미지
+    public Sprite emptyHeartSprite; // 빈 하트 이미지
 
     [Header("하트 오브젝트 (PlayerHp 하위의 Heart들)")]
-    public Image[] hearts;
+    public Image[] hearts; // 하트 이미지 배열
 
-    /// <summary>
-    /// 현재 체력에 따라 하트 UI를 업데이트합니다.
-    /// currentHp: 남은 하트 수 (예: 2이면 하트 2개 채움)
-    /// maxHp: 전체 하트 수 (예: 3이면 하트 3개)
-    /// </summary>
+    // 현재/최대 체력에 따라 하트 채움과 표시 개수를 갱신한다
     public void UpdateHearts(int currentHp, int maxHp)
     {
         for (int i = 0; i < hearts.Length; i++)

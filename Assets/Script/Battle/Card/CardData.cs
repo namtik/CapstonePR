@@ -3,38 +3,31 @@ using UnityEngine;
 
 namespace Battle.Card
 {
-    /// <summary>
-    /// 카드 정적 정의 (Resources/CardDB/Cards.json에서 로드).
-    /// 효과는 CardEffectResolver가 id로 분기하여 실행.
-    /// 카드 인스턴스(런타임)는 CardInstance를 사용.
-    /// </summary>
+    // 카드 정적 정의(JSON에서 로드되는 데이터 모델)
     [Serializable]
     public class CardData
     {
-        public int id;
-        public string displayName;
-        public CardElement element;
-        public CardType type;
-        public int gauge;
-        public string description;
+        public int id;                  // 카드 고유 ID
+        public string displayName;      // 표시 이름
+        public CardElement element;     // 카드 속성
+        public CardType type;           // 카드 유형
+        public int gauge;               // 게이지 코스트
+        public string description;      // 설명 문구
 
-        /// <summary>카드 등급(Normal/Rare/Epic). 보상 등장 가중치 등에 사용. (프리팹 표시는 추후)</summary>
-        public CardRarity rarity;
+        public CardRarity rarity;       // 카드 등급
 
-        /// <summary>BASIC / EXHAUST / ONE_TIME / POWER / FRAGMENT / NO_COMBO_SLOT / TEMPORARY_ON_CREATE 등.</summary>
-        public string[] tags;
+        public string[] tags;           // 동작 태그 목록
 
-        /// <summary>카드 사용 시 콤보 슬롯에 입력되는지(파편/무속성은 false).</summary>
-        public bool comboSlot;
+        public bool comboSlot;          // 콤보 슬롯 입력 여부
 
-        /// <summary>아트 바인딩용(EffectName 컬럼).</summary>
-        public string effectName;
+        public string effectName;       // 아트 바인딩용 효과명
 
-        /// <summary>아트 바인딩용(SkillImg 컬럼).</summary>
-        public string skillImg;
+        public string skillImg;         // 아트 바인딩용 스킬 이미지명
 
+        // 기본 생성자
         public CardData() { }
 
+        // 모든 필드를 받는 생성자
         public CardData(int id, string displayName, CardElement element, CardType type,
                         int gauge, string description,
                         string[] tags = null, bool comboSlot = true,
@@ -54,11 +47,14 @@ namespace Battle.Card
             this.rarity = rarity;
         }
 
+        // 파편 카드 여부
         public bool IsFragment => element == CardElement.Fragment;
+        // 무속성 카드 여부
         public bool IsNeutral => element == CardElement.Neutral;
-        /// <summary>콤보 슬롯에 들어가지 않는 카드(파편 + 무속성 + ComboSlot=false).</summary>
+        // 콤보 슬롯을 건너뛰는 카드 여부
         public bool BypassComboSlot => !comboSlot;
 
+        // 지정 태그 보유 여부 확인
         public bool HasTag(string tag)
         {
             if (tags == null || string.IsNullOrEmpty(tag)) return false;
@@ -68,24 +64,20 @@ namespace Battle.Card
         }
     }
 
-    /// <summary>덱/패/더미를 순회하는 런타임 카드 인스턴스.</summary>
+    // 덱/패/더미를 순회하는 런타임 카드 인스턴스
     public class CardInstance
     {
-        public CardData data;
-        /// <summary>이번 전투 한정 생성된 임시 카드(파편). true면 전투 종료 시 소실.</summary>
-        public bool transient;
-        /// <summary>저주된 카드(미사용 상태). 사용 시 플레이어가 피해를 본다.</summary>
-        public bool cursed;
+        public CardData data;          // 원본 카드 데이터
+        public bool transient;         // 이번 전투 한정 임시 카드 여부
+        public bool cursed;            // 저주 여부
 
-        /// <summary>이 카드가 패로 들어온 이후 진행된 게이지 수(땅6/땅16 등의 공식 GAUGE_SINCE_DRAWN).</summary>
-        public int gaugeSinceDrawn;
+        public int gaugeSinceDrawn;    // 패에 들어온 뒤 진행된 게이지 수
 
-        /// <summary>드로우 직후 아직 어떤 카드도 사용되지 않은 상태(바람11/310 USED_IMMEDIATELY_AFTER_DRAW용).</summary>
-        public bool justDrawn;
+        public bool justDrawn;         // 드로우 직후 미사용 상태 여부
 
-        /// <summary>이 인스턴스가 사용된 누적 횟수(바람314 SELF_USE_COUNT / N회 후 소멸용).</summary>
-        public int selfUseCount;
+        public int selfUseCount;       // 이 인스턴스 누적 사용 횟수
 
+        // 카드 데이터로 인스턴스 생성
         public CardInstance(CardData data, bool transient = false)
         {
             this.data = data;
@@ -94,9 +86,13 @@ namespace Battle.Card
             this.justDrawn = false;
         }
 
+        // 카드 ID
         public int Id => data.id;
+        // 카드 속성
         public CardElement Element => data.element;
+        // 카드 유형
         public CardType Type => data.type;
+        // 게이지 코스트
         public int Gauge => data.gauge;
     }
 }

@@ -7,22 +7,24 @@ using UnityEngine.UI;
 public class CardUpgradeUIController : MonoBehaviour
 {
     [Header("Element Card Sprites")]
-    [SerializeField] private Sprite fireElementSprite;
-    [SerializeField] private Sprite waterElementSprite;
-    [SerializeField] private Sprite windElementSprite;
-    [SerializeField] private Sprite landElementSprite;
+    [SerializeField] private Sprite fireElementSprite; // 불 속성 카드 스프라이트
+    [SerializeField] private Sprite waterElementSprite; // 물 속성 카드 스프라이트
+    [SerializeField] private Sprite windElementSprite; // 바람 속성 카드 스프라이트
+    [SerializeField] private Sprite landElementSprite; // 땅 속성 카드 스프라이트
 
-    public event Action OnCardUpgradeSelected;
+    public event Action OnCardUpgradeSelected; // 카드 강화 선택 시 발생 이벤트
 
-    private readonly Dictionary<string, Button> cardButtons = new Dictionary<string, Button>();
-    private readonly Dictionary<string, ElementSlotSystem.RunDeckCard> cardBindings = new Dictionary<string, ElementSlotSystem.RunDeckCard>();
-    private bool upgradeClaimedThisReward;
+    private readonly Dictionary<string, Button> cardButtons = new Dictionary<string, Button>(); // 버튼 이름→버튼 매핑
+    private readonly Dictionary<string, ElementSlotSystem.RunDeckCard> cardBindings = new Dictionary<string, ElementSlotSystem.RunDeckCard>(); // 버튼 이름→카드 바인딩
+    private bool upgradeClaimedThisReward; // 이번 보상에서 강화 사용 여부
 
+    // 버튼 캐싱
     void Awake()
     {
         CacheButtons();
     }
 
+    // 강화 선택 UI 표시 및 바인딩
     public void ShowUpgradeOptions()
     {
         CacheButtons();
@@ -30,12 +32,14 @@ public class CardUpgradeUIController : MonoBehaviour
         RefreshView();
     }
 
+    // 강화 사용 여부 설정 후 뷰 갱신
     public void SetUpgradeClaimed(bool claimed)
     {
         upgradeClaimedThisReward = claimed;
         RefreshView();
     }
 
+    // 자식 버튼 중 카드 버튼을 캐싱
     void CacheButtons()
     {
         cardButtons.Clear();
@@ -53,6 +57,7 @@ public class CardUpgradeUIController : MonoBehaviour
         }
     }
 
+    // 런 덱 카드를 버튼에 바인딩
     void BindCards()
     {
         cardBindings.Clear();
@@ -85,6 +90,7 @@ public class CardUpgradeUIController : MonoBehaviour
         }
     }
 
+    // 버튼별 스프라이트/레벨/클릭 상태 갱신
     void RefreshView()
     {
         foreach (KeyValuePair<string, Button> pair in cardButtons)
@@ -112,6 +118,7 @@ public class CardUpgradeUIController : MonoBehaviour
         }
     }
 
+    // 선택한 카드를 강화하고 이벤트 발생
     void UpgradeCard(string buttonName)
     {
         if (upgradeClaimedThisReward)
@@ -126,6 +133,7 @@ public class CardUpgradeUIController : MonoBehaviour
         RefreshView();
     }
 
+    // 런 덱 카드를 속성별로 그룹화
     static Dictionary<string, List<ElementSlotSystem.RunDeckCard>> BuildGroupedCards(System.Collections.ObjectModel.ReadOnlyCollection<ElementSlotSystem.RunDeckCard> runDeck)
     {
         Dictionary<string, List<ElementSlotSystem.RunDeckCard>> grouped = new Dictionary<string, List<ElementSlotSystem.RunDeckCard>>
@@ -151,6 +159,7 @@ public class CardUpgradeUIController : MonoBehaviour
         return grouped;
     }
 
+    // 카드 버튼 이름 형식인지 판별
     static bool IsCardButtonName(string buttonName)
     {
         if (string.IsNullOrEmpty(buttonName) || buttonName.Length != 3)
@@ -162,6 +171,7 @@ public class CardUpgradeUIController : MonoBehaviour
             && buttonName[2] <= '9';
     }
 
+    // 버튼 이름에서 속성 키 추출
     static string ElementKeyFromButtonName(string buttonName)
     {
         if (string.IsNullOrEmpty(buttonName))
@@ -177,6 +187,7 @@ public class CardUpgradeUIController : MonoBehaviour
         }
     }
 
+    // 버튼 이름에서 카드 인덱스 추출
     static int CardIndexFromButtonName(string buttonName)
     {
         if (string.IsNullOrEmpty(buttonName) || buttonName.Length < 3)
@@ -185,6 +196,7 @@ public class CardUpgradeUIController : MonoBehaviour
         return (buttonName[2] - '1');
     }
 
+    // 버튼에 속성별 스프라이트 적용
     void ApplyButtonSprite(Button button, string buttonName)
     {
         if (button == null)
@@ -209,6 +221,7 @@ public class CardUpgradeUIController : MonoBehaviour
         image.preserveAspect = true;
     }
 
+    // 버튼 하위 텍스트에 레벨 표시
     static void SetLevelText(Button button, string text)
     {
         if (button == null)

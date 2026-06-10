@@ -2,72 +2,60 @@ using System.Collections.Generic;
 using UnityEngine;
 using static SkillDataParser;
 
-/// <summary>
-/// 특성 벡터 추출기 (v4 - 5차원, f2 제거)
-/// 
-/// FCM용 (5차원):
-///   f1 긴급도      = 가장 가까운 콤보 근접도 (4-카드수)/4
-///   f3 반복성      = 위협 콤보 중 최소 사이클
-///   f5 보충 진행도  = 사용한 카드 / 12 (연속)
-///   f7 위협 밀도    = 위협 콤보 수 / 전체 보유 수 (연속, f2 대체)
-///   f8 슬롯 균형도  = 4슬롯 잔여 균등도 (연속)
-/// 
-/// 트리 전용:
-///   f4 오염도      = 무속성 카드 비율
-/// 
-/// f2 제거 이유: 97%에서 0, 분리도 기여 0.1%. f7이 동일 역할을 연속값으로 수행.
-/// </summary>
+// FCM/트리용 특성 벡터 추출기 (5차원 + 오염도)
 public static class FeatureExtractor
 {
+    // 입력 키('q'~'r') → 원소 인덱스 매핑
     private static readonly Dictionary<string, int> KeyToIndex = new Dictionary<string, int>
     {
         { "q", 0 }, { "w", 1 }, { "e", 2 }, { "r", 3 }
     };
 
-    public const int ElementCount = 4;
-    public const float THREAT_THRESHOLD = 0.50f;
-    public const int TOTAL_CARDS = 12;
+    public const int ElementCount = 4;            // 원소 수
+    public const float THREAT_THRESHOLD = 0.50f;  // 위협 판정 근접도 기준
+    public const int TOTAL_CARDS = 12;            // 전체 카드 수
 
+    // 위협 콤보 분석 결과
     public struct ThreatInfo
     {
-        public int SkillIndex;
-        public int MinCards;
-        public float Proximity;
-        public int CycleLength;
-        public bool HasChain;
-        public int ChainSkillIndex;
-        public int ChainCards;
-        public int TotalCards;
+        public int SkillIndex;        // 스킬 인덱스
+        public int MinCards;          // 완성까지 최소 카드 수
+        public float Proximity;       // 근접도(0~1)
+        public int CycleLength;       // 콤보 사이클 길이
+        public bool HasChain;         // 연쇄 여부
+        public int ChainSkillIndex;   // 연쇄 스킬 인덱스
+        public int ChainCards;        // 연쇄 추가 카드 수
+        public int TotalCards;        // 총 카드 수
     }
 
-    // ─── FCM용 특성 추출 (5차원) ───
-
+    // 위협 분석 후 FCM 특성 5차원 추출
     public static float[] ExtractFCMFeatures()
     {
         ThreatInfo[] threats = AnalyzeThreats();
         return CalcFCMFeatures(threats);
     }
 
+    // 위협 정보를 함께 반환하며 FCM 특성 추출
     public static float[] ExtractFCMFeatures(out ThreatInfo[] threats)
     {
         threats = AnalyzeThreats();
         return CalcFCMFeatures(threats);
     }
 
+    // 위협 배열로부터 특성 5차원 계산
     static float[] CalcFCMFeatures(ThreatInfo[] threats)
     {
         return new float[]
         {
-            CalcUrgency(threats),          // f1
-            CalcRepeatRisk(threats),       // f3
-            CalcReplenishProgress(),       // f5
-            CalcThreatDensity(threats),    // f7
-            CalcSlotBalance(),             // f8
+            CalcUrgency(threats),
+            CalcRepeatRisk(threats),
+            CalcReplenishProgress(),
+            CalcThreatDensity(threats),
+            CalcSlotBalance(),
         };
     }
 
-    // ─── f4 오염도 (트리 전용) ───
-
+    // f4 오염도: 위협 원소 슬롯의 무속성 카드 비율
     public static float CalcPollution(ThreatInfo[] threats)
     {
         ElementSlotSystem slotSys = ElementSlotSystem.Instance;
@@ -99,8 +87,7 @@ public static class FeatureExtractor
         return totalCards > 0 ? totalNull / totalCards : 0f;
     }
 
-    // ─── 위협 분석 ───
-
+    // 학습된 스킬들의 위협도(근접/사이클/연쇄) 분석
     public static ThreatInfo[] AnalyzeThreats()
     {
         ComboSystem combo = ComboSystem.Instance;
@@ -162,7 +149,7 @@ public static class FeatureExtractor
         return threats.ToArray();
     }
 
-    // ─── f1: 긴급도 ───
+    // f1 긴급도: 최대 근접도
     static float CalcUrgency(ThreatInfo[] threats)
     {
         float max = 0f;
@@ -171,7 +158,7 @@ public static class FeatureExtractor
         return max;
     }
 
-    // ─── f3: 반복성 ───
+    // f3 반복성: 위협 콤보 중 최소 사이클 기반
     static float CalcRepeatRisk(ThreatInfo[] threats)
     {
         int bestCycle = 4;
@@ -181,7 +168,7 @@ public static class FeatureExtractor
         return Mathf.Clamp01(1f - (bestCycle - 1f) / 3f);
     }
 
-    // ─── f5: 보충 진행도 ───
+    // f5 보충 진행도: 사용한 카드 비율
     static float CalcReplenishProgress()
     {
         ElementSlotSystem slotSys = ElementSlotSystem.Instance;
@@ -191,7 +178,7 @@ public static class FeatureExtractor
         return Mathf.Clamp01((float)(TOTAL_CARDS - rem) / TOTAL_CARDS);
     }
 
-    // ─── f7: 위협 밀도 (f2 대체) ───
+    // f7 위협 밀도: 위협 콤보 / 전체 비율
     static float CalcThreatDensity(ThreatInfo[] threats)
     {
         if (threats.Length == 0) return 0f;
@@ -201,7 +188,7 @@ public static class FeatureExtractor
         return (float)tc / threats.Length;
     }
 
-    // ─── f8: 슬롯 균형도 ───
+    // f8 슬롯 균형도: 4슬롯 잔여 균등도
     static float CalcSlotBalance()
     {
         ElementSlotSystem slotSys = ElementSlotSystem.Instance;
@@ -230,8 +217,7 @@ public static class FeatureExtractor
         return Mathf.Clamp01(1f - Mathf.Sqrt(variance / 4f) / 0.5f);
     }
 
-    // ─── 최소 카드 수 ───
-
+    // 현재 슬롯에서 콤보 완성까지 필요한 최소 카드 수
     static int CalcMinCards(int[] slot, int[] target, ElementSlotSystem slotSys)
     {
         if (slot[0] == target[0] && slot[1] == target[1] && slot[2] == target[2]) return 0;
@@ -243,6 +229,7 @@ public static class FeatureExtractor
         return -1;
     }
 
+    // 소비 후 잔여 카드 기준 최소 카드 수(연쇄 판정용)
     static int CalcMinCardsWithRemaining(int[] slot, int[] target, int[] remaining)
     {
         if (slot[0] == target[0] && slot[1] == target[1] && slot[2] == target[2]) return 0;
@@ -253,8 +240,7 @@ public static class FeatureExtractor
         return -1;
     }
 
-    // ─── 카드 소비 ───
-
+    // 최소 카드 수에 따라 소비될 카드 배열 반환
     static int[] GetConsumedCards(int minCards, int[] target)
     {
         switch (minCards)
@@ -267,6 +253,7 @@ public static class FeatureExtractor
         }
     }
 
+    // 소비 카드 차감 후 슬롯별 잔여 수 계산
     static int[] CalcRemainingAfterConsume(ElementSlotSystem slotSys, int[] consumed)
     {
         int[] rem = new int[4];
@@ -279,6 +266,7 @@ public static class FeatureExtractor
         return rem;
     }
 
+    // 잔여 카드로 필요한 원소를 충족하는지 검사
     static bool HasEnoughFromRemaining(int[] remaining, int[] elements)
     {
         int[] n = new int[4];
@@ -287,6 +275,7 @@ public static class FeatureExtractor
         return true;
     }
 
+    // 슬롯 보유분으로 필요한 원소를 충족하는지 검사
     static bool HasEnoughCards(ElementSlotSystem slotSys, int[] elements)
     {
         if (slotSys == null) return true;
@@ -296,8 +285,7 @@ public static class FeatureExtractor
         return true;
     }
 
-    // ─── 유틸리티 ───
-
+    // 현재 콤보 입력을 원소 인덱스 배열로 변환
     public static int[] GetComboSlotAsIndices()
     {
         ComboSystem combo = ComboSystem.Instance;
@@ -310,6 +298,7 @@ public static class FeatureExtractor
         return result;
     }
 
+    // 콤보 문자열을 원소 인덱스 배열로 변환
     public static int[] ComboStringToIndices(string combo)
     {
         if (string.IsNullOrEmpty(combo) || combo.Length < 3) return null;
@@ -321,6 +310,7 @@ public static class FeatureExtractor
         return result;
     }
 
+    // 콤보 시퀀스의 사이클 길이(1~3) 계산
     static int CalcCycleLength(int[] seq)
     {
         if (seq == null) return 4;

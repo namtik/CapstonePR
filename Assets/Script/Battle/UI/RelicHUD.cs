@@ -7,67 +7,67 @@ using Battle.Relic;
 
 namespace Battle.UI
 {
-    /// <summary>
-    /// 화면 좌상단에 보유 유물 아이콘을 획득 순서대로 표시한다.
-    /// 아이콘에 마우스를 올리면 이름+설명 툴팁이 나타난다.
-    /// </summary>
+    // 좌상단에 보유 유물 아이콘을 표시하고 호버 툴팁을 띄움
     public class RelicHUD : MonoBehaviour
     {
-        public static RelicHUD Instance { get; private set; }
+        public static RelicHUD Instance { get; private set; } // 싱글톤 인스턴스
 
-        private const float ICON_SIZE     = 60f;
-        private const float ICON_SPACING  = 8f;
-        private const float TOOLTIP_PAD   = 12f;
-        private const float TT_ICON_SIZE  = 48f;
+        private const float ICON_SIZE     = 60f; // 아이콘 크기
+        private const float ICON_SPACING  = 8f; // 아이콘 간격
+        private const float TOOLTIP_PAD   = 12f; // 툴팁 내부 여백
+        private const float TT_ICON_SIZE  = 48f; // 툴팁 아이콘 크기
 
         [Header("HUD 위치")]
         [Tooltip("유물 HUD 아이콘 컨테이너의 좌상단 앵커 기준 위치. Y를 더 작은(음수) 값으로 내리면 화면 아래로 이동")]
-        [SerializeField] private Vector2 hudAnchoredPosition = new Vector2(10f, -10f);
+        [SerializeField] private Vector2 hudAnchoredPosition = new Vector2(10f, -10f); // HUD 위치
 
         [Header("HUD 배경 박스")]
         [Tooltip("유물 아이콘 뒤 박스 배경색(알파를 낮추면 반투명)")]
-        [SerializeField] private Color hudBackgroundColor = new Color(0f, 0f, 0f, 0.45f);
+        [SerializeField] private Color hudBackgroundColor = new Color(0f, 0f, 0f, 0.45f); // HUD 배경 색
         [Tooltip("배경 박스 내부 여백 (Left, Right, Top, Bottom)")]
-        [SerializeField] private Vector4 hudBackgroundPadding = new Vector4(10f, 10f, 8f, 8f);
+        [SerializeField] private Vector4 hudBackgroundPadding = new Vector4(10f, 10f, 8f, 8f); // 배경 내부 여백
 
         [Header("툴팁 글씨체")]
         [Tooltip("유물 이름/설명에 사용할 글씨체. 비워두면 TMP 기본 폰트 사용")]
-        [SerializeField] private TMP_FontAsset tooltipFont;
+        [SerializeField] private TMP_FontAsset tooltipFont; // 툴팁 폰트
         [Tooltip("유물 이름 글자 크기")]
-        [SerializeField] private float nameFontSize = 18f;
+        [SerializeField] private float nameFontSize = 18f; // 이름 글자 크기
         [Tooltip("유물 설명 글자 크기")]
-        [SerializeField] private float descFontSize = 15f;
+        [SerializeField] private float descFontSize = 15f; // 설명 글자 크기
 
         [Header("툴팁 크기")]
         [Tooltip("툴팁 가로 폭(px). 세로 높이는 설명 길이에 맞춰 자동 조절된다")]
-        [SerializeField] private float tooltipWidth = 340f;
+        [SerializeField] private float tooltipWidth = 340f; // 툴팁 가로 폭
         [Tooltip("툴팁 최소 세로 높이(px)")]
-        [SerializeField] private float tooltipMinHeight = 90f;
+        [SerializeField] private float tooltipMinHeight = 90f; // 툴팁 최소 높이
 
-        private RectTransform   _iconContainer;
-        private GameObject      _tooltip;
-        private Image           _tooltipIcon;
-        private TextMeshProUGUI _tooltipName;
-        private TextMeshProUGUI _tooltipDesc;
-        private RectTransform   _tooltipRect;
-        private float           _textX;
-        private float           _textW;
-        private float           _nameH;
+        private RectTransform   _iconContainer; // 아이콘 컨테이너
+        private GameObject      _tooltip; // 툴팁 루트
+        private Image           _tooltipIcon; // 툴팁 아이콘
+        private TextMeshProUGUI _tooltipName; // 툴팁 이름 텍스트
+        private TextMeshProUGUI _tooltipDesc; // 툴팁 설명 텍스트
+        private RectTransform   _tooltipRect; // 툴팁 RectTransform
+        private float           _textX; // 툴팁 텍스트 시작 X
+        private float           _textW; // 툴팁 텍스트 폭
+        private float           _nameH; // 이름 줄 높이
 
-        private readonly List<RelicDef>   _relics    = new List<RelicDef>();
-        private readonly List<GameObject> _iconItems = new List<GameObject>();
+        private readonly List<RelicDef>   _relics    = new List<RelicDef>(); // 보유 유물 목록
+        private readonly List<GameObject> _iconItems = new List<GameObject>(); // 생성된 아이콘 목록
 
+        // 싱글톤 인스턴스를 설정
         void Awake()
         {
             if (Instance == null) Instance = this;
             else if (Instance != this) { Destroy(gameObject); return; }
         }
 
+        // 싱글톤 참조를 해제
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
         }
 
+        // 레이아웃을 구성하고 보유 유물을 초기 표시
         void Start()
         {
             BuildLayout();
@@ -75,6 +75,7 @@ namespace Battle.UI
                 Refresh(RelicManager.Instance.OwnedRelics);
         }
 
+        // 보유 유물 목록을 갱신하고 아이콘을 재구성
         public void Refresh(IReadOnlyList<RelicDef> relics)
         {
             _relics.Clear();
@@ -82,8 +83,7 @@ namespace Battle.UI
             RebuildIcons();
         }
 
-        // ── 레이아웃 구성 ──────────────────────────────────────────
-
+        // 아이콘 컨테이너와 툴팁 패널을 런타임으로 생성
         void BuildLayout()
         {
             Canvas canvas = GetComponentInParent<Canvas>();
@@ -92,7 +92,7 @@ namespace Battle.UI
 
             Transform canvasT = canvas.transform;
 
-            // 아이콘 컨테이너: 캔버스 좌상단 고정
+            // 아이콘 컨테이너를 좌상단에 고정 생성
             var containerGo = new GameObject("RelicIconContainer", typeof(RectTransform));
             containerGo.transform.SetParent(canvasT, false);
             _iconContainer = (RectTransform)containerGo.transform;
@@ -121,10 +121,10 @@ namespace Battle.UI
             sizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            // 유물이 하나도 없으면 컨테이너(배경 패널)를 숨긴다 — 첫 유물을 얻는 순간부터 보이게 된다.
+            // 유물이 없으면 컨테이너를 숨김
             containerGo.SetActive(_relics.Count > 0);
 
-            // 툴팁 패널: 캔버스 좌상단 앵커 (아이콘 컨테이너와 동일 기준)
+            // 툴팁 패널을 좌상단 앵커로 생성
             var tooltipGo = new GameObject("RelicTooltip", typeof(RectTransform));
             tooltipGo.transform.SetParent(canvasT, false);
             tooltipGo.transform.SetAsLastSibling();
@@ -142,7 +142,7 @@ namespace Battle.UI
             _textW = tooltipWidth - _textX - TOOLTIP_PAD;
             _nameH = Mathf.Ceil(nameFontSize * 1.4f);
 
-            // 아이콘 (툴팁 좌상단)
+            // 툴팁 좌상단 아이콘 생성
             var iconGo = new GameObject("TT_Icon", typeof(RectTransform));
             iconGo.transform.SetParent(tooltipGo.transform, false);
             var iconRect = (RectTransform)iconGo.transform;
@@ -154,7 +154,7 @@ namespace Battle.UI
             _tooltipIcon = iconGo.AddComponent<Image>();
             _tooltipIcon.color = new Color(0.6f, 0.5f, 0.2f, 1f); // 아이콘 없을 때 기본색
 
-            // 이름
+            // 툴팁 이름 텍스트 생성
             var nameGo = new GameObject("TT_Name", typeof(RectTransform));
             nameGo.transform.SetParent(tooltipGo.transform, false);
             var nameRect = (RectTransform)nameGo.transform;
@@ -170,7 +170,7 @@ namespace Battle.UI
             _tooltipName.overflowMode = TextOverflowModes.Overflow;
             if (tooltipFont != null) _tooltipName.font = tooltipFont;
 
-            // 설명
+            // 툴팁 설명 텍스트 생성
             var descGo = new GameObject("TT_Desc", typeof(RectTransform));
             descGo.transform.SetParent(tooltipGo.transform, false);
             var descRect = (RectTransform)descGo.transform;
@@ -188,6 +188,7 @@ namespace Battle.UI
             _tooltip.SetActive(false);
         }
 
+        // 기존 아이콘을 제거하고 보유 유물로 다시 생성
         void RebuildIcons()
         {
             if (_iconContainer == null) return;
@@ -198,10 +199,11 @@ namespace Battle.UI
             for (int i = 0; i < _relics.Count; i++)
                 _iconItems.Add(CreateIconItem(_relics[i], i));
 
-            // 유물 보유 여부에 따라 컨테이너 표시/숨김 — 0개면 맵에서 빈 박스가 보이지 않게 한다.
+            // 유물이 없으면 빈 박스가 보이지 않도록 컨테이너 숨김
             _iconContainer.gameObject.SetActive(_relics.Count > 0);
         }
 
+        // 유물 1개의 아이콘 오브젝트를 생성하고 호버 트리거를 연결
         GameObject CreateIconItem(RelicDef relic, int index)
         {
             var go = new GameObject($"Relic_{relic.id}", typeof(RectTransform));
@@ -240,13 +242,12 @@ namespace Battle.UI
             return go;
         }
 
-        // ── 툴팁 ──────────────────────────────────────────────────
-
+        // 해당 유물의 툴팁 내용을 채우고 아이콘 위치에 표시
         void ShowTooltip(RelicDef relic, int iconIndex)
         {
             if (_tooltip == null || _tooltipRect == null) return;
 
-            // 텍스트/아이콘 갱신
+            // 아이콘/텍스트 갱신
             if (_tooltipIcon != null)
             {
                 _tooltipIcon.sprite = relic.icon;
@@ -268,8 +269,7 @@ namespace Battle.UI
                     tooltipWidth, Mathf.Max(contentH, iconH, tooltipMinHeight));
             }
 
-            // 위치: _iconContainer와 _tooltipRect 모두 캔버스 좌상단(0,1) 앵커
-            // → anchoredPosition이 동일 기준이므로 직접 오프셋 계산 가능
+            // 동일 좌상단 앵커 기준으로 아이콘 위치를 계산
             float iconX = hudAnchoredPosition.x + hudBackgroundPadding.x + iconIndex * (ICON_SIZE + ICON_SPACING);
             float iconY = hudAnchoredPosition.y - hudBackgroundPadding.z; // 패딩 적용된 아이콘 상단 Y
 

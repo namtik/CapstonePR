@@ -3,34 +3,30 @@ using UnityEngine.UI;
 
 namespace Battle.UI
 {
-    /// <summary>
-    /// 보상 화면의 "선택하지 않기 / 나가기" 버튼을 인스펙터에서 꾸미기 위한 스타일 묶음.
-    /// 런타임에 버튼을 생성할 때 이 값을 그대로 적용한다.
-    /// 버튼 이미지/색/크기/위치/폰트/폰트크기/글자색/라벨을 모두 노출한다.
-    /// </summary>
+    // 보상 화면 스킵/나가기 버튼을 인스펙터에서 꾸미는 스타일 묶음
     [System.Serializable]
     public class RewardSkipButtonStyle
     {
         [Header("라벨 (글자)")]
-        public string label = "선택하지 않기";
-        public Font font;
-        [Range(8, 96)] public int fontSize = 28;
-        public Color textColor = Color.white;
+        public string label = "선택하지 않기"; // 버튼 라벨
+        public Font font; // 라벨 폰트
+        [Range(8, 96)] public int fontSize = 28; // 라벨 글자 크기
+        public Color textColor = Color.white; // 라벨 색
 
         [Header("버튼 모양")]
         [Tooltip("비워두면 단색 배경으로 그려진다.")]
-        public Sprite buttonImage;
-        public Color buttonColor = new Color(0.15f, 0.15f, 0.18f, 0.95f);
+        public Sprite buttonImage; // 버튼 배경 스프라이트
+        public Color buttonColor = new Color(0.15f, 0.15f, 0.18f, 0.95f); // 버튼 배경 색
         [Tooltip("buttonImage가 9-슬라이스(테두리 있는) 스프라이트일 때 켜면 늘려도 모서리가 보존된다.")]
-        public bool sliced = true;
-        public Vector2 size = new Vector2(320f, 80f);
+        public bool sliced = true; // 9-슬라이스 사용 여부
+        public Vector2 size = new Vector2(320f, 80f); // 버튼 크기
 
         [Header("위치 (부모 중앙 기준 anchored position)")]
-        public Vector2 anchoredPosition = new Vector2(0f, -340f);
+        public Vector2 anchoredPosition = new Vector2(0f, -340f); // 버튼 위치
 
-        static Font _builtinFont;
+        static Font _builtinFont; // 내장 폰트 캐시
 
-        /// <summary>이 스타일대로 클릭 버튼을 런타임 생성해 parent 아래에 붙이고 반환한다.</summary>
+        // 이 스타일대로 클릭 버튼을 런타임 생성해 parent 아래에 부착
         public Button Build(Transform parent, System.Action onClick)
         {
             var go = new GameObject("SkipButton", typeof(RectTransform));
@@ -75,6 +71,7 @@ namespace Battle.UI
             return btn;
         }
 
+        // 내장 폰트를 로드(캐시)해 반환
         static Font BuiltinFont()
         {
             if (_builtinFont == null)

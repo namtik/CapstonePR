@@ -1,34 +1,25 @@
 namespace Battle.AI
 {
-    /// <summary>
-    /// FCM-RBFN 적 AI 사전학습 가중치 (오프라인 Python 학습 산출물 임베드).
-    /// 출처: gk_result/new_centroids_gk.cs (Centroids) + rbfn_result_gk/rbfn_weights_gk.cs (CovInvs/QTypeWeights/QContextWeights/QBias).
-    /// 재학습 시: Python(fcm_retrain_gk.py / rbfn_train_gk.py)이 출력한 .cs 배열을 아래 값에 그대로 교체해 넣으면 된다.
-    ///
-    /// 추론: Q_total(s,a) = Σ_i μ_i(x)·QTypeWeights[i,a] + Σ_j c_j·QContextWeights[j,a] + QBias[a]
-    ///   μ = 마할라노비스 퍼지 소속도(Centroids, CovInvs) / x = 특성6[f1,f2,f3,f4,f5,f7] / c = 컨텍스트8
-    /// 행동: 0 저주(curse) 1 탈진(exhaust) 2 흡수(absorb) 3 강화(enhance) 4 회복(recover) 5 버리기(discard)
-    /// 현재 가중치 = 합성데이터 기반(좋은행동선택률 90.6%). 실데이터 재학습 후 교체 예정.
-    /// </summary>
+    // FCM-RBFN 적 AI 사전학습 가중치(오프라인 Python 학습 산출물 임베드)
     public static class EnemyAiModel
     {
         public const float M = 2f;       // 퍼지 지수
         public const int TYPES = 5;      // 플레이어 유형 수
         public const int ACTIONS = 6;    // 방해행동 수
-        public const int FEAT = 6;       // 특성 차원 [f1,f2,f3,f4,f5,f7]
+        public const int FEAT = 6;       // 특성 차원
         public const int CTX = 8;        // 컨텍스트 차원
 
-        public static readonly string[] ActionNames = { "curse", "exhaust", "absorb", "enhance", "recover", "discard" };
-        public static readonly string[] TypeNames = { "화상형", "파편형", "연속타격형", "피버형", "안정형" };
+        public static readonly string[] ActionNames = { "curse", "exhaust", "absorb", "enhance", "recover", "discard" }; // 행동 이름
+        public static readonly string[] TypeNames = { "화상형", "파편형", "연속타격형", "피버형", "안정형" };           // 유형 이름
 
-        /// <summary>배열 차원이 기대치와 맞으면 로드된 것으로 본다(임베드라 항상 true).</summary>
+        // 배열 차원이 기대치와 일치하는지(로드 여부)
         public static bool Loaded =>
             Centroids.GetLength(0) == TYPES && Centroids.GetLength(1) == FEAT &&
             QTypeWeights.GetLength(0) == TYPES && QTypeWeights.GetLength(1) == ACTIONS &&
             QContextWeights.GetLength(0) == CTX && QContextWeights.GetLength(1) == ACTIONS &&
             QBias.Length == ACTIONS && CovInvs.Length == TYPES;
 
-        // ── FCM 중심점 [유형 5 x 특성 6] ──
+        // FCM 중심점 [유형 5 x 특성 6]
         public static readonly float[,] Centroids =
         {
             { 0.6536f, 0.2026f, 0.2770f, 0.2131f, 0.4439f, 0.2937f },  // 화상형
@@ -38,7 +29,7 @@ namespace Battle.AI
             { 0.2440f, 0.2730f, 0.2700f, 0.6112f, 0.2920f, 0.3005f },  // 안정형
         };
 
-        // ── 공분산 역행렬 A_i (마할라노비스 거리용, 각 6x6) ──
+        // 공분산 역행렬(마할라노비스 거리용, 유형별 6x6)
         public static readonly float[][,] CovInvs =
         {
             new float[,]  // 화상형
@@ -88,7 +79,7 @@ namespace Battle.AI
             },
         };
 
-        // ── RBFN 유형 가중치 [유형 5 x 행동 6] ──
+        // RBFN 유형 가중치 [유형 5 x 행동 6]
         public static readonly float[,] QTypeWeights =
         {
             { 0.4849f, -0.3705f, -0.3456f, -0.5292f, 0.0241f, -0.0353f },  // 화상형
@@ -98,7 +89,7 @@ namespace Battle.AI
             { -0.4015f, -0.1792f, -0.3218f, 0.7226f, 0.3350f, -0.0319f },  // 안정형
         };
 
-        // ── RBFN 컨텍스트 가중치 [컨텍스트 8 x 행동 6] (순서: enemy_hp, player_hp, hand_fire, hand_frag, hand_chain, hand_def, hand_null, hand_count/10) ──
+        // RBFN 컨텍스트 가중치 [컨텍스트 8 x 행동 6]
         public static readonly float[,] QContextWeights =
         {
             { 0.0317f, -0.0152f, 0.0355f, -0.0021f, -1.1674f, 0.0049f },  // enemy_hp
@@ -108,10 +99,10 @@ namespace Battle.AI
             { 0.1429f, -0.0038f, 0.0210f, 0.0779f, 0.1878f, -0.0069f },   // hand_chain
             { -0.1274f, -0.0840f, 0.0104f, -0.0019f, 0.0066f, 0.0379f },  // hand_def
             { -0.2343f, 0.0076f, -0.0976f, -0.0908f, 0.0458f, -0.0186f }, // hand_null
-            { -0.0518f, -0.1144f, -0.0973f, 0.0386f, -0.1664f, 0.2000f }, // hand_count  [임시] 버리기 0.5992→0.30 (버리기 빈도 완화). 재학습 시 원복
+            { -0.0518f, -0.1144f, -0.0973f, 0.0386f, -0.1664f, 0.2000f }, // hand_count
         };
 
-        // ── RBFN 바이어스 [행동 6] ──
-        public static readonly float[] QBias = { -0.1204f, -0.0860f, -0.1241f, 0.0223f, 0.4338f, -0.2000f }; // [임시] 버리기 bias 0.0865→-0.20 (빈도 강하게 억제). 너무 안 나오면 -0.10, 여전히 잦으면 -0.35. 재학습 시 원복
+        // RBFN 바이어스 [행동 6]
+        public static readonly float[] QBias = { -0.1204f, -0.0860f, -0.1241f, 0.0223f, 0.4338f, -0.2000f };
     }
 }

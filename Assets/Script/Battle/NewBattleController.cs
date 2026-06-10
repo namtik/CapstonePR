@@ -10,218 +10,184 @@ using Battle.UI;
 
 namespace Battle
 {
-    /// <summary>
-    /// 새 전투 시스템 진입점.
-    /// - 5장 손패, 드래그 사용
-    /// - 카드별 게이지 → EnemyStat.ConsumeGaugeStep로 누적
-    /// - D 드로우 / 각성(속성 카드 10장 사용 시 즉시 발동) / 속성 카드 입력 카운트
-    /// 기존 ElementSlotSystem/ComboSystem과 공존하지 않는다(테스트 씬 전용).
-    /// </summary>
+    // 새 전투 시스템 진입점 (5장 손패·드래그 사용·각성·콤보·적 AI 방해)
     public class NewBattleController : MonoBehaviour
     {
-        /// <summary>각성 발동에 필요한 속성 카드 사용 횟수 — 도달 시 즉시 발동.</summary>
-        public const int AWAKEN_ACTIVATION_INPUT = 10;
-        /// <summary>각성 발동 시 기본 지속 시간(초).</summary>
-        public const float AWAKEN_DURATION_SECONDS = 4f;
-        /// <summary>각성 발동 시 보유 콤보 1개당 추가되는 지속 시간(초).</summary>
-        public const float AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS = 1f;
-        /// <summary>콤보 1회 성공 시 추가되는 시간(초).</summary>
-        public const float COMBO_BONUS_SECONDS = 0.1f;
-        /// <summary>콤보 스킬 발동 후 재사용까지 필요한 속성 카드 입력 횟수(발동 이후 카드부터 카운트).</summary>
-        public const int COMBO_REUSE_INPUT = 5;
-        public const int START_DRAW = 5;
+        public const int AWAKEN_ACTIVATION_INPUT = 10;                  // 각성 발동에 필요한 속성 카드 사용 횟수
+        public const float AWAKEN_DURATION_SECONDS = 4f;               // 각성 기본 지속 시간(초)
+        public const float AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS = 1f; // 보유 콤보 1개당 추가 지속 시간(초)
+        public const float COMBO_BONUS_SECONDS = 0.1f;                 // 콤보 1회 성공 시 추가 시간(초)
+        public const int COMBO_REUSE_INPUT = 5;                        // 콤보 재사용까지 필요한 속성 입력 횟수
+        public const int START_DRAW = 5;                              // 전투 시작 시 드로우 수
 
-        public static NewBattleController Instance { get; private set; }
+        public static NewBattleController Instance { get; private set; } // 싱글톤 인스턴스
 
         [Header("UI")]
-        [SerializeField] private CardHandHUD handHud;
+        [SerializeField] private CardHandHUD handHud;                 // 손패 HUD
         [Tooltip("카드 사용 시 EffectName(예: Fire_ATK)에 해당하는 스프라이트 시트 애니메이션을 재생. " +
                  "비우면 자동으로 캔버스에 생성. 시트가 없으면 조용히 스킵.")]
-        [SerializeField] private CardEffectOverlay effectOverlay;
+        [SerializeField] private CardEffectOverlay effectOverlay;     // 카드 효과 이펙트 오버레이
         [Tooltip("플레이어 피격 시 화면 빨간 플래시. 비우면 자동 생성.")]
-        [SerializeField] private PlayerDamageOverlay damageOverlay;
+        [SerializeField] private PlayerDamageOverlay damageOverlay;   // 플레이어 피격 화면 오버레이
         [Tooltip("각성 동안 화면 상단에 남은 시간을 표시할 전용 게이지. 씬에 직접 만들어 연결(코드로 생성하지 않음). 비우면 표시 생략.")]
-        [SerializeField] private AwakenTimerGauge awakenTimerGauge;
+        [SerializeField] private AwakenTimerGauge awakenTimerGauge;   // 상단 각성 타이머 게이지
 
         [Header("보유 콤보 스킬 (각성 전용 / Inspector 편집)")]
-        [SerializeField] private List<ComboSkillDef> ownedComboSkills = new List<ComboSkillDef>();
-        public IReadOnlyList<ComboSkillDef> OwnedComboSkills => ownedComboSkills;
+        [SerializeField] private List<ComboSkillDef> ownedComboSkills = new List<ComboSkillDef>(); // 보유 콤보 스킬 목록
+        public IReadOnlyList<ComboSkillDef> OwnedComboSkills => ownedComboSkills; // 보유 콤보 읽기 전용 노출
 
         [Header("콤보 스킬 DB")]
         [Tooltip("ON이면 Resources/ComboDB의 데이터 드리븐 콤보를 사용 (Inspector의 ownedComboSkills를 덮어씀). " +
                  "OFF면 위 Inspector 수동 리스트 사용.")]
-        [SerializeField] private bool useComboDatabase = true;
+        [SerializeField] private bool useComboDatabase = true;        // 콤보 DB 사용 여부
         [Tooltip("보유할 콤보 RefComboID(1000~1019). 비우면 전체 보유. 예: 1000,1004,1008")]
-        [SerializeField] private List<int> ownedComboRefIds = new List<int>();
+        [SerializeField] private List<int> ownedComboRefIds = new List<int>(); // 보유할 콤보 RefComboID 목록
         [Tooltip("[테스트] 콤보 보상 UI 전까지 수동 획득용 — 이 RefComboID(1000~1019)를 컨텍스트 메뉴 '콤보 1개 추가'로 보유에 더함.")]
-        [SerializeField] private int debugAddComboRefId = 1000;
+        [SerializeField] private int debugAddComboRefId = 1000;       // 디버그 수동 콤보 추가용 RefComboID
 
         [Header("각성 콤보 이펙트")]
         [Tooltip("각성 종료 시 Damage 콤보가 적에게 들어갈 때 재생할 이펙트 이름. " +
                  "Resources/CardEffects/{이름}.png 시트를 찾아 적 위치에서 재생. " +
                  "비우거나 시트가 없으면 조용히 스킵.")]
         [FormerlySerializedAs("feverDamageEffectName")]
-        [SerializeField] private string awakenDamageEffectName = "Fever_ATK";
+        [SerializeField] private string awakenDamageEffectName = "Fever_ATK"; // 각성 데미지 콤보 이펙트 이름
         [Tooltip("Damage 콤보가 N개 동시에 발동될 때 이펙트가 한 곳에 겹쳐 보이지 않도록 좌우/상하로 분산.\n" +
                  "X = 콤보 간 가로 간격, Y = zigzag 세로 진폭. 0으로 두면 분산 없이 한 곳.")]
         [FormerlySerializedAs("feverDamageEffectSpread")]
-        [SerializeField] private Vector2 awakenDamageEffectSpread = new Vector2(220f, 80f);
+        [SerializeField] private Vector2 awakenDamageEffectSpread = new Vector2(220f, 80f); // 데미지 이펙트 분산 간격
         [Tooltip("각성 종료 시 데미지 콤보 1건당 더해질 셰이크 강도 배율. 콤보가 많을수록 더 세게 흔들림.\n" +
                  "0이면 셰이크 비활성.")]
         [FormerlySerializedAs("feverShakeIntensityPerHit")]
-        [SerializeField] private float awakenShakeIntensityPerHit = 0.6f;
+        [SerializeField] private float awakenShakeIntensityPerHit = 0.6f; // 콤보 1건당 셰이크 강도 배율
         [Tooltip("각성 셰이크 강도 상한 — 콤보가 너무 많아도 이 값을 넘지 않음.")]
         [FormerlySerializedAs("feverShakeIntensityMax")]
-        [SerializeField] private float awakenShakeIntensityMax = 2.0f;
+        [SerializeField] private float awakenShakeIntensityMax = 2.0f; // 셰이크 강도 상한
 
         [Header("각성 화면 효과 (Screen wind 등)")]
         [Tooltip("각성 동안 화면 전체에 유지될 프리팹(예: Hovl 'Screen wind'). 각성 발동 시 루프 재생되고 종료 시 정지된다. " +
                  "UIParticle로 전투 UI 위에 렌더되며, 프리팹의 카메라 부착 스크립트(HS_ScreenEffect)는 자동 비활성된다. " +
                  "비우면 화면 효과 없음.")]
-        [SerializeField] private GameObject awakenScreenEffectPrefab;
+        [SerializeField] private GameObject awakenScreenEffectPrefab; // 각성 화면 효과 프리팹
         [Tooltip("각성 화면 효과 UIParticle 스케일 — 화면을 덮도록 플레이로 튜닝(클수록 큼). 0 이하면 오버레이 기본 스케일 사용.")]
-        [SerializeField] private float awakenScreenEffectScale = 100f;
+        [SerializeField] private float awakenScreenEffectScale = 100f; // 각성 화면 효과 스케일
 
         [Header("디버그")]
-        [SerializeField] private bool logVerbose = true;
+        [SerializeField] private bool logVerbose = true;             // 상세 로그 출력 여부
 
         [Header("적 AI (방해행동 선택)")]
         [Tooltip("ON이면 FCM-RBFN 학습 모델로 방해행동을 선택. OFF면 랜덤.")]
-        [SerializeField] private bool useAiDisruption = true;
+        [SerializeField] private bool useAiDisruption = true;        // AI 방해행동 선택 사용 여부
         [Tooltip("탐험 비율 — 데이터 수집 시 행동 다양성 확보용(0=항상 최적, 0.1~0.2=수집용). 학습 데이터가 충분하면 0으로.")]
         [Range(0f, 1f)]
-        [SerializeField] private float aiExplorationEpsilon = 0.15f;
+        [SerializeField] private float aiExplorationEpsilon = 0.15f; // AI 탐험 비율(epsilon)
         [Tooltip("ON이면 각 방해행동 결정을 CSV로 기록(persistentDataPath/ai_logs) → 오프라인 재학습용.")]
-        [SerializeField] private bool logAiDecisions = false;
+        [SerializeField] private bool logAiDecisions = false;        // 방해행동 결정 CSV 기록 여부
         [Tooltip("ON이면 게임 중 실제 결과로 적 AI Q-가중치를 미세조정(세션 단위 누적, 오프라인 베이스에서 시작).")]
-        [SerializeField] private bool onlineLearning = false;
+        [SerializeField] private bool onlineLearning = false;        // 온라인 학습 사용 여부
         [Tooltip("온라인 학습 TD 할인율 γ. 0=즉시 효과보상만(기존 동작·롤백), 0.6 권장. '스텝'은 시간이 아니라 방해행동 결정 횟수 — 행동 간 연계 가치를 학습. onlineLearning ON일 때만 적용.")]
         [Range(0f, 0.95f)]
-        [SerializeField] private float aiRewardGamma = 0.6f;
+        [SerializeField] private float aiRewardGamma = 0.6f;        // 온라인 학습 TD 할인율 γ
 
-        private readonly CardDeckSystem _deck = new CardDeckSystem();
-        private readonly CardEffectResolver _resolver = new CardEffectResolver();
-        private readonly CardEffectContext _ctx = new CardEffectContext();
-        private readonly ComboEffectResolver _comboResolver = new ComboEffectResolver();
-        private readonly ComboResolveContext _comboCtx = new ComboResolveContext();
+        private readonly CardDeckSystem _deck = new CardDeckSystem();     // 덱/패/더미 관리 시스템
+        private readonly CardEffectResolver _resolver = new CardEffectResolver(); // 카드 효과 해석기
+        private readonly CardEffectContext _ctx = new CardEffectContext();        // 카드 효과 실행 컨텍스트
+        private readonly ComboEffectResolver _comboResolver = new ComboEffectResolver(); // 콤보 효과 해석기
+        private readonly ComboResolveContext _comboCtx = new ComboResolveContext();      // 콤보 효과 실행 컨텍스트
 
-        private Player _player;
-        private EnemyController _enemy;
-        private EnemyStat _enemyStat;
+        private Player _player;                  // 플레이어 참조
+        private EnemyController _enemy;          // 적 컨트롤러 참조
+        private EnemyStat _enemyStat;            // 적 스탯 참조
 
-        private bool _inBattle;
-        // 일반 카드 사용 중앙 연출 진행 중 — 연출이 끝날 때까지 다른 카드 사용을 막아 효과 중첩/재진입 방지.
-        private bool _cardPresenting;
+        private bool _inBattle;                  // 전투 진행 중 여부
+        private bool _cardPresenting;            // 일반 카드 사용 중앙 연출 진행 중 여부(재진입 방지)
 
-        // 각성 게이지
-        private int _elementInputCount;   // 각성 발동용 누적 (10 도달 시 즉시 발동)
-        private bool _awakenActive;
-        private bool _awakenPending;        // 발동 조건 충족(보류) — 선택 카드의 선택 완료 후 발동
-        private float _awakenTimeRemaining; // 활성화 시 남은 시간(초). 0 이하가 되면 종료
-        private float _awakenMaxTime;       // 콤보 보너스로 늘어나는 동적 최대치 (게이지 fill 계산용)
-        private List<CardInstance> _awakenStoredNeutralCards = new List<CardInstance>();
-        private GameObject _awakenScreenEffectInstance; // 각성 동안 유지되는 화면 효과 핸들(종료 시 정지)
+        private int _elementInputCount;          // 각성 발동용 누적 속성 입력 수
+        private bool _awakenActive;              // 각성 활성 여부
+        private bool _awakenPending;             // 각성 발동 보류 상태(선택 완료 후 발동)
+        private float _awakenTimeRemaining;      // 각성 남은 시간(초)
+        private float _awakenMaxTime;            // 각성 동적 최대 시간(게이지 fill 계산용)
+        private List<CardInstance> _awakenStoredNeutralCards = new List<CardInstance>(); // 각성 중 격리한 무속성 카드
+        private GameObject _awakenScreenEffectInstance; // 각성 동안 유지되는 화면 효과 핸들
 
-        // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 복원용
-        private List<CardInstance> _awakenSnapshotHand;
-        private List<CardInstance> _awakenSnapshotDraw;
-        private List<CardInstance> _awakenSnapshotDiscard;
+        private List<CardInstance> _awakenSnapshotHand;    // 각성 직전 패 스냅샷(복원용)
+        private List<CardInstance> _awakenSnapshotDraw;    // 각성 직전 뽑을 더미 스냅샷(복원용)
+        private List<CardInstance> _awakenSnapshotDiscard; // 각성 직전 버린 더미 스냅샷(복원용)
 
-        // 콤보 슬롯 (각성 동안 입력된 속성, sliding window 3장)
-        private readonly List<CardElement> _comboInput = new List<CardElement>();
-        // 콤보 스킬 인덱스별 재사용 쿨다운(남은 속성 입력 횟수). 0이면 재사용 가능, >0이면 대기 중.
-        // ownedComboSkills와 같은 인덱스로 정렬. ActivateAwaken에서 보유 콤보 수만큼 할당.
-        private int[] _comboCooldown = System.Array.Empty<int>();
-        // 각성 종료 시 일괄 발동할 콤보 스킬 큐 (매칭 순서대로 적재)
-        private readonly List<ComboSkillDef> _queuedComboSkills = new List<ComboSkillDef>();
-        // 각성 동안 입력된 속성 전체 기록(왼쪽 UI 표시용)
-        private readonly List<CardElement> _awakenInputHistory = new List<CardElement>();
+        private readonly List<CardElement> _comboInput = new List<CardElement>(); // 콤보 슬롯(슬라이딩 윈도우 3장)
+        private int[] _comboCooldown = System.Array.Empty<int>(); // 콤보별 재사용 쿨다운(남은 입력 횟수)
+        private readonly List<ComboSkillDef> _queuedComboSkills = new List<ComboSkillDef>(); // 각성 종료 시 발동할 콤보 큐
+        private readonly List<CardElement> _awakenInputHistory = new List<CardElement>(); // 각성 중 입력 속성 전체 기록
 
-        // 콤보 DB 효과용 카운터
-        private int _usedFireCardCount;       // 이번 전투 불 카드 사용 수 (USED_FIRE_CARD_COUNT)
+        private int _usedFireCardCount;       // 이번 전투 불 카드 사용 수
         private int _awakenFragmentExhausted; // 각성 진입 시 격리된 파편 수
-        private int _awakenComboCountThisEnd; // 이번 각성 종료 시 발동되는 콤보 총수 (REPEAT_BY_AWAKEN_COMBO_COUNT)
-        // refComboId별 이번 각성 발동 횟수 (REPEAT_BY_SELF_AWAKEN_USE_COUNT)
-        private readonly Dictionary<int, int> _comboSelfUseCount = new Dictionary<int, int>();
+        private int _awakenComboCountThisEnd; // 이번 각성 종료 시 발동되는 콤보 총수
+        private readonly Dictionary<int, int> _comboSelfUseCount = new Dictionary<int, int>(); // refComboId별 이번 각성 발동 횟수
 
-        // 방해 행동 — 속성 저주 (PDF: 한 속성 모든 카드, 플레이어 카드 사용 2회 동안 지속)
-        public const int CURSE_DURATION_USES = 2;
-        public const int CURSE_PLAYER_DAMAGE = 6;
-        private CardElement? _cursedElement;
-        private int _curseRemainingUses;
-        // 방해행동(회복) 쿨다운 — 회복 발동 후 다른 방해행동 2회 수행해야 재사용.
-        private int _recoverCooldown;
+        public const int CURSE_DURATION_USES = 2;   // 저주 지속 카드 사용 횟수
+        public const int CURSE_PLAYER_DAMAGE = 6;   // 저주 카드 사용 시 플레이어 피해량
+        private CardElement? _cursedElement;        // 현재 저주된 속성
+        private int _curseRemainingUses;            // 저주 남은 지속 횟수
+        private int _recoverCooldown;               // 방해행동(회복) 쿨다운
 
-        // ── 온라인 학습: 방해행동 효과 추적 보상 (각 방해의 '의도 달성'으로 학습, 동시 1개) ──
-        // 즉시형(흡수/회복/버리기)=발동 직전 상황으로 즉시 측정. 지연형(저주/탈진/강화)=발현 이벤트까지 추적.
         [Tooltip("지연형 방해가 발현되지 않은 채 흐른 최대 시간(초). 초과하면 미발현 보상으로 마감.")]
-        [SerializeField] private float disruptionTrackTimeout = 25f;
+        [SerializeField] private float disruptionTrackTimeout = 25f; // 지연형 추적 타임아웃(초)
         private DisruptionTrack _track;       // 진행 중 지연형 추적(동시 1개)
-        const float UNFIRED_REWARD = -0.3f;   // 발현 못 한 지연형 — 약한 음수(실패와 구분)
+        const float UNFIRED_REWARD = -0.3f;   // 발현 못 한 지연형 보상(약한 음수)
 
+        // 진행 중인 지연형 방해행동 추적 상태
         class DisruptionTrack
         {
-            public Battle.AI.AiDecision decision;
+            public Battle.AI.AiDecision decision; // 추적 대상 AI 결정
             public int action;                // 0 저주 / 1 탈진 / 3 강화
-            public float elapsed;
+            public float elapsed;             // 추적 경과 시간
             public int curseHits;             // 저주: 실제 자해 발생 횟수
             public CardInstance exhaustCard;  // 탈진: 삽입한 카드 인스턴스
             public int playerHpAtFire;        // 강화: 발동 시 플레이어 HP
         }
 
-        // ── TD(0) 전이 큐 — (s,a,r,s')가 모두 모이면 학습(target=r+γ·maxQ(s')) ──
-        // "스텝"=방해행동 결정 1회(게이지 도달 이벤트). s'=다음 방해결정의 상태(=시간 아님).
-        // onlineLearning ON + aiRewardGamma>0 일 때만 채워진다. γ=0이면 큐 미사용(Observe 즉시 학습).
-        // 즉시형(흡수/회복/버리기)은 보상이 결정 시점에, 지연형(저주/탈진/강화)은 발현 시점에 채워지므로
-        // 보상은 결정과 레퍼런스(membership 배열 인스턴스)로 매칭한다.
-        private readonly List<TdTransition> _tdQueue = new List<TdTransition>();
+        private readonly List<TdTransition> _tdQueue = new List<TdTransition>(); // TD(0) 전이 큐
 
+        // TD(0) 학습용 (s,a,r,s') 전이 한 건
         class TdTransition
         {
             public float[] mu, ctx;          // s (membership 배열 = 결정 식별자)
             public int action;               // a
             public float reward;             // r
-            public bool hasReward;
+            public bool hasReward;           // 보상 확정 여부
             public bool immediate;           // 디버그 라벨용(즉시형/지연형)
             public float[] nextMu, nextCtx;  // s' (다음 결정 상태). null이면 미확정
-            public bool hasNext;
+            public bool hasNext;             // s' 확정 여부
         }
 
-        // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
-        private int _skipNextGaugeCount;
-        // 물12(211): 마지막으로 사용한 카드 (재사용 대상)
-        private CardInstance _lastResolvedCard;
+        private int _skipNextGaugeCount;      // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
+        private CardInstance _lastResolvedCard; // 물12(211): 마지막으로 사용한 카드(재사용 대상)
 
-        public bool IsAwakenActive => _awakenActive;
-        public CardDeckSystem Deck => _deck;
-        public CardInstance LastResolvedCard => _lastResolvedCard;
-        public CardElement? CursedElement => _cursedElement;
-        /// <summary>불126: 적 행동 시 화상이 줄어들지 않는지 — EnemyController가 조회.</summary>
+        public bool IsAwakenActive => _awakenActive;        // 각성 활성 여부 노출
+        public CardDeckSystem Deck => _deck;                // 덱 시스템 노출
+        public CardInstance LastResolvedCard => _lastResolvedCard; // 마지막 사용 카드 노출
+        public CardElement? CursedElement => _cursedElement; // 현재 저주 속성 노출
+        // 불126: 적 행동 시 화상이 줄어들지 않는지를 EnemyController가 조회
         public bool BurnPersistsOnEnemyTurn => _ctx != null && _ctx.burnPersistsOnEnemyTurn;
-        /// <summary>각성 발동에 필요한 실제 속성 카드 수 (바람326 등 보정 반영, 최소 1).</summary>
+        // 각성 발동에 필요한 실제 속성 카드 수(보정 반영, 최소 1)
         public int EffectiveAwakenInput =>
             Mathf.Max(1, AWAKEN_ACTIVATION_INPUT + (_ctx != null ? _ctx.awakenGaugeMaxDelta : 0));
 
-        /// <summary>BattleTestController가 라운드 시작 전에 주입하는 사용자 정의 시작 덱.</summary>
-        private List<CardInstance> _customStartingDeck;
+        private List<CardInstance> _customStartingDeck;      // 외부가 주입한 사용자 정의 시작 덱
+        // 라운드 시작 전 사용자 정의 시작 덱 주입
         public void SetCustomStartingDeck(List<CardInstance> deck) => _customStartingDeck = deck;
 
-        // ─────────────────────────────────────────────────────────────
-        // 생명주기
-        // ─────────────────────────────────────────────────────────────
-
+        // 싱글톤 설정 + 덱 이벤트 구독
         void Awake()
         {
             if (Instance == null) Instance = this;
             else if (Instance != this) { Destroy(gameObject); return; }
             _resolver.Bind(_ctx);
 
-            // 카드가 패로 들어올 때 gaugeSinceDrawn 리셋 + USED_IMMEDIATELY_AFTER_DRAW 플래그
             _deck.OnCardDrawn += OnCardDrawnHandler;
-            // 패에서 버려질 때 ON_SELF_DISCARDED 등 트리거
             _deck.OnCardDiscarded += OnCardDiscardedHandler;
         }
 
+        // 이벤트 구독 해제 및 싱글톤 정리
         void OnDestroy()
         {
             _deck.OnCardDrawn -= OnCardDrawnHandler;
@@ -235,31 +201,30 @@ namespace Battle
             if (Instance == this) Instance = null;
         }
 
+        // 카드가 패로 들어올 때 게이지 리셋·트리거·탈진 추적 처리
         void OnCardDrawnHandler(CardInstance card)
         {
             if (card == null) return;
             card.gaugeSinceDrawn = 0;
             card.justDrawn = true;
             _ctx.currentCardJustDrawn = true;
-            // 바람319: 패에 들어올 때 트리거 (각성 중에는 효과가 드로우로 치환되므로 제외)
             if (_inBattle && !_awakenActive) _resolver.NotifyCardEnteredHand(card);
 
-            // 효과 추적: 탈진으로 삽입한 카드가 뽑혔다 = 손패 1칸 낭비 성공
             if (_track != null && _track.action == 1 && ReferenceEquals(card, _track.exhaustCard))
                 ResolveTrack(0.7f);
         }
 
+        // 패에서 카드가 버려질 때 트리거 처리(각성 중 제외)
         void OnCardDiscardedHandler(CardInstance card)
         {
-            // 물205/206/219: 패에서 버려질 때 트리거 (각성 중 제외)
             if (_inBattle && !_awakenActive) _resolver.NotifyCardDiscardedFromHand(card);
         }
 
+        // 매 프레임 입력·각성·추적·UI 갱신
         void Update()
         {
             if (!_inBattle) return;
 
-            // 적 참조 최신화
             if (_enemy == null || !_enemy.gameObject.activeInHierarchy)
             {
                 _enemy = FindFirstObjectByType<EnemyController>();
@@ -275,8 +240,8 @@ namespace Battle
             SyncChainStatus();
         }
 
-        // 연쇄(chain) 스택을 플레이어 상태 패널에 표시 — Ctx.chainCount가 바뀔 때만 갱신.
-        private int _lastChainShown = -1;
+        private int _lastChainShown = -1;  // 마지막으로 UI에 표시한 연쇄 수
+        // 연쇄 스택을 플레이어 상태 패널에 표시(변경 시에만 갱신)
         void SyncChainStatus()
         {
             if (_player == null) return;
@@ -285,7 +250,7 @@ namespace Battle
             _player.SetStatus("chain", _ctx.chainCount);
         }
 
-        /// <summary>각성 지속 시간 카운트다운 (Update에서 매 프레임 호출).</summary>
+        // 각성 지속 시간 카운트다운 및 종료 처리
         void TickAwakenTimer()
         {
             if (!_awakenActive) return;
@@ -296,14 +261,10 @@ namespace Battle
                 EndAwaken();
                 return;
             }
-            // 상단 각성 타이머 게이지 — 각성 중 매 프레임 남은 시간 갱신(콤보 매칭 보너스도 반영됨)
             if (awakenTimerGauge != null) awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 전투 진입/종료
-        // ─────────────────────────────────────────────────────────────
-
+        // 전투 진입 — 참조/컨텍스트/덱/UI 초기화 후 시작 드로우
         public void StartBattle()
         {
             _player = Player.Resolve(true);
@@ -315,11 +276,9 @@ namespace Battle
             _ctx.enemyStat = _enemyStat;
             _ctx.deck = _deck;
             ResetContextFlags();
-            // 땅410 등: 런 동안 누적된 영구 공격력(Permanent ATTACK_POWER)을 전투 시작 시 복원
             if (RunDeckState.Instance != null)
                 _ctx.attackPowerBonus += RunDeckState.Instance.PermanentAttackPower;
 
-            // 플레이어 피격/방어도 소모 이벤트 구독 (전투마다 갱신)
             if (_player != null)
             {
                 _player.OnPlayerHit -= OnPlayerHitHandler;
@@ -328,7 +287,6 @@ namespace Battle
                 _player.OnBlockConsumedByAttack += OnBlockConsumedHandler;
             }
 
-            // 적 공격 직후 첫 카드 무료 트리거(바람20/319)용
             if (_enemyStat != null)
             {
                 _enemyStat.OnGaugeFull -= OnEnemyAttackFiredHandler;
@@ -338,7 +296,6 @@ namespace Battle
             var startingDeck = _customStartingDeck ?? CardDatabase.BuildDefaultPrototypeDeck();
             _deck.StartBattle(startingDeck);
 
-            // 콤보 스킬 DB 사용 시 — Inspector 수동 리스트를 DB 로드 결과로 교체
             if (useComboDatabase)
             {
                 ownedComboSkills = ComboSkillDatabase.BuildOwnedCombos(ownedComboRefIds);
@@ -351,17 +308,16 @@ namespace Battle
             {
                 handHud.Bind(_deck);
                 handHud.UseCardCallback = OnUseCardRequested;
-                handHud.SelectionClosedCallback = TryActivatePendingAwaken; // 선택 완료 후 보류 각성 발동
-                handHud.SetAwakenMode(false); // 전투 시작 시점에는 콤보 UI 숨김
+                handHud.SelectionClosedCallback = TryActivatePendingAwaken;
+                handHud.SetAwakenMode(false);
             }
             else
             {
                 Debug.LogWarning("[NewBattleController] handHud가 미연결입니다.");
             }
 
-            // 카드 효과 이펙트 오버레이 — 비어 있으면 자동 생성
             if (effectOverlay == null) effectOverlay = ResolveOrCreateEffectOverlay();
-            if (effectOverlay != null) effectOverlay.ClearAll(); // 이전 전투의 잔여 이펙트 제거(다음 스테이지 시작 시 재생 방지)
+            if (effectOverlay != null) effectOverlay.ClearAll();
             if (damageOverlay == null) damageOverlay = ResolveOrCreateDamageOverlay();
 
             EnsureEventSystem();
@@ -373,13 +329,12 @@ namespace Battle
             _awakenPending = false;
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
-            if (awakenTimerGauge != null) awakenTimerGauge.Hide(); // 각성 전까지 상단 타이머 숨김
+            if (awakenTimerGauge != null) awakenTimerGauge.Hide();
             _usedFireCardCount = 0;
             _recoverCooldown = 0;
-            _track = null;            // 직전 전투의 미마감 지연추적 잔재 제거
-            _tdQueue.Clear();         // TD 전이 큐 초기화(세션 누적은 OnlineQLearner가 관리)
+            _track = null;
+            _tdQueue.Clear();
 
-            // 각성 게이지를 전투 UI의 활성 HP바 아래에 배치 (맵 HP바 오인식 방지)
             if (handHud != null)
             {
                 var hpRect = ResolveActiveCombatHpBarRect();
@@ -393,35 +348,30 @@ namespace Battle
             Log($"전투 시작 — {START_DRAW}장 드로우");
         }
 
+        // 전투 종료 — 추적/큐 마감·덱 종료·UI/이펙트 정리
         public void EndBattle()
         {
             _inBattle = false;
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
-            ResolveTrackUnfired(); // 온라인 학습: 진행 중 지연 추적을 미발현으로 마감
-            TdFlushTerminal();     // TD: 남은 전이를 터미널(부트스트랩 0)로 마감
+            ResolveTrackUnfired();
+            TdFlushTerminal();
             _deck.EndBattle();
             if (handHud != null)
             {
-                // 진행 중인 카드 사용 연출/지연 효과 취소 — 보상 화면과 카드 효과가 겹쳐 실행되는 것을 방지
                 handHud.CancelCardUsePresentations();
                 handHud.UseCardCallback = null;
                 handHud.SelectionClosedCallback = null;
                 handHud.SetAwakenGaugeVisible(false);
             }
-            if (awakenTimerGauge != null) awakenTimerGauge.Hide(); // 상단 각성 타이머 숨김
-            // 재생 중이던 카드 이펙트 잔여물 제거 — 보상 화면(timeScale=0)에서 멈춘 뒤 다음 스테이지로 이월되는 것 방지
+            if (awakenTimerGauge != null) awakenTimerGauge.Hide();
             if (effectOverlay != null) effectOverlay.ClearAll();
-            _awakenScreenEffectInstance = null; // ClearAll이 이미 파괴 — 핸들만 정리
+            _awakenScreenEffectInstance = null;
             Log("전투 종료");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // [테스트] 보유 콤보 런타임 추가/갱신 (콤보 보상 UI 전까지 수동 획득용)
-        // ─────────────────────────────────────────────────────────────
-
-        /// <summary>인스펙터 ownedComboRefIds 리스트를 즉시 적용(런타임 콤보 갱신). 각성 중에는 desync 방지 위해 보류(다음 각성부터 반영).</summary>
+        // [테스트] 인스펙터 ownedComboRefIds를 즉시 적용(각성 중에는 보류)
         [ContextMenu("[테스트] 보유 콤보 갱신 (인스펙터 리스트 적용)")]
         public void RefreshOwnedCombosRuntime()
         {
@@ -443,7 +393,7 @@ namespace Battle
                           ? $"(refIds: {string.Join(",", ownedComboRefIds)})" : "(전체)"));
         }
 
-        /// <summary>콤보 1개(refComboId 1000~1019) 추가 후 즉시 적용. 추후 콤보 보상이 이 메서드를 호출하면 됨.</summary>
+        // 콤보 1개(refComboId) 추가 후 즉시 적용
         public void AddOwnedCombo(int refComboId)
         {
             if (ownedComboRefIds == null) ownedComboRefIds = new List<int>();
@@ -452,16 +402,17 @@ namespace Battle
                 Debug.Log($"[NewBattle] 콤보 {refComboId} 이미 보유 중.");
                 return;
             }
-            // ⚠️ 빈 리스트(=전체 보유) 상태에서 처음 추가하면 '지정 집합'으로 전환됨(전체→해당 1개).
             ownedComboRefIds.Add(refComboId);
             useComboDatabase = true;
             RefreshOwnedCombosRuntime();
             Debug.Log($"[NewBattle] 콤보 추가: {refComboId}");
         }
 
+        // [테스트] debugAddComboRefId 콤보 1개 추가
         [ContextMenu("[테스트] 콤보 1개 추가 (debugAddComboRefId)")]
         void DebugAddOneCombo() => AddOwnedCombo(debugAddComboRefId);
 
+        // 전투 시작 시 카드 효과 컨텍스트 플래그/카운터 전체 초기화
         void ResetContextFlags()
         {
             _ctx.bonusDamagePerCardActive = false;
@@ -508,7 +459,6 @@ namespace Battle
             _ctx.handLimitBonus = 0;
             _ctx.firstCardAfterAttackFreeActive = false;
 
-            // 신규 카드 효과 플래그 초기화
             _ctx.chainGainOnCardUseActive = false;
             _ctx.chainGainOnCardUseAmount = 0;
             _ctx.damageOnFragmentUseActive = false;
@@ -533,6 +483,7 @@ namespace Battle
             _lastResolvedCard = null;
         }
 
+        // 카드 사용 통계(공격/파편/불/이름별·런 프로파일) 갱신
         void UpdateUsageStats(CardInstance card)
         {
             if (card == null) return;
@@ -547,11 +498,10 @@ namespace Battle
                 _ctx.usedCardNameCounts[name] = cur + 1;
             }
 
-            // 적 AI 런 프로파일: 일반(비각성) 카드 사용 기록 — 카테고리(플레이 빈도) + 코스트(평균 코스트)
             RunDeckState.Instance?.RecordCardUse(Battle.AI.EnemyDisruptionAI.Classify(card.data), card.data.gauge);
         }
 
-        /// <summary>물15(214) — 플레이어에게 적용된 모든 저주 해제.</summary>
+        // 물15(214) — 플레이어에게 적용된 모든 저주 해제
         public void ClearAllCurses()
         {
             bool hadCurse = _cursedElement.HasValue;
@@ -561,58 +511,53 @@ namespace Battle
             if (hadCurse) Log("[저주] 해제됨");
         }
 
-        /// <summary>EnemyController가 공격 종료 시 호출 — 다음 카드에 FIRST_CARD_AFTER_ENEMY_ATTACK 적용.</summary>
+        // EnemyController가 공격 종료 시 호출 — 다음 카드에 적 공격 후 플래그 적용
         public void NotifyEnemyAttackFinished()
         {
             _ctx.firstCardAfterEnemyAttack = true;
         }
 
+        // 물18(217): 플레이어 피격 시 회복 1
         void OnPlayerHitHandler()
         {
-            // 물18(217): 피격 시 회복 1
             if (_ctx.healOnPlayerHitActive && _ctx.player != null)
                 _ctx.player.Heal(1);
         }
 
+        // 땅18(417): 방어도 소모 시 무작위 파편 1장 버린 더미에
         void OnBlockConsumedHandler()
         {
-            // 땅18(417): 방어도 소모 시 무작위 파편 1장 버린 더미에
             if (_ctx.fragmentOnBlockConsumeActive && _deck != null)
                 _deck.AddToDiscard(CardDatabase.CreateFragmentInstance());
         }
 
+        // 적 공격 발생 시 — 강화 발현 처리·각성 게이지 -5·땅424 방어도 획득
         void OnEnemyAttackFiredHandler()
         {
             _ctx.firstCardAfterEnemyAttack = true;
 
-            // 효과 추적: 강화가 걸린 채 적 공격이 발생 = 발현. 그 사이 받은 피해로 보상.
-            // (EnemyController.HandleGaugeFull이 먼저 구독돼 첫 타격 피해가 동기 적용된 뒤 호출됨)
             if (_track != null && _track.action == 3) ResolveTrack(EnhanceReward(_track.playerHpAtFire));
 
-            // 새 메커니즘: 적 공격을 받으면 플레이어 각성 게이지 -5 (각성 빌드업 vs 적 공격의 레이스).
             if (!_awakenActive)
             {
                 _elementInputCount = Mathf.Max(0, _elementInputCount - 5);
                 UpdateAwakenText();
             }
 
-            // 땅424: 적 공격 종료 후 방어도 획득
             if (_ctx.blockOnEnemyAttackActive && _ctx.blockOnEnemyAttackAmount > 0 && _player != null)
                 _player.AddGuard(_ctx.blockOnEnemyAttackAmount);
         }
 
-        /// <summary>
-        /// 직전 효과(예: 207의 DRAW)의 시각 갱신이 먼저 반영되도록
-        /// 다음 프레임에 선택 모드 진입. 동일 프레임 내 다중 OnPileChanged → 한꺼번에 렌더되는 문제 회피.
-        /// </summary>
+        // 직전 효과의 시각 갱신 후 다음 프레임에 선택 모드 진입
         IEnumerator DeferredSelection(string prompt,
             System.Action<CardInstance> callback,
             System.Func<CardInstance, bool> filter)
         {
-            yield return null; // 1프레임 대기 — 드로우/배치 변화가 화면에 먼저 반영됨
+            yield return null;
             if (handHud != null) handHud.EnterSelectionMode(prompt, callback, filter: filter);
         }
 
+        // 다음 프레임에 카드 픽커 모드 진입
         IEnumerator DeferredPicker(string prompt, IList<CardInstance> cards,
             System.Action<CardInstance> callback)
         {
@@ -620,15 +565,15 @@ namespace Battle
             if (handHud != null) handHud.EnterCardPickerMode(prompt, cards, callback);
         }
 
-        /// <summary>카드 사용 후 보류된 각성을 (선택 모드 진입을 기다린 뒤) 발동 시도.</summary>
+        // 카드 사용 후 보류된 각성을 선택 모드 진입 대기 후 발동 시도
         IEnumerator DeferredPendingAwakenCheck()
         {
-            yield return null; // DeferredSelection이 선택 모드를 켜는 프레임 이후까지 대기
+            yield return null;
             yield return null;
             TryActivatePendingAwaken();
         }
 
-        /// <summary>필터에 매칭되는 카드가 패에 있는지 확인.</summary>
+        // 필터에 매칭되는 카드가 패에 있는지 확인
         bool HandHasMatch(System.Func<CardInstance, bool> filter)
         {
             if (filter == null) return _deck.Hand.Count > 0;
@@ -637,7 +582,7 @@ namespace Battle
             return false;
         }
 
-        /// <summary>CardEffects의 cardFilter 문자열을 EnterSelectionMode용 delegate로.</summary>
+        // CardEffects의 cardFilter 문자열을 선택 모드용 delegate로 변환
         static System.Func<CardInstance, bool> BuildHandCardFilter(string filter)
         {
             if (string.IsNullOrEmpty(filter)) return null;
@@ -657,7 +602,7 @@ namespace Battle
             }
         }
 
-        /// <summary>파편 인스턴스를 지정 존(HAND/DRAW_PILE_SHUFFLE/DISCARD_PILE_SHUFFLE)에 배치.</summary>
+        // 파편 인스턴스를 지정 존(HAND/DRAW/DISCARD)에 배치
         void PlaceFragmentInZone(CardInstance frag, string zone)
         {
             if (frag == null) return;
@@ -678,22 +623,18 @@ namespace Battle
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 입력
-        // ─────────────────────────────────────────────────────────────
-
+        // 키 입력 처리 (D 드로우)
         void HandleInput()
         {
             if (Input.GetKeyDown(KeyCode.D))
             {
-                // 카드 사용 연출 중 / 카드 선택·픽커·더미보기 모드 중에는 D 드로우 금지
                 if (_cardPresenting) return;
                 if (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode || handHud.IsViewerMode)) return;
                 TryDDraw();
             }
-            // 각성은 속성 카드 10장 사용 시 즉시 발동 — 별도 입력 키 없음.
         }
 
+        // D 드로우 시도 — 1장 뽑고 적 게이지 +1
         void TryDDraw()
         {
             if (_deck.IsHandFull)
@@ -714,16 +655,12 @@ namespace Battle
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 카드 사용
-        // ─────────────────────────────────────────────────────────────
-
+        // 카드 사용 요청 처리 — 각성 중 콤보 슬롯 등록 / 일반은 중앙 연출 후 효과 실행
         bool OnUseCardRequested(CardInstance card)
         {
             if (!_inBattle) return false;
             if (card == null) return false;
 
-            // 각성 중: 모든 카드 효과를 '드로우 1'로 치환 + 콤보 슬롯 등록
             if (_awakenActive)
             {
                 _deck.MoveAfterUse(card, exile: false, poweredField: false);
@@ -733,13 +670,10 @@ namespace Battle
                 if (card.data.comboSlot)
                 {
                     AddToComboSlot(card.Element);
-                    // 이번 입력은 '발동 이후' 입력 — 직전까지 발동된 콤보들의 쿨다운을 1 감소시킨 뒤 매칭 시도.
                     TickComboCooldowns();
                     comboTriggered = TryActivateCombo();
                 }
 
-                // 콤보 매칭 시 지속 시간 +1초 (비급서 보유 시 +0.5초 추가)
-                // 게이지가 줄어들지 않도록 max도 함께 증가시킨다 (시각적으로 끝부분이 살짝 차오르는 효과)
                 if (comboTriggered)
                 {
                     float extraBonus = (RelicManager.Instance != null &&
@@ -760,20 +694,14 @@ namespace Battle
                     handHud.UpdateComboSlot(_comboInput);
                     handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
                     handHud.UpdateAwakenInputHistory(_awakenInputHistory);
-                    // 각성 중에도 사용한 카드를 중앙에 띄움 — 단, 콤보 연타를 막지 않도록 비차단(interruptable).
-                    // 빠르게 연속 입력하면 직전 연출을 교체해 항상 최신 카드만 중앙에 표시.
                     handHud.PlayCardUsePresentation(card, null, interruptable: true);
                 }
 
-                // 콤보는 쿨다운 후 재사용 가능하므로 '전부 소진' 종료 없음 — 시간 종료(TickAwakenTimer)로만 종료.
                 return true;
             }
 
-            // 일반: 사용한 카드를 화면 중앙에 잠깐 띄운 뒤, 사라지는 순간 효과를 실행한다.
-            // 연출 중에는 다른 카드 사용을 막아 효과 중첩/재진입을 방지.
             if (_cardPresenting) return false;
 
-            // 카드를 즉시 패에서 빼 재사용 방지 + 손패 UI 정리. 중앙 연출이 끝나면 ResolveCardUse가 효과를 실행.
             _deck.PullFromHand(card);
             _cardPresenting = true;
 
@@ -787,41 +715,34 @@ namespace Battle
             return true;
         }
 
-        /// <summary>
-        /// 카드 사용의 실제 효과 처리 — 중앙 표시 연출이 끝나(카드가 사라지는) 시점에 호출된다.
-        /// 카드는 이미 패에서 제거된 상태(OnUseCardRequested의 PullFromHand 완료).
-        /// </summary>
+        // 카드 사용 실제 효과 처리 — 중앙 연출 종료 시점 호출(카드는 이미 패에서 제거됨)
         void ResolveCardUse(CardInstance card)
         {
             if (card == null) return;
-            // 전투 종료(보상 진입) 후 지연 콜백이 카드 효과를 실행하지 않도록 방어 — 보상 화면과 겹침 방지
             if (!_inBattle) return;
 
             ApplyCurseOnCardUse(card);
 
-            // 빙결 순서 처리용: 카드 사용 '전' 적 빙결량 기록 (이 카드가 부여한 빙결은 이 카드의 게이지 상승을 막지 않음)
             int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
 
             var result = _resolver.Resolve(card);
 
-            // 이 카드 사용 횟수 누적(바람314 N회 후 소멸 판정용 — Resolve가 직전 값을 읽고 판정함)
             card.selfUseCount++;
 
             // 바람314: 버린 더미 대신 패로 복귀 (소멸이 아닐 때만)
             if (result.returnToHandInsteadOfDiscard && !result.exile && !result.keepOnField)
             {
-                if (!_deck.AddToHand(card)) _deck.AddToDiscard(card); // 패가 가득이면 버린 더미로 폴백
+                if (!_deck.AddToHand(card)) _deck.AddToDiscard(card);
             }
             else
             {
                 _deck.PlaceCardAfterUse(card, result.exile, result.keepOnField);
 
-                // 바람318: 사용 후 버린 더미로 이동하는 카드의 ON_CARD_MOVED_TO_DISCARD 트리거
+                // 바람318: 사용 후 버린 더미로 이동하는 카드 트리거
                 if (!result.exile && !result.keepOnField)
                     _resolver.NotifyCardMovedToDiscard(card);
             }
 
-            // 카드 사용 효과 애니메이션 (EffectName 기반 스프라이트 시트)
             if (effectOverlay != null) effectOverlay.Play(card.data);
 
             if (result.exile) _resolver.NotifyExile(card);
@@ -861,7 +782,7 @@ namespace Battle
                         {
                             if (selected == null) return;
                             _deck.DiscardCardFromHand(selected);
-                            if (_ctx.discardToDrawActive) _deck.Draw(1); // 물21(220)
+                            if (_ctx.discardToDrawActive) _deck.Draw(1);
                         }, filter));
                 }
                 else Log("[효과] 버릴 카드 없음 — 건너뜀");
@@ -927,12 +848,11 @@ namespace Battle
 
             // 게이지 누적
             int gaugeCost = card.Gauge;
-            if (result.currentCardFreeThisUse) gaugeCost = 0; // 바람11(310)
+            if (result.currentCardFreeThisUse) gaugeCost = 0;
             if (_ctx.firstCardAfterAttackFreeActive && _ctx.firstCardAfterEnemyAttack)
-                gaugeCost = 0; // 바람20(319)
+                gaugeCost = 0;
 
-            // 빙결 순서: 이 카드가 부여한 빙결은 '이 카드의 게이지 상승'을 막지 않도록,
-            // 게이지 처리 동안만 카드 사용 전 빙결량으로 되돌렸다가 처리 후 복원.
+            // 빙결 순서: 이 카드가 부여한 빙결은 게이지 처리 동안만 사용 전 빙결량으로 되돌렸다가 복원
             int frostAddedByCard = 0;
             if (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int frostAfterCard))
             {
@@ -945,28 +865,24 @@ namespace Battle
             if (frostAddedByCard > 0 && _enemyStat != null)
             {
                 int frostRemaining = _enemyStat.statusEffects.TryGetValue("frost", out int fr) ? fr : 0;
-                _enemy?.SetStatus("frost", frostRemaining + frostAddedByCard); // 카드가 부여한 빙결 복원 + UI 갱신
+                _enemy?.SetStatus("frost", frostRemaining + frostAddedByCard);
             }
 
             if (result.skipNextGaugeCost) _skipNextGaugeCount++;
 
-            // 통계 갱신
             UpdateUsageStats(card);
 
-            // 각성 입력 카운팅
             if (card.data.comboSlot) AccumulateAwakenInput();
 
-            // 각성 발동이 보류됐다면 — 선택 카드가 아니면 곧 발동, 선택 카드면 선택 완료 후 발동.
-            // (선택 모드는 DeferredSelection이 1프레임 뒤 진입하므로 2프레임 후 확인)
+            // 각성 발동이 보류됐다면 — 선택이 없으면 곧, 선택 카드면 선택 완료 후 발동
             if (_awakenPending) StartCoroutine(DeferredPendingAwakenCheck());
 
-            // 마지막 카드 기록 (자기 복사 방지)
             if (card.Id != 211) _lastResolvedCard = card;
             _ctx.previousCardType = card.Type;
-            _ctx.firstCardAfterEnemyAttack = false; // 카드 사용 후 리셋
+            _ctx.firstCardAfterEnemyAttack = false;
             _ctx.currentCardJustDrawn = false;
 
-            // "방금 뽑은" 표시는 한 번이라도 카드를 쓰면 만료 (310의 USED_IMMEDIATELY_AFTER_DRAW용)
+            // "방금 뽑은" 표시는 한 번이라도 카드를 쓰면 만료
             for (int i = 0; i < _deck.Hand.Count; i++)
                 _deck.Hand[i].justDrawn = false;
             if (card != null) card.justDrawn = false;
@@ -974,15 +890,11 @@ namespace Battle
             Log($"{card.data.displayName} 사용 — 게이지+{gaugeCost}, 연쇄={_ctx.chainCount}");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 적 게이지
-        // ─────────────────────────────────────────────────────────────
-
+        // 적 게이지 누적 (각성 중·바람14 스킵 처리 포함)
         void AccrueEnemyGauge(int amount)
         {
-            if (_awakenActive) return; // 각성 중에는 적 게이지 증가 X
+            if (_awakenActive) return;
 
-            // 바람14(313): 다음 카드는 게이지 소모 스킵
             if (_skipNextGaugeCount > 0)
             {
                 _skipNextGaugeCount--;
@@ -1000,68 +912,57 @@ namespace Battle
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 각성
-        // ─────────────────────────────────────────────────────────────
-
+        // 각성 발동용 속성 입력 누적 — 임계 도달 시 발동 보류
         void AccumulateAwakenInput()
         {
             if (_awakenActive) return;
 
             _elementInputCount++;
-            // 속성 카드 N장 사용 시 발동 (별도 입력 키 없음). N은 바람326 등으로 가변.
-            // 단, 즉시 발동하지 않고 '보류'로 둔 뒤 — 선택 카드의 선택이 끝난 후 발동(TryActivatePendingAwaken).
             if (_elementInputCount >= EffectiveAwakenInput)
                 _awakenPending = true;
         }
 
-        /// <summary>
-        /// 각성 발동 보류분을 실제로 발동. 단, 카드 선택/픽커가 진행 중이면 대기(선택 완료 후 다시 호출됨).
-        /// 호출 시점: 카드 사용 종료 시(선택이 없을 때) + 선택/픽커 종료 콜백.
-        /// </summary>
+        // 보류된 각성을 실제로 발동(선택 진행 중이면 대기)
         void TryActivatePendingAwaken()
         {
             if (!_awakenPending || _awakenActive || !_inBattle) return;
-            if (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode)) return; // 선택 진행 중 — 대기
+            if (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode)) return;
             _awakenPending = false;
             ActivateAwaken();
         }
 
+        // 각성 발동 — 지속시간 계산·스냅샷·무속성 격리·콤보 UI 활성화
         void ActivateAwaken()
         {
             _awakenActive = true;
-            RunDeckState.Instance?.RecordAwakenActivation(); // 적 AI 런 프로파일: 피버사이클(f7)
+            RunDeckState.Instance?.RecordAwakenActivation();
             _elementInputCount = 0;
-            // 지속 시간 = 기본 4초 + 보유 콤보 1개당 1초 (발동 시점에 계산)
             int ownedComboCount = ownedComboSkills != null ? ownedComboSkills.Count : 0;
             float awakenDuration = AWAKEN_DURATION_SECONDS + ownedComboCount * AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS;
             _awakenTimeRemaining = awakenDuration;
             _awakenMaxTime = awakenDuration;
 
-            // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 그대로 복원.
+            // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 그대로 복원
             _awakenSnapshotHand = new List<CardInstance>(_deck.Hand);
             _awakenSnapshotDraw = new List<CardInstance>(_deck.DrawPile);
             _awakenSnapshotDiscard = new List<CardInstance>(_deck.DiscardPile);
 
-            // 패/드로우/버린 더미의 무속성 카드 임시 격리 (각성 중 속성 카드만 순환)
+            // 무속성 카드 임시 격리 (각성 중 속성 카드만 순환)
             _awakenStoredNeutralCards = _deck.ExtractAllNeutralCards();
 
-            // 격리된 카드 중 파편 수 기록 (REPEAT_BY_AWAKEN_FRAGMENT_EXHAUSTED용)
+            // 격리된 카드 중 파편 수 기록
             _awakenFragmentExhausted = 0;
             foreach (var c in _awakenStoredNeutralCards)
                 if (c != null && c.Element == CardElement.Fragment) _awakenFragmentExhausted++;
             _comboSelfUseCount.Clear();
 
-            // 패를 가득 차게 드로우 (기획서: 각성 발동 시 패 보충)
             _deck.Draw(_deck.HandLimit);
 
-            // 콤보 입력/쿨다운/큐/히스토리 초기화
             _comboInput.Clear();
             _comboCooldown = new int[ownedComboSkills != null ? ownedComboSkills.Count : 0];
             _queuedComboSkills.Clear();
             _awakenInputHistory.Clear();
 
-            // 콤보 슬롯/스킬 UI 활성화 및 갱신
             if (handHud != null)
             {
                 handHud.SetAwakenMode(true);
@@ -1070,43 +971,39 @@ namespace Battle
                 handHud.UpdateAwakenInputHistory(_awakenInputHistory);
             }
 
-            // 상단 각성 타이머 게이지 표시 + 초기값 세팅
             if (awakenTimerGauge != null)
             {
                 awakenTimerGauge.Show();
                 awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
             }
 
-            // 각성 화면 효과(Screen wind 등) — UI 위에 루프 재생, 각성 종료(EndAwaken) 시 정지
             if (effectOverlay != null && awakenScreenEffectPrefab != null)
                 _awakenScreenEffectInstance = effectOverlay.PlayPrefabPersistent(awakenScreenEffectPrefab, awakenScreenEffectScale);
 
             Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
         }
 
+        // 각성 종료 — 더미 복원·큐 콤보 일괄 발동·이펙트/UI 정리
         void EndAwaken()
         {
             _awakenActive = false;
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
-            if (awakenTimerGauge != null) awakenTimerGauge.Hide(); // 상단 각성 타이머 숨김
+            if (awakenTimerGauge != null) awakenTimerGauge.Hide();
 
-            // 각성 화면 효과 즉시 정지(잔상 없이 바로 제거)
             if (effectOverlay != null) effectOverlay.StopPersistent(_awakenScreenEffectInstance);
             _awakenScreenEffectInstance = null;
 
-            // 각성 직전 상태로 패/뽑을 더미/버린 더미 복원 (각성 중의 드로우·사용 churn 되돌림).
-            // 격리했던 무속성/파편 카드도 스냅샷에 포함돼 있으므로 함께 복원됨.
+            // 각성 직전 상태로 패/뽑을 더미/버린 더미 복원 (격리 카드 포함)
             _deck.RestorePiles(_awakenSnapshotHand, _awakenSnapshotDraw, _awakenSnapshotDiscard);
             _awakenSnapshotHand = null;
             _awakenSnapshotDraw = null;
             _awakenSnapshotDiscard = null;
             _awakenStoredNeutralCards.Clear();
 
-            // 큐에 쌓인 콤보 스킬 일괄 발동 (매칭 순서대로) — 복원 후 적용되므로 Draw 콤보 등은 복원된 덱에서 유효
             if (_queuedComboSkills.Count > 0)
             {
-                // Damage 콤보를 먼저 세어두면, 이펙트 분산 시 i번째/총N개로 좌우 정렬 가능
+                // Damage 콤보 수를 먼저 세어 이펙트 좌우 분산에 사용
                 int damageCount = 0;
                 for (int i = 0; i < _queuedComboSkills.Count; i++)
                     if (_queuedComboSkills[i] != null && _queuedComboSkills[i].effect == ComboEffectType.Damage)
@@ -1142,14 +1039,14 @@ namespace Battle
                     }
                 }
 
-                // Damage 콤보가 1건 이상이면 데미지 임팩트 강조용 셰이크 (콤보 수에 비례, 상한 있음)
+                // Damage 콤보가 1건 이상이면 임팩트 강조용 셰이크 (콤보 수 비례, 상한 있음)
                 if (damageCount > 0 && damageOverlay != null && awakenShakeIntensityPerHit > 0f)
                 {
                     float intensity = Mathf.Min(damageCount * awakenShakeIntensityPerHit, awakenShakeIntensityMax);
                     damageOverlay.TriggerShake(intensity);
                 }
 
-                // 이무기의 여의주: 성공한 콤보 수만큼 각성 게이지 회복 (즉시 재발동 방지를 위해 max-1 상한)
+                // 이무기의 여의주: 성공 콤보 수만큼 각성 게이지 회복 (즉시 재발동 방지 max-1 상한)
                 if (RelicManager.Instance != null &&
                     RelicManager.Instance.HasEffect(RelicEffectType.AwakenGaugeRecoverPerCombo))
                 {
@@ -1165,12 +1062,10 @@ namespace Battle
                 Log("[각성] 종료 — 발동된 콤보 없음");
             }
 
-            // 콤보 슬롯/입력/쿨다운/히스토리 초기화
             _comboInput.Clear();
             _comboCooldown = System.Array.Empty<int>();
             _awakenInputHistory.Clear();
 
-            // 콤보 슬롯/스킬 UI 비활성화
             if (handHud != null)
             {
                 handHud.SetAwakenMode(false);
@@ -1180,30 +1075,22 @@ namespace Battle
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 콤보 매칭
-        // ─────────────────────────────────────────────────────────────
-
+        // 콤보 슬롯에 속성 추가(윈도우 3장 유지) + 히스토리 누적
         void AddToComboSlot(CardElement element)
         {
             _comboInput.Add(element);
             if (_comboInput.Count > 3) _comboInput.RemoveAt(0);
-            // 전체 히스토리(왼쪽 표시용)에도 누적
             _awakenInputHistory.Add(element);
         }
 
-        /// <summary>발동 이후 입력 1회 — 쿨다운 중인 콤보들의 남은 횟수를 1씩 감소(0 미만 방지).</summary>
+        // 쿨다운 중인 콤보들의 남은 횟수를 1씩 감소
         void TickComboCooldowns()
         {
             for (int i = 0; i < _comboCooldown.Length; i++)
                 if (_comboCooldown[i] > 0) _comboCooldown[i]--;
         }
 
-        /// <summary>
-        /// 콤보 매칭. 매칭되면 큐에 적재(즉시 발동 X). 각성 종료 시 일괄 발동.
-        /// 쿨다운(>0)인 콤보는 매칭 제외, 매칭 시 COMBO_REUSE_INPUT 만큼 쿨다운 부여.
-        /// 반환값=true는 "이번에 매칭됐다" — 호출자가 시간 보너스(+1s) 부여용.
-        /// </summary>
+        // 콤보 매칭 — 매칭 시 큐에 적재·쿨다운 부여, 매칭 여부 반환(시간 보너스용)
         bool TryActivateCombo()
         {
             if (_comboInput.Count < 3) return false;
@@ -1211,14 +1098,13 @@ namespace Battle
 
             for (int i = 0; i < ownedComboSkills.Count; i++)
             {
-                if (i < _comboCooldown.Length && _comboCooldown[i] > 0) continue; // 재사용 대기 중
+                if (i < _comboCooldown.Length && _comboCooldown[i] > 0) continue;
                 var skill = ownedComboSkills[i];
                 if (skill == null) continue;
                 if (skill.Matches(_comboInput))
                 {
                     _queuedComboSkills.Add(skill);
-                    if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_INPUT; // 재사용까지 N입력 대기
-                    // 슬롯은 클리어하지 않음 — 슬라이딩 윈도우 그대로 유지
+                    if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_INPUT;
                     Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 {COMBO_REUSE_INPUT}입력)");
                     return true;
                 }
@@ -1226,9 +1112,9 @@ namespace Battle
             return false;
         }
 
+        // 콤보 스킬 1건 발동 — DB 콤보는 다중 효과, 레거시는 단일 효과
         void ActivateComboSkill(ComboSkillDef skill)
         {
-            // DB 콤보: 데이터 드리븐 다중 효과를 리졸버로 실행
             if (skill.fromDatabase)
             {
                 Log($"[콤보 스킬] {skill.displayName} ({skill.ComboString()}, ref={skill.refComboId}) 발동 — 효과 {(skill.dbEffects != null ? skill.dbEffects.Count : 0)}건");
@@ -1237,14 +1123,13 @@ namespace Battle
                 return;
             }
 
-            // 레거시(Inspector 수동) 콤보: 단일 효과
             Log($"[콤보 스킬] {skill.displayName} ({skill.ComboString()}) 발동 — {skill.effect} {skill.amount}");
 
             switch (skill.effect)
             {
                 case ComboEffectType.Damage:
                     if (_enemy != null) _enemy.TakeDamage(skill.amount);
-                    // 데미지 이펙트는 EndAwaken이 위치 분산+셰이크와 함께 일괄 처리하므로 여기선 띄우지 않음.
+                    // 데미지 이펙트는 EndAwaken이 분산+셰이크와 함께 처리하므로 여기선 띄우지 않음
                     break;
                 case ComboEffectType.Burn:
                     if (_enemy != null) _enemy.AddStatus("burn", skill.amount);
@@ -1261,7 +1146,7 @@ namespace Battle
             }
         }
 
-        /// <summary>DB 콤보 효과 실행 직전 런타임 참조/카운터를 채운다.</summary>
+        // DB 콤보 효과 실행 직전 런타임 참조/카운터를 채움
         void FillComboContext(ComboSkillDef skill)
         {
             _comboCtx.enemy = _enemy;
@@ -1281,11 +1166,7 @@ namespace Battle
             _comboCtx.onGainChain = n => { _ctx.chainCount += n; };
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 방해 행동 — EnemyController.HandleMidPattern이 호출
-        // ─────────────────────────────────────────────────────────────
-
-        /// <summary>AI 미사용/폴백 — 가용 행동(저주/탈진/흡수/강화 + 회복(쿨다운 가용) + 버리기(패≥2)) 중 무작위 1개.</summary>
+        // AI 미사용/폴백 — 가용 행동 중 무작위 1개 선택
         int RandomFallbackPick(bool recoverReady)
         {
             var pool = new List<int> { 0, 1, 2, 3 };
@@ -1294,16 +1175,12 @@ namespace Battle
             return pool[Random.Range(0, pool.Count)];
         }
 
-        /// <summary>
-        /// 기획서 0.6v + 확장 [방해행동]: 적이 특정 행동게이지(중간 단계)에 도달하면 호출.
-        /// 저주 / 탈진 / 흡수 / 강화 / 회복(쿨다운) / 버리기 중 1개 — FCM-RBFN AI가 선택(폴백 랜덤). 실행 분기는 공통.
-        /// </summary>
+        // 적 방해행동 발동 — AI(또는 랜덤)로 1개 선택 후 분기 실행, 보상 추적 시작
         public string TriggerDisruption()
         {
-            // FCM-RBFN 학습 모델로 방해행동 선택(랜덤 폴백). 6개 실행 분기는 그대로 재사용.
             bool recoverReady = _recoverCooldown <= 0;
             int pick;
-            Battle.AI.AiDecision? rewardDecision = null; // 온라인 학습 ON일 때만 채워짐 → 효과 추적 시작용
+            Battle.AI.AiDecision? rewardDecision = null;
             if (useAiDisruption && Battle.AI.EnemyAiModel.Loaded)
             {
                 try
@@ -1317,9 +1194,7 @@ namespace Battle
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
                             $" → 선택={Battle.AI.EnemyAiModel.ActionNames[pick]}{(decision.explored ? " (탐험)" : "")}");
                     if (logAiDecisions) Battle.AI.DisruptionLogger.Log(decision);
-                    // 보상 추적/표시는 항상 수행(디버그 관찰용). 가중치 학습만 onlineLearning ON일 때(학습 호출 4곳에 가드).
                     rewardDecision = decision;
-                    // TD: 이번 결정이 직전 전이들의 s'가 된다 → 채우고, 완성분 게시(+ON이면 학습), 새 전이 시작.
                     if (aiRewardGamma > 0f) TdOnDecision(decision);
                 }
                 catch (System.Exception e)
@@ -1333,7 +1208,7 @@ namespace Battle
                 pick = RandomFallbackPick(recoverReady);
             }
 
-            // 회복 쿨다운 진행 — 회복이 아닌 행동이 발동되면 1 감소(회복 후 다른 행동 2회 후 재사용)
+            // 회복 쿨다운 진행 — 회복이 아닌 행동이 발동되면 1 감소
             if (pick != 4 && _recoverCooldown > 0) _recoverCooldown--;
 
             switch (pick)
@@ -1345,7 +1220,7 @@ namespace Battle
                     _cursedElement = target;
                     _curseRemainingUses = CURSE_DURATION_USES;
                     handHud?.Refresh();
-                    if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0); // 자해/회피 발현까지 추적
+                    if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0);
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
                     return $"방해: {ElementName(target)} 저주!";
                 }
@@ -1354,7 +1229,7 @@ namespace Battle
                     var dummy = CardDatabase.CreateNeutralFillerInstance();
                     if (dummy != null) _deck.AddToDrawShuffled(dummy);
                     handHud?.Refresh();
-                    if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 1); if (_track != null) _track.exhaustCard = dummy; } // 그 카드가 뽑힐 때까지 추적
+                    if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 1); if (_track != null) _track.exhaustCard = dummy; }
                     Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
                     return "방해: 탈진 카드 삽입!";
                 }
@@ -1370,7 +1245,7 @@ namespace Battle
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
                 {
                     _enemy?.BuffNextAttack();
-                    if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 3); if (_track != null) _track.playerHpAtFire = _player != null ? _player.currentHp : 0; } // 다음 적 공격까지 추적
+                    if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 3); if (_track != null) _track.playerHpAtFire = _player != null ? _player.currentHp : 0; }
                     Log("[방해] 강화 — 적 다음 공격 피해 증가(1회)");
                     return "방해: 적 강화!";
                 }
@@ -1399,13 +1274,13 @@ namespace Battle
             }
         }
 
-        /// <summary>방해(버리기): 플레이어가 패에서 count장을 직접 선택해 버린다. 카드 선택 모드를 연쇄로 사용.</summary>
+        // 방해(버리기): 플레이어가 패에서 count장을 직접 선택해 버림(선택 모드 연쇄)
         IEnumerator EnemyForcedDiscardRoutine(int count)
         {
             int done = 0;
             while (done < count && _deck.HandCount > 0 && handHud != null)
             {
-                yield return null; // 선택 모드 진입 전 한 프레임 (렌더 안정)
+                yield return null;
                 if (_deck.HandCount == 0) break;
                 bool picked = false;
                 int idx = done + 1;
@@ -1419,31 +1294,26 @@ namespace Battle
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 온라인 학습 — 방해행동 효과 추적 보상 (각 방해의 '의도 달성'으로 학습)
-        // ─────────────────────────────────────────────────────────────
-
-        // 지연형(저주/탈진/강화) 추적 시작. 직전 미발현 추적은 먼저 마감.
+        // 지연형(저주/탈진/강화) 추적 시작 (직전 미발현 추적은 먼저 마감)
         void BeginTrack(Battle.AI.AiDecision decision, int action)
         {
             ResolveTrackUnfired();
             _track = new DisruptionTrack { decision = decision, action = action };
         }
 
-        // 즉시형(흡수/회복/버리기): 발동 시점 가치로 보상 확정.
-        // γ>0이면 TD 큐에 보상만 채우고 다음 결정(s' 확정) 때 학습, γ=0이면 즉시 학습.
+        // 즉시형(흡수/회복/버리기): 발동 시점 가치로 보상 확정 후 학습/게시
         void ObserveDisruption(Battle.AI.AiDecision decision, int action, float reward)
         {
             reward = Mathf.Clamp(reward, -1f, 1f);
             if (aiRewardGamma > 0f) { TdSetReward(decision, reward, immediate: true); return; }
             if (onlineLearning) Battle.AI.OnlineQLearner.Observe(decision.membership, decision.context, action, reward);
             float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
-            Battle.AI.AiDebug.PublishReward(action, reward, true, drift); // 디버그 오버레이용(학습 OFF여도 항상 게시)
+            Battle.AI.AiDebug.PublishReward(action, reward, true, drift);
             if (logVerbose)
                 Log($"[적AI{(onlineLearning ? "학습" : "관찰")}] {Battle.AI.EnemyAiModel.ActionNames[action]} r={reward:+0.00;-0.00} (즉시) drift={drift:F3}");
         }
 
-        // 지연형 발현 → 보상 확정. (즉시형과 동일하게 γ로 분기)
+        // 지연형 발현 → 보상 확정 후 학습/게시
         void ResolveTrack(float reward)
         {
             if (_track == null) return;
@@ -1452,13 +1322,12 @@ namespace Battle
             if (aiRewardGamma > 0f) { TdSetReward(t.decision, reward, immediate: false); return; }
             if (onlineLearning) Battle.AI.OnlineQLearner.Observe(t.decision.membership, t.decision.context, t.action, reward);
             float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
-            Battle.AI.AiDebug.PublishReward(t.action, reward, false, drift); // 디버그 오버레이용(학습 OFF여도 항상 게시)
+            Battle.AI.AiDebug.PublishReward(t.action, reward, false, drift);
             if (logVerbose)
                 Log($"[적AI{(onlineLearning ? "학습" : "관찰")}] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={reward:+0.00;-0.00} (발현) drift={drift:F3}");
         }
 
-        // ── TD(0) 전이 큐 관리 (aiRewardGamma>0 일 때만 사용) ─────────────────────
-        // 새 방해결정: 직전 전이들의 s'를 이번 결정 상태로 채우고, (s,a,r,s') 완성분을 학습한 뒤 새 전이를 적재.
+        // 새 방해결정: 직전 전이들의 s'를 채우고 완성분 학습 후 새 전이 적재
         void TdOnDecision(Battle.AI.AiDecision decision)
         {
             for (int i = 0; i < _tdQueue.Count; i++)
@@ -1472,7 +1341,7 @@ namespace Battle
             _tdQueue.Add(new TdTransition { mu = decision.membership, ctx = decision.context, action = decision.action });
         }
 
-        // 보상 확정: 같은 결정(membership 레퍼런스)의 전이에 보상을 채운다. 완성되면 학습.
+        // 같은 결정의 전이에 보상을 채움(완성되면 학습)
         void TdSetReward(Battle.AI.AiDecision decision, float reward, bool immediate)
         {
             for (int i = 0; i < _tdQueue.Count; i++)
@@ -1486,7 +1355,7 @@ namespace Battle
             TdFlush();
         }
 
-        // 보상과 s'가 모두 확정된 전이를 TD 학습(target=r+γ·maxQ(s'))시키고 큐에서 제거.
+        // 보상과 s'가 모두 확정된 전이를 TD 학습 후 큐에서 제거
         void TdFlush()
         {
             for (int i = _tdQueue.Count - 1; i >= 0; i--)
@@ -1503,7 +1372,7 @@ namespace Battle
             }
         }
 
-        // 전투 종료/리셋: 남은 전이는 터미널(s'=null → 부트스트랩 0)로 학습. 보상 미확정분은 결과가 없어 버린다.
+        // 전투 종료/리셋: 남은 전이를 터미널(s'=null)로 학습, 보상 미확정분은 버림
         void TdFlushTerminal()
         {
             for (int i = 0; i < _tdQueue.Count; i++)
@@ -1519,7 +1388,7 @@ namespace Battle
             _tdQueue.Clear();
         }
 
-        // 발현 못 하고 끝남(타임아웃/전투종료) → 저주는 자해/회피분 반영, 그 외 미발현 음수.
+        // 발현 못 하고 끝난 지연형 추적 마감(저주는 자해/회피분, 그 외 미발현 음수)
         void ResolveTrackUnfired()
         {
             if (_track == null) return;
@@ -1527,6 +1396,7 @@ namespace Battle
             else ResolveTrack(UNFIRED_REWARD);
         }
 
+        // 지연형 추적 경과 시간 누적, 타임아웃 시 미발현 마감
         void TickDisruptionTrack()
         {
             if (_track == null) return;
@@ -1534,32 +1404,31 @@ namespace Battle
             if (_track.elapsed >= disruptionTrackTimeout) ResolveTrackUnfired();
         }
 
-        // ── 행동별 보상 공식 (모두 [-1,1], 각 방해의 '의도 달성'을 측정) ──
-        // 흡수: 발동 직전 각성 근접도(임박할수록 가치↑).
+        // 흡수 보상: 발동 직전 각성 근접도(임박할수록 가치↑)
         float AbsorbReward(int awakenBefore)
         {
             float prox = EffectiveAwakenInput > 0 ? Mathf.Clamp01(awakenBefore / (float)EffectiveAwakenInput) : 0f;
             return Mathf.Clamp(prox * 2f - 0.6f, -1f, 1f);
         }
-        // 회복: 발동 직전 적 빈사도(빈사일수록 가치↑, 만피는 낭비라 음수).
+        // 회복 보상: 발동 직전 적 빈사도(빈사일수록 가치↑, 만피는 음수)
         float RecoverReward(float enemyHpBefore)
         {
             float ratio = (_enemyStat != null && _enemyStat.maxHp > 0f) ? Mathf.Clamp01(enemyHpBefore / _enemyStat.maxHp) : 1f;
             return Mathf.Clamp((1f - ratio) * 2f - 1f, -1f, 1f);
         }
-        // 버리기: 발동 직전 손패 압박(가득 찰수록 가치↑). 기본 패 한도 5 기준.
+        // 버리기 보상: 발동 직전 손패 압박(가득 찰수록 가치↑, 한도 5 기준)
         float DiscardReward(int handBefore)
         {
             float pressure = Mathf.Clamp01(handBefore / 5f);
             return Mathf.Clamp(pressure * 2f - 0.8f, -1f, 1f);
         }
-        // 저주: 자해를 유도하면 강한+(2회 다 유도 시 최대), 안 써도(회피=제약 성공) 약한+. HP 못 깎아도 실패 아님.
+        // 저주 보상: 자해 유도 시 강한+, 회피(제약 성공)는 약한+ (HP 못 깎아도 실패 아님)
         float CurseReward(int hits)
         {
-            if (hits <= 0) return 0.2f; // 회피 = 플레이어 행동을 제약한 약한 성공(실패 아님)
+            if (hits <= 0) return 0.2f;
             return Mathf.Clamp(0.3f + hits * 0.45f, -1f, 1f);
         }
-        // 강화: 발현(적 공격 발생) 자체 +0.4(가드 흡수도 성공 인정), 그 사이 받은 HP 피해만큼 가산.
+        // 강화 보상: 발현 자체 +0.4, 그 사이 받은 HP 피해만큼 가산
         float EnhanceReward(int playerHpAtFire)
         {
             float lost = (_player != null && _player.maxHp > 0)
@@ -1567,13 +1436,13 @@ namespace Battle
             return Mathf.Clamp(0.4f + lost * 3f, -1f, 1f);
         }
 
-        /// <summary>외부(NewCardView)가 카드가 저주되었는지 확인용.</summary>
+        // 외부(NewCardView)가 카드 속성이 저주되었는지 확인용
         public bool IsElementCursed(CardElement element)
         {
             return _cursedElement.HasValue && _cursedElement.Value == element && _curseRemainingUses > 0;
         }
 
-        /// <summary>저주된 속성 카드 사용 시 플레이어 피해. 카드 사용 2회 동안 지속(어떤 카드든 카운트).</summary>
+        // 저주된 속성 카드 사용 시 플레이어 피해 적용(2회 동안 지속)
         void ApplyCurseOnCardUse(CardInstance card)
         {
             if (!_cursedElement.HasValue || _curseRemainingUses <= 0) return;
@@ -1582,7 +1451,7 @@ namespace Battle
             {
                 _player.TakeDamage(CURSE_PLAYER_DAMAGE);
                 Log($"[저주] {_cursedElement.Value} 카드 사용 — 플레이어 {CURSE_PLAYER_DAMAGE} 피해");
-                if (_track != null && _track.action == 0) _track.curseHits++; // 효과 추적: 실제 자해 발생
+                if (_track != null && _track.action == 0) _track.curseHits++;
             }
 
             _curseRemainingUses--;
@@ -1590,57 +1459,48 @@ namespace Battle
             {
                 Log($"[저주] {_cursedElement.Value} 저주 종료");
                 _cursedElement = null;
-                if (_track != null && _track.action == 0) ResolveTrack(CurseReward(_track.curseHits)); // 저주 소진 → 보상 확정(자해/회피)
+                if (_track != null && _track.action == 0) ResolveTrack(CurseReward(_track.curseHits));
             }
         }
 
+        // 속성을 한글 이름으로 변환
         static string ElementName(CardElement e) => e switch
         {
             CardElement.Fire => "불", CardElement.Water => "물",
             CardElement.Wind => "바람", CardElement.Earth => "땅", _ => "?"
         };
 
+        // 각성 게이지 텍스트/게이지 갱신 및 HP바 앵커 재시도
         void UpdateAwakenText()
         {
             if (handHud == null) return;
 
-            // 전투 UI의 활성 HP바가 늦게 켜질 수 있으므로 매 프레임 anchor 재시도
             var activeCombatHpRect = ResolveActiveCombatHpBarRect();
             if (activeCombatHpRect != null)
                 handHud.SetAwakenGaugeAnchor(activeCombatHpRect);
 
-            // HP바 아래 기존 게이지는 '충전(0/10)'만 담당 — 각성 중 '시간 표시'는 상단 타이머 게이지가 담당.
-            // (각성 발동 시 _elementInputCount=0으로 리셋되므로 각성 중에는 0/10으로 표시됨)
             int awakenMax = EffectiveAwakenInput;
             handHud.SetAwakenText($"{_elementInputCount}/{awakenMax}");
             handHud.UpdateAwakenGauge(_elementInputCount, awakenMax, false, 0f, 0f);
         }
 
+        // 상세 로그 출력(logVerbose ON일 때만)
         void Log(string msg)
         {
             if (logVerbose) Debug.Log($"[NewBattle] {msg}");
         }
 
-        /// <summary>
-        /// 각성 종료 시 데미지 콤보 N건을 좌우/상하로 분산시키기 위한 오프셋 계산.
-        /// index 0..total-1 → 중심에서 좌우로 펼침, Y는 짝/홀로 zigzag.
-        /// total<=1 이면 분산 없음(원점).
-        /// </summary>
+        // 각성 종료 시 데미지 콤보 N건을 좌우/상하로 분산할 오프셋 계산
         Vector2 ComputeAwakenDamageOffset(int index, int total)
         {
             if (total <= 1) return Vector2.zero;
-            // -(total-1)/2 ~ +(total-1)/2 로 정규화 → 가운데 기준 좌우 균등 배치
             float lane = index - (total - 1) * 0.5f;
             float x = lane * awakenDamageEffectSpread.x;
-            // Y: 짝수 인덱스 -dip, 홀수 +dip (작은 zigzag로 단조로움 회피)
             float y = ((index % 2 == 0) ? -1f : 1f) * awakenDamageEffectSpread.y;
             return new Vector2(x, y);
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 자동 셋업 헬퍼
-        // ─────────────────────────────────────────────────────────────
-
+        // 손패 HUD를 찾거나 전투 캔버스 하위에 생성
         CardHandHUD ResolveOrCreateHandHud()
         {
             var existing = FindFirstObjectByType<CardHandHUD>(FindObjectsInactive.Include);
@@ -1664,6 +1524,7 @@ namespace Battle
             return hudGo.AddComponent<CardHandHUD>();
         }
 
+        // 전투 캔버스 탐색(CombatStage 하위 우선, 없으면 첫 캔버스)
         Canvas ResolveCombatCanvas()
         {
             GameObject combatStage = GameObject.Find("CombatStage");
@@ -1675,6 +1536,7 @@ namespace Battle
             return FindFirstObjectByType<Canvas>();
         }
 
+        // 활성 전투 HP바(PlayerHpBar)의 RectTransform 탐색(맵 HP바 오인식 방지)
         RectTransform ResolveActiveCombatHpBarRect()
         {
             GameObject combatStage = GameObject.Find("CombatStage");
@@ -1713,6 +1575,7 @@ namespace Battle
             return null;
         }
 
+        // EventSystem이 없으면 생성해 보장
         void EnsureEventSystem()
         {
             var es = FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>(FindObjectsInactive.Include);
@@ -1723,6 +1586,7 @@ namespace Battle
             go.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
 
+        // 카드 효과 오버레이를 찾거나 전투 캔버스 하위에 생성
         CardEffectOverlay ResolveOrCreateEffectOverlay()
         {
             var existing = FindFirstObjectByType<CardEffectOverlay>(FindObjectsInactive.Include);
@@ -1743,6 +1607,7 @@ namespace Battle
             return go.AddComponent<CardEffectOverlay>();
         }
 
+        // 플레이어 피격 오버레이를 찾거나 전투 캔버스 하위에 생성
         PlayerDamageOverlay ResolveOrCreateDamageOverlay()
         {
             var existing = FindFirstObjectByType<PlayerDamageOverlay>(FindObjectsInactive.Include);

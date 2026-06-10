@@ -1,98 +1,83 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// 속성 슬롯 시스템 — 프로토타입 v29 이식
-/// Q=불(fire) / W=물(water) / E=바람(wind) / R=땅(earth) 고정 슬롯
-/// 각 속성별 독립 덱을 관리하며, 전투 간 런 덱이 유지됨
-///
-/// [교체 대상] CardSystem.cs (단일 덱 → 손패 방식)
-/// </summary>
+// 속성 슬롯 시스템 — Q=불/W=물/E=바람/R=땅 고정 슬롯, 전투 간 런 덱 유지
 public class ElementSlotSystem : MonoBehaviour
 {
-    // ── 상수 ──────────────────────────────────────────────────────────
-    public static readonly string[] SLOT_KEYS    = { "Q", "W", "E", "R" };
-    public static readonly string[] ELEMENT_KEYS = { "fire", "water", "wind", "earth" };
-    public const string NEUTRAL_CARD = "neutral";
+    public static readonly string[] SLOT_KEYS    = { "Q", "W", "E", "R" }; // 슬롯 키 목록
+    public static readonly string[] ELEMENT_KEYS = { "fire", "water", "wind", "earth" }; // 속성 키 목록
+    public const string NEUTRAL_CARD = "neutral"; // 무속성 카드 식별자
 
-    public const int CARDS_PER_ELEMENT = 3; // 런 덱 기본 속성당 카드 수
-    public const int SLOT_CURSE_TURNS  = 2;
-    public const int CURSED_SLOT_DAMAGE = 6;
+    public const int CARDS_PER_ELEMENT = 3; // 런 덱 속성당 기본 카드 수
+    public const int SLOT_CURSE_TURNS  = 2; // 저주 지속 횟수
+    public const int CURSED_SLOT_DAMAGE = 6; // 저주 반동 피해
 
-    // ── 런 덱 카드 (전투 간 유지) ────────────────────────────────────
+    // 전투 간 유지되는 런 덱 카드
     [System.Serializable]
     public class RunDeckCard
     {
-        public string elementKey;  // "fire" / "water" / "wind" / "earth"
+        public string elementKey;  // 속성 키
         public int    upgradeLevel; // 카드 강화 횟수
 
+        // 카드 생성
         public RunDeckCard(string key, int upgrade = 0)
         {
             elementKey   = key;
             upgradeLevel = upgrade;
         }
 
-        /// 카드 기본 피해 = 1 + 강화레벨
-        public int BaseDamage => 1 + upgradeLevel;
-        /// 부가효과 보너스 = 강화레벨과 동일
-        public int EffectBonus => upgradeLevel;
+        public int BaseDamage => 1 + upgradeLevel; // 기본 피해(1+강화레벨)
+        public int EffectBonus => upgradeLevel; // 부가효과 보너스(강화레벨)
     }
 
-    // ── 슬롯 상태 ─────────────────────────────────────────────────────
+    // 개별 슬롯의 런타임 상태
     public class SlotState
     {
         public string       elementKey;   // 이 슬롯에 고정된 속성
-        public string       slotKey;      // "Q" / "W" / "E" / "R"
-        public RunDeckCard  currentCard;  // 현재 장전된 카드 (null = 빈 슬롯)
+        public string       slotKey;      // 슬롯 키(Q/W/E/R)
+        public RunDeckCard  currentCard;  // 현재 장전된 카드(null=빈 슬롯)
         public bool         hasNeutralCard; // 무속성 카드 혼입 여부
         public int          neutralDeckCount; // 뽑기 대기 중인 무속성 카드 수
-        public int          neutralGraveCount; // 사용 후 대기 중인 무속성 카드 수(재구성 시 deck으로 이동)
-        public int          curseTurns;   // 저주 남은 횟수 (0 = 정상)
+        public int          neutralGraveCount; // 사용 후 대기 중인 무속성 카드 수
+        public int          curseTurns;   // 저주 남은 횟수(0=정상)
 
-        public List<RunDeckCard> deck  = new List<RunDeckCard>();
-        public List<RunDeckCard> grave = new List<RunDeckCard>();
+        public List<RunDeckCard> deck  = new List<RunDeckCard>(); // 슬롯 덱
+        public List<RunDeckCard> grave = new List<RunDeckCard>(); // 슬롯 묘지
 
-        public bool IsEmpty   => currentCard == null && !hasNeutralCard && deck.Count == 0;
-        public bool IsCursed  => curseTurns > 0;
-        public bool HasCard   => currentCard != null || hasNeutralCard;
-        public int  RemainingCount => (currentCard != null ? 1 : 0) + (hasNeutralCard ? 1 : 0) + deck.Count + neutralDeckCount;
+        public bool IsEmpty   => currentCard == null && !hasNeutralCard && deck.Count == 0; // 완전히 빈 슬롯인지
+        public bool IsCursed  => curseTurns > 0; // 저주 상태인지
+        public bool HasCard   => currentCard != null || hasNeutralCard; // 장전된 카드 보유 여부
+        public int  RemainingCount => (currentCard != null ? 1 : 0) + (hasNeutralCard ? 1 : 0) + deck.Count + neutralDeckCount; // 남은 카드 총수
     }
 
-    // ── 싱글턴 ───────────────────────────────────────────────────────
-    public static ElementSlotSystem Instance;
+    public static ElementSlotSystem Instance; // 싱글턴 인스턴스
 
-    // ── 런 덱 (Inspector에서도 확인 가능) ────────────────────────────
     [Header("런 덱 상태 (디버그)")]
-    [SerializeField] private int runDeckCount;
+    [SerializeField] private int runDeckCount; // 런 덱 카드 수(인스펙터 표시용)
 
-    private List<RunDeckCard> _runDeck = new List<RunDeckCard>();
-    public System.Collections.ObjectModel.ReadOnlyCollection<RunDeckCard> RunDeck => _runDeck.AsReadOnly();
+    private List<RunDeckCard> _runDeck = new List<RunDeckCard>(); // 런 덱
+    public System.Collections.ObjectModel.ReadOnlyCollection<RunDeckCard> RunDeck => _runDeck.AsReadOnly(); // 런 덱 읽기 전용 뷰
 
-    // ── 속성별 전체 강화 레벨 ─────────────────────────────────────────
+    // 속성별 전체 강화 레벨
     private Dictionary<string, int> _elementUpgradeLevels = new Dictionary<string, int>
     {
         { "fire", 0 }, { "water", 0 }, { "wind", 0 }, { "earth", 0 }
     };
-    public System.Collections.Generic.IReadOnlyDictionary<string, int> ElementUpgradeLevels => _elementUpgradeLevels;
+    public System.Collections.Generic.IReadOnlyDictionary<string, int> ElementUpgradeLevels => _elementUpgradeLevels; // 속성 강화 레벨 읽기 전용 뷰
 
-    // ── 슬롯 배열 ─────────────────────────────────────────────────────
-    private SlotState[] _slots = new SlotState[4];
+    private SlotState[] _slots = new SlotState[4]; // 슬롯 배열
 
     [Header("슬롯 피해 계산")]
-    [SerializeField] private float fallbackPlayerAttackDamage = 10f;
-    [SerializeField] private float slotDamagePerAttackPoint = 0.1f;
+    [SerializeField] private float fallbackPlayerAttackDamage = 10f; // 플레이어 공격력 대체값
+    [SerializeField] private float slotDamagePerAttackPoint = 0.1f; // 공격력 1당 슬롯 피해 계수
 
-    // ── 내부 참조 ─────────────────────────────────────────────────────
-    private ComboSystem     comboSystem;
-    private Player          player;
-    private EnemyController enemyController;
-    private bool            inBattle;
-    public bool InBattle => inBattle;
+    private ComboSystem     comboSystem; // 콤보 시스템 참조
+    private Player          player; // 플레이어 참조
+    private EnemyController enemyController; // 적 참조
+    private bool            inBattle; // 전투 진행 여부
+    public bool InBattle => inBattle; // 전투 진행 여부(읽기 전용)
 
-    // ─────────────────────────────────────────────────────────────────
-    // Unity 생명주기
-    // ─────────────────────────────────────────────────────────────────
-
+    // 싱글턴 설정 및 런 덱 초기화
     void Awake()
     {
         if (Instance == null)
@@ -109,6 +94,7 @@ public class ElementSlotSystem : MonoBehaviour
         InitRunDeck();
     }
 
+    // 참조 확보 및 HUD 보장
     void Start()
     {
         comboSystem = FindFirstObjectByType<ComboSystem>();
@@ -117,15 +103,17 @@ public class ElementSlotSystem : MonoBehaviour
         EnsureHudComponent();
     }
 
+    // 전투 중 입력 및 참조 갱신
     void Update()
     {
-        runDeckCount = _runDeck.Count; // 인스펙터 디버그용
+        runDeckCount = _runDeck.Count;
 
         if (!inBattle) return;
         RefreshEnemyRef();
         HandleInput();
     }
 
+    // 적/플레이어 참조 재확보
     void RefreshEnemyRef()
     {
         if (enemyController == null || !enemyController.gameObject.activeInHierarchy)
@@ -135,6 +123,7 @@ public class ElementSlotSystem : MonoBehaviour
             player = Player.Resolve(true);
     }
 
+    // HUD 컴포넌트 보장(없으면 추가)
     void EnsureHudComponent()
     {
         ElementSlotHUD existingHud = FindFirstObjectByType<ElementSlotHUD>();
@@ -145,11 +134,7 @@ public class ElementSlotSystem : MonoBehaviour
         Debug.Log("[ElementSlotSystem] ElementSlotHUD가 없어 자동으로 추가했습니다.");
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 초기화
-    // ─────────────────────────────────────────────────────────────────
-
-    /// <summary>런 처음 시작 시 기본 런 덱 생성</summary>
+    // 런 처음 시작 시 기본 런 덱 생성
     public void InitRunDeck()
     {
         _runDeck.Clear();
@@ -160,7 +145,7 @@ public class ElementSlotSystem : MonoBehaviour
         Debug.Log($"[ElementSlotSystem] 런 덱 초기화: {_runDeck.Count}장");
     }
 
-    /// <summary>전투 시작 시 호출 — 런 덱에서 속성별 덱 빌드 후 첫 카드 드로우</summary>
+    // 전투 시작 — 속성별 덱 빌드 후 첫 카드 드로우
     public void StartBattle()
     {
         inBattle = true;
@@ -169,7 +154,6 @@ public class ElementSlotSystem : MonoBehaviour
         comboSystem = FindFirstObjectByType<ComboSystem>();
         RefreshEnemyRef();
 
-        // 4개 슬롯 초기화
         for (int i = 0; i < 4; i++)
         {
             _slots[i] = new SlotState
@@ -189,17 +173,14 @@ public class ElementSlotSystem : MonoBehaviour
         Debug.Log("[ElementSlotSystem] 전투 시작 — 슬롯 준비 완료");
     }
 
-    /// <summary>전투 종료 시 호출</summary>
+    // 전투 종료 처리
     public void EndBattle()
     {
         inBattle = false;
         Debug.Log("[ElementSlotSystem] 전투 종료");
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 덱 관리
-    // ─────────────────────────────────────────────────────────────────
-
+    // 런 덱을 셔플해 속성별 슬롯 덱으로 분배
     void BuildElementDecksFromRunDeck()
     {
         foreach (var slot in _slots)
@@ -212,7 +193,6 @@ public class ElementSlotSystem : MonoBehaviour
             slot.neutralGraveCount = 0;
         }
 
-        // 런 덱을 셔플 후 속성별로 분류
         List<RunDeckCard> shuffled = new List<RunDeckCard>(_runDeck);
         ShuffleList(shuffled);
 
@@ -226,7 +206,7 @@ public class ElementSlotSystem : MonoBehaviour
         Debug.Log("[ElementSlotSystem] 속성별 덱 빌드 완료");
     }
 
-    /// <summary>카드 없는 슬롯에 덱에서 드로우</summary>
+    // 카드 없는 슬롯에 덱에서 드로우(전량 소진 시 재구성)
     void SyncEmptySlots()
     {
         for (int i = 0; i < 4; i++)
@@ -239,6 +219,7 @@ public class ElementSlotSystem : MonoBehaviour
             RebuildSpentElementDecks();
     }
 
+    // 슬롯에 카드 1장 드로우(무속성/일반 가중 추첨)
     void DrawCardForSlot(int index)
     {
         var slot = _slots[index];
@@ -261,6 +242,7 @@ public class ElementSlotSystem : MonoBehaviour
         slot.deck.RemoveAt(0);
     }
 
+    // 모든 슬롯 자원이 소진됐는지 확인
     bool AreAllElementResourcesSpent()
     {
         foreach (var slot in _slots)
@@ -268,6 +250,7 @@ public class ElementSlotSystem : MonoBehaviour
         return true;
     }
 
+    // 묘지를 덱으로 되돌려 슬롯 덱 재구성
     void RebuildSpentElementDecks()
     {
         bool anyGrave = false;
@@ -289,10 +272,7 @@ public class ElementSlotSystem : MonoBehaviour
         Debug.Log("[ElementSlotSystem] 모든 슬롯 소진 → 덱 재구성");
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 입력 처리
-    // ─────────────────────────────────────────────────────────────────
-
+    // 키 입력에 따라 해당 슬롯 사용
     void HandleInput()
     {
         if (Input.GetKeyDown(KeyCode.Q)) UseSlot(0);
@@ -301,7 +281,7 @@ public class ElementSlotSystem : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.R)) UseSlot(3);
     }
 
-    /// <summary>슬롯 사용 — 카드 소비 → 피해 → 콤보 전달</summary>
+    // 슬롯 사용 — 카드 소비/피해/콤보/저주 처리 후 드로우
     public void UseSlot(int index)
     {
         if (!inBattle) return;
@@ -315,7 +295,6 @@ public class ElementSlotSystem : MonoBehaviour
         bool triggeredCurse   = !isNeutral && slot.IsCursed;
         bool consumedRealCard = false;
 
-        // ── 카드 소비 ──────────────────────────────────────────────
         if (isNeutral)
         {
             slot.hasNeutralCard = false;
@@ -329,49 +308,38 @@ public class ElementSlotSystem : MonoBehaviour
             consumedRealCard = true;
         }
 
-        // ── 콤보 히스토리 업데이트 (무속성 제외) ──────────────────
         if (!isNeutral)
             comboSystem?.OnCardUsed(SLOT_KEYS[index]);
 
-        // ── 속성 피해 적용 (무속성 제외) ──────────────────────────
         if (!isNeutral && enemyController != null)
         {
             int dmg = CalculateSlotDamage(card, slot.elementKey);
             enemyController.TakeDamage(dmg, SLOT_KEYS[index]);
             Debug.Log($"[{SLOT_KEYS[index]}] {slot.elementKey} 피해 {dmg}");
 
-            // ── 속성별 부가 효과 (업그레이드 레벨 비례) ──────────
             int effectAmount = CalculateEffectAmount(card, slot.elementKey);
             Debug.Log($"[부가효과] 속성={slot.elementKey}, cardLevel={card.upgradeLevel}, elementLevel={GetElementUpgradeLevel(slot.elementKey)}, effectAmount={effectAmount}");
             if (effectAmount > 0)
                 ApplyElementEffect(slot.elementKey, effectAmount);
         }
 
-        // ── 저주 반동 ──────────────────────────────────────────────
         if (triggeredCurse)
         {
             player?.TakeDamage(CURSED_SLOT_DAMAGE);
             Debug.Log($"[{SLOT_KEYS[index]}] 저주 반동 — 플레이어 {CURSED_SLOT_DAMAGE} 피해");
         }
 
-        // 저주는 슬롯별이 아닌 전역 2회 카운트로 소모한다.
         ConsumeGlobalCurseUse();
 
-        // ── 다음 카드 드로우 ───────────────────────────────────────
         if (consumedRealCard)
             DrawCardForSlot(index);
 
         SyncEmptySlots();
 
-        // ?? ?꾪닾 寃쎌슦 ?쒖뒱 ??? ?쇳빐 ?잛닔 ?뚯뿉 ?뱀젙)
         enemyController?.OnPlayerAction();
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 적 방해 패턴 (EnemyStat 게이지 50% 도달 시 호출)
-    // ─────────────────────────────────────────────────────────────────
-
-    /// <summary>랜덤 슬롯에 저주 or 무속성 카드 혼입</summary>
+    // 랜덤 슬롯에 저주 또는 무속성 카드 혼입(적 방해)
     public string TriggerDisruptionPattern()
     {
         int  slotIndex = Random.Range(0, 4);
@@ -390,14 +358,12 @@ public class ElementSlotSystem : MonoBehaviour
         {
             _slots[slotIndex].neutralDeckCount++;
 
-            // 중립카드를 획득한 즉시 슬롯 최상단에 올려 즉시 사용 가능하게 한다.
             if (!_slots[slotIndex].hasNeutralCard)
             {
                 _slots[slotIndex].hasNeutralCard = true;
                 _slots[slotIndex].neutralDeckCount = Mathf.Max(0, _slots[slotIndex].neutralDeckCount - 1);
             }
 
-            // Neutral is an extra card mixed into this slot's draw pool.
             if (!_slots[slotIndex].HasCard)
                 DrawCardForSlot(slotIndex);
 
@@ -408,11 +374,7 @@ public class ElementSlotSystem : MonoBehaviour
         return resultMessage;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 런 덱 편집 (보상 / 상점 / 명상)
-    // ─────────────────────────────────────────────────────────────────
-
-    /// <summary>특정 카드 인덱스 강화 +1 (전투 보상)</summary>
+    // 특정 카드 인덱스 강화 +1 (전투 보상)
     public void UpgradeRunDeckCard(int cardIndex)
     {
         if (cardIndex < 0 || cardIndex >= _runDeck.Count) return;
@@ -420,7 +382,7 @@ public class ElementSlotSystem : MonoBehaviour
         Debug.Log($"[카드 강화] {_runDeck[cardIndex].elementKey} #{cardIndex} → +{_runDeck[cardIndex].upgradeLevel}");
     }
 
-    /// <summary>속성 전체 강화 +1 (명상 보상)</summary>
+    // 속성 전체 강화 +1 (명상 보상)
     public void UpgradeElementGroup(string elementKey)
     {
         if (!_elementUpgradeLevels.ContainsKey(elementKey)) return;
@@ -428,14 +390,14 @@ public class ElementSlotSystem : MonoBehaviour
         Debug.Log($"[속성 강화] {elementKey} Lv.{_elementUpgradeLevels[elementKey]}");
     }
 
-    /// <summary>런 덱에 속성 카드 추가 (상점 구매)</summary>
+    // 런 덱에 속성 카드 추가 (상점 구매)
     public void AddRunDeckCard(string elementKey)
     {
         _runDeck.Add(new RunDeckCard(elementKey));
         Debug.Log($"[덱 추가] {elementKey} 추가 — 런 덱 총 {_runDeck.Count}장");
     }
 
-    /// <summary>런 덱에서 속성 카드 1장 제거 (상점 정제)</summary>
+    // 런 덱에서 속성 카드 1장 제거 (상점 정제)
     public bool RemoveRunDeckCard(string elementKey)
     {
         int idx = _runDeck.FindIndex(c => c.elementKey == elementKey);
@@ -445,10 +407,7 @@ public class ElementSlotSystem : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 유틸
-    // ─────────────────────────────────────────────────────────────────
-
+    // 저주를 전역 카운트로 1회 소모
     void ConsumeGlobalCurseUse()
     {
         bool hadCurse = false;
@@ -472,34 +431,27 @@ public class ElementSlotSystem : MonoBehaviour
         }
     }
 
+    // 속성 전체 강화 레벨 반환
     public int       GetElementUpgradeLevel(string key)
         => _elementUpgradeLevels.TryGetValue(key, out int lv) ? lv : 0;
 
+    // 인덱스로 슬롯 상태 반환
     public SlotState GetSlot(int index) => _slots[index];
 
+    // 슬롯 키로 속성 키 반환
     public string GetElementKeyBySlotKey(string slotKey)
     {
         int i = System.Array.IndexOf(SLOT_KEYS, slotKey);
         return i >= 0 ? ELEMENT_KEYS[i] : "";
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 속성별 부가 효과
-    // ─────────────────────────────────────────────────────────────────
-
-    /// <summary>카드 upgradeLevel + 속성 전체 강화 레벨 합산</summary>
+    // 부가 효과량 = 카드 보너스 + 속성 강화 레벨
     int CalculateEffectAmount(RunDeckCard card, string elementKey)
     {
         return card.EffectBonus + GetElementUpgradeLevel(elementKey);
     }
 
-    /// <summary>
-    /// 속성에 맞는 부가 효과를 적용합니다. 강화 레벨만큼 효과 부여.
-    ///   fire  → 적에게 burn(화상)
-    ///   water → 적에게 wet(습기)
-    ///   wind  → 플레이어에게 launcher(런처)
-    ///   earth → 플레이어에게 fortify(강화)
-    /// </summary>
+    // 속성별 부가 효과 적용(fire=화상/water=습기/wind=런처/earth=강화)
     void ApplyElementEffect(string elementKey, int amount)
     {
         switch (elementKey)
@@ -538,20 +490,17 @@ public class ElementSlotSystem : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 피해 계산
-    // ─────────────────────────────────────────────────────────────────
-
+    // 슬롯 피해 계산(플레이어 공격력×총 레벨×계수)
     int CalculateSlotDamage(RunDeckCard card, string elementKey)
     {
         float playerAttack = player != null ? player.attackDamage : fallbackPlayerAttackDamage;
         int totalLevel = card.BaseDamage + GetElementUpgradeLevel(elementKey);
 
-        // This keeps slot damage tied to player stats while preserving legacy balance when attackDamage=10.
         float scaledDamage = playerAttack * totalLevel * slotDamagePerAttackPoint;
         return Mathf.Max(1, Mathf.RoundToInt(scaledDamage));
     }
 
+    // 리스트를 무작위로 섞음
     void ShuffleList<T>(List<T> list)
     {
         for (int i = list.Count - 1; i > 0; i--)
@@ -561,6 +510,7 @@ public class ElementSlotSystem : MonoBehaviour
         }
     }
 
+    // 지정 슬롯에 저주 부여
     public void ApplyCurse(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= 4) return;
@@ -568,13 +518,13 @@ public class ElementSlotSystem : MonoBehaviour
         Debug.Log($"[ElementSlotSystem] {SLOT_KEYS[slotIndex]} 슬롯 저주 {SLOT_CURSE_TURNS}회");
     }
 
+    // 지정 슬롯에 무속성 카드 삽입
     public void InsertNullCard(int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= 4) return;
 
         _slots[slotIndex].neutralDeckCount++;
 
-        // 슬롯이 비어있으면 즉시 올림
         if (!_slots[slotIndex].hasNeutralCard && _slots[slotIndex].currentCard == null)
         {
             _slots[slotIndex].hasNeutralCard = true;

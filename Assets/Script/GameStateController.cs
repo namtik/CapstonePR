@@ -1,35 +1,36 @@
 ﻿using UnityEngine;
 
-// 게임 상태를 관리하고 캔버스 전환을 담당
-//  씬 전환 대신 캔버스 활성화/비활성화로 상태 전환
+// 게임 상태를 관리하고 캔버스 활성화/비활성화로 화면을 전환하는 컨트롤러
 public class GameStateController : MonoBehaviour
 {
+    // 전역 싱글턴 인스턴스
     public static GameStateController Instance { get; private set; }
 
     [Header("Canvas References")]
-    public Canvas mapCanvas;
+    public Canvas mapCanvas; // 맵 캔버스
 
     [Header("시작 화면")]
-    public GameObject mainMenuStage;     // MainMenu GameObject (게임 시작 시 가장 먼저 표시)
+    public GameObject mainMenuStage;     // 메인 메뉴 화면 (가장 먼저 표시)
 
     [Header("Stage GameObjects")]
-    public GameObject mapStage;          // MapStage GameObject
-    public GameObject combatStage;       // CombatStage GameObject
-    public GameObject eliteStage;        // EliteStage GameObject (있다면)
-    public GameObject bossStage;         // BossStage GameObject (있다면)
-    public GameObject shopStage;         // ShopStage GameObject (있다면)
-    public GameObject restStage;         // RestStage GameObject (있다면)
-    public GameObject eventStage;        // EventStage GameObject (이벤트 노드)
-    public GameObject relicStage;        // RelicStage GameObject (유물 획득 노드)
+    public GameObject mapStage;          // 맵 스테이지
+    public GameObject combatStage;       // 전투 스테이지
+    public GameObject eliteStage;        // 정예 스테이지
+    public GameObject bossStage;         // 보스 스테이지
+    public GameObject shopStage;         // 상점 스테이지
+    public GameObject restStage;         // 휴식 스테이지
+    public GameObject eventStage;        // 이벤트 스테이지
+    public GameObject relicStage;        // 유물 스테이지
 
     [Header("Managers")]
-    public MapManager mapManager;
-    public RoundManager roundManager;  // 라운드 관리자 추가
+    public MapManager mapManager; // 맵 관리자
+    public RoundManager roundManager;  // 라운드 관리자
 
     [Header("Game State")]
-    public int lastVisitedNodeIndex = -1;
-    public System.Collections.Generic.List<int> clearedNodes = new System.Collections.Generic.List<int>();
+    public int lastVisitedNodeIndex = -1; // 마지막으로 방문한 노드 인덱스
+    public System.Collections.Generic.List<int> clearedNodes = new System.Collections.Generic.List<int>(); // 클리어한 노드 인덱스 목록
 
+    // 초기화: 싱글턴 중복 방지
     void Awake()
     {
         if (Instance == null)
@@ -43,13 +44,12 @@ public class GameStateController : MonoBehaviour
         }
     }
 
+    // 시작 시 상태 초기화 후 메인 화면 또는 맵을 표시
     void Start()
     {
-        // 게임 시작 시 초기화
         InitializeGameState();
 
         // 메인 화면이 지정되어 있으면 맵 대신 메인 화면을 먼저 표시한다.
-        // [게임 플레이] 버튼이 StartGame()을 호출하면 맵으로 진입.
         if (mainMenuStage != null)
         {
             HideAllStages();
@@ -61,9 +61,7 @@ public class GameStateController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 메인 화면 [게임 플레이] 버튼에서 호출. 메인 화면을 닫고 맵으로 진입한다.
-    /// </summary>
+    // 메인 화면 [게임 플레이] 버튼: 메인 화면을 닫고 맵으로 진입
     public void StartGame()
     {
         if (mainMenuStage != null)
@@ -72,12 +70,13 @@ public class GameStateController : MonoBehaviour
         ShowMap();
     }
 
+    // 게임 상태 초기화 (레이캐스터 보장)
     void InitializeGameState()
     {
-        // Panel raycastTarget 비활성화
         EnsureGraphicRaycaster();
     }
-    
+
+    // 맵 캔버스에 GraphicRaycaster를 보장하고 패널 레이캐스트를 끈다
     void EnsureGraphicRaycaster()
     {
         if (mapCanvas != null)
@@ -87,21 +86,20 @@ public class GameStateController : MonoBehaviour
             {
                 mapCanvas.gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             }
-            
-            // Panel이나 background 이미지가 클릭을 막지 않도록 설정
+
             DisablePanelRaycast();
         }
     }
-    
+
+    // 패널/배경 이미지가 클릭을 막지 않도록 raycastTarget을 끈다
     void DisablePanelRaycast()
     {
         if (mapCanvas == null) return;
-        
-        // Canvas 하위의 모든 Image 중 Panel, Background 등의 raycastTarget 비활성화
+
         var allImages = mapCanvas.GetComponentsInChildren<UnityEngine.UI.Image>(true);
         foreach (var img in allImages)
         {
-            if (img.gameObject.name.ToLower().Contains("panel") || 
+            if (img.gameObject.name.ToLower().Contains("panel") ||
                 img.gameObject.name.ToLower().Contains("background"))
             {
                 img.raycastTarget = false;
@@ -109,14 +107,11 @@ public class GameStateController : MonoBehaviour
         }
     }
 
-    // 맵 화면으로 전환
-    // 전투 캔버스 숨기고 맵 캔버스 표시
+    // 맵 화면으로 전환하고 HP UI 동기화 및 맵 새로고침
     public void ShowMap()
     {
-        //  모든 스테이지 비활성화
         HideAllStages();
 
-        //  맵 스테이지만 활성화
         if (mapStage != null)
         {
             mapStage.SetActive(true);
@@ -131,13 +126,11 @@ public class GameStateController : MonoBehaviour
             Debug.LogError("mapStage와 mapCanvas 둘 다 null입니다!");
         }
 
-        // 맵 UI가 켜진 뒤 즉시 플레이어 HP UI 동기화
         if (roundManager != null)
         {
             roundManager.EnsurePlayerUiSync();
         }
 
-        //  맵을 새로고침 (약간의 지연으로 MapManager 초기화 완료 대기)
         if (mapManager != null)
         {
             StartCoroutine(RefreshMapDelayed());
@@ -148,31 +141,26 @@ public class GameStateController : MonoBehaviour
         }
     }
 
+    // 한 프레임 대기 후 맵을 새로고침하고 HP UI를 다시 동기화하는 코루틴
     System.Collections.IEnumerator RefreshMapDelayed()
     {
-        // 한 프레임 대기하여 MapManager.Start() 완료 보장
         yield return null;
         mapManager.RefreshMap();
 
-        // 맵 갱신 직후 한 번 더 동기화해 첫 프레임 값 깜빡임 방지
         if (roundManager != null)
         {
             roundManager.EnsurePlayerUiSync();
         }
     }
 
-    // 노드 타입에 따라 적절한 스테이지 표시
-    // MapManager.OnNodeSelected()에서 호출됨
+    // 노드 타입에 따라 적절한 스테이지를 표시 (MapManager에서 호출)
     public void ShowCanvasForNodeType(NodeType nodeType, bool isBossNode)
     {
-        //  모든 스테이지 비활성화
         HideAllStages();
 
-        //  노드 타입에 따라 스테이지 활성화
         GameObject targetStage = null;
 
         // 전투 계열(Combat/Elite/Boss)은 모두 combatStage 사용
-        // CombatStageController가 배경 스프라이트를 타입별로 전환
         if (isBossNode || nodeType == NodeType.Combat || nodeType == NodeType.Elite || nodeType == NodeType.Boss)
         {
             targetStage = combatStage;
@@ -206,7 +194,7 @@ public class GameStateController : MonoBehaviour
         }
     }
 
-    // 모든 스테이지 비활성화
+    // 모든 스테이지를 비활성화한다
     void HideAllStages()
     {
         if (mapStage != null)
@@ -225,14 +213,14 @@ public class GameStateController : MonoBehaviour
         if (relicStage != null) relicStage.SetActive(false);
     }
 
-    // 전투 화면으로 전환
+    // (구버전) 전투 화면으로 전환
     [System.Obsolete("Use ShowCanvasForNodeType instead")]
     public void ShowBattle()
     {
         ShowCanvasForNodeType(NodeType.Combat, false);
     }
 
-    // 노드 클리어 처리
+    // 노드를 클리어 처리해 목록에 추가한다
     public void MarkNodeCleared(int index)
     {
         if (index < 0) return;
@@ -242,22 +230,22 @@ public class GameStateController : MonoBehaviour
         }
     }
 
-    // 노드가 클리어되었는지 확인
+    // 노드가 클리어되었는지 확인한다
     public bool IsNodeCleared(int index)
     {
         return index >= 0 && clearedNodes.Contains(index);
     }
 
-    // 전투 클리어 후 맵으로 복귀
+    // 전투 클리어 후 현재 노드를 클리어 처리한다
     public void OnRoundClear()
     {
-        // 현재 노드 클리어 처리
         if (lastVisitedNodeIndex >= 0)
         {
             MarkNodeCleared(lastVisitedNodeIndex);
         }
     }
 
+    // 런을 처음부터 재시작하고 맵으로 돌아간다
     public void RestartRunToMap()
     {
         Time.timeScale = 1f;
@@ -281,9 +269,7 @@ public class GameStateController : MonoBehaviour
         ShowMap();
     }
 
-    /// <summary>
-    /// 설정창의 [메인화면으로 돌아가기]에서 호출. 진행 중이던 런/전투를 정리하고 메인 메뉴 화면을 표시한다.
-    /// </summary>
+    // 진행 중이던 런/전투를 정리하고 메인 메뉴 화면으로 돌아간다
     public void ReturnToMainMenu()
     {
         Time.timeScale = 1f;

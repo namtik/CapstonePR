@@ -6,94 +6,90 @@ using Battle.Card;
 
 namespace Battle.UI
 {
-    /// <summary>
-    /// 카드 사용 시 효과(스프라이트 시트 애니메이션)를 화면에 재생.
-    /// 카드의 EffectName(예: Fire_ATK, Burn_EFF, Heal_EFF, Wind_POW)으로
-    /// Resources/CardEffects/{EffectName}.png(스프라이트 시트, 다중 슬라이스)을 자동 로드.
-    /// 시트가 없으면 조용히 스킵 — 이펙트 미완성 상태도 안전.
-    /// </summary>
+    // 카드 사용 시 효과 애니메이션을 화면에 재생(시트/파티클 자동 로드)
     public class CardEffectOverlay : MonoBehaviour
     {
         [Header("효과 표시 위치 (캔버스 anchored 좌표)")]
         [Tooltip("적 대상 효과(*_ATK, Burn_EFF, Chain_EFF) 위치 — 화면 상단 쪽.")]
-        [SerializeField] private Vector2 enemyAnchoredPos = new Vector2(0f, 300f);
+        [SerializeField] private Vector2 enemyAnchoredPos = new Vector2(0f, 300f); // 적 대상 효과 위치
         [Tooltip("플레이어 대상 효과(*_DEF, *_POW, Heal_EFF) 위치 — 화면 하단 쪽.")]
-        [SerializeField] private Vector2 playerAnchoredPos = new Vector2(0f, 100f);
+        [SerializeField] private Vector2 playerAnchoredPos = new Vector2(0f, 100f); // 플레이어 대상 효과 위치
         [Tooltip("Earth_ATK 전용 위치 — 땅 공격은 좀 더 아래쪽에서 표시.")]
-        [SerializeField] private Vector2 earthAtkAnchoredPos = new Vector2(0f, 100f);
+        [SerializeField] private Vector2 earthAtkAnchoredPos = new Vector2(0f, 100f); // Earth_ATK 전용 위치
         [Tooltip("효과 이미지 기본 크기.")]
-        [SerializeField] private Vector2 effectSize = new Vector2(1024f, 1024f);
+        [SerializeField] private Vector2 effectSize = new Vector2(1024f, 1024f); // 효과 기본 크기
         [Tooltip("Heal_EFF 전용 — 화면 하단 풀폭 띠 모드. 가로는 자동 stretch, Y만 사용(높이).")]
-        [SerializeField] private Vector2 healEffSize = new Vector2(0f, 800f);
+        [SerializeField] private Vector2 healEffSize = new Vector2(0f, 800f); // Heal_EFF 전용 크기
         [Tooltip("Heal_EFF 전용 — 화면 바닥에서 위쪽 Y 오프셋.")]
-        [SerializeField] private float healEffBottomY = 0f;
+        [SerializeField] private float healEffBottomY = 0f; // Heal_EFF 바닥 Y 오프셋
         [Tooltip("재생 FPS — 시트 프레임 수에 맞춰 조정. 보통 12~24.")]
-        [SerializeField] private float defaultFps = 24f;
+        [SerializeField] private float defaultFps = 24f; // 기본 재생 FPS
         [Tooltip("재생 속도 배율 — 스프라이트 FPS와 파티클 시뮬레이션 속도에 함께 곱해진다. 1=원본, 0.8=더 천천히(오래 보임). 순식간에 사라지면 낮춰라.")]
-        [SerializeField, Range(0.25f, 5f)] private float playbackSpeed = 1.0f;
+        [SerializeField, Range(0.25f, 5f)] private float playbackSpeed = 1.0f; // 재생 속도 배율
         [Tooltip("이펙트를 손패 등 다른 UI보다 앞에 그리기 위한 Sort Order. 자체 Canvas+Override Sorting을 자동 설정한다. 손패보다 뒤면 값을 키우세요.")]
-        [SerializeField] private int foregroundSortingOrder = 1000;
+        [SerializeField] private int foregroundSortingOrder = 1000; // 전경 정렬 순서
 
         [Header("개별 효과 위치 오버라이드 (Inspector에서 effectName 매핑)")]
-        [SerializeField] private List<EffectPositionOverride> positionOverrides = new List<EffectPositionOverride>();
+        [SerializeField] private List<EffectPositionOverride> positionOverrides = new List<EffectPositionOverride>(); // 효과별 위치 오버라이드
 
         [Header("개별 효과 크기 오버라이드 (Inspector에서 effectName 매핑)")]
-        [SerializeField] private List<EffectSizeOverride> sizeOverrides = new List<EffectSizeOverride>();
+        [SerializeField] private List<EffectSizeOverride> sizeOverrides = new List<EffectSizeOverride>(); // 효과별 크기 오버라이드
 
+        // 효과 이름과 anchored 위치 매핑 구조체
         [System.Serializable]
         public struct EffectPositionOverride
         {
-            public string effectName;
-            public Vector2 anchoredPos;
+            public string effectName; // 대상 효과 이름
+            public Vector2 anchoredPos; // 적용할 위치
         }
 
+        // 효과 이름과 크기 매핑 구조체
         [System.Serializable]
         public struct EffectSizeOverride
         {
-            public string effectName;
-            public Vector2 size;
+            public string effectName; // 대상 효과 이름
+            public Vector2 size; // 적용할 크기
         }
 
         [Header("파티클 프리팹 (Resources/CardEffects/{effectName} 프리팹 우선)")]
         [Tooltip("ON이면 effectName과 같은 이름의 프리팹이 있을 때 스프라이트 시트 대신 UIParticle로 재생.")]
-        [SerializeField] private bool preferParticlePrefab = true;
+        [SerializeField] private bool preferParticlePrefab = true; // 파티클 프리팹 우선 사용 여부
         [Tooltip("UIParticle 기본 스케일 — 파티클이 월드 단위로 제작되므로 UI에서 키워야 보인다. 플레이로 튜닝.")]
-        [SerializeField] private float particleScale = 100f;
+        [SerializeField] private float particleScale = 100f; // UIParticle 기본 스케일
         [Tooltip("파티클 효과별 스케일 오버라이드 (effectName 매핑).")]
-        [SerializeField] private List<EffectScaleOverride> particleScaleOverrides = new List<EffectScaleOverride>();
+        [SerializeField] private List<EffectScaleOverride> particleScaleOverrides = new List<EffectScaleOverride>(); // 파티클별 스케일 오버라이드
         [Tooltip("파티클 자동 소멸 시 추가 여유시간(초).")]
-        [SerializeField] private float particleLifetimePadding = 0.5f;
+        [SerializeField] private float particleLifetimePadding = 0.5f; // 파티클 소멸 여유시간
         [Tooltip("파티클 위치 오프셋 (effectName별) — 인스턴스를 래퍼 중심(0,0)으로 리셋한 뒤 이 값만큼 이동. 이펙트마다 위치 미세조정.")]
-        [SerializeField] private List<EffectPositionOverride> particlePositionOffsets = new List<EffectPositionOverride>();
+        [SerializeField] private List<EffectPositionOverride> particlePositionOffsets = new List<EffectPositionOverride>(); // 파티클별 위치 오프셋
 
+        // 효과 이름과 파티클 스케일 매핑 구조체
         [System.Serializable]
         public struct EffectScaleOverride
         {
-            public string effectName;
-            public float scale;
+            public string effectName; // 대상 효과 이름
+            public float scale; // 적용할 스케일
         }
 
         [Header("디버그")]
-        [SerializeField] private bool logMissing = false;
+        [SerializeField] private bool logMissing = false; // 누락 로그 출력 여부
 
-        // 시트 캐시 — 반복 로드 회피
-        private readonly Dictionary<string, Sprite[]> _cache = new Dictionary<string, Sprite[]>();
-        // 파티클 프리팹 캐시 (없으면 null도 캐싱해 반복 로드 회피)
-        private readonly Dictionary<string, GameObject> _prefabCache = new Dictionary<string, GameObject>();
-        // 누락 경고 1회만 출력
-        private readonly HashSet<string> _warned = new HashSet<string>();
-        // 재생 중/예약 파괴 대기 중인 FX 인스턴스 — 전투 종료/시작 시 일괄 정리(다음 스테이지로 이월 방지)
-        private readonly List<GameObject> _activeFx = new List<GameObject>();
+        private readonly Dictionary<string, Sprite[]> _cache = new Dictionary<string, Sprite[]>(); // 시트 캐시
+        private readonly Dictionary<string, GameObject> _prefabCache = new Dictionary<string, GameObject>(); // 파티클 프리팹 캐시
+        private readonly HashSet<string> _warned = new HashSet<string>(); // 누락 경고 1회 출력용
+        private readonly List<GameObject> _activeFx = new List<GameObject>(); // 활성 FX 인스턴스 목록
 
-        private RectTransform _selfRect;
+        private RectTransform _selfRect; // 자신의 RectTransform 캐시
+        // 자신의 RectTransform 반환(지연 캐싱)
         public RectTransform Rect => _selfRect != null ? _selfRect : _selfRect = (RectTransform)transform;
 
+        // 시작 시 전경 캔버스를 보장
         void Awake()
         {
             EnsureForegroundCanvas();
         }
 
-        /// <summary>이펙트가 손패 등 다른 UI보다 앞에 그려지도록 자체 Canvas + Override Sorting을 보장.</summary>
+        // 자체 Canvas + Override Sorting으로 다른 UI보다 앞에 그려지도록 보장
         void EnsureForegroundCanvas()
         {
             var canvas = GetComponent<Canvas>();
@@ -102,37 +98,29 @@ namespace Battle.UI
             canvas.sortingOrder = foregroundSortingOrder;
         }
 
-        /// <summary>
-        /// 카드 사용 시 호출. effectName에 해당하는 시트가 있으면 적절한 위치에 1회 재생.
-        /// </summary>
+        // 카드의 effectName으로 효과를 1회 재생
         public void Play(CardData card)
         {
             if (card == null) return;
             PlayByName(card.effectName);
         }
 
-        /// <summary>
-        /// 임의 effectName(예: "Fever_ATK")을 직접 재생. CardData 없이 콤보 스킬/전용 이펙트 등에 사용.
-        /// 위치/크기 결정 규칙은 Play(CardData)와 동일 — 이름이 *_ATK / BURN* / CHAIN* 이면 적, 그 외엔 플레이어.
-        /// </summary>
+        // 임의 effectName을 기본 위치에 직접 재생
         public void PlayByName(string effectName)
         {
             PlayByNameAtOffset(effectName, Vector2.zero);
         }
 
-        /// <summary>
-        /// 같은 이펙트를 여러 번 분산해서 띄울 때 사용. 기본 위치(ResolvePositionFor 결과)에 offset을 더한 위치에서 재생.
-        /// 콤보가 여러 건 발동될 때 위치를 어긋나게 해서 시각적으로 횟수를 구분할 수 있음.
-        /// </summary>
+        // 기본 위치에 offset을 더한 위치에서 효과를 재생
         public void PlayByNameAtOffset(string effectName, Vector2 offsetFromDefault)
         {
             if (string.IsNullOrEmpty(effectName)) return;
 
-            SfxManager.Instance?.PlayEffect(effectName); // 이펙트 효과음(effectName별 매핑/기본 클립)
+            SfxManager.Instance?.PlayEffect(effectName);
 
             Vector2 pos = ResolvePositionFor(effectName) + offsetFromDefault;
 
-            // 1순위 — 파티클 프리팹(Resources/CardEffects/{effectName}.prefab)
+            // 1순위로 파티클 프리팹이 있으면 사용
             if (preferParticlePrefab)
             {
                 GameObject prefab = LoadPrefab(effectName);
@@ -143,7 +131,7 @@ namespace Battle.UI
                 }
             }
 
-            // 2순위 — 스프라이트 시트(폴백)
+            // 프리팹이 없으면 스프라이트 시트로 폴백
             Sprite[] frames = LoadFrames(effectName);
             if (frames == null || frames.Length == 0)
             {
@@ -156,11 +144,7 @@ namespace Battle.UI
             SpawnEffect(frames, pos, size, effectName);
         }
 
-        /// <summary>
-        /// 재생 중이거나 예약 파괴 대기 중인 모든 FX를 즉시 제거.
-        /// 전투 종료/시작 시 호출 — timeScale=0(보상 화면)으로 멈춘 이펙트가
-        /// 다음 스테이지 시작 때 재생되어 보이는 문제를 방지한다.
-        /// </summary>
+        // 재생 중이거나 파괴 대기 중인 모든 FX를 즉시 제거
         public void ClearAll()
         {
             for (int i = 0; i < _activeFx.Count; i++)
@@ -171,61 +155,64 @@ namespace Battle.UI
             _activeFx.Clear();
         }
 
+        // effectName에 해당하는 시트 프레임들을 로드(캐시)
         Sprite[] LoadFrames(string effectName)
         {
             if (_cache.TryGetValue(effectName, out var cached)) return cached;
-            // 슬라이스된 시트의 모든 sprite 로드(이름순). 단일 sprite도 길이 1로 반환됨.
             var arr = Resources.LoadAll<Sprite>($"CardEffects/{effectName}");
             _cache[effectName] = arr;
             return arr;
         }
 
+        // effectName에 해당하는 파티클 프리팹을 로드(캐시)
         GameObject LoadPrefab(string effectName)
         {
             if (_prefabCache.TryGetValue(effectName, out var cached)) return cached;
-            // 같은 이름의 .png(시트)와 .prefab이 공존해도 GameObject 타입만 로드됨.
             var prefab = Resources.Load<GameObject>($"CardEffects/{effectName}");
             _prefabCache[effectName] = prefab;
             return prefab;
         }
 
+        // effectName에 맞는 표시 위치를 결정(오버라이드 > 전용 > 카테고리)
         Vector2 ResolvePositionFor(string effectName)
         {
-            // 1순위 — Inspector 오버라이드 리스트
+            // 인스펙터 오버라이드 우선
             for (int i = 0; i < positionOverrides.Count; i++)
             {
                 if (string.Equals(positionOverrides[i].effectName, effectName, System.StringComparison.OrdinalIgnoreCase))
                     return positionOverrides[i].anchoredPos;
             }
 
-            // 2순위 — Earth_ATK 전용 위치 (땅 공격은 좀 더 아래)
+            // Earth_ATK 전용 위치
             if (string.Equals(effectName, "Earth_ATK", System.StringComparison.OrdinalIgnoreCase))
                 return earthAtkAnchoredPos;
 
-            // 3순위 — 카테고리별 기본 위치
+            // 이름 카테고리별 기본 위치(공격류는 적, 그 외 플레이어)
             string up = effectName.ToUpperInvariant();
             if (up.EndsWith("_ATK") || up.StartsWith("BURN") || up.StartsWith("CHAIN"))
                 return enemyAnchoredPos;
             return playerAnchoredPos;
         }
 
+        // effectName에 맞는 표시 크기를 결정(오버라이드 > 전용 > 기본)
         Vector2 ResolveSizeFor(string effectName)
         {
-            // 1순위 — Inspector 오버라이드 리스트
+            // 인스펙터 오버라이드 우선
             for (int i = 0; i < sizeOverrides.Count; i++)
             {
                 if (string.Equals(sizeOverrides[i].effectName, effectName, System.StringComparison.OrdinalIgnoreCase))
                     return sizeOverrides[i].size;
             }
 
-            // 2순위 — Heal_EFF 전용 크기 (회복은 옆으로 늘림)
+            // Heal_EFF 전용 크기
             if (string.Equals(effectName, "Heal_EFF", System.StringComparison.OrdinalIgnoreCase))
                 return healEffSize;
 
-            // 3순위 — 기본 크기
+            // 기본 크기
             return effectSize;
         }
 
+        // 시트 프레임으로 FX 오브젝트를 생성해 애니메이션 재생
         void SpawnEffect(Sprite[] frames, Vector2 anchoredPos, Vector2 size, string effectName)
         {
             var go = new GameObject($"FX_{frames[0].name}", typeof(RectTransform), typeof(Image), typeof(CardEffectAnimator));
@@ -236,12 +223,12 @@ namespace Battle.UI
 
             if (bottomStretch)
             {
-                // 화면 하단 풀폭 띠 — 회복 이펙트가 아래에서 전체적으로 올라오는 느낌
+                // 화면 하단 풀폭 띠로 배치
                 rt.anchorMin = new Vector2(0f, 0f);
                 rt.anchorMax = new Vector2(1f, 0f);
                 rt.pivot = new Vector2(0.5f, 0f);
                 rt.anchoredPosition = new Vector2(0f, healEffBottomY);
-                // sizeDelta.x=0 이면 anchor stretch로 화면 폭에 자동 맞춤. y는 띠 높이.
+                // x=0이면 화면 폭에 자동 stretch, y는 띠 높이
                 rt.sizeDelta = new Vector2(0f, size.y);
             }
             else
@@ -258,14 +245,10 @@ namespace Battle.UI
             _activeFx.Add(go);
 
             var anim = go.GetComponent<CardEffectAnimator>();
-            // 풀폭 띠 모드에선 sprite를 RectTransform에 맞게 늘려야 함 (aspect 보존 X)
             anim.Play(frames, defaultFps * Mathf.Max(0.01f, playbackSpeed), loop: false, preserveAspect: !bottomStretch);
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 파티클 프리팹 재생 (UIParticle — Overlay 캔버스에서도 UI와 합성)
-        // ─────────────────────────────────────────────────────────────
-
+        // 파티클 프리팹을 UIParticle 래퍼로 생성해 재생
         void SpawnParticle(GameObject prefab, Vector2 anchoredPos, string effectName)
         {
             var go = new GameObject($"FX_{effectName}", typeof(RectTransform));
@@ -283,8 +266,7 @@ namespace Battle.UI
             var uip = go.AddComponent<UIParticle>();
             uip.scale = ResolveParticleScaleFor(effectName);
 
-            // 프리팹을 직접 인스턴스화해 래퍼의 자식으로 붙인다. localPosition을 0으로 리셋해
-            // 프리팹 원본 위치(씬 좌표)를 제거하고, effectName별 오프셋만큼만 미세 이동.
+            // 프리팹을 래퍼 자식으로 붙이고 effectName별 오프셋만큼만 이동
             var inst = Instantiate(prefab);
             inst.transform.SetParent(go.transform, false);
             Vector2 off = ResolveParticleOffsetFor(effectName);
@@ -293,24 +275,16 @@ namespace Battle.UI
             inst.transform.localScale = Vector3.one;
             uip.RefreshParticles();
 
-            // UI(스크린) 공간에서 보이도록 모든 파티클을 Local 시뮬레이션으로 강제.
-            // World 시뮬레이션이면 파티클이 캔버스 밖(월드 원점 근처)에서 터져 화면에 안 보인다.
+            // 스크린 공간에 보이도록 Local 시뮬레이션으로 강제
             ForceLocalSimulation(uip);
             uip.Play();
 
-            // 프리팹이 자동 파괴(stopAction) 설정이 없어도, 재생 길이만큼 뒤 안전하게 정리.
+            // 재생 길이만큼 뒤 안전하게 파괴
             float life = ComputeParticleLifetime(uip) / Mathf.Max(0.01f, playbackSpeed) + Mathf.Max(0f, particleLifetimePadding);
             Destroy(go, life);
         }
 
-        /// <summary>
-        /// 임의의 파티클 프리팹을 화면 중앙에 UIParticle로 1회 재생(전투 UI 위에 렌더).
-        /// 각성 발동 등 전체 화면 연출용. Hovl 'Screen wind'처럼 카메라에 자식으로 붙는
-        /// 풀스크린 스크립트(HS_ScreenEffect)는 UIParticle 경로와 충돌하므로 자동 비활성한다.
-        /// </summary>
-        /// <param name="prefab">재생할 파티클 프리팹.</param>
-        /// <param name="scale">UIParticle 스케일(0 이하면 기본 particleScale 사용).</param>
-        /// <param name="duration">표시 시간(초). 0 이하면 파티클 길이에서 자동 계산.</param>
+        // 임의 파티클 프리팹을 화면 중앙에 1회 재생
         public void PlayPrefab(GameObject prefab, float scale = 0f, float duration = 0f)
         {
             if (prefab == null) return;
@@ -322,22 +296,19 @@ namespace Battle.UI
             Destroy(go, life);
         }
 
-        /// <summary>
-        /// 프리팹을 루프 재생해 명시적으로 멈출 때까지 화면에 유지(각성 지속 동안 등).
-        /// 반환된 핸들을 <see cref="StopPersistent"/>에 넘겨 정지한다. 비-루프 프리팹도 강제로 루프시킨다.
-        /// </summary>
+        // 프리팹을 루프 재생해 멈출 때까지 유지(핸들 반환)
         public GameObject PlayPrefabPersistent(GameObject prefab, float scale = 0f)
         {
             if (prefab == null) return null;
             return SpawnPrefabFx(prefab, scale, loop: true, out _);
         }
 
-        /// <summary>지속 재생 중인 프리팹을 즉시 정지 — 남은 입자까지 모두 비우고 래퍼를 바로 제거(각성 종료 시 잔상 없음).</summary>
+        // 지속 재생 중인 프리팹을 즉시 정지하고 래퍼를 제거
         public void StopPersistent(GameObject handle)
         {
             if (handle == null) return;
 
-            // 남은 입자를 즉시 비워(Clear) 다음 프레임 잔상까지 제거한 뒤 래퍼 파괴.
+            // 남은 입자를 즉시 비워 잔상까지 제거한 뒤 래퍼 파괴
             var systems = handle.GetComponentsInChildren<ParticleSystem>(true);
             for (int i = 0; i < systems.Length; i++)
             {
@@ -348,7 +319,7 @@ namespace Battle.UI
             Destroy(handle);
         }
 
-        /// <summary>PlayPrefab/PlayPrefabPersistent 공통 — UIParticle 래퍼 생성·프리팹 부착·재생.</summary>
+        // UIParticle 래퍼를 만들고 프리팹을 부착해 재생(공통 로직)
         GameObject SpawnPrefabFx(GameObject prefab, float scale, bool loop, out UIParticle uip)
         {
             var go = new GameObject($"FX_{prefab.name}", typeof(RectTransform));
@@ -367,7 +338,7 @@ namespace Battle.UI
             uip.scale = scale > 0f ? scale : particleScale;
 
             var inst = Instantiate(prefab);
-            DisableCameraReparenting(inst); // 카메라 자식화 스크립트 차단(UIParticle 안에서 재생되도록)
+            DisableCameraReparenting(inst);
             inst.transform.SetParent(go.transform, false);
             inst.transform.localPosition = Vector3.zero;
             inst.transform.localRotation = Quaternion.identity;
@@ -375,7 +346,7 @@ namespace Battle.UI
 
             if (loop)
             {
-                // 비-루프 프리팹도 각성 동안 끊기지 않도록 모든 파티클을 루프로.
+                // 비-루프 프리팹도 모든 파티클을 루프로 변경
                 var systems = inst.GetComponentsInChildren<ParticleSystem>(true);
                 for (int i = 0; i < systems.Length; i++)
                 {
@@ -391,7 +362,7 @@ namespace Battle.UI
             return go;
         }
 
-        /// <summary>인스턴스(및 자식)의 카메라 재부모화 스크립트(HS_ScreenEffect 등)를 끈다 — UIParticle 경로와 충돌 방지.</summary>
+        // 인스턴스의 카메라 재부모화 스크립트(HS_ScreenEffect)를 비활성
         static void DisableCameraReparenting(GameObject inst)
         {
             var behaviours = inst.GetComponentsInChildren<MonoBehaviour>(true);
@@ -399,12 +370,12 @@ namespace Battle.UI
             {
                 var b = behaviours[i];
                 if (b == null) continue;
-                // Start()에서 transform.SetParent(camera)를 호출하는 Hovl 풀스크린 스크립트.
-                // enabled=false면 아직 호출 전인 Start가 실행되지 않아 카메라로 빠져나가지 않는다.
+                // 카메라로 재부모화하는 풀스크린 스크립트를 비활성
                 if (b.GetType().Name == "HS_ScreenEffect") b.enabled = false;
             }
         }
 
+        // 모든 파티클을 Local 시뮬레이션으로 강제하고 속도 배율 적용
         void ForceLocalSimulation(UIParticle uip)
         {
             var list = uip != null ? uip.particles : null;
@@ -415,10 +386,11 @@ namespace Battle.UI
                 if (ps == null) continue;
                 var main = ps.main;
                 main.simulationSpace = ParticleSystemSimulationSpace.Local;
-                main.simulationSpeed = main.simulationSpeed * Mathf.Max(0.01f, playbackSpeed); // 재생 속도 배율
+                main.simulationSpeed = main.simulationSpeed * Mathf.Max(0.01f, playbackSpeed);
             }
         }
 
+        // effectName에 맞는 파티클 스케일을 결정(오버라이드 > 기본)
         float ResolveParticleScaleFor(string effectName)
         {
             for (int i = 0; i < particleScaleOverrides.Count; i++)
@@ -429,6 +401,7 @@ namespace Battle.UI
             return particleScale;
         }
 
+        // effectName에 맞는 파티클 위치 오프셋을 결정(없으면 0)
         Vector2 ResolveParticleOffsetFor(string effectName)
         {
             for (int i = 0; i < particlePositionOffsets.Count; i++)
@@ -439,7 +412,7 @@ namespace Battle.UI
             return Vector2.zero;
         }
 
-        // 자식 파티클들의 (duration + 최대 수명) 중 가장 긴 시간 — 1회 재생 후 파괴 시점.
+        // 자식 파티클의 (duration+최대 수명) 중 최댓값을 계산
         float ComputeParticleLifetime(UIParticle uip)
         {
             float max = 0f;

@@ -1,32 +1,28 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// 보스 스테이지를 클리어하면 게임 클리어 화면을 표시한다.
-/// 이 스크립트는 항상 활성화된 오브젝트(예: GameStateController)에 붙인다.
-/// gameClearCanvas는 비활성 상태로 시작하고, 보스 클리어 시 RoundManager가 활성화한다.
-/// 화면(캔버스)과 버튼 배치는 직접 구성한 뒤 아래 필드에 연결하면 된다.
-/// 버튼은 [메인 메뉴], [게임 종료] 2개.
-/// </summary>
+// 보스 스테이지 클리어 시 게임 클리어 화면을 표시하는 컨트롤러
 public class GameClearController : MonoBehaviour
 {
+    // 전역 싱글턴 인스턴스
     public static GameClearController Instance { get; private set; }
 
     [Header("게임 클리어 캔버스 (비활성 상태로 시작)")]
-    [SerializeField] private GameObject gameClearCanvas;
+    [SerializeField] private GameObject gameClearCanvas; // 클리어 화면 캔버스
 
     [Tooltip("게임 클리어 화면이 떠 있는 동안 숨길 인게임 공용 UI(GlobalUI). 클리어 화면을 닫으면 다시 켜진다.")]
-    [SerializeField] private GameObject globalUI;
+    [SerializeField] private GameObject globalUI; // 클리어 중 숨길 공용 UI
 
     [Header("버튼")]
     [Tooltip("클릭 시 진행 중이던 런을 정리하고 메인 메뉴로 돌아간다.")]
-    [SerializeField] private Button mainMenuButton;
+    [SerializeField] private Button mainMenuButton; // 메인 메뉴 버튼
     [Tooltip("클릭 시 게임을 종료한다.")]
-    [SerializeField] private Button quitButton;
+    [SerializeField] private Button quitButton; // 게임 종료 버튼
 
-    /// <summary>캔버스가 연결되어 게임 클리어 화면을 표시할 준비가 됐는지 여부.</summary>
+    // 캔버스 연결 여부 (클리어 화면 표시 준비 상태)
     public bool IsReady => gameClearCanvas != null;
 
+    // 초기화: 싱글턴 설정, 캔버스 비활성화, 버튼 리스너 연결
     void Awake()
     {
         Instance = this;
@@ -47,13 +43,14 @@ public class GameClearController : MonoBehaviour
         }
     }
 
+    // 파괴 시 싱글턴 참조 해제
     void OnDestroy()
     {
         if (Instance == this)
             Instance = null;
     }
 
-    /// <summary>게임 클리어 화면을 표시한다. (보스 클리어 시 RoundManager가 호출)</summary>
+    // 게임 클리어 화면을 표시한다 (보스 클리어 시 RoundManager가 호출)
     public void ShowGameClear()
     {
         if (gameClearCanvas == null)
@@ -62,7 +59,6 @@ public class GameClearController : MonoBehaviour
             return;
         }
 
-        // 클리어 화면이 떠 있는 동안 인게임 공용 UI(HUD 등)를 숨긴다.
         if (globalUI != null)
             globalUI.SetActive(false);
 
@@ -70,7 +66,7 @@ public class GameClearController : MonoBehaviour
         Time.timeScale = 0f;
     }
 
-    /// <summary>게임 클리어 [메인 메뉴] — 런을 정리하고 메인 메뉴로 돌아간다.</summary>
+    // 클리어 화면 [메인 메뉴]: 런을 정리하고 메인 메뉴로 복귀
     public void OnMainMenuClicked()
     {
         Time.timeScale = 1f;
@@ -78,7 +74,6 @@ public class GameClearController : MonoBehaviour
         if (gameClearCanvas != null)
             gameClearCanvas.SetActive(false);
 
-        // 숨겼던 공용 UI를 다시 켜서 다음 런에 HUD가 꺼진 채 남지 않도록 한다.
         if (globalUI != null)
             globalUI.SetActive(true);
 
@@ -89,7 +84,7 @@ public class GameClearController : MonoBehaviour
             Debug.LogError("[GameClear] GameStateController.Instance가 null이라 메인 메뉴로 돌아갈 수 없습니다.");
     }
 
-    /// <summary>게임 클리어 [게임 종료].</summary>
+    // 클리어 화면 [게임 종료]: 애플리케이션 종료
     public void OnQuitClicked()
     {
         Debug.Log("게임 종료");

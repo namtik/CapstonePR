@@ -6,26 +6,22 @@ using Battle.Deck;
 
 namespace Battle
 {
-    /// <summary>
-    /// [테스트 전용] 인스펙터로 덱을 보고/편집하는 도구.
-    /// - 게임 시작 전: deckEntries를 채우고 useAsStartingDeck를 켜면 플레이 시작 시 런 시작 덱으로 적용.
-    /// - 게임 중: 버튼(또는 컴포넌트 우클릭 컨텍스트 메뉴)으로 런 덱 적용 / 현재 전투에 카드 즉시 투입.
-    /// 카드 ID는 "카드 목록 콘솔 출력"으로 확인. 출시 빌드 전 삭제해도 무방한 디버그 컴포넌트.
-    /// </summary>
+    // [테스트 전용] 인스펙터로 덱을 보고/편집하는 디버그 도구
     public class DeckDebugTool : MonoBehaviour
     {
         [Header("덱 목록 (Card Id + 수량)")]
         [Tooltip("테스트용 덱 구성. 버튼으로 런 덱/현재 전투에 적용한다. 카드 ID는 아래 '카드 목록 콘솔 출력'으로 확인.")]
-        public List<CardDatabase.DeckEntry> deckEntries = new List<CardDatabase.DeckEntry>();
+        public List<CardDatabase.DeckEntry> deckEntries = new List<CardDatabase.DeckEntry>(); // 편집용 덱 구성 목록
 
         [Header("시작 덱으로 사용")]
         [Tooltip("체크하면 플레이 시작(Start)에서 위 목록을 런 시작 덱으로 적용한다. (게임 시작 전 덱 세팅)")]
-        public bool useAsStartingDeck = false;
+        public bool useAsStartingDeck = false;        // 시작 시 위 목록을 런 덱으로 적용할지 여부
 
         [Header("게임 중 한 장 빠른 추가")]
         [Tooltip("이 카드 ID를 '패' 또는 '뽑을 더미'에 즉시 투입(빠른 추가 버튼).")]
-        public int quickAddCardId = 100;
+        public int quickAddCardId = 100;             // 빠른 추가로 투입할 카드 ID
 
+        // 시작 시 useAsStartingDeck이 켜져 있으면 목록을 런 시작 덱으로 적용
         void Start()
         {
             if (useAsStartingDeck && deckEntries != null && deckEntries.Count > 0)
@@ -35,8 +31,7 @@ namespace Battle
             }
         }
 
-        // ── 런 덱 (다음 전투/시작 덱) ──────────────────────────────
-
+        // 현재 런 덱을 편집용 목록으로 불러오기
         [ContextMenu("현재 런 덱 → 목록으로 불러오기")]
         public void LoadFromRunDeck()
         {
@@ -45,6 +40,7 @@ namespace Battle
             Debug.Log($"[DeckDebug] 런 덱 불러옴 — {deckEntries.Count}종");
         }
 
+        // 편집용 목록을 런 덱에 적용 (다음 전투부터)
         [ContextMenu("목록 → 런 덱 적용 (다음 전투부터)")]
         public void ApplyToRunDeck()
         {
@@ -52,14 +48,14 @@ namespace Battle
             Debug.Log($"[DeckDebug] 런 덱에 적용 — {deckEntries.Count}종");
         }
 
+        // 런 덱을 기본값으로 리셋
         [ContextMenu("런 덱 기본값으로 리셋")]
         public void ResetRunDeck()
         {
             RunDeckState.EnsureExists().ResetRun();
         }
 
-        // ── 현재 전투 (라이브 덱) ──────────────────────────────────
-
+        // 편집용 목록 전체를 현재 전투의 뽑을 더미에 추가
         [ContextMenu("목록 전부 → 현재 전투 뽑을 더미에 추가")]
         public void AddListToCurrentBattle()
         {
@@ -71,6 +67,7 @@ namespace Battle
             Debug.Log($"[DeckDebug] 현재 전투 뽑을 더미에 {instances.Count}장 추가");
         }
 
+        // quickAddCardId 카드 1장을 현재 전투의 패에 빠르게 추가
         [ContextMenu("빠른 추가: 카드 1장 → 패")]
         public void AddQuickCardToHand()
         {
@@ -89,6 +86,7 @@ namespace Battle
             else Debug.Log($"[DeckDebug] 패에 추가: {data.displayName}");
         }
 
+        // quickAddCardId 카드 1장을 현재 전투의 뽑을 더미에 빠르게 추가
         [ContextMenu("빠른 추가: 카드 1장 → 뽑을 더미")]
         public void AddQuickCardToDraw()
         {
@@ -102,8 +100,7 @@ namespace Battle
             Debug.Log($"[DeckDebug] 뽑을 더미에 추가: {data.displayName}");
         }
 
-        // ── 참고용 ────────────────────────────────────────────────
-
+        // 전체 카드 목록(ID·이름)을 콘솔에 출력
         [ContextMenu("카드 목록(ID·이름) 콘솔 출력")]
         public void DumpCardList()
         {
@@ -114,6 +111,7 @@ namespace Battle
             Debug.Log(sb.ToString());
         }
 
+        // 진행 중인 전투의 라이브 덱을 반환 (없으면 null)
         static CardDeckSystem ResolveBattleDeck()
         {
             var nb = NewBattleController.Instance;

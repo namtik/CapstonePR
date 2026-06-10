@@ -8,51 +8,53 @@ using Battle.UI;
 public class ShopOfferItemUI : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private Image iconImage;
-    [SerializeField] private TextMeshProUGUI titleText;
-    [SerializeField] private TextMeshProUGUI descriptionText;
-    [SerializeField] private TextMeshProUGUI priceText;
-    [SerializeField] private Image moneyIconImage;
-    [SerializeField] private Button buyButton;
-    [SerializeField] private bool enableIconClickPurchase = true;
-    [SerializeField] private float purchasedAlpha = 0.45f;
-    [SerializeField] private string purchasedLabel = "\uAD6C\uB9E4\uC644\uB8CC";
-    [SerializeField] private float cardVisualScale = 1f;
-    [SerializeField] private float moneyIconScale = 1.35f;
-    [SerializeField] private float relicIconScale = 1.45f;
+    [SerializeField] private Image iconImage; // 상품 아이콘 이미지
+    [SerializeField] private TextMeshProUGUI titleText; // 상품 이름 텍스트
+    [SerializeField] private TextMeshProUGUI descriptionText; // 상품 설명 텍스트
+    [SerializeField] private TextMeshProUGUI priceText; // 현재 사용 중인 가격 텍스트
+    [SerializeField] private Image moneyIconImage; // 가격 옆 재화 아이콘
+    [SerializeField] private Button buyButton; // 구매 버튼
+    [SerializeField] private bool enableIconClickPurchase = true; // 아이콘 클릭 구매 허용 여부
+    [SerializeField] private float purchasedAlpha = 0.45f; // 구매 완료 시 알파값
+    [SerializeField] private string purchasedLabel = "\uAD6C\uB9E4\uC644\uB8CC"; // 구매 완료 라벨
+    [SerializeField] private float cardVisualScale = 1f; // 카드 비주얼 전체 스케일
+    [SerializeField] private float moneyIconScale = 1.35f; // 재화 아이콘 스케일
+    [SerializeField] private float relicIconScale = 1.45f; // 렐릭 아이콘 스케일
 
     [Header("Auto Bind")]
-    [SerializeField] private bool autoBindFieldsByName = true;
-    [SerializeField] private bool autoBindPriceTextByName = true;
-    [SerializeField] private string priceNameSuffix = "_Price";
+    [SerializeField] private bool autoBindFieldsByName = true; // 이름 기반 필드 자동 바인딩 여부
+    [SerializeField] private bool autoBindPriceTextByName = true; // 이름 기반 가격 텍스트 자동 바인딩 여부
+    [SerializeField] private string priceNameSuffix = "_Price"; // 가격 텍스트 이름 접미사
 
-    private int price;
-    private System.Action onBuy;
-    private Button iconBuyButton;
-    private Button rootBuyButton;
-    private TextMeshProUGUI defaultPriceText;
-    private TextMeshProUGUI externalPriceText;
-    private NewCardView newCardView;
-    private CanvasGroup canvasGroup;
-    private bool isPurchased;
-    private const string PurchasedDoneText = "\uAD6C\uB9E4\uC644\uB8CC";
-    private RectTransform cardVisualRect;
-    private Vector3 baseCardVisualScale = Vector3.one;
-    private bool baseCardVisualScaleCaptured;
-    private bool runtimeMoneyIconCreated;
-    private bool runtimeOfferIconCreated;
-    private readonly System.Collections.Generic.List<Graphic> cardVisualGraphics = new System.Collections.Generic.List<Graphic>();
-    private bool relicIconOnlyMode;
-    private Vector2 iconBaseSizeDelta;
-    private Vector3 iconBaseScale = Vector3.one;
-    private bool iconBaseCaptured;
+    private int price; // 현재 상품 가격
+    private System.Action onBuy; // 구매 시 실행할 콜백
+    private Button iconBuyButton; // 아이콘에 부착된 구매 버튼
+    private Button rootBuyButton; // 루트에 부착된 폴백 구매 버튼
+    private TextMeshProUGUI defaultPriceText; // 자체 가격 텍스트
+    private TextMeshProUGUI externalPriceText; // 외부에서 지정한 가격 텍스트
+    private NewCardView newCardView; // 카드 비주얼 뷰
+    private CanvasGroup canvasGroup; // 알파 제어용 캔버스 그룹
+    private bool isPurchased; // 구매 완료 상태
+    private const string PurchasedDoneText = "\uAD6C\uB9E4\uC644\uB8CC"; // 구매 완료 기본 텍스트
+    private RectTransform cardVisualRect; // 카드 비주얼 RectTransform
+    private Vector3 baseCardVisualScale = Vector3.one; // 카드 비주얼 기준 스케일
+    private bool baseCardVisualScaleCaptured; // 기준 스케일 캡처 여부
+    private bool runtimeMoneyIconCreated; // 런타임 재화 아이콘 생성 여부
+    private bool runtimeOfferIconCreated; // 런타임 상품 아이콘 생성 여부
+    private readonly System.Collections.Generic.List<Graphic> cardVisualGraphics = new System.Collections.Generic.List<Graphic>(); // 카드 비주얼 그래픽 캐시
+    private bool relicIconOnlyMode; // 렐릭 아이콘 전용 모드 여부
+    private Vector2 iconBaseSizeDelta; // 아이콘 기준 크기
+    private Vector3 iconBaseScale = Vector3.one; // 아이콘 기준 스케일
+    private bool iconBaseCaptured; // 아이콘 기준값 캡처 여부
 
+    // 자동 바인딩 및 구매 라벨 정규화
     void Awake()
     {
         TryAutoBindFields();
         NormalizePurchasedLabel();
     }
 
+    // 상품 정보(제목/설명/아이콘/가격/구매콜백)로 슬롯 초기화
     public void Setup(string title, string description, Sprite icon, int offerPrice, System.Action onBuyClick)
     {
         cardVisualGraphics.Clear();
@@ -93,6 +95,7 @@ public class ShopOfferItemUI : MonoBehaviour
         RefreshBuyState();
     }
 
+    // 활성화 시 자동 바인딩 및 재화 변동 구독
     void OnEnable()
     {
         TryAutoBindFields();
@@ -103,6 +106,7 @@ public class ShopOfferItemUI : MonoBehaviour
         RefreshBuyState();
     }
 
+    // 인스펙터 값 변경 시 바인딩/라벨/스케일 갱신
     void OnValidate()
     {
         TryAutoBindFields();
@@ -110,6 +114,7 @@ public class ShopOfferItemUI : MonoBehaviour
         ApplyCardVisualScale();
     }
 
+    // 구매 완료 라벨이 비었거나 깨진 경우 기본값으로 보정
     void NormalizePurchasedLabel()
     {
         if (string.IsNullOrWhiteSpace(purchasedLabel))
@@ -118,11 +123,11 @@ public class ShopOfferItemUI : MonoBehaviour
             return;
         }
 
-        // 기존 직렬화 값이 깨진 경우(예: 인코딩 변환) 자동 보정
         if (purchasedLabel.Contains("�") || purchasedLabel.Contains("êµ¬") || purchasedLabel.Contains("êµ¬ë§¤"))
             purchasedLabel = PurchasedDoneText;
     }
 
+    // 이름 규칙으로 UI 필드들을 자동 탐색해 바인딩
     void TryAutoBindFields()
     {
         if (!autoBindFieldsByName) return;
@@ -160,6 +165,7 @@ public class ShopOfferItemUI : MonoBehaviour
         TryAutoBindPriceText();
     }
 
+    // 아이콘 이미지가 없으면 폴백 탐색 후 런타임으로 생성
     void EnsureOfferIconReady()
     {
         if (iconImage != null) return;
@@ -167,7 +173,6 @@ public class ShopOfferItemUI : MonoBehaviour
         TryBindFallbackIconImage();
         if (iconImage != null) return;
 
-        // Relic 슬롯처럼 아이콘 전용 이미지가 없는 구조를 대비해 런타임으로 생성한다.
         if (runtimeOfferIconCreated) return;
 
         var go = new GameObject("OfferIconImage", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -184,6 +189,7 @@ public class ShopOfferItemUI : MonoBehaviour
         runtimeOfferIconCreated = true;
     }
 
+    // 자식 이미지 중 재화 아이콘이 아닌 것을 아이콘으로 폴백 바인딩
     void TryBindFallbackIconImage()
     {
         if (iconImage != null) return;
@@ -210,6 +216,7 @@ public class ShopOfferItemUI : MonoBehaviour
         }
     }
 
+    // 카드 비주얼의 기준 스케일을 1회 캡처
     void CaptureBaseCardScaleIfNeeded()
     {
         if (baseCardVisualScaleCaptured) return;
@@ -219,6 +226,7 @@ public class ShopOfferItemUI : MonoBehaviour
         baseCardVisualScaleCaptured = true;
     }
 
+    // 카드 비주얼에 설정 스케일을 적용
     void ApplyCardVisualScale()
     {
         if (cardVisualRect == null)
@@ -230,6 +238,7 @@ public class ShopOfferItemUI : MonoBehaviour
         cardVisualRect.localScale = baseCardVisualScale * scale;
     }
 
+    // 카드 데이터로 카드 비주얼(NewCardView) 미리보기 적용
     public void SetupCardVisual(CardData cardData, Sprite iconOverride = null)
     {
         if (cardData == null) return;
@@ -239,18 +248,21 @@ public class ShopOfferItemUI : MonoBehaviour
         newCardView?.ApplyShopPreview(cardData, iconOverride);
     }
 
+    // 카드 비주얼 스케일 설정 및 적용
     public void SetCardVisualScale(float scale)
     {
         cardVisualScale = scale;
         ApplyCardVisualScale();
     }
 
+    // 재화 아이콘 스케일 설정 및 적용
     public void SetMoneyIconScale(float scale)
     {
         moneyIconScale = scale;
         ApplyMoneyIconScale();
     }
 
+    // 가격 텍스트들의 폰트 크기 설정
     public void SetPriceFontSize(float size)
     {
         if (size <= 0f) return;
@@ -265,12 +277,14 @@ public class ShopOfferItemUI : MonoBehaviour
             priceText.fontSize = size;
     }
 
+    // 렐릭 아이콘 스케일 설정 및 적용
     public void SetRelicIconScale(float scale)
     {
         relicIconScale = Mathf.Clamp(scale, 1f, 2.5f);
         ApplyRelicIconOnlyMode();
     }
 
+    // 외부 가격 텍스트를 지정하고 가격 표시 갱신
     public void SetExternalPriceText(TextMeshProUGUI target)
     {
         externalPriceText = target;
@@ -278,6 +292,7 @@ public class ShopOfferItemUI : MonoBehaviour
         ApplyPriceText();
     }
 
+    // 렐릭 아이콘 전용 모드 토글
     public void SetRelicIconOnlyMode(bool enabled)
     {
         relicIconOnlyMode = enabled;
@@ -292,9 +307,9 @@ public class ShopOfferItemUI : MonoBehaviour
         ApplyRelicIconOnlyMode();
     }
 
+    // 아이콘 클릭만 구매로 처리하고 다른 구매 버튼 비활성화
     void EnableIconOnlyPurchaseMode()
     {
-        // 렐릭 모드에서는 아이콘 클릭만 구매 판정으로 사용.
         BindIconPurchaseIfNeeded();
 
         if (buyButton != null && buyButton != iconBuyButton)
@@ -315,6 +330,7 @@ public class ShopOfferItemUI : MonoBehaviour
         }
     }
 
+    // 루트 폴백 구매 버튼을 비활성화
     void DisableRootPurchaseFallback()
     {
         if (rootBuyButton == null)
@@ -326,6 +342,7 @@ public class ShopOfferItemUI : MonoBehaviour
         rootBuyButton.enabled = false;
     }
 
+    // 구매 상태를 설정하고 비주얼/가격/버튼 갱신
     public void SetPurchasedState(bool purchased)
     {
         isPurchased = purchased;
@@ -335,6 +352,7 @@ public class ShopOfferItemUI : MonoBehaviour
         RefreshBuyState();
     }
 
+    // 가격 텍스트를 비움
     public void ClearPriceText()
     {
         if (externalPriceText != null)
@@ -344,6 +362,7 @@ public class ShopOfferItemUI : MonoBehaviour
             defaultPriceText.text = string.Empty;
     }
 
+    // 이름 규칙으로 가격 텍스트를 자동 탐색해 바인딩
     void TryAutoBindPriceText()
     {
         if (!autoBindPriceTextByName) return;
@@ -368,8 +387,6 @@ public class ShopOfferItemUI : MonoBehaviour
             }
         }
 
-        // NewSkillCard 프리팹(카드 비주얼 재사용)에서는 guageCost를 카드 코스트로 사용하므로
-        // 가격 텍스트 자동 바인딩 우선순위를 Price로 두고, 없을 때만 기존 이름으로 폴백한다.
         defaultPriceText = newCardView != null
             ? FindChildComponentByName<TextMeshProUGUI>("Price", "price", "guageCost", "GaugeCost")
             : FindChildComponentByName<TextMeshProUGUI>("guageCost", "GaugeCost", "Price");
@@ -377,6 +394,7 @@ public class ShopOfferItemUI : MonoBehaviour
             priceText = defaultPriceText;
     }
 
+    // 구매 여부에 따라 가격 또는 완료 라벨을 가격 텍스트에 반영
     void ApplyPriceText()
     {
         if (isPurchased)
@@ -407,12 +425,11 @@ public class ShopOfferItemUI : MonoBehaviour
             priceText.text = value;
     }
 
+    // guageCost/GaugeCost 텍스트는 카드 코스트 전용이라 상점 가격으로 덮지 않도록 판정
     bool ShouldPreserveDefaultPriceText()
     {
         if (defaultPriceText == null) return false;
 
-        // 카드 슬롯(NewCardView)에서 guageCost/GaugeCost는 카드 코스트 전용이므로
-        // 상점 가격 로직으로 덮어쓰지 않는다.
         if (newCardView == null) return false;
 
         string n = defaultPriceText.name;
@@ -420,6 +437,7 @@ public class ShopOfferItemUI : MonoBehaviour
             || string.Equals(n, "GaugeCost", System.StringComparison.OrdinalIgnoreCase);
     }
 
+    // 렐릭 전용 모드 여부에 따라 카드 비주얼 숨김과 아이콘 스케일/순서를 조정
     void ApplyRelicIconOnlyMode()
     {
         if (relicIconOnlyMode)
@@ -437,16 +455,12 @@ public class ShopOfferItemUI : MonoBehaviour
                 float scale = Mathf.Clamp(relicIconScale, 1f, 2.5f);
                 Vector3 desiredScale = iconBaseScale * scale;
 
-                // 렐릭 슬롯 루트에 ButtonHoverScale이 붙어 있으면 매 프레임 localScale을 자신의 base로
-                // 되돌리기 때문에 여기서 직접 scale을 줘도 곧바로 덮어써진다. 그 경우 호버 컴포넌트의
-                // 기준 스케일 자체를 갱신해, 아이콘 스케일이 유지되고 호버는 그 위에 곱해지도록 한다.
                 var hover = iconImage.GetComponent<ButtonHoverScale>();
                 if (hover != null)
                     hover.SetBaseScale(desiredScale);
                 else
                     iconImage.rectTransform.localScale = desiredScale;
 
-                // 배경/프레임 오브젝트가 많은 슬롯에서도 렐릭 아이콘이 최상단에 보이도록 보장한다.
                 iconImage.rectTransform.SetAsLastSibling();
             }
             else
@@ -461,6 +475,7 @@ public class ShopOfferItemUI : MonoBehaviour
         }
     }
 
+    // 아이콘의 기준 크기/스케일을 1회 캡처
     void CaptureIconBaseIfNeeded()
     {
         if (iconBaseCaptured) return;
@@ -471,12 +486,11 @@ public class ShopOfferItemUI : MonoBehaviour
         iconBaseCaptured = true;
     }
 
+    // 폰트가 한글을 지원하지 않으면 ASCII 라벨로 대체한 구매 완료 라벨 반환
     string ResolvePurchasedLabelFor(TextMeshProUGUI target)
     {
         string done = string.IsNullOrWhiteSpace(purchasedLabel) ? PurchasedDoneText : purchasedLabel;
 
-        // 가격 텍스트 폰트가 한글 글리프를 지원하지 않으면 fallback 폰트로 깨져 보일 수 있음.
-        // 이 경우 같은 폰트에서 안정적으로 보이는 ASCII 라벨을 사용한다.
         if (target != null && target.font != null)
         {
             if (!target.font.HasCharacters(done))
@@ -486,6 +500,7 @@ public class ShopOfferItemUI : MonoBehaviour
         return done;
     }
 
+    // 후보 이름들로 자식에서 지정 타입 컴포넌트를 탐색
     T FindChildComponentByName<T>(params string[] candidateNames) where T : Component
     {
         if (candidateNames == null || candidateNames.Length == 0) return null;
@@ -505,6 +520,7 @@ public class ShopOfferItemUI : MonoBehaviour
         return null;
     }
 
+    // 이름이 일치하는 자식 Transform을 재귀 탐색
     static Transform FindChildRecursiveByName(Transform root, string targetName)
     {
         if (root == null || string.IsNullOrWhiteSpace(targetName)) return null;
@@ -521,23 +537,27 @@ public class ShopOfferItemUI : MonoBehaviour
         return null;
     }
 
+    // 비활성화 시 재화 변동 구독 해제
     void OnDisable()
     {
         if (MoneyManager.Instance != null)
             MoneyManager.Instance.OnMoneyChanged -= OnMoneyChanged;
     }
 
+    // 파괴 시 재화 변동 구독 해제
     void OnDestroy()
     {
         if (MoneyManager.Instance != null)
             MoneyManager.Instance.OnMoneyChanged -= OnMoneyChanged;
     }
 
+    // 재화 변동 시 구매 가능 상태 갱신
     void OnMoneyChanged(int _)
     {
         RefreshBuyState();
     }
 
+    // 보유 골드와 구매 상태로 구매 버튼들의 활성화 갱신
     void RefreshBuyState()
     {
         bool canBuy = !isPurchased && MoneyManager.Instance != null && MoneyManager.Instance.CurrentMoney >= price;
@@ -551,6 +571,7 @@ public class ShopOfferItemUI : MonoBehaviour
             rootBuyButton.interactable = canBuy;
     }
 
+    // 구매 버튼 클릭 처리(구매 콜백 실행)
     void OnBuyClicked()
     {
         if (isPurchased) return;
@@ -558,16 +579,17 @@ public class ShopOfferItemUI : MonoBehaviour
         RefreshBuyState();
     }
 
+    // 구매 상태에 따른 카드 비주얼 표시/숨김 적용
     void ApplyPurchasedVisual()
     {
         if (canvasGroup == null)
             canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
 
-        // 구매 시 카드 컨테이너의 시각 요소를 전부 숨긴다.
         canvasGroup.alpha = 1f;
         SetCardVisualVisible(!isPurchased, false);
     }
 
+    // 카드 비주얼 그래픽들의 표시 여부 일괄 설정
     void SetCardVisualVisible(bool visible, bool keepIconVisible)
     {
         CacheCardVisualGraphics();
@@ -580,6 +602,7 @@ public class ShopOfferItemUI : MonoBehaviour
         }
     }
 
+    // 숨김 대상 카드 비주얼 그래픽 목록을 캐시(가격/재화 아이콘은 제외)
     void CacheCardVisualGraphics()
     {
         if (cardVisualGraphics.Count > 0) return;
@@ -593,14 +616,12 @@ public class ShopOfferItemUI : MonoBehaviour
             Graphic graphic = graphics[i];
             if (graphic == null) continue;
 
-            // 카드의 코스트 텍스트(guageCost)는 상점 가격이 아니므로 구매 시 무조건 같이 숨깁니다!
             if (graphic.name == "guageCost" || graphic.name == "GaugeCost")
             {
                 cardVisualGraphics.Add(graphic);
                 continue;
             }
 
-            // 실제 상점 가격 텍스트나 재화 아이콘은 숨기지 않고 남겨둡니다.
             if (graphic == priceText || graphic == defaultPriceText || graphic == externalPriceText || graphic == moneyIconImage)
                 continue;
 
@@ -608,6 +629,7 @@ public class ShopOfferItemUI : MonoBehaviour
         }
     }
 
+    // 구매 상태에 따라 재화 아이콘 표시 여부 갱신
     void ApplyMoneyIconState()
     {
         if (moneyIconImage == null) return;
@@ -617,6 +639,7 @@ public class ShopOfferItemUI : MonoBehaviour
             moneyIconImage.gameObject.SetActive(show);
     }
 
+    // 재화 아이콘을 준비하고 스프라이트/스케일 적용
     void EnsureMoneyIconReady()
     {
         if (moneyIconImage == null)
@@ -640,6 +663,7 @@ public class ShopOfferItemUI : MonoBehaviour
         }
     }
 
+    // 가격 텍스트 옆에 런타임 재화 아이콘 생성
     void TryCreateRuntimeMoneyIcon()
     {
         if (runtimeMoneyIconCreated) return;
@@ -665,6 +689,7 @@ public class ShopOfferItemUI : MonoBehaviour
         runtimeMoneyIconCreated = true;
     }
 
+    // 재화 아이콘 스케일을 적용
     void ApplyMoneyIconScale()
     {
         if (moneyIconImage == null) return;
@@ -676,6 +701,7 @@ public class ShopOfferItemUI : MonoBehaviour
         rt.localScale = new Vector3(scale, scale, 1f);
     }
 
+    // 아이콘에 구매 버튼을 부착하고 클릭 콜백 연결
     void BindIconPurchaseIfNeeded()
     {
         if (!enableIconClickPurchase || iconImage == null) return;
@@ -690,6 +716,7 @@ public class ShopOfferItemUI : MonoBehaviour
         iconBuyButton.onClick.AddListener(OnBuyClicked);
     }
 
+    // 전용 구매 버튼이 없으면 카드 루트 클릭을 구매 폴백으로 연결
     void BindRootPurchaseIfNeeded()
     {
         if (!enableIconClickPurchase) return;
@@ -698,7 +725,6 @@ public class ShopOfferItemUI : MonoBehaviour
         if (buyButton != null)
             buyButton.enabled = true;
 
-        // 명시적 BuyButton이 없을 때 카드 루트 클릭으로도 구매되게 폴백.
         if (buyButton != null) return;
 
         if (rootBuyButton == null)

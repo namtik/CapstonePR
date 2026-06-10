@@ -4,8 +4,9 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Button))]
 public class ClearButtonProxy : MonoBehaviour
 {
-    Button button;
+    Button button; // 연결된 버튼
 
+    // 버튼 클릭 리스너를 등록
     void Awake()
     {
         button = GetComponent<Button>();
@@ -15,12 +16,11 @@ public class ClearButtonProxy : MonoBehaviour
         button.onClick.AddListener(OnClearClicked);
     }
 
-    // 버튼이 런타임에 호출하는 핸들러
+    // 라운드 클리어 처리를 호출
     public void OnClearClicked()
     {
         Debug.Log("=== ClearButtonProxy.OnClearClicked 호출됨 ===");
 
-        // GameStateController를 먼저 시도
         var stateController = GameStateController.Instance;
         if (stateController != null)
         {

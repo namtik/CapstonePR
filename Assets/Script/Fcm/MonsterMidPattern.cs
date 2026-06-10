@@ -2,89 +2,74 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-/// <summary>
-/// 게이지 5 (빠른 판단):
-///   1. 특성 추출 (블렌딩 없이 현재 값 직접 사용)
-///   2. RBFN or 트리로 행동 선택 + 실행
-///
-/// 게이지 10 (학습):
-///   1. 몬스터 메인 공격 실행
-///   2. 슬라이딩 윈도우의 최근 데이터로 RBFN 가중치 재학습
-/// </summary>
+// 몬스터 중간 패턴: 게이지 5 빠른 판단, 게이지 10 온라인 학습
 public class MonsterMidPattern : MonoBehaviour
 {
     [Header("행동 결정 모드")]
-    [SerializeField] private bool useRBFN = false;
-    [SerializeField] private bool stochastic = true;
-    [SerializeField] private float deterministicThreshold = 0.80f;
+    [SerializeField] private bool useRBFN = false;                  // RBFN 사용 여부
+    [SerializeField] private bool stochastic = true;               // 확률적 선택 여부
+    [SerializeField] private float deterministicThreshold = 0.80f; // 확정 선택 임계값
 
     [Header("RBFN")]
-    [SerializeField] private RBFNetwork rbfn = new RBFNetwork();
+    [SerializeField] private RBFNetwork rbfn = new RBFNetwork();    // RBF 네트워크
 
     [Header("실시간 학습 (Online Learning)")]
     [Tooltip("RBFN 모드에서 게이지 10에 온라인 학습 실행")]
-    [SerializeField] private bool onlineLearning = true;
+    [SerializeField] private bool onlineLearning = true;           // 온라인 학습 on/off
     [Tooltip("슬라이딩 윈도우 크기 (최근 N개 데이터만 기억)")]
-    [SerializeField] private int maxMemorySize = 30;
+    [SerializeField] private int maxMemorySize = 30;               // 기억 버퍼 크기
 
     [Header("의사결정 트리 임계값 (트리 모드 + 정답 생성용)")]
-    [SerializeField] private MonsterDecisionTree.Thresholds thresholds;
+    [SerializeField] private MonsterDecisionTree.Thresholds thresholds; // 트리 임계값
 
     [Header("디버그")]
-    [SerializeField] private FCMDebugOverlay debugOverlay;
+    [SerializeField] private FCMDebugOverlay debugOverlay;          // 디버그 오버레이
 
     [Header("데이터 수집")]
-    [SerializeField] private bool collectData = false;
-    [SerializeField] private string logFolderName = "fcm_logs";
-    [SerializeField] private string playerId = "";
+    [SerializeField] private bool collectData = false;             // CSV 수집 여부
+    [SerializeField] private string logFolderName = "fcm_logs";    // 로그 폴더명
+    [SerializeField] private string playerId = "";                 // 플레이어 식별자
 
-    private MonsterDecisionTree decisionTree;
-    private int triggerCount = 0;
-    private string logFilePath;
-    private bool headerWritten = false;
+    private MonsterDecisionTree decisionTree;   // 결정 트리 인스턴스
+    private int triggerCount = 0;               // 발동 횟수
+    private string logFilePath;                 // 로그 파일 경로
+    private bool headerWritten = false;         // CSV 헤더 기록 여부
 
-    // 슬라이딩 윈도우 (트리 선생님의 정답 버퍼)
-    private List<float[]> recentFeaturesBuf = new List<float[]>();
-    private List<int> recentActionsBuf = new List<int>();
+    private List<float[]> recentFeaturesBuf = new List<float[]>(); // 최근 특성 버퍼
+    private List<int> recentActionsBuf = new List<int>();          // 최근 정답 행동 버퍼
 
+    // 결정 트리 초기화
     void Awake()
     {
         decisionTree = new MonsterDecisionTree(thresholds);
     }
 
+    // 전투 시작 시 발동 카운트 초기화 및 로그 준비
     public void InitBattle()
     {
         triggerCount = 0;
-        // 버퍼는 스테이지 간 유지 (플레이어 성향 누적)
-        // 새 플레이어면 Clear() 호출
         if (collectData) InitLogFile();
     }
 
-    /// <summary>새 플레이어 시작 시 버퍼 초기화</summary>
+    // 새 플레이어 시작 시 기억 버퍼 초기화
     public void ResetMemory()
     {
         recentFeaturesBuf.Clear();
         recentActionsBuf.Clear();
     }
 
-    // ═══════════════════════════════════
-    // 게이지 5: 빠른 판단 + 정답 수집
-    // ═══════════════════════════════════
-
+    // 게이지 5: 특성 추출→행동 결정→실행→정답 수집
     public string Execute()
     {
         triggerCount++;
 
-        // 1. 특성 추출 (블렌딩 없이 현재 값 직접 사용)
         float[] features = FeatureExtractor.ExtractFCMFeatures(
             out FeatureExtractor.ThreatInfo[] threats);
         float f4 = FeatureExtractor.CalcPollution(threats);
 
-        // 2. FCM 소속도
         float[] membership = FCMAnalyzer.CalcMembership(features);
         int dominant = FCMAnalyzer.GetDominantType(membership);
 
-        // 3. 행동 결정
         MonsterDecisionTree.Decision finalDecision;
         float[] actionProbs = null;
 
@@ -93,10 +78,8 @@ public class MonsterMidPattern : MonoBehaviour
         else
             finalDecision = decisionTree.Decide(membership, features, f4, threats);
 
-        // 4. 행동 실행
         string result = ExecuteAction(finalDecision);
 
-        // 5. 트리 선생님의 '정답' 수집 (RBFN 모드일 때도 항상)
         if (onlineLearning)
         {
             var idealDecision = decisionTree.Decide(membership, features, f4, threats);
@@ -104,7 +87,6 @@ public class MonsterMidPattern : MonoBehaviour
             recentFeaturesBuf.Add((float[])features.Clone());
             recentActionsBuf.Add((int)idealDecision.ChosenAction);
 
-            // 윈도우 크기 제한
             while (recentFeaturesBuf.Count > maxMemorySize)
             {
                 recentFeaturesBuf.RemoveAt(0);
@@ -112,7 +94,6 @@ public class MonsterMidPattern : MonoBehaviour
             }
         }
 
-        // 6. 로그/디버그
         LogDecision(features, f4, membership, dominant, finalDecision, threats, actionProbs);
 
         if (debugOverlay == null)
@@ -125,15 +106,7 @@ public class MonsterMidPattern : MonoBehaviour
         return result;
     }
 
-    // ═══════════════════════════════════
-    // 게이지 10: 학습
-    // ═══════════════════════════════════
-
-    /// <summary>
-    /// 게이지 10 도달 시 호출.
-    /// 슬라이딩 윈도우의 최근 데이터로 RBFN 가중치를 재학습한다.
-    /// 행렬 연산이 포함되므로 게이지 5가 아닌 게이지 10에서 실행.
-    /// </summary>
+    // 게이지 10: 최근 데이터로 RBFN 가중치 재학습
     public void OnGauge10()
     {
         if (!useRBFN || !onlineLearning) return;
@@ -144,13 +117,12 @@ public class MonsterMidPattern : MonoBehaviour
         Debug.Log($"[MidPattern] 온라인 학습 완료 (기억: {recentFeaturesBuf.Count}개)");
     }
 
+    // 전투 종료 처리(버퍼는 유지)
     public void OnBattleEnd()
     {
-        // 버퍼는 유지 (다음 스테이지에서도 누적 학습)
     }
 
-    // ─── RBFN 행동 결정 ───
-
+    // RBFN 순전파로 행동·확률 결정
     MonsterDecisionTree.Decision DecideWithRBFN(float[] features, float f4,
         FeatureExtractor.ThreatInfo[] threats, out float[] probs)
     {
@@ -178,6 +150,7 @@ public class MonsterMidPattern : MonoBehaviour
         };
     }
 
+    // 행동 종류에 맞는 대상 슬롯 선정
     int FindBestTarget(MonsterDecisionTree.Action action, FeatureExtractor.ThreatInfo[] threats)
     {
         ComboSystem combo = ComboSystem.Instance;
@@ -218,8 +191,7 @@ public class MonsterMidPattern : MonoBehaviour
         return best >= 0 ? best : Random.Range(0, 4);
     }
 
-    // ─── 행동 실행 ───
-
+    // 결정된 방해행동을 실제 시스템에 적용
     string ExecuteAction(MonsterDecisionTree.Decision dec)
     {
         switch (dec.ChosenAction)
@@ -245,8 +217,7 @@ public class MonsterMidPattern : MonoBehaviour
         }
     }
 
-    // ─── 데이터 수집 ───
-
+    // CSV 로그 파일 경로 초기화
     void InitLogFile()
     {
         string dir = Path.Combine(Application.persistentDataPath, logFolderName);
@@ -257,6 +228,7 @@ public class MonsterMidPattern : MonoBehaviour
         headerWritten = false;
     }
 
+    // 결정 1건을 CSV 한 행으로 기록
     void WriteDataRow(float[] features, float f4, float[] mem, int dom,
                       MonsterDecisionTree.Decision dec,
                       FeatureExtractor.ThreatInfo[] threats, float[] actionProbs)
@@ -303,8 +275,7 @@ public class MonsterMidPattern : MonoBehaviour
         catch (System.Exception e) { Debug.LogWarning($"[MidPattern] 저장 실패: {e.Message}"); }
     }
 
-    // ─── 디버그 ───
-
+    // 결정 내용을 콘솔에 디버그 출력
     void LogDecision(float[] features, float f4, float[] mem, int dom,
                      MonsterDecisionTree.Decision dec,
                      FeatureExtractor.ThreatInfo[] threats, float[] actionProbs)

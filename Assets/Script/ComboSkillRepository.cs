@@ -1,12 +1,9 @@
 using System.Collections.Generic;
 
-/// <summary>
-/// 콤보 스킬 보유 데이터 접근 통합 레이어.
-/// - 레거시 모드: ComboSystem 사용
-/// - 신규 전투 모드: ComboSkillProgression 사용
-/// </summary>
+// 콤보 스킬 보유 데이터 접근 통합 레이어(레거시/신규 모드 분기)
 public static class ComboSkillRepository
 {
+    // 모드에 맞는 습득 스킬 ID 집합 반환
     public static HashSet<int> GetLearnedSkillIds()
     {
         if (ComboSystem.Instance != null)
@@ -15,6 +12,7 @@ public static class ComboSkillRepository
         return ComboSkillProgression.EnsureExists().GetLearnedSkillIds();
     }
 
+    // 모드에 맞게 스킬 습득(중복 시 false)
     public static bool LearnSkill(SkillDataParser.SkillData skill)
     {
         if (skill == null) return false;

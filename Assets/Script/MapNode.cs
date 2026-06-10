@@ -1,23 +1,25 @@
 using UnityEngine;
 
+// 맵 노드 종류 (전투/상점/휴식/정예/보스/이벤트/유물)
 public enum NodeType { Combat, Shop, Rest, Elite, Boss, Event, Relic }
 
-// ���� ����� ���¿� ������ �����ϴ� ������Ʈ
+// 개별 맵 노드의 상태와 비주얼을 담당하는 컴포넌트
 public class MapNode : MonoBehaviour
 {
-    public int nodeIndex = -1;
-    public MapManager mapManager;
-    public bool isCleared = false;
-    public RoundData roundData;
-    
+    public int nodeIndex = -1; // 맵 데이터상 노드 인덱스
+    public MapManager mapManager; // 소속 맵 관리자
+    public bool isCleared = false; // 클리어 여부
+    public RoundData roundData; // 이 노드의 라운드 데이터
+
     [Header("��� Ÿ�� (���� ���� ����)")]
-    [SerializeField] private NodeType _nodeType = NodeType.Combat;
-    
+    [SerializeField] private NodeType _nodeType = NodeType.Combat; // 직렬화된 기본 노드 타입
+
+    // roundData가 있으면 그 타입을, 없으면 _nodeType을 사용하는 노드 타입
     public NodeType nodeType
     {
         get
         {
-            // roundData�� ������ �װ� ���, ������ _nodeType ���
+            // roundData가 있으면 그것을, 없으면 _nodeType 사용
             if (roundData != null)
                 return roundData.roundType;
             return _nodeType;
@@ -29,50 +31,51 @@ public class MapNode : MonoBehaviour
     }
 
     [Header("���־� ����")]
-    public NodeVisualConfig visualConfig;
+    public NodeVisualConfig visualConfig; // 노드 비주얼 설정
 
-    private UnityEngine.UI.Image img;
-    private bool isHighlighted = false;
-    private Color highlightColor = Color.white;
-    private bool isCurrentPosition = false; // ����: ���� �÷��̾� ��ġ ǥ��
+    private UnityEngine.UI.Image img; // 노드 이미지 컴포넌트
+    private bool isHighlighted = false; // 강조 표시 여부
+    private Color highlightColor = Color.white; // 강조 색상
+    private bool isCurrentPosition = false; // 현재 플레이어 위치 여부
 
+    // 초기화: 이미지 컴포넌트 확보 및 raycastTarget 활성화
     void Awake()
     {
         img = GetComponent<UnityEngine.UI.Image>();
-        
-        // Image�� raycastTarget Ȱ��ȭ
+
+        // Image의 raycastTarget 활성화
         if (img != null && !img.raycastTarget)
         {
             img.raycastTarget = true;
         }
     }
 
+    // 시작 시 비주얼을 갱신한다
     void Start()
     {
         UpdateVisual();
     }
 
-    // ����: ȭ�� ǥ�� ������Ʈ (�켱����: Ŭ���� > ������ġ > ���̶���Ʈ > Ÿ��)
+    // 상태 우선순위(클리어 > 현재위치 > 강조 > 타입)에 따라 노드 표시를 갱신한다
     void UpdateVisual()
     {
         if (img == null) return;
-        
-        // ����: Ŭ����� ���� ȸ��
+
+        // 클리어된 노드는 회색 처리
         if (isCleared)
         {
             img.color = visualConfig != null ? visualConfig.clearedColor : Color.gray;
-            // ũ��� ���� (Ŭ���� �Ŀ��� ���� ��ġ�� ũ�� ����)
+            // 크기는 복원 (현재 위치는 크기 유지)
             if (!isCurrentPosition)
             {
                 transform.localScale = Vector3.one;
             }
             return;
         }
-        
-        // ����: ���� ��ġ�� ũ��� Outline���θ� ǥ�� (������ Ÿ�Ժ� ����)
-        // isCurrentPosition�� ���� �Ʒ� Ÿ�Ժ� ����/�̹��� ����
-        
-        // ����: ���� ����
+
+        // 현재 위치는 크기 확대로만 표시 (색/이미지는 타입별 유지)
+
+        // 강조 상태
         if (isHighlighted)
         {
             img.color = Color.black;
@@ -83,14 +86,13 @@ public class MapNode : MonoBehaviour
             return;
         }
 
-        // ����: �⺻ Ÿ�Ժ� ��������Ʈ �Ǵ� ����
-        // ũ��� ���� ��ġ�� �ƴϸ� 1.0���� ����
+        // 기본: 타입별 스프라이트 또는 색상, 현재 위치가 아니면 크기 1.0
         if (!isCurrentPosition)
         {
             img.color = Color.black;
             transform.localScale = Vector3.one;
         }
-        
+
         if (visualConfig != null)
         {
             Sprite typeSprite = visualConfig.GetSpriteForType(nodeType);
@@ -106,7 +108,7 @@ public class MapNode : MonoBehaviour
         }
         else
         {
-            // ����: �⺻ ����
+            // 폴백: 타입별 기본 색상
             switch (nodeType)
             {
                 case NodeType.Combat: img.color = Color.red; break;
@@ -120,6 +122,7 @@ public class MapNode : MonoBehaviour
         }
     }
 
+    // 클리어 상태를 설정하고 비주얼/버튼을 갱신한다
     public void SetCleared(bool cleared)
     {
         isCleared = cleared;
@@ -128,6 +131,7 @@ public class MapNode : MonoBehaviour
         if (btn != null) btn.interactable = !cleared;
     }
 
+    // 지정 색으로 노드를 강조 표시한다
     public void Highlight(Color color)
     {
         if (img == null) img = GetComponent<UnityEngine.UI.Image>();
@@ -137,37 +141,33 @@ public class MapNode : MonoBehaviour
         UpdateVisual();
     }
 
-    /// <summary>
-    /// ���� �÷��̾� ��ġ�� Ư�� ���̶���Ʈ
-    /// ����: ũ�� Ȯ��θ� ǥ�� (���� ���)
-    /// </summary>
+    // 현재 플레이어 위치로 크기 확대 강조한다
     public void HighlightAsCurrentPosition(float scale)
     {
         if (img == null) img = GetComponent<UnityEngine.UI.Image>();
-        
+
         isCurrentPosition = true;
-        
-        // ����: ũ�� Ȯ�븸 ����
+
+        // 크기 확대만 적용
         transform.localScale = Vector3.one * scale;
-        
+
         UpdateVisual();
     }
 
-    /// <summary>
-    /// ���� ��ġ ���̶���Ʈ ����
-    /// </summary>
+    // 현재 위치 강조를 해제하고 크기를 복원한다
     public void ClearCurrentPositionHighlight()
     {
         if (!isCurrentPosition) return;
-        
+
         isCurrentPosition = false;
-        
-        // ũ�⸦ ������� ����
+
+        // 크기를 원래대로 복원
         transform.localScale = Vector3.one;
-        
+
         UpdateVisual();
     }
 
+    // 클릭 시 맵 관리자에 노드 선택을 알린다
     public void OnClicked()
     {
         if (mapManager != null)

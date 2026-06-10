@@ -2,44 +2,41 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// 플레이어 사망 시 눈꺼풀이 감기는 연출을 재생하고,
-/// 다 감긴 뒤 다시하기/게임종료 버튼을 표시한다.
-/// 이 스크립트는 항상 활성화된 오브젝트(예: GameStateController)에 붙여야 한다.
-/// gameOverCanvas는 비활성 상태로 시작하고, 사망 시 활성화된다.
-/// </summary>
+// 플레이어 사망 시 눈꺼풀 감김 연출과 다시하기/종료 버튼을 처리하는 컨트롤러
 public class GameOverController : MonoBehaviour
 {
+    // 전역 싱글턴 인스턴스
     public static GameOverController Instance { get; private set; }
 
     [Header("게임오버 캔버스 (비활성 상태로 시작)")]
-    [SerializeField] private GameObject gameOverCanvas;
+    [SerializeField] private GameObject gameOverCanvas; // 게임오버 화면 캔버스
 
     [Header("눈꺼풀 패널 (닫힌 위치 = 각자 화면 절반을 덮는 위치로 배치)")]
-    [SerializeField] private RectTransform topEyelid;
-    [SerializeField] private RectTransform bottomEyelid;
+    [SerializeField] private RectTransform topEyelid; // 위쪽 눈꺼풀 패널
+    [SerializeField] private RectTransform bottomEyelid; // 아래쪽 눈꺼풀 패널
 
     [Header("버튼 그룹 (눈 감긴 뒤 표시)")]
-    [SerializeField] private GameObject buttonGroup;
-    [SerializeField] private Button retryButton;
-    [SerializeField] private Button quitButton;
+    [SerializeField] private GameObject buttonGroup; // 버튼 묶음 오브젝트
+    [SerializeField] private Button retryButton; // 다시하기 버튼
+    [SerializeField] private Button quitButton; // 게임 종료 버튼
     [Tooltip("클릭 시 진행 중이던 런을 정리하고 메인 메뉴로 돌아간다.")]
-    [SerializeField] private Button mainMenuButton;
+    [SerializeField] private Button mainMenuButton; // 메인 메뉴 버튼
 
     [Header("연출 설정")]
-    [SerializeField] private float closeDuration = 1.4f;
-    [SerializeField] private float openDuration = 0.5f;
+    [SerializeField] private float closeDuration = 1.4f; // 눈 감기는 시간(초)
+    [SerializeField] private float openDuration = 0.5f; // 눈 뜨는 시간(초)
     [Tooltip("닫힘 시 중앙에서 약간 겹치게 해 검은 틈을 방지한다.")]
-    [SerializeField] private float centerOverlap = 4f;
+    [SerializeField] private float centerOverlap = 4f; // 중앙 겹침 보정값
 
-    private Vector2 topClosedPos;
-    private Vector2 topOpenPos;
-    private Vector2 bottomClosedPos;
-    private Vector2 bottomOpenPos;
-    private bool positionsCached;
-    private bool isDead;
-    private Coroutine animRoutine;
+    private Vector2 topClosedPos; // 위 눈꺼풀 닫힘 위치
+    private Vector2 topOpenPos; // 위 눈꺼풀 열림 위치
+    private Vector2 bottomClosedPos; // 아래 눈꺼풀 닫힘 위치
+    private Vector2 bottomOpenPos; // 아래 눈꺼풀 열림 위치
+    private bool positionsCached; // 눈꺼풀 위치 캐시 완료 여부
+    private bool isDead; // 사망 연출 진행 중 여부
+    private Coroutine animRoutine; // 진행 중인 연출 코루틴
 
+    // 초기화: 싱글턴 설정, 위치 캐시, 캔버스 비활성화, 버튼 리스너 연결
     void Awake()
     {
         Instance = this;
@@ -67,12 +64,14 @@ public class GameOverController : MonoBehaviour
         }
     }
 
+    // 파괴 시 싱글턴 참조 해제
     void OnDestroy()
     {
         if (Instance == this)
             Instance = null;
     }
 
+    // 눈꺼풀의 열림/닫힘 위치를 계산해 캐시한다
     void CacheEyelidPositions()
     {
         if (positionsCached) return;
@@ -82,7 +81,7 @@ public class GameOverController : MonoBehaviour
             Vector2 placed = topEyelid.anchoredPosition;
             float height = topEyelid.rect.height;
             if (height < 1f) height = Screen.height; // 레이아웃 전이면 화면 높이로 대체
-            topClosedPos = placed + Vector2.down * centerOverlap;     // 살짝 중앙을 넘어 겹침
+            topClosedPos = placed + Vector2.down * centerOverlap; // 살짝 중앙을 넘어 겹침
             topOpenPos = placed + Vector2.up * (height + centerOverlap); // 화면 위로 완전히 숨김
         }
 
@@ -98,7 +97,7 @@ public class GameOverController : MonoBehaviour
         positionsCached = true;
     }
 
-    /// <summary>플레이어 사망 연출 시작.</summary>
+    // 플레이어 사망 연출을 시작한다
     public void PlayDeathSequence()
     {
         if (isDead) return;
@@ -122,6 +121,7 @@ public class GameOverController : MonoBehaviour
         animRoutine = StartCoroutine(CloseEyelids());
     }
 
+    // 눈꺼풀을 닫는 코루틴 (감긴 뒤 버튼 그룹 표시)
     IEnumerator CloseEyelids()
     {
         float dur = Mathf.Max(0.01f, closeDuration);
@@ -150,6 +150,7 @@ public class GameOverController : MonoBehaviour
         animRoutine = null;
     }
 
+    // [다시하기] 버튼 콜백: 재시작 연출 시작
     public void OnRetryClicked()
     {
         if (!isDead) return;
@@ -158,6 +159,7 @@ public class GameOverController : MonoBehaviour
         animRoutine = StartCoroutine(RetrySequence());
     }
 
+    // 런을 재시작하고 눈을 뜨는 연출 코루틴
     IEnumerator RetrySequence()
     {
         if (buttonGroup != null)
@@ -190,6 +192,7 @@ public class GameOverController : MonoBehaviour
         isDead = false;
     }
 
+    // 플레이어 HP를 복구하고 맵으로 런을 재시작한다
     void RestartRun()
     {
         Time.timeScale = 1f;
@@ -209,7 +212,7 @@ public class GameOverController : MonoBehaviour
             Debug.LogError("[GameOver] GameStateController.Instance가 null이라 런 재시작을 수행할 수 없습니다.");
     }
 
-    /// <summary>게임오버 화면에서 [메인 메뉴]로 — 진행 중이던 런을 정리하고 메인 메뉴를 표시한다.</summary>
+    // [메인 메뉴] 버튼 콜백: 런을 정리하고 메인 메뉴로 복귀
     public void OnMainMenuClicked()
     {
         if (!isDead) return;
@@ -236,6 +239,7 @@ public class GameOverController : MonoBehaviour
             Debug.LogError("[GameOver] GameStateController.Instance가 null이라 메인 메뉴로 돌아갈 수 없습니다.");
     }
 
+    // [게임 종료] 버튼 콜백: 애플리케이션 종료
     public void OnQuitClicked()
     {
         Debug.Log("게임 종료");

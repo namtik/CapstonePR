@@ -5,154 +5,161 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Collections;
 
+// 유물 보상 상자 연출 및 유물 지급 스테이지 컨트롤러
 public class RelicStageController : MonoBehaviour
 {
-    private const string DefaultSpriteOnlyRelicDescription = "개발중인 유물";
+    private const string DefaultSpriteOnlyRelicDescription = "개발중인 유물"; // 스프라이트 전용 유물 기본 설명
 
+    // 상점에 노출할 렐릭 후보 정보
     public struct ShopRelicCandidate
     {
-        public bool isSpriteOnly;
-        public RelicDef relic;
-        public Sprite sprite;
-        public string displayName;
-        public string description;
+        public bool isSpriteOnly; // 스프라이트 전용 여부
+        public RelicDef relic; // 렐릭 정의
+        public Sprite sprite; // 스프라이트
+        public string displayName; // 표시 이름
+        public string description; // 설명
     }
 
+    // 스프라이트 기반(효과 미구현) 유물 인스펙터 엔트리
     [System.Serializable]
     private struct SpriteOnlyRelicEntry
     {
-        public Sprite sprite;
-        public string displayName;
-        [TextArea(2, 4)] public string description;
+        public Sprite sprite; // 스프라이트
+        public string displayName; // 표시 이름
+        [TextArea(2, 4)] public string description; // 설명
     }
 
+    // 상자 연출 설정
     [System.Serializable]
     private struct ChestSettings
     {
         [Header("References")]
-        public Button chestButton;
-        public RectTransform chestTransform;
-        public Image chestImage;
+        public Button chestButton; // 상자 버튼
+        public RectTransform chestTransform; // 상자 트랜스폼
+        public Image chestImage; // 상자 이미지
 
         [Header("Sprites")]
-        public Sprite closedChestSprite;
-        public Sprite openedChestSprite;
+        public Sprite closedChestSprite; // 닫힌 상자 스프라이트
+        public Sprite openedChestSprite; // 열린 상자 스프라이트
 
         [Header("Shake")]
-        public float shakeDuration;
-        public float shakePositionAmplitude;
-        public float shakeRotationAmplitude;
-        public float shakeFrequency;
+        public float shakeDuration; // 흔들림 지속 시간
+        public float shakePositionAmplitude; // 흔들림 위치 진폭
+        public float shakeRotationAmplitude; // 흔들림 회전 진폭
+        public float shakeFrequency; // 흔들림 주파수
     }
 
+    // 보상 아이템 등장 연출 설정
     [System.Serializable]
     private struct ItemSettings
     {
         [Header("References")]
-        public GameObject itemObject;
-        public RectTransform itemTransform;
-        public Image itemImage;
+        public GameObject itemObject; // 아이템 오브젝트
+        public RectTransform itemTransform; // 아이템 트랜스폼
+        public Image itemImage; // 아이템 이미지
 
         [Header("Rise")]
-        public float riseDuration;
-        public float riseHeight;
-        public AnimationCurve riseCurve;
-        public AnimationCurve scaleCurve;
+        public float riseDuration; // 상승 지속 시간
+        public float riseHeight; // 상승 높이
+        public AnimationCurve riseCurve; // 상승 곡선
+        public AnimationCurve scaleCurve; // 스케일 곡선
 
         [Header("Hover")]
-        public float hoverSpeed;
-        public float hoverAmplitude;
+        public float hoverSpeed; // 부유 속도
+        public float hoverAmplitude; // 부유 진폭
     }
 
+    // 보상 흡수(아이템 -> UI 슬롯) 연출 설정
     [System.Serializable]
     private struct RewardAbsorbSettings
     {
         [Header("References")]
-        public RectTransform uiCanvasRect;
-        public RectTransform targetSlotRect;
-        public Image targetSlotImage;
-        public Image flyingImageTemplate;
+        public RectTransform uiCanvasRect; // UI 캔버스 Rect
+        public RectTransform targetSlotRect; // 목표 슬롯 Rect
+        public Image targetSlotImage; // 목표 슬롯 이미지
+        public Image flyingImageTemplate; // 날아가는 이미지 템플릿
 
         [Header("Timing")]
-        public float flyDuration;
-        public AnimationCurve xMoveCurve;
-        public AnimationCurve yMoveCurve;
-        public AnimationCurve arcCurve;
-        public float arcHeight;
+        public float flyDuration; // 이동 지속 시간
+        public AnimationCurve xMoveCurve; // X 이동 곡선
+        public AnimationCurve yMoveCurve; // Y 이동 곡선
+        public AnimationCurve arcCurve; // 포물선 곡선
+        public float arcHeight; // 포물선 높이
 
         [Header("Scale")]
-        public float startScale;
-        public float endScale;
+        public float startScale; // 시작 스케일
+        public float endScale; // 종료 스케일
     }
 
     [Header("툴팁 팝업 (Optional)")]
-    [SerializeField] private RectTransform tooltipPopupRoot;
-    [SerializeField] private Image tooltipPopupBackground;
-    [SerializeField] private TextMeshProUGUI tooltipNameText;
-    [SerializeField] private TextMeshProUGUI tooltipDescriptionText;
-    [SerializeField] private Vector2 tooltipPopupAnchoredPosition = new Vector2(0f, -60f);
-    [SerializeField] private Vector2 tooltipPopupSize = new Vector2(820f, 220f);
-    [SerializeField] private Vector2 tooltipPopupPadding = new Vector2(24f, 18f);
-    [SerializeField] private Color tooltipPopupBackgroundColor = new Color(0f, 0f, 0f, 0.78f);
+    [SerializeField] private RectTransform tooltipPopupRoot; // 툴팁 팝업 루트
+    [SerializeField] private Image tooltipPopupBackground; // 툴팁 배경 이미지
+    [SerializeField] private TextMeshProUGUI tooltipNameText; // 툴팁 이름 텍스트
+    [SerializeField] private TextMeshProUGUI tooltipDescriptionText; // 툴팁 설명 텍스트
+    [SerializeField] private Vector2 tooltipPopupAnchoredPosition = new Vector2(0f, -60f); // 툴팁 앵커 위치
+    [SerializeField] private Vector2 tooltipPopupSize = new Vector2(820f, 220f); // 툴팁 크기
+    [SerializeField] private Vector2 tooltipPopupPadding = new Vector2(24f, 18f); // 툴팁 패딩
+    [SerializeField] private Color tooltipPopupBackgroundColor = new Color(0f, 0f, 0f, 0.78f); // 툴팁 배경 색
 
     [Header("상자 관련 설정")]
-    [SerializeField] private ChestSettings chestSettings;
+    [SerializeField] private ChestSettings chestSettings; // 상자 연출 설정
 
     [Header("아이템 관련 설정")]
-    [SerializeField] private ItemSettings itemSettings;
+    [SerializeField] private ItemSettings itemSettings; // 아이템 연출 설정
 
     [Header("개발중 유물 이미지")]
-    [SerializeField] private string relicSpriteFolderPath = "Assets/Sprite/Relic";
-    [SerializeField] private bool autoCollectSpritesInEditor = true;
-    [SerializeField] private bool avoidOwnedDuplicates = true;
-    [SerializeField] private List<SpriteOnlyRelicEntry> spriteOnlyRelics = new List<SpriteOnlyRelicEntry>();
+    [SerializeField] private string relicSpriteFolderPath = "Assets/Sprite/Relic"; // 유물 스프라이트 폴더 경로
+    [SerializeField] private bool autoCollectSpritesInEditor = true; // 에디터에서 스프라이트 자동 수집 여부
+    [SerializeField] private bool avoidOwnedDuplicates = true; // 보유 중복 회피 여부
+    [SerializeField] private List<SpriteOnlyRelicEntry> spriteOnlyRelics = new List<SpriteOnlyRelicEntry>(); // 스프라이트 전용 유물 목록
 
     [Header("획득 유물 상호작용")]
-    [SerializeField] private float itemHoverScaleMultiplier = 1.08f;
-    [SerializeField] private float itemHoverScaleLerpSpeed = 10f;
-    [SerializeField] private Sprite fallbackRewardSprite;
+    [SerializeField] private float itemHoverScaleMultiplier = 1.08f; // 호버 시 확대 배율
+    [SerializeField] private float itemHoverScaleLerpSpeed = 10f; // 호버 스케일 보간 속도
+    [SerializeField] private Sprite fallbackRewardSprite; // 보상 폴백 스프라이트
 
     [Header("획득 연출: 월드 -> 좌측 상단 UI 슬롯")]
-    [SerializeField] private RewardAbsorbSettings rewardAbsorbSettings;
+    [SerializeField] private RewardAbsorbSettings rewardAbsorbSettings; // 보상 흡수 연출 설정
 
     [Header("툴팁 이름 폰트 설정")]
-    [SerializeField] private TMP_FontAsset tooltipNameFontAsset;
-    [SerializeField] private float tooltipNameFontSize = 34f;
-    [SerializeField] private FontStyles tooltipNameFontStyle = FontStyles.Bold;
-    [SerializeField] private Color tooltipNameFontColor = Color.white;
-    [SerializeField] private TextAlignmentOptions tooltipNameAlignment = TextAlignmentOptions.Top;
+    [SerializeField] private TMP_FontAsset tooltipNameFontAsset; // 이름 폰트 에셋
+    [SerializeField] private float tooltipNameFontSize = 34f; // 이름 폰트 크기
+    [SerializeField] private FontStyles tooltipNameFontStyle = FontStyles.Bold; // 이름 폰트 스타일
+    [SerializeField] private Color tooltipNameFontColor = Color.white; // 이름 폰트 색
+    [SerializeField] private TextAlignmentOptions tooltipNameAlignment = TextAlignmentOptions.Top; // 이름 정렬
 
     [Header("툴팁 설명 폰트 설정")]
-    [SerializeField] private TMP_FontAsset tooltipDescriptionFontAsset;
-    [SerializeField] private float tooltipDescriptionFontSize = 28f;
-    [SerializeField] private FontStyles tooltipDescriptionFontStyle = FontStyles.Normal;
-    [SerializeField] private Color tooltipDescriptionFontColor = new Color(0.92f, 0.92f, 0.92f, 1f);
-    [SerializeField] private TextAlignmentOptions tooltipDescriptionAlignment = TextAlignmentOptions.Top;
+    [SerializeField] private TMP_FontAsset tooltipDescriptionFontAsset; // 설명 폰트 에셋
+    [SerializeField] private float tooltipDescriptionFontSize = 28f; // 설명 폰트 크기
+    [SerializeField] private FontStyles tooltipDescriptionFontStyle = FontStyles.Normal; // 설명 폰트 스타일
+    [SerializeField] private Color tooltipDescriptionFontColor = new Color(0.92f, 0.92f, 0.92f, 1f); // 설명 폰트 색
+    [SerializeField] private TextAlignmentOptions tooltipDescriptionAlignment = TextAlignmentOptions.Top; // 설명 정렬
 
-    private RoundManager roundManager;
-    private RelicRoundData currentData;
+    private RoundManager roundManager; // 라운드 매니저 참조
+    private RelicRoundData currentData; // 현재 라운드 데이터
 
-    private Vector3 chestInitialLocalPos;
-    private Quaternion chestInitialLocalRot;
-    private Vector3 itemInitialLocalPos;
+    private Vector3 chestInitialLocalPos; // 상자 초기 위치
+    private Quaternion chestInitialLocalRot; // 상자 초기 회전
+    private Vector3 itemInitialLocalPos; // 아이템 초기 위치
 
-    private bool isSequenceRunning;
-    private bool isChestOpened;
-    private bool isHovering;
-    private bool rewardGranted;
-    private float hoverStartTime;
+    private bool isSequenceRunning; // 상자 열기 시퀀스 진행 중 여부
+    private bool isChestOpened; // 상자 열림 여부
+    private bool isHovering; // 아이템 부유 중 여부
+    private bool rewardGranted; // 보상 선택 완료 여부
+    private float hoverStartTime; // 부유 시작 시각
 
-    private Sprite grantedRewardSprite;
-    private bool clickBound;
-    private bool itemInteractBound;
-    private bool isRewardPointerHover;
-    private string grantedRewardName;
-    private string grantedRewardDescription;
-    private bool wasHoveringByMouse;
-    private bool isAbsorbSequenceRunning;
-    private bool hasPendingReward;
-    private RewardCandidate pendingReward;
+    private Sprite grantedRewardSprite; // 지급 보상 스프라이트
+    private bool clickBound; // 상자 클릭 바인딩 여부
+    private bool itemInteractBound; // 아이템 상호작용 바인딩 여부
+    private bool isRewardPointerHover; // 보상 포인터 호버 여부
+    private string grantedRewardName; // 지급 보상 이름
+    private string grantedRewardDescription; // 지급 보상 설명
+    private bool wasHoveringByMouse; // 직전 마우스 호버 상태
+    private bool isAbsorbSequenceRunning; // 흡수 시퀀스 진행 중 여부
+    private bool hasPendingReward; // 대기 중 보상 존재 여부
+    private RewardCandidate pendingReward; // 지급 대기 보상
 
+    // 바인딩 및 상자/아이템 초기 상태 캡처
     void Awake()
     {
         EnsureRuntimeBindings();
@@ -170,12 +177,14 @@ public class RelicStageController : MonoBehaviour
             itemSettings.itemObject.SetActive(false);
     }
 
+    // 활성화 시 바인딩 및 스테이지 초기화
     void OnEnable()
     {
         EnsureRuntimeBindings();
         ResetStageForEntry();
     }
 
+    // 라운드 데이터/매니저를 받아 렐릭 스테이지 시작
     public void BeginRelic(RelicRoundData data, RoundManager manager)
     {
         currentData = data;
@@ -183,6 +192,7 @@ public class RelicStageController : MonoBehaviour
         ResetStageForEntry();
     }
 
+    // 진입 시 스테이지 시각 상태 초기화
     void ResetStageForEntry()
     {
         EnsureRuntimeBindings();
@@ -190,6 +200,7 @@ public class RelicStageController : MonoBehaviour
         HideTooltipPopup();
     }
 
+    // 상자 클릭 시 열기 시퀀스 시작
     public void OnChestClicked()
     {
         if (isSequenceRunning || isChestOpened)
@@ -198,6 +209,7 @@ public class RelicStageController : MonoBehaviour
         StartCoroutine(PlayChestOpenSequence());
     }
 
+    // 상자/아이템 참조 및 이벤트 리스너 바인딩
     void EnsureRuntimeBindings()
     {
         EnsureTooltipPopupBindings();
@@ -243,6 +255,7 @@ public class RelicStageController : MonoBehaviour
         }
     }
 
+    // 보상 획득 후 맵으로 복귀
     public void ReturnToMapAfterReward()
     {
         if (!isChestOpened)
@@ -263,6 +276,7 @@ public class RelicStageController : MonoBehaviour
             GameStateController.Instance.ShowMap();
     }
 
+    // 상자/아이템/툴팁을 초기 시각 상태로 리셋
     void PrepareStageVisualState()
     {
         isSequenceRunning = false;
@@ -306,11 +320,11 @@ public class RelicStageController : MonoBehaviour
         HideTooltipPopup();
     }
 
+    // 상자 흔들림 -> 열림 -> 보상 선택 -> 아이템 등장 -> 부유까지의 연출 시퀀스
     System.Collections.IEnumerator PlayChestOpenSequence()
     {
         isSequenceRunning = true;
 
-        // 1) Chest shake to build anticipation.
         float duration = Mathf.Max(0f, chestSettings.shakeDuration);
         float freq = Mathf.Max(0f, chestSettings.shakeFrequency);
         float elapsed = 0f;
@@ -337,7 +351,6 @@ public class RelicStageController : MonoBehaviour
             chestSettings.chestTransform.localRotation = chestInitialLocalRot;
         }
 
-        // 2) Swap chest sprite from closed to opened.
         if (chestSettings.chestImage != null && chestSettings.openedChestSprite != null)
             chestSettings.chestImage.sprite = chestSettings.openedChestSprite;
         if (chestSettings.chestButton != null)
@@ -345,7 +358,6 @@ public class RelicStageController : MonoBehaviour
         if (chestSettings.chestImage != null)
             chestSettings.chestImage.raycastTarget = false;
 
-        // Reward is granted on chest click, not on stage entry.
         if (!rewardGranted)
         {
             rewardGranted = TryPickRewardAndPreview(out grantedRewardSprite);
@@ -358,7 +370,6 @@ public class RelicStageController : MonoBehaviour
             }
         }
 
-        // 3) Item reveal from chest position with curve-driven rise.
         if (itemSettings.itemObject != null)
             itemSettings.itemObject.SetActive(true);
         if (itemSettings.itemTransform != null)
@@ -407,13 +418,13 @@ public class RelicStageController : MonoBehaviour
             itemSettings.itemTransform.localScale = Vector3.one;
         }
 
-        // 4) Start sine-wave hovering.
         hoverStartTime = Time.time;
         isHovering = true;
         isChestOpened = true;
         isSequenceRunning = false;
     }
 
+    // 부유 애니메이션 및 호버 스케일/마우스 호버 동기화
     void Update()
     {
         if (!isHovering || itemSettings.itemTransform == null)
@@ -436,6 +447,7 @@ public class RelicStageController : MonoBehaviour
         SyncHoverStateFromMousePosition();
     }
 
+    // 후보 중 하나를 무작위 선택해 미리보기 정보 설정(아직 지급 전)
     bool TryPickRewardAndPreview(out Sprite rewardSprite)
     {
         rewardSprite = null;
@@ -472,6 +484,7 @@ public class RelicStageController : MonoBehaviour
         return true;
     }
 
+    // 대기 중 보상을 실제로 보유 목록에 지급
     void GrantPendingRewardIfAny()
     {
         if (!hasPendingReward)
@@ -510,6 +523,7 @@ public class RelicStageController : MonoBehaviour
         hasPendingReward = false;
     }
 
+    // 미보유 정의/스프라이트 유물로 보상 후보 목록 구성
     List<RewardCandidate> BuildCandidates(RelicManager manager)
     {
         var result = new List<RewardCandidate>();
@@ -573,6 +587,7 @@ public class RelicStageController : MonoBehaviour
         return result;
     }
 
+    // 보상 후보를 상점용 후보 목록으로 변환해 반환
     public List<ShopRelicCandidate> GetShopRelicCandidates(RelicManager manager)
     {
         var result = new List<ShopRelicCandidate>();
@@ -595,6 +610,7 @@ public class RelicStageController : MonoBehaviour
         return result;
     }
 
+    // 보상 위로 포인터 진입 시 툴팁 표시
     void OnRewardPointerEnter()
     {
         if (!isChestOpened)
@@ -604,6 +620,7 @@ public class RelicStageController : MonoBehaviour
         UpdateRewardDescriptionText();
     }
 
+    // 보상에서 포인터 이탈 시 툴팁 숨김
     void OnRewardPointerExit()
     {
         if (!isChestOpened)
@@ -613,6 +630,7 @@ public class RelicStageController : MonoBehaviour
         HideTooltipPopup();
     }
 
+    // 보상 클릭 시 흡수 연출 시작
     void OnRewardPointerClick()
     {
         if (!isChestOpened || isAbsorbSequenceRunning)
@@ -621,6 +639,7 @@ public class RelicStageController : MonoBehaviour
         StartCoroutine(PlayRewardAbsorbAndReturn());
     }
 
+    // 보상 흡수 연출 후 지급하고 맵으로 복귀
     IEnumerator PlayRewardAbsorbAndReturn()
     {
         isAbsorbSequenceRunning = true;
@@ -651,11 +670,12 @@ public class RelicStageController : MonoBehaviour
         ReturnToMapAfterReward();
     }
 
-    RectTransform flyingImageRect;
-    Image flyingImage;
-    Vector2 flyStartLocalPos;
-    Vector2 flyEndLocalPos;
+    RectTransform flyingImageRect; // 날아가는 이미지 Rect
+    Image flyingImage; // 날아가는 이미지
+    Vector2 flyStartLocalPos; // 이동 시작 로컬 위치
+    Vector2 flyEndLocalPos; // 이동 종료 로컬 위치
 
+    // 흡수 연출용 날아가는 이미지를 생성하고 시작 위치 설정
     bool TryCreateAndPlayAbsorbFx(Sprite sprite)
     {
         if (sprite == null)
@@ -727,6 +747,7 @@ public class RelicStageController : MonoBehaviour
         return true;
     }
 
+    // 아이템과 목표 슬롯의 캔버스 로컬 좌표를 계산
     bool TryResolveLocalPositions(RectTransform canvasRect, Canvas canvas, out Vector2 fromLocal, out Vector2 toLocal)
     {
         fromLocal = Vector2.zero;
@@ -749,7 +770,6 @@ public class RelicStageController : MonoBehaviour
         }
         else
         {
-            // Fallback target near top-left so the effect is still visible when target reference is missing.
             Vector2 fallback = new Vector2(80f, Screen.height - 80f);
             targetScreen = new Vector3(fallback.x, fallback.y, 0f);
         }
@@ -758,7 +778,6 @@ public class RelicStageController : MonoBehaviour
         bool okTo = RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, targetScreen, cam, out toLocal);
         if (!okFrom && itemSettings.itemTransform != null)
         {
-            // UI source fallback: convert world point directly from the item rect transform.
             okFrom = RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 canvasRect,
                 RectTransformUtility.WorldToScreenPoint(cam, itemSettings.itemTransform.position),
@@ -769,6 +788,7 @@ public class RelicStageController : MonoBehaviour
         return okFrom && okTo;
     }
 
+    // 날아가는 이미지를 목표 슬롯까지 곡선 이동·축소시키는 코루틴
     IEnumerator AnimateFlyingImageToSlot()
     {
         if (flyingImageRect == null)
@@ -820,6 +840,7 @@ public class RelicStageController : MonoBehaviour
         flyingImage = null;
     }
 
+    // 목표 슬롯 이미지를 활성화하고 보상 스프라이트 설정
     void EnableTargetSlotImage()
     {
         var slotImage = rewardAbsorbSettings.targetSlotImage;
@@ -836,6 +857,7 @@ public class RelicStageController : MonoBehaviour
             slotImage.sprite = grantedRewardSprite != null ? grantedRewardSprite : fallbackRewardSprite;
     }
 
+    // 연출에 사용할 캔버스를 탐색해 반환
     Canvas ResolveCanvas()
     {
         if (rewardAbsorbSettings.uiCanvasRect != null)
@@ -851,6 +873,7 @@ public class RelicStageController : MonoBehaviour
         return FindFirstObjectByType<Canvas>();
     }
 
+    // 보상 이름/설명을 툴팁에 반영하고 표시
     void UpdateRewardDescriptionText()
     {
         if (tooltipNameText == null || tooltipDescriptionText == null)
@@ -863,6 +886,7 @@ public class RelicStageController : MonoBehaviour
         ShowTooltipPopup();
     }
 
+    // 마우스가 아이템 위에 있는지 검사해 호버 상태 동기화
     void SyncHoverStateFromMousePosition()
     {
         if (!isChestOpened || itemSettings.itemTransform == null || itemSettings.itemImage == null)
@@ -886,6 +910,7 @@ public class RelicStageController : MonoBehaviour
         else OnRewardPointerExit();
     }
 
+    // 툴팁 팝업 오브젝트를 확보하거나 런타임으로 생성·배치
     void EnsureTooltipPopupBindings()
     {
         if (tooltipPopupRoot != null && tooltipNameText != null && tooltipDescriptionText != null)
@@ -960,6 +985,7 @@ public class RelicStageController : MonoBehaviour
         HideTooltipPopup();
     }
 
+    // 툴팁 텍스트 폰트/색/정렬 등 스타일 적용
     void ApplyTooltipTextStyle()
     {
         if (tooltipPopupBackground != null)
@@ -988,6 +1014,7 @@ public class RelicStageController : MonoBehaviour
         }
     }
 
+    // 툴팁 팝업을 표시하고 최상단으로 정렬
     void ShowTooltipPopup()
     {
         if (tooltipPopupRoot == null)
@@ -999,12 +1026,14 @@ public class RelicStageController : MonoBehaviour
         tooltipPopupRoot.SetAsLastSibling();
     }
 
+    // 툴팁 팝업 숨김
     void HideTooltipPopup()
     {
         if (tooltipPopupRoot != null)
             tooltipPopupRoot.gameObject.SetActive(false);
     }
 
+    // 스프라이트 이름을 정규화해 유물 id 생성
     static string BuildSpriteRelicId(Sprite sprite)
     {
         if (sprite == null || string.IsNullOrWhiteSpace(sprite.name))
@@ -1021,16 +1050,18 @@ public class RelicStageController : MonoBehaviour
         return $"sprite_{new string(chars)}";
     }
 
+    // 보상 후보 한 건의 데이터
     struct RewardCandidate
     {
-        public bool isSpriteOnly;
-        public RelicDef relic;
-        public Sprite sprite;
-        public string displayName;
-        public string description;
+        public bool isSpriteOnly; // 스프라이트 전용 여부
+        public RelicDef relic; // 렐릭 정의
+        public Sprite sprite; // 스프라이트
+        public string displayName; // 표시 이름
+        public string description; // 설명
     }
 
 #if UNITY_EDITOR
+    // 에디터에서 목록이 비어 있으면 폴더에서 스프라이트 자동 수집
     void OnValidate()
     {
         if (!autoCollectSpritesInEditor)
@@ -1042,6 +1073,7 @@ public class RelicStageController : MonoBehaviour
         CollectSpriteOnlyRelicsFromFolder();
     }
 
+    // 지정 폴더의 스프라이트들을 스프라이트 전용 유물 목록으로 수집
     [ContextMenu("Collect Sprite-Only Relics")]
     void CollectSpriteOnlyRelicsFromFolder()
     {

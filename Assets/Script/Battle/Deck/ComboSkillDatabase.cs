@@ -5,38 +5,37 @@ using Battle.Card;
 
 namespace Battle
 {
-    /// <summary>
-    /// 콤보 스킬 정의 (Resources/ComboDB/ComboSkills.json + ComboEffects.json 기반).
-    /// 기획자가 ComboSkill_DB.xlsx → Tools/Combo DB 메뉴로 JSON 갱신 → 게임 반영.
-    /// canonical(1000~1019)에 효과가 정의되고, alias(1020~1063)는 refComboId로 효과 공유.
-    /// </summary>
+    // 콤보 스킬/효과 정의를 로드·조회하는 정적 데이터베이스
     public static class ComboSkillDatabase
     {
-        const string SKILLS_RESOURCE_PATH  = "ComboDB/ComboSkills";
-        const string EFFECTS_RESOURCE_PATH = "ComboDB/ComboEffects";
-        const string ICONS_RESOURCE_PATH   = "ComboSkillIcons";
+        const string SKILLS_RESOURCE_PATH  = "ComboDB/ComboSkills";  // 콤보 스킬 JSON 경로
+        const string EFFECTS_RESOURCE_PATH = "ComboDB/ComboEffects"; // 콤보 효과 JSON 경로
+        const string ICONS_RESOURCE_PATH   = "ComboSkillIcons";      // 콤보 아이콘 리소스 경로
 
-        private static List<ComboSkillData> _all;
-        private static Dictionary<int, List<ComboEffectData>> _effectsByRef;
+        private static List<ComboSkillData> _all;                              // 전체 콤보 목록
+        private static Dictionary<int, List<ComboEffectData>> _effectsByRef;   // 참조 ID → 효과 목록 맵
 
+        // 최초 1회 로드 보장
         public static void EnsureInit()
         {
             if (_all != null) return;
             LoadAll();
         }
 
-        /// <summary>캐시 초기화 — 에디터에서 JSON 재변환 후 다시 로드할 때 사용.</summary>
+        // 캐시 초기화(JSON 재변환 후 재로드용)
         public static void ResetCache()
         {
             _all = null;
             _effectsByRef = null;
         }
 
+        // 전체 콤보 목록
         public static IReadOnlyList<ComboSkillData> All
         {
             get { EnsureInit(); return _all; }
         }
 
+        // 참조 콤보 ID로 효과 목록 조회
         public static IReadOnlyList<ComboEffectData> GetEffects(int refComboId)
         {
             EnsureInit();
@@ -45,22 +44,12 @@ namespace Battle
                 : (IReadOnlyList<ComboEffectData>)Array.Empty<ComboEffectData>();
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 보유 콤보 구성
-        // ─────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 보유할 refComboId 집합으로 런타임 ComboSkillDef 리스트를 만든다.
-        /// 각 refComboId당 1개(canonical 슬롯 순서로 표시), 매칭은 모든 순서 변형 허용.
-        /// ownedRefIds가 null/비어있으면 전체(1000~1019) 보유.
-        /// </summary>
+        // 보유 refComboId 집합으로 런타임 콤보 정의 목록 구성
         public static List<ComboSkillDef> BuildOwnedCombos(IEnumerable<int> ownedRefIds = null)
         {
             EnsureInit();
 
-            // refComboId → 모든 슬롯 순서 키 모음 (순서무관 매칭용)
             var ordersByRef = new Dictionary<int, HashSet<string>>();
-            // refComboId → canonical(=id가 refComboId와 같은) 데이터. 없으면 첫 등장 데이터.
             var canonicalByRef = new Dictionary<int, ComboSkillData>();
 
             foreach (var c in _all)
@@ -109,21 +98,19 @@ namespace Battle
                     descriptionKR = data.description,
                     dbEffects     = effects,
                     acceptedOrders = ordersByRef[refId],
-                    // 표시 이름: comboName 비어있으면 설명 앞부분/슬롯으로 폴백
                     displayName   = !string.IsNullOrEmpty(data.comboName)
                                     ? data.comboName
                                     : $"콤보 {refId}",
-                    // 시각 효과(EndAwaken 셰이크/분산)는 effect==Damage 여부만 보므로 데미지 포함 시 Damage로.
                     effect        = HasDamage(effects) ? ComboEffectType.Damage : ComboEffectType.Draw,
                 };
                 result.Add(def);
             }
 
-            // refComboId 오름차순으로 정렬(표시 안정성)
             result.Sort((a, b) => a.refComboId.CompareTo(b.refComboId));
             return result;
         }
 
+        // 효과 목록에 DAMAGE 동사 포함 여부 판정
         static bool HasDamage(List<ComboEffectData> effects)
         {
             if (effects == null) return false;
@@ -133,12 +120,14 @@ namespace Battle
             return false;
         }
 
+        // 스킬 이미지명으로 아이콘 스프라이트 로드
         static Sprite ResolveSkillIcon(string skillImg)
         {
             if (string.IsNullOrWhiteSpace(skillImg)) return null;
             return Resources.Load<Sprite>($"{ICONS_RESOURCE_PATH}/{skillImg.Trim()}");
         }
 
+        // 문자열을 CardElement로 파싱
         public static CardElement ParseElement(string s)
         {
             switch ((s ?? "").Trim().ToUpperInvariant())
@@ -151,10 +140,7 @@ namespace Battle
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 로드
-        // ─────────────────────────────────────────────────────────────
-
+        // 콤보 스킬/효과 JSON 전체 로드
         static void LoadAll()
         {
             _all = new List<ComboSkillData>();
@@ -205,7 +191,6 @@ namespace Battle
                         }
                         list.Add(e);
                     }
-                    // EffectIndex 순서 보장
                     foreach (var list in _effectsByRef.Values)
                         list.Sort((a, b) => a.index.CompareTo(b.index));
                 }

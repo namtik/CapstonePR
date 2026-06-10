@@ -5831,20 +5831,37 @@ MonoBehaviour:
   rewardHubUIController: {fileID: 0}
   cardRewardTitleFont: {fileID: 12800000, guid: 5175f24c0e704b54db9f862115bd798f, type: 3}
   cardRewardTitleFontSize: 48
-  cardRewardTitleColor: {r: 1, g: 1, b: 1, a: 1}
+  cardRewardTitleColor:
+    r: 1
+    g: 1
+    b: 1
+    a: 1
   cardRewardTitlePosition: {x: 0, y: 440}
   cardRewardSkipButtonStyle:
     label: "\uC120\uD0DD\uD558\uC9C0 \uC54A\uAE30"
     font: {fileID: 12800000, guid: 5175f24c0e704b54db9f862115bd798f, type: 3}
     fontSize: 32
-    textColor: {r: 1, g: 1, b: 1, a: 1}
+    textColor:
+      r: 1
+      g: 1
+      b: 1
+      a: 1
     buttonImage: {fileID: 21300000, guid: e94cd10613d90e246b5fc8e67dd7ce8e, type: 3}
-    buttonColor: {r: 1, g: 0.9803922, b: 0.9803922, a: 1}
+    buttonColor:
+      r: 1
+      g: 0.9803922
+      b: 0.9803922
+      a: 1
     sliced: 1
     size: {x: 320, y: 80}
     anchoredPosition: {x: 0, y: -440}
   cardRewardCardScale: 1.5
   cardRewardCardSpacing: 480
+  currentRoundData: {fileID: 0}
+  currentEnemyIndex: 0
+  currentEnemy: {fileID: 0}
+  clearedCombatCount: 0
+  pendingRoundData: {fileID: 0}
 --- !u!1 &638207295
 GameObject:
   m_ObjectHideFlags: 0
@@ -20796,7 +20813,7 @@ MonoBehaviour:
     count: 1
   - cardId: 114
     count: 2
-  useAsStartingDeck: 0
+  useAsStartingDeck: 1
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:

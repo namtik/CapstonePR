@@ -1,64 +1,60 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// 
-/// 수정 사항 (17280개 조합 검증):
-///   P1: f1 < 0.25 → 무속성 공통 가드 (위협 없으면 저주/셔플 의미 없음)
-///   P2: 모든 유형에서 f1 >= 0.50이면 무속성 전에 저주/셔플 우선
-///   P3: 체인 + f1 >= 0.50이면 셔플 우선
-///   P4: 이미 오염 + 무속성 방지 (f4 체크 강화)
-///   P5: f5 >= 0.92(카드 소진)이면 무속성 대신 저주
-///   P6: urgencyOverrideForShuffle 0.90 → 0.75 (빠른 사이클 저주 방지)
-/// </summary>
+// FCM 유형·특성 기반 몬스터 방해행동 결정 트리
 public class MonsterDecisionTree
 {
+    // 방해행동 종류
     public enum Action { ComboShuffle = 0, SlotCurse = 1, NullInsert = 2 }
 
+    // 결정 결과(행동·사유·대상 슬롯)
     public struct Decision
     {
-        public Action ChosenAction;
-        public string Reason;
-        public int TargetSlot;
+        public Action ChosenAction;   // 선택된 행동
+        public string Reason;         // 결정 사유
+        public int TargetSlot;        // 대상 슬롯
     }
 
+    // 결정 트리 임계값 모음
     [System.Serializable]
     public class Thresholds
     {
         [Header("셔플 판정")]
-        public float urgencyForShuffle = 0.70f;
-        public float repeatForFastCycle = 0.50f;
+        public float urgencyForShuffle = 0.70f;       // 셔플 긴급도 기준
+        public float repeatForFastCycle = 0.50f;      // 빠른 사이클 판정 기준
 
         [Header("저주 판정")]
-        public float densityForRush = 0.50f;
-        public float urgencyOverrideForShuffle = 0.75f;
+        public float densityForRush = 0.50f;          // 위협 집중 판정 기준
+        public float urgencyOverrideForShuffle = 0.75f; // 집중 시 셔플 전환 긴급도
 
         [Header("무속성 전환점")]
-        public float pollutionThreshold = 0.40f;
+        public float pollutionThreshold = 0.40f;      // 오염도 한계
 
         [Header("탐색형 셔플")]
-        public float explorerUrgency = 0.50f;
+        public float explorerUrgency = 0.50f;         // 탐색형 셔플 긴급도
 
         [Header("버스트 판정")]
-        public float burstReplenishThreshold = 0.50f;
-        public float burstBalanceThreshold = 0.40f;
+        public float burstReplenishThreshold = 0.50f; // 버스트 보충 기준
+        public float burstBalanceThreshold = 0.40f;   // 버스트 불균형 기준
 
         [Header("공통 가드")]
         [Tooltip("이 값 미만이면 위협 없음 → 무속성")]
-        public float noThreatThreshold = 0.25f;      // P1
+        public float noThreatThreshold = 0.25f;       // 위협 없음 기준
         [Tooltip("이 값 이상이면 콤보 접근 → 무속성 금지")]
-        public float comboApproachThreshold = 0.50f;  // P2
+        public float comboApproachThreshold = 0.50f;  // 콤보 접근 기준
         [Tooltip("이 값 이상이면 카드 소진 → 무속성 금지")]
-        public float depletionThreshold = 0.92f;      // P5
+        public float depletionThreshold = 0.92f;      // 카드 소진 기준
     }
 
-    private Thresholds t;
+    private Thresholds t;   // 사용 임계값
 
+    // 생성자: 임계값 주입(없으면 기본값)
     public MonsterDecisionTree(Thresholds thresholds = null)
     {
         t = thresholds ?? new Thresholds();
     }
 
+    // 특성·소속도·위협으로 방해행동 결정
     public Decision Decide(float[] membership, float[] fcm,
                            float f4, FeatureExtractor.ThreatInfo[] threats)
     {
@@ -72,53 +68,38 @@ public class MonsterDecisionTree
 
         bool isFast = (f3 >= t.repeatForFastCycle) || hasChain;
 
-        // ══════════════════════════════════
-        // 공통 가드 (유형 분기 전에 처리)
-        // ══════════════════════════════════
-
-        // P1: 위협 없으면 저주/셔플 의미 없음 → 무속성
         if (f1 < t.noThreatThreshold)
         {
-            // P5: 카드 소진이면 무속성도 의미 없음 → 저주로 대체
             if (f5 >= t.depletionThreshold)
                 return MakeCurse(threats, "공통+위협없음+카드소진->저주(견제)");
-            // P4: 이미 오염이면 무속성 추가 대신 저주
             if (f4 >= t.pollutionThreshold)
                 return MakeCurse(threats, "공통+위협없음+오염->저주(견제)");
             return MakeNullInsert(threats, "공통+위협없음->무속성(미래투자)");
         }
 
-        // P3: 체인 + 콤보 접근이면 유형 무관하게 셔플 우선
         if (hasChain && f1 >= t.comboApproachThreshold)
             return MakeShuffle(threats, "공통+체인+콤보접근->셔플");
 
-        // ══════════════════════════════════
-        // 유형별 분기
-        // ══════════════════════════════════
-
         switch (dominant)
         {
-            case 0: // ── 콤보 러시형 ──
+            case 0:
                 if (f1 >= t.urgencyForShuffle && isFast)
                     return MakeShuffle(threats, "러시+긴급+빠름->셔플");
                 if (f1 >= t.urgencyForShuffle)
                     return MakeCurse(threats, "러시+긴급+느림->저주");
                 if (f4 >= t.pollutionThreshold)
                     return MakeCurse(threats, "러시+멀고+오염->저주");
-                // P5: 카드 소진 체크
                 if (f5 >= t.depletionThreshold)
                     return MakeCurse(threats, "러시+멀고+카드소진->저주");
                 return MakeNullInsert(threats, "러시+멀고+깨끗->무속성");
 
-            case 1: // ── 경로 의존형 ──
-                if (f7 < t.densityForRush) // 위협 집중
+            case 1:
+                if (f7 < t.densityForRush)
                 {
-                    if (f1 >= t.urgencyOverrideForShuffle && isFast) // P6: 0.75로 완화
+                    if (f1 >= t.urgencyOverrideForShuffle && isFast)
                         return MakeShuffle(threats, "의존+집중+긴급+빠름->셔플");
                     return MakeCurse(threats, "의존+위협집중->저주");
                 }
-                // 위협 분산 (f7 >= 0.50)
-                // P2: 콤보 접근이면 무속성 금지
                 if (f1 >= t.comboApproachThreshold)
                 {
                     if (isFast)
@@ -131,27 +112,22 @@ public class MonsterDecisionTree
                     return MakeCurse(threats, "의존+분산+카드소진->저주");
                 return MakeNullInsert(threats, "의존+분산+깨끗+안전->무속성");
 
-            case 3: // ── 버스트형 ──
-                // P2: 콤보 접근이면 보충보다 즉각 대응 우선
+            case 3:
                 if (f1 >= t.urgencyForShuffle && isFast)
                     return MakeShuffle(threats, "버스트+콤보긴급+빠름->셔플");
                 if (f1 >= t.urgencyForShuffle)
                     return MakeCurse(threats, "버스트+콤보긴급->저주");
-                // 버스트 본래 로직
                 if (f5 >= t.burstReplenishThreshold && f8 < t.burstBalanceThreshold)
                 {
-                    // P4: 이미 오염이 심하면 저주로 대체
                     if (f4 >= t.pollutionThreshold)
                         return MakeCurse(threats, "버스트+보충+불균형+오염->저주");
-                    // P5: 카드 소진이면 무속성 불가
                     if (f5 >= t.depletionThreshold)
                         return MakeCurse(threats, "버스트+보충+카드소진->저주");
                     return MakeNullInsert(threats, "버스트+보충+불균형->무속성(보충전삽입)");
                 }
                 return MakeCurse(threats, "버스트+대기->저주");
 
-            default: // ── 탐색/분산형 ──
-                // P2: 콤보 접근이면 무속성 금지
+            default:
                 if (f1 >= t.comboApproachThreshold)
                 {
                     if (isFast)
@@ -166,17 +142,17 @@ public class MonsterDecisionTree
         }
     }
 
-    // ─── 행동 생성 ───
-
+    // 콤보 셔플 결정 생성
     Decision MakeShuffle(FeatureExtractor.ThreatInfo[] threats, string reason) => new Decision
     { ChosenAction = Action.ComboShuffle, Reason = reason, TargetSlot = -1 };
+    // 슬롯 저주 결정 생성
     Decision MakeCurse(FeatureExtractor.ThreatInfo[] threats, string reason) => new Decision
     { ChosenAction = Action.SlotCurse, Reason = reason, TargetSlot = FindCurseTarget(threats) };
+    // 무속성 삽입 결정 생성
     Decision MakeNullInsert(FeatureExtractor.ThreatInfo[] threats, string reason) => new Decision
     { ChosenAction = Action.NullInsert, Reason = reason, TargetSlot = FindNullInsertTarget(threats) };
 
-    // ─── 타겟 슬롯 ───
-
+    // 저주 대상 슬롯 선정(위협 원소 빈도 최대)
     int FindCurseTarget(FeatureExtractor.ThreatInfo[] threats)
     {
         ComboSystem combo = ComboSystem.Instance;
@@ -222,6 +198,7 @@ public class MonsterDecisionTree
         return target;
     }
 
+    // 무속성 삽입 대상 슬롯 선정(무속성 최소 보유 슬롯)
     int FindNullInsertTarget(FeatureExtractor.ThreatInfo[] threats)
     {
         ComboSystem combo = ComboSystem.Instance;
@@ -260,6 +237,7 @@ public class MonsterDecisionTree
         return best;
     }
 
+    // 행동 한글 이름 반환
     public static string GetActionName(Action a) => a switch
     {
         Action.ComboShuffle => "콤보 셔플",
@@ -267,6 +245,7 @@ public class MonsterDecisionTree
         Action.NullInsert => "무속성 삽입",
         _ => "?"
     };
+    // 행동 코드 문자열 반환
     public static string GetActionCode(Action a) => a switch
     {
         Action.ComboShuffle => "shuffle",

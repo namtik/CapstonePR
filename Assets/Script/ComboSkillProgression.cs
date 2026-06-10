@@ -1,17 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// 신규 전투 시스템에서 콤보 스킬 "보유 정보"만 관리하는 경량 저장소.
-/// 전투 발동/입력 처리 로직은 포함하지 않는다.
-/// </summary>
+// 콤보 스킬 보유 정보만 관리하는 경량 저장소
 public class ComboSkillProgression : MonoBehaviour
 {
-    public static ComboSkillProgression Instance { get; private set; }
+    public static ComboSkillProgression Instance { get; private set; } // 싱글턴 인스턴스
 
-    private readonly List<SkillDataParser.SkillData> learnedSkills = new List<SkillDataParser.SkillData>();
-    private readonly HashSet<int> learnedSkillIds = new HashSet<int>();
+    private readonly List<SkillDataParser.SkillData> learnedSkills = new List<SkillDataParser.SkillData>(); // 습득한 스킬 목록
+    private readonly HashSet<int> learnedSkillIds = new HashSet<int>(); // 습득한 스킬 ID 집합
 
+    // 인스턴스 보장(없으면 탐색 또는 생성)
     public static ComboSkillProgression EnsureExists()
     {
         if (Instance != null) return Instance;
@@ -29,6 +27,7 @@ public class ComboSkillProgression : MonoBehaviour
         return go.AddComponent<ComboSkillProgression>();
     }
 
+    // 싱글턴 초기화
     void Awake()
     {
         if (Instance == null)
@@ -42,11 +41,13 @@ public class ComboSkillProgression : MonoBehaviour
             Destroy(gameObject);
     }
 
+    // 습득한 스킬 ID 집합 복사본 반환
     public HashSet<int> GetLearnedSkillIds()
     {
         return new HashSet<int>(learnedSkillIds);
     }
 
+    // 스킬 습득(중복 시 false)
     public bool LearnSkill(SkillDataParser.SkillData skill)
     {
         if (skill == null) return false;
@@ -57,6 +58,7 @@ public class ComboSkillProgression : MonoBehaviour
         return true;
     }
 
+    // 습득한 스킬 개수 반환
     public int LearnedSkillCount()
     {
         return learnedSkills.Count;

@@ -6,42 +6,43 @@ using Battle.Relic;
 
 public class RoundManager : MonoBehaviour
 {
-    [SerializeField] private DifficultyConfig difficultyConfig;
-    [SerializeField] private GameObject enemyPrefab;
-    [SerializeField] private Transform enemySpawnPoint;
-    [SerializeField] private CombatStageController combatStageController;
+    [SerializeField] private DifficultyConfig difficultyConfig; // 난이도 스케일 설정
+    [SerializeField] private GameObject enemyPrefab; // 적 프리팹
+    [SerializeField] private Transform enemySpawnPoint; // 적 스폰 위치
+    [SerializeField] private CombatStageController combatStageController; // 전투 스테이지 배경 제어
 
     [Header("상태이상 UI 패널")]
-    [SerializeField] private StatusPanelUI playerStatusPanel;
-    [SerializeField] private StatusPanelUI enemyStatusPanel;
+    [SerializeField] private StatusPanelUI playerStatusPanel; // 플레이어 상태이상 패널
+    [SerializeField] private StatusPanelUI enemyStatusPanel; // 적 상태이상 패널
 
     [Header("보상 UI")]
-    [SerializeField] private RewardHubUIController rewardHubUIController;
+    [SerializeField] private RewardHubUIController rewardHubUIController; // 보상 허브 UI 컨트롤러
 
     [Header("보상 상단 문구 - 카드")]
-    [SerializeField] private Font cardRewardTitleFont;
-    [SerializeField, Range(12, 96)] private int cardRewardTitleFontSize = 40;
-    [SerializeField] private Color cardRewardTitleColor = Color.white;
+    [SerializeField] private Font cardRewardTitleFont; // 카드 보상 제목 폰트
+    [SerializeField, Range(12, 96)] private int cardRewardTitleFontSize = 40; // 카드 보상 제목 폰트 크기
+    [SerializeField] private Color cardRewardTitleColor = Color.white; // 카드 보상 제목 색상
     [Tooltip("상단 문구 위치(화면 중앙 기준). 기본 (0, 320).")]
-    [SerializeField] private Vector2 cardRewardTitlePosition = new Vector2(0f, 320f);
+    [SerializeField] private Vector2 cardRewardTitlePosition = new Vector2(0f, 320f); // 카드 보상 제목 위치
 
     [Header("보상 - 카드 선택하지 않기 버튼")]
-    [SerializeField] private Battle.UI.RewardSkipButtonStyle cardRewardSkipButtonStyle = new Battle.UI.RewardSkipButtonStyle();
+    [SerializeField] private Battle.UI.RewardSkipButtonStyle cardRewardSkipButtonStyle = new Battle.UI.RewardSkipButtonStyle(); // 카드 보상 건너뛰기 버튼 스타일
 
     [Header("보상 - 카드 크기/배치")]
     [Tooltip("제시 카드 배율(1 = 기본). 키우면 간격도 함께 올려 겹침 방지.")]
-    [SerializeField, Range(0.3f, 2f)] private float cardRewardCardScale = 1f;
+    [SerializeField, Range(0.3f, 2f)] private float cardRewardCardScale = 1f; // 카드 보상 카드 배율
     [Tooltip("카드 사이 가로 간격(px). 기본 360.")]
-    [SerializeField] private float cardRewardCardSpacing = 360f;
+    [SerializeField] private float cardRewardCardSpacing = 360f; // 카드 보상 카드 간격(px)
 
-    private RoundData currentRoundData;
-    private int currentEnemyIndex = 0;
-    private EnemyStat currentEnemy;
-    public event System.Action OnRoundClear;
-    private IRoundHandler currentRoundHandler;
-    private int clearedCombatCount = 0;
+    private RoundData currentRoundData; // 현재 진행 중인 라운드 데이터
+    private int currentEnemyIndex = 0; // 현재 처리 중인 적 인덱스
+    private EnemyStat currentEnemy; // 현재 적 스탯
+    public event System.Action OnRoundClear; // 라운드 클리어 이벤트
+    private IRoundHandler currentRoundHandler; // 현재 라운드 핸들러
+    private int clearedCombatCount = 0; // 클리어한 전투 수
 
 
+    // 런타임 플레이어가 없으면 생성하고 상태 패널을 연결한다.
     void EnsureRuntimePlayerExists()
     {
         Player existingPlayer = Player.Resolve(true);
@@ -62,26 +63,26 @@ public class RoundManager : MonoBehaviour
         Debug.Log("[RoundManager] Hidden runtime Player created");
     }
 
+    // 플레이어 UI 동기화를 보장한다.
     public void EnsurePlayerUiSync()
     {
         EnsureRuntimePlayerExists();
     }
 
-    /// <summary>새 전투 시스템(NewBattleController) 사용 중이면 기존 ElementSlot/Combo 자동 셋업을 건너뛴다.</summary>
+    // 새 전투 시스템(NewBattleController)이 활성 상태인지 반환한다.
     bool IsNewBattleSystemActive()
     {
         return Battle.NewBattleController.Instance != null;
     }
 
+    // 레거시 원소 슬롯/HUD 전투 시스템을 보장 생성한다(새 전투 시스템이면 건너뜀).
     void EnsureElementCombatSystems()
     {
         EnsureRuntimePlayerExists();
 
-        // 새 전투 시스템 모드: 레거시 ElementSlot/HUD 자동 생성 차단
         if (IsNewBattleSystemActive())
             return;
 
-        // Ensure slot system exists even when scene setup is missing.
         var slotSystem = ElementSlotSystem.Instance ?? FindFirstObjectByType<ElementSlotSystem>();
         if (slotSystem == null)
         {
@@ -90,7 +91,6 @@ public class RoundManager : MonoBehaviour
             DontDestroyOnLoad(go);
         }
 
-        // Ensure HUD exists.
         var hud = FindFirstObjectByType<ElementSlotHUD>();
         if (hud == null)
         {
@@ -101,7 +101,6 @@ public class RoundManager : MonoBehaviour
             hudGo.AddComponent<ElementSlotHUD>();
         }
 
-        // Force legacy hand UI system off so only 4-slot HUD remains.
         var legacySystems = FindObjectsByType<CardSystem>(FindObjectsSortMode.None);
         foreach (var legacy in legacySystems)
         {
@@ -113,6 +112,7 @@ public class RoundManager : MonoBehaviour
         }
     }
 
+    // 전투 스테이지의 캔버스를 찾아 반환한다.
     Canvas ResolveCombatStageCanvas()
     {
         if (combatStageController != null)
@@ -129,23 +129,21 @@ public class RoundManager : MonoBehaviour
         return combatStageObject.GetComponentInChildren<Canvas>(true);
     }
 
+    // 라운드를 시작한다(필요 시 초기 스킬 선택을 먼저 진행).
     public void StartRound(RoundData roundData)
     {
         EnsureElementCombatSystems();
 
-        // 새 전투 시스템 모드에서는 starter 스킬 선택 UI를 건너뜀
         if (IsNewBattleSystemActive())
         {
             ContinueStartRound(roundData);
             return;
         }
 
-        // 첫 스테이지 진입 시 스킬이 없으면 초기 스킬 선택 후 라운드 시작
         if (ComboSystem.Instance != null && ComboSystem.Instance.learnedSkills.Count == 0)
         {
             ComboSystem.Instance.LearnStarterSkill();
 
-            // 스킬 선택 완료 후 라운드 진행
             SkillRewardUI rewardUI = SkillDataParser.Instance?.SkillRewardUI;
             if (rewardUI != null)
             {
@@ -158,8 +156,9 @@ public class RoundManager : MonoBehaviour
         ContinueStartRound(roundData);
     }
 
-    private RoundData pendingRoundData;
+    private RoundData pendingRoundData; // 초기 스킬 선택 대기 중인 라운드 데이터
 
+    // 초기 스킬 선택 완료 시 대기 중이던 라운드를 진행한다.
     void OnStarterSkillSelected(SkillDataParser.SkillData skill)
     {
         SkillRewardUI rewardUI = SkillDataParser.Instance?.SkillRewardUI;
@@ -173,12 +172,12 @@ public class RoundManager : MonoBehaviour
         }
     }
 
+    // 라운드 데이터를 설정하고 핸들러를 만들어 라운드를 진행한다.
     void ContinueStartRound(RoundData roundData)
     {
         currentRoundData = roundData;
         currentEnemyIndex = 0;
 
-        // 전투 스테이지 배경 전환 + 덱/손패/콤보 초기화
         if (combatStageController != null)
         {
             combatStageController.Initialize(roundData);
@@ -188,6 +187,7 @@ public class RoundManager : MonoBehaviour
         currentRoundHandler.OnEnterRound(this);
     }
 
+    // 라운드를 종료하고 종료 핸들러와 클리어 이벤트를 호출한다.
     public void EndRound()
     {
         if (!IsNewBattleSystemActive())
@@ -199,7 +199,7 @@ public class RoundManager : MonoBehaviour
         OnRoundClear?.Invoke();
     }
 
-    /// <summary>신규 전투 시스템: 노드 진입 시 런 덱을 주입하고 전투를 시작한다.</summary>
+    // 신규 전투 시스템: 런 덱을 주입하고 전투를 시작한다.
     void BeginNewBattleForNode()
     {
         var nb = Battle.NewBattleController.Instance;
@@ -211,9 +211,7 @@ public class RoundManager : MonoBehaviour
         nb.StartBattle();
     }
 
-    /// <summary>
-    /// 일반/정예 전투 시작 (CombatRoundHandler, EliteRoundHandler)
-    /// </summary>
+    // 일반 전투를 시작한다.
     public void StartCombat(CombatRoundData data)
     {
         EnsureElementCombatSystems();
@@ -229,9 +227,7 @@ public class RoundManager : MonoBehaviour
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
 
-    /// <summary>
-    /// 정예 전투 시작 (EliteRoundHandler)
-    /// </summary>
+    // 정예 전투를 시작한다.
     public void StartCombat(EliteRoundData data)
     {
         EnsureElementCombatSystems();
@@ -247,9 +243,7 @@ public class RoundManager : MonoBehaviour
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
 
-    /// <summary>
-    /// 보스 전투 시작 (BossRoundHandler)
-    /// </summary>
+    // 보스 전투를 시작한다.
     public void StartBoss(BossRoundData data)
     {
         EnsureElementCombatSystems();
@@ -264,9 +258,7 @@ public class RoundManager : MonoBehaviour
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
 
-    /// <summary>
-    /// 상점 열기 (ShopRoundHandler)
-    /// </summary>
+    // 상점 스테이지를 연다.
     public void OpenShop()
     {
         ShopStageController controller = FindFirstObjectByType<ShopStageController>(FindObjectsInactive.Include);
@@ -293,14 +285,13 @@ public class RoundManager : MonoBehaviour
         Debug.Log("[RoundManager] 상점 스테이지 시작");
     }
 
+    // 상점을 닫고 맵으로 복귀한다.
     public void CloseShop()
     {
         ReturnToMap();
     }
 
-    /// <summary>
-    /// 이벤트 스테이지 시작 (EventRoundHandler)
-    /// </summary>
+    // 이벤트 스테이지를 연다.
     public void OpenEvent(EventRoundData data)
     {
         EventStageController controller = FindFirstObjectByType<EventStageController>(FindObjectsInactive.Include);
@@ -315,9 +306,7 @@ public class RoundManager : MonoBehaviour
         Debug.Log("[RoundManager] 이벤트 스테이지 시작");
     }
 
-    /// <summary>
-    /// 휴식 스테이지 시작 (RestRoundHandler)
-    /// </summary>
+    // 휴식 스테이지를 연다.
     public void OpenRest(RestRoundData data)
     {
         RestStageController controller = FindFirstObjectByType<RestStageController>(FindObjectsInactive.Include);
@@ -344,9 +333,7 @@ public class RoundManager : MonoBehaviour
         Debug.Log("[RoundManager] 휴식 스테이지 시작");
     }
 
-    /// <summary>
-    /// 유물 스테이지 시작 (RelicRoundHandler)
-    /// </summary>
+    // 유물 스테이지를 연다.
     public void OpenRelic(RelicRoundData data)
     {
         RelicStageController controller = FindFirstObjectByType<RelicStageController>(FindObjectsInactive.Include);
@@ -373,9 +360,7 @@ public class RoundManager : MonoBehaviour
         Debug.Log("[RoundManager] 유물 스테이지 시작");
     }
 
-    /// <summary>
-    /// Relic 스테이지 보상 처리: 후보가 있으면 후보에서, 없으면 전체 효과에서 랜덤 지급.
-    /// </summary>
+    // 유물 스테이지 보상을 처리한다(후보가 있으면 후보, 없으면 전체에서 랜덤 지급).
     public void GrantRelicFromStage(IReadOnlyList<RelicEffectType> candidates)
     {
         if (RelicManager.Instance == null)
@@ -416,9 +401,7 @@ public class RoundManager : MonoBehaviour
         Debug.Log($"[RoundManager] RelicStage 보상 지급: {picked}");
     }
 
-    /// <summary>
-    /// 플레이어 HP 회복 (RestRoundHandler)
-    /// </summary>
+    // 플레이어 HP를 비율만큼 회복하고 맵으로 복귀한다.
     public void HealPlayer(float healPercent)
     {
         var player = Player.Resolve(true);
@@ -432,15 +415,11 @@ public class RoundManager : MonoBehaviour
         ReturnToMap();
     }
 
-    /// <summary>
-    /// 스킬 보상 UI 표시 (CombatRoundHandler, EliteRoundHandler)
-    /// </summary>
+    // 전투 보상 UI를 표시한다(등급별 골드 지급 후 스킬 또는 카드 보상으로 분기).
     public void ShowSkillReward()
     {
-        // 기획서 0.6v: 전투 등급별 골드 일괄 지급 (일반 30~50 / 정예 100~150 / 보스 200~250)
         GrantTieredCombatGold();
 
-        // 신규 전투 시스템: 스킬 보상 대신 카드 획득 보상으로 분기
         if (IsNewBattleSystemActive())
         {
             ShowCardReward();
@@ -471,9 +450,7 @@ public class RoundManager : MonoBehaviour
     }
 
 
-    /// <summary>
-    /// 신규 시스템 카드 획득 보상 — 4장 중 1장을 런 덱에 추가.
-    /// </summary>
+    // 신규 시스템 카드 획득 보상을 표시한다(제시 카드 중 1장을 런 덱에 추가).
     void ShowCardReward()
     {
         Debug.Log("[RoundManager] 카드 획득 보상 표시");
@@ -487,11 +464,9 @@ public class RoundManager : MonoBehaviour
         rewardUI.SetCardLayout(cardRewardCardScale, cardRewardCardSpacing);
         rewardUI.Present(cardPrefab, pickedCardId =>
     {
-        // pickedCardId가 0보다 클 때만 추가하므로, -1을 전달받으면 추가되지 않음
         if (pickedCardId > 0)
             Battle.RunDeckState.EnsureExists().AddCard(pickedCardId);
 
-        // 이후 로직(콤보 보상 체크 등)은 동일하게 진행
         if (ShouldShowComboBookRewardAfterCard())
         {
             ShowComboBookRewardAfterCard();
@@ -502,11 +477,13 @@ public class RoundManager : MonoBehaviour
     });
 }
 
+    // 카드 보상 후 콤보 책 보상을 표시할 라운드인지 판정한다(정예/보스).
     bool ShouldShowComboBookRewardAfterCard()
     {
         return currentRoundData is EliteRoundData || currentRoundData is BossRoundData;
     }
 
+    // 카드 보상 후 콤보 책 보상 UI를 표시하고 선택한 콤보를 지급한다.
     void ShowComboBookRewardAfterCard()
     {
         var panel = FindFirstObjectByType<Battle.UI.ComboBookRewardPanelUI>(FindObjectsInactive.Include);
@@ -539,7 +516,7 @@ public class RoundManager : MonoBehaviour
         Debug.Log("[RoundManager] 카드 보상 후 책 UI 콤보 보상 표시");
     }
 
-    /// <summary>기획서 0.6v: 전투 등급별 골드 일괄 지급. 비전투 라운드는 지급하지 않는다.</summary>
+    // 전투 등급별 골드를 일괄 지급한다(비전투 라운드는 지급하지 않음).
     void GrantTieredCombatGold()
     {
         if (MoneyManager.Instance == null) return;
@@ -554,9 +531,7 @@ public class RoundManager : MonoBehaviour
         Debug.Log($"[보상] 전투 골드 +{gold}");
     }
 
-    /// <summary>
-    /// 맵으로 복귀 (RestRoundHandler, 보상 선택 완료 후)
-    /// </summary>
+    // 보상 처리 후 노드를 클리어 표시하고 맵으로 복귀한다(보스 클리어 시 게임 클리어 화면).
     public void ReturnToMap()
     {
         if (!IsNewBattleSystemActive())
@@ -568,11 +543,9 @@ public class RoundManager : MonoBehaviour
             Debug.LogError("GameStateController.Instance가 null입니다!");
             return;
         }
-        
-        // 현재 노드 클리어 처리
+
         stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
 
-        // 보스 라운드를 클리어하면 맵으로 돌아가는 대신 게임 클리어 화면을 표시한다.
         if (currentRoundData is BossRoundData
             && GameClearController.Instance != null
             && GameClearController.Instance.IsReady)
@@ -581,35 +554,25 @@ public class RoundManager : MonoBehaviour
             return;
         }
 
-        // 맵으로 복귀
         stateController.ShowMap();
     }
 
-    /// <summary>
-    /// 플레이어 사망 후 런 재시작(또는 강제 재시작) 시 호출 — 진행 중이던 전투를 정리한다.
-    /// 적은 자기가 죽을 때만 스스로 파괴되므로, 플레이어 사망으로 전투가 중단되면
-    /// 살아있는 적 GameObject(+HP/행동게이지/스프라이트/데미지 표시)가 그대로 남는다.
-    /// 다음 전투 진입 시 새 적과 겹쳐 보이는 것을 막기 위해 여기서 명시적으로 제거한다.
-    /// </summary>
+    // 진행 중이던 전투를 정리하고 남은 적 GameObject를 제거한다(플레이어 사망/재시작 시).
     public void AbortActiveCombat()
     {
-        // 진행 중이던 전투 종료(덱/손패/이펙트 잔여물 정리)
         if (IsNewBattleSystemActive())
             Battle.NewBattleController.Instance?.EndBattle();
         else
             ElementSlotSystem.Instance?.EndBattle();
 
-        // 적 사망 이벤트 구독 해지
         if (currentEnemy != null)
         {
             currentEnemy.OnDied -= HandleEnemyDied;
             currentEnemy = null;
         }
 
-        // 진행 중이던 스폰 대기 코루틴(SpawnNextAfterDelay 등) 취소
         StopAllCoroutines();
 
-        // 스폰 지점에 남아있는 모든 적 제거(자가 파괴되지 않은 적)
         if (enemySpawnPoint != null)
         {
             for (int i = enemySpawnPoint.childCount - 1; i >= 0; i--)
@@ -619,13 +582,11 @@ public class RoundManager : MonoBehaviour
         currentEnemyIndex = 0;
     }
 
-    // ── 내부 몬스터 스폰 ───
-
+    // 다음 적을 스폰한다(목록을 모두 처치했으면 라운드 종료).
     void SpawnNextEnemy(List<EnemyData> enemies, int columnIndex, NodeType nodeType)
     {
         if (currentEnemyIndex >= enemies.Count)
         {
-            // 모든 몬스터 처치 → 라운드 종료
             EndRound();
             return;
         }
@@ -633,6 +594,7 @@ public class RoundManager : MonoBehaviour
         SpawnEnemy(enemies[currentEnemyIndex], columnIndex, nodeType);
     }
 
+    // 적 프리팹을 생성해 스탯/뷰/배경/사망 이벤트를 설정한다.
     void SpawnEnemy(EnemyData data, int columnIndex, NodeType nodeType)
     {
         if (enemyPrefab == null)
@@ -643,7 +605,6 @@ public class RoundManager : MonoBehaviour
 
         GameObject go = Instantiate(enemyPrefab, enemySpawnPoint);
 
-        // 적을 중앙에 배치
         RectTransform rectTransform = go.GetComponent<RectTransform>();
         if (rectTransform != null)
         {
@@ -664,35 +625,29 @@ public class RoundManager : MonoBehaviour
         if (enemyStatusPanel != null && controller != null)
         {
             enemyStatusPanel.SetTarget(controller);
-            // 상태 패널이 적 피격 흔들림을 함께 따라가도록 흔들림 대상 연결
             if (view != null) enemyStatusPanel.SetFollowTarget(view.ShakeTarget);
         }
         Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}");
-        
+
         if (view != null && data.enemySprite != null)
             view.SetSprite(data.enemySprite);
 
-        // 피격 당한 이미지 주입(EnemyData.hitSprite). 비어 있으면 교체 없이 기존 연출만 적용.
         if (view != null)
             view.SetHitSprite(data.hitSprite);
 
-        // 공격 모션 프레임 주입(EnemyData.attackSprites). 비어 있으면 EnemyView에 직접 지정한 프레임 사용.
         if (view != null)
             view.SetAttackSprites(data.attackSprites);
 
-        // 몬스터 종류에 맞는 전투 배경 적용(적별 배경 풀에서 랜덤). 풀이 비면 라운드 타입 기본 배경 유지.
         if (combatStageController != null)
             combatStageController.ApplyEnemyBackground(data);
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
 
-        // 이전 적 구독 해지 (중복 구독 방지)
         if (currentEnemy != null)
         {
             currentEnemy.OnDied -= HandleEnemyDied;
         }
 
-        // 사망 이벤트 구독
         stat.OnDied += HandleEnemyDied;
         currentEnemy = stat;
         MonsterMidPattern midPattern = go.GetComponent<MonsterMidPattern>();
@@ -702,17 +657,16 @@ public class RoundManager : MonoBehaviour
         }
     }
 
+    // 적 사망 시 재화를 지급하고 다음 적 스폰을 예약한다.
     public void HandleEnemyDied()
     {
         Debug.Log("[RoundManager.HandleEnemyDied] 호출됨");
-        
-        // 구독 해지
+
         if (currentEnemy != null)
         {
             currentEnemy.OnDied -= HandleEnemyDied;
         }
 
-        // 재화 지급 — 신규 시스템은 전투 종료 시 등급별 골드로 일괄 지급(기획서 0.6v)하므로 처치당 지급 X
         if (!IsNewBattleSystemActive() && MoneyManager.Instance != null)
         {
             MoneyManager.Instance.OnEnemyKilled();
@@ -720,10 +674,10 @@ public class RoundManager : MonoBehaviour
 
         currentEnemyIndex++;
 
-        // 다음 몬스터 스폰 (딜레이)
         StartCoroutine(SpawnNextAfterDelay());
     }
 
+    // 일정 지연 후 라운드 타입에 맞게 다음 적을 스폰하거나 라운드를 종료한다.
     IEnumerator SpawnNextAfterDelay(float delay = 1.5f)
     {
         yield return new WaitForSeconds(delay);
@@ -733,7 +687,6 @@ public class RoundManager : MonoBehaviour
         else if (currentRoundData is EliteRoundData eliteData)
             SpawnNextEnemy(eliteData.enemies, eliteData.columnIndex, eliteData.roundType);
         else if (currentRoundData is BossRoundData)
-            // 보스는 단일 적이므로 처치 시 곧바로 라운드 종료 → 보상/게임 클리어 흐름으로 진입.
             EndRound();
     }
 }

@@ -6,43 +6,34 @@ using System;
 
 public class Player : MonoBehaviour, IBattleUnit
 {
-    public static Player Instance { get; private set; }
+    public static Player Instance { get; private set; } // 전역 싱글톤 인스턴스
 
     [Header("능력치")]
-    public int maxHp = 100;
-    public int currentHp;
-    public float attackDamage = 10f;
+    public int maxHp = 100; // 최대 체력
+    public int currentHp; // 현재 체력
+    public float attackDamage = 10f; // 공격력
 
     [Header("UI")]
-    public HeartUI heartUI;
-    public TMP_Text hpText;
-    public Slider hpBar;
+    public HeartUI heartUI; // 하트 표시 UI
+    public TMP_Text hpText; // 체력 텍스트
+    public Slider hpBar; // 체력 바
     public Slider cooldownBar; // 쿨타임 슬라이더
     public Text cooldownText; // 쿨타임 표시 텍스트
     public Text resultText; // 방어/회피 결과 텍스트
 
     [Header("상태이상 및 방어도")]
-    public float guard = 0f;
-    public Dictionary<string, int> statusEffects = new Dictionary<string, int>();
+    public float guard = 0f; // 방어도
+    public Dictionary<string, int> statusEffects = new Dictionary<string, int>(); // 상태이상 수치 맵
 
-    //[Header("방어/회피 설정")]
-    //public float defenseWindow = 0.5f; // 방어/회피 입력 유효 시간 (초)
-    //public float defenseActionCooldown = 3f; // 방어/회피 쿨타임 (초)
+    public ParticleSystem attackParticle; // 공격 파티클 이펙트
 
-    //private bool isDefending = false;
-    //private bool isDodging = false;
-    //private float inputTimer = 0f;
-    //private float cooldownTimer = 0f;
-    //private bool isOnCooldown = false;
-    //private float resultDisplayTimer = 0f;
-
-    public ParticleSystem attackParticle;
-
+    // 런타임 임시 생성된 PlayerLogic 폴백인지 판별한다
     static bool IsRuntimeFallback(Player player)
     {
         return player != null && player.gameObject != null && player.gameObject.name == "PlayerLogic";
     }
 
+    // 씬에서 유효한 Player 인스턴스를 찾아 반환한다
     public static Player Resolve(bool includeInactive = true)
     {
         if (Instance != null)
@@ -79,6 +70,7 @@ public class Player : MonoBehaviour, IBattleUnit
         return preferred;
     }
 
+    // Player를 찾고 없으면 런타임 폴백 오브젝트를 생성해 반환한다
     public static Player GetOrCreateRuntime()
     {
         Player resolved = Resolve(true);
@@ -92,6 +84,7 @@ public class Player : MonoBehaviour, IBattleUnit
         return player;
     }
 
+    // 싱글톤 등록, 체력·상태이상 초기화, UI 갱신
     void Awake()
     {
         if (Instance == null || IsRuntimeFallback(Instance))
@@ -106,10 +99,11 @@ public class Player : MonoBehaviour, IBattleUnit
         statusEffects["launcher"] = 0;
         statusEffects["fortify"] = 0;
         statusEffects["charge"] = 0;
-        statusEffects["chain"] = 0; // 연쇄 스택 표시용 (실제 값은 CardEffectContext.chainCount와 동기화)
+        statusEffects["chain"] = 0;
         UpdateUI();
     }
 
+    // UI 참조 재확인 및 미사용 쿨타임 UI 정리
     void Start()
     {
         ResolveUiReferences();
@@ -118,6 +112,7 @@ public class Player : MonoBehaviour, IBattleUnit
 
     }
 
+    // 씬에서 체력 텍스트/바 등 UI 참조를 찾아 연결한다
     void ResolveUiReferences()
     {
         if (heartUI == null)
@@ -168,12 +163,14 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
+    // 오브젝트가 로드된 씬에 속하는지 판별한다
     bool IsSceneObject(GameObject go)
     {
         if (go == null) return false;
         return go.scene.IsValid() && go.scene.isLoaded;
     }
 
+    // 씬 안의 "HpText" 텍스트들을 순회 반환한다
     IEnumerable<TMP_Text> GetAllSceneHpTexts()
     {
         TMP_Text[] texts = Resources.FindObjectsOfTypeAll<TMP_Text>();
@@ -186,6 +183,7 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
+    // 씬 안의 "PlayerHpBar" 슬라이더들을 순회 반환한다
     IEnumerable<Slider> GetAllScenePlayerHpBars()
     {
         Slider[] sliders = Resources.FindObjectsOfTypeAll<Slider>();
@@ -198,6 +196,7 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
+    // 구버전 "HpSlider" 오브젝트들을 비활성화한다
     void DisableLegacyHpSliders()
     {
         Slider[] sliders = FindObjectsByType<Slider>(FindObjectsSortMode.None);
@@ -208,6 +207,7 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
+    // 사용하지 않는 쿨타임 바/텍스트 UI를 숨긴다
     void HideUnusedCooldownUI()
     {
         if (cooldownBar != null)
@@ -217,6 +217,7 @@ public class Player : MonoBehaviour, IBattleUnit
             cooldownText.gameObject.SetActive(false);
     }
 
+    // 상단 체력바가 들어갈 컨테이너 RectTransform을 찾는다
     RectTransform GetTopHpContainer()
     {
         if (hpText != null && hpText.transform.parent is RectTransform parentRect)
@@ -235,6 +236,7 @@ public class Player : MonoBehaviour, IBattleUnit
         return null;
     }
 
+    // 컨테이너 자식 중 "PlayerHpBar" 슬라이더를 찾는다
     Slider FindHpBarInContainer(RectTransform container)
     {
         if (container == null) return null;
@@ -252,6 +254,7 @@ public class Player : MonoBehaviour, IBattleUnit
         return null;
     }
 
+    // 상단 체력바를 올바른 컨테이너에 배치하고 상호작용을 끈다
     void EnsureTopHpBarPlacement()
     {
         RectTransform container = GetTopHpContainer();
@@ -267,12 +270,11 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
+    // 새 전투 시작 시 방어도와 모든 상태이상을 초기화한다
     public void ResetStatusForNewBattle()
     {
-        // 방어도 초기화
         guard = 0f;
 
-        // 모든 상태이상 수치를 0으로 만들고 UI 패널에 알림
         List<string> keys = new List<string>(statusEffects.Keys);
         foreach (string key in keys)
         {
@@ -280,73 +282,17 @@ public class Player : MonoBehaviour, IBattleUnit
             {
                 statusEffects[key] = 0;
 
-                // UI 아이콘이 지워지도록 0이 되었다는 신호 발송!
                 OnStatusChanged?.Invoke(key, 0);
             }
         }
     }
+
+    // 매 프레임 갱신(현재 동작 없음)
     void Update()
     {
-        //HandleDefenseInput();
-
-        //// 방어/회피 입력 타이머 감소
-        //if (inputTimer > 0)
-        //{
-        //    inputTimer -= Time.deltaTime;
-        //}
-        //else
-        //{
-        //    isDefending = false;
-        //    isDodging = false;
-        //}
-
-        //// 쿨타임 처리
-        //if (isOnCooldown)
-        //{
-        //    cooldownTimer -= Time.deltaTime;
-        //    UpdateCooldownUI();
-
-        //    if (cooldownTimer <= 0f)
-        //    {
-        //        isOnCooldown = false;
-        //        cooldownTimer = 0f;
-        //        UpdateCooldownUI();
-        //    }
-        //}
-
-        //// 결과 텍스트 표시 타이머
-        //if (resultDisplayTimer > 0f)
-        //{
-        //    resultDisplayTimer -= Time.deltaTime;
-        //    if (resultDisplayTimer <= 0f && resultText != null)
-        //    {
-        //        resultText.text = "";
-        //    }
-        //}
     }
 
-    //void HandleDefenseInput()
-    //{
-    //    if (isOnCooldown) return;
-
-    //    // 왼쪽 방향키 (<): 회피
-    //    if (Input.GetKeyDown(KeyCode.LeftArrow))
-    //    {
-    //        isDodging = true;
-    //        isDefending = false;
-    //        inputTimer = defenseWindow;
-    //        StartCooldown();
-    //    }
-    //    // 오른쪽 방향키 (>): 방어
-    //    else if (Input.GetKeyDown(KeyCode.RightArrow))
-    //    {
-    //        isDefending = true;
-    //        isDodging = false;
-    //        inputTimer = defenseWindow;
-    //        StartCooldown();
-    //    }
-    //}
-
+    // 피해를 받고 방어도 소모·HP 감소·사망 처리 및 트리거를 발생시킨다
     public void TakeDamage(float damage, string cardtype = "normal")
     {
         bool blockConsumed = false;
@@ -370,7 +316,7 @@ public class Player : MonoBehaviour, IBattleUnit
         {
             currentHp -= finalDamage;
             UpdateUI();
-            OnHpDecreased?.Invoke(finalDamage); // 피격 화면 효과용
+            OnHpDecreased?.Invoke(finalDamage);
 
             if (currentHp <= 0)
             {
@@ -378,7 +324,6 @@ public class Player : MonoBehaviour, IBattleUnit
             }
         }
 
-        // 새 전투 시스템 피격/방어도 트리거 (자기손실은 트리거 X)
         if (cardtype != "self_loss")
         {
             OnPlayerHit?.Invoke();
@@ -386,16 +331,12 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
-    /// <summary>피격(방어도로 막힘 포함). 물18(217) 등 트리거용.</summary>
-    public event Action OnPlayerHit;
+    public event Action OnPlayerHit; // 피격(방어도로 막힘 포함) 발생 이벤트
+    public event Action<int> OnHpDecreased; // 실제 HP 감소 시(줄어든 양) 이벤트
+    public event Action OnBlockConsumedByAttack; // 적 공격에 방어도가 소모됐을 때 이벤트
+    public event Action<string, int> OnStatusChanged; // 상태이상 수치 변경 이벤트
 
-    /// <summary>HP가 실제로 줄어들 때 호출 — 피격 화면 효과용. amount = 줄어든 HP량.</summary>
-    public event Action<int> OnHpDecreased;
-    /// <summary>적 공격으로 방어도가 소모됐을 때. 땅18(417) 등 트리거용.</summary>
-    public event Action OnBlockConsumedByAttack;
-
-    public event Action<string, int> OnStatusChanged;
-
+    // 상태이상을 추가하며(젖음→빙결 변환 등), 최대 999로 제한한다
     public void AddStatus(string type, int amount)
     {
         if (!statusEffects.ContainsKey(type)) return;
@@ -408,36 +349,42 @@ public class Player : MonoBehaviour, IBattleUnit
             OnStatusChanged?.Invoke("wet", 0);
             return;
         }
-        // 기획서 0.6v: 스택형 키워드 최대 999
         statusEffects[type] = Mathf.Clamp(statusEffects[type] + amount, 0, 999);
         OnStatusChanged?.Invoke(type, statusEffects[type]);
     }
 
+    // 지정한 상태이상의 현재 수치를 반환한다
     public int GetStatus(string type)
     {
         return statusEffects.ContainsKey(type) ? statusEffects[type] : 0;
     }
 
+    // 상태이상 수치를 지정값(0~999)으로 설정한다
     public void SetStatus(string type, int amount)
     {
         if (statusEffects.ContainsKey(type))
         {
-            int v = Mathf.Clamp(amount, 0, 999); // 기획서 0.6v: 스택 최대 999
+            int v = Mathf.Clamp(amount, 0, 999);
             statusEffects[type] = v;
             OnStatusChanged?.Invoke(type, v);
         }
 
      }
+
+    // 현재 공격력을 반환한다
     public float GetAttackDamage()
     {
         return attackDamage;
     }
+
+    // 방어도를 더하며 최대 999로 제한한다
     public void AddGuard(float amount)
     {
-        guard = Mathf.Clamp(guard + amount, 0f, 999f); // 기획서 0.6v: 방어도 최대 999
+        guard = Mathf.Clamp(guard + amount, 0f, 999f);
         OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
     }
 
+    // 사망 처리 — 게임오버 연출을 재생한다
     void Die()
     {
         Debug.Log("플레이어 사망!");
@@ -452,23 +399,25 @@ public class Player : MonoBehaviour, IBattleUnit
             Debug.LogWarning("[Player] GameOverController를 찾지 못해 사망 연출을 재생하지 못했습니다.");
     }
 
+    // 체력을 회복하며 최대 체력을 넘지 않는다
     public void Heal(int amount)
     {
         currentHp = Mathf.Min(currentHp + amount, maxHp);
         UpdateUI();
     }
 
+    // 외부에서 호출해 체력 UI를 강제 동기화한다
     public void UpdateUIForExternalSync()
     {
         UpdateUI();
     }
 
+    // 체력 텍스트와 체력 바를 현재 값으로 갱신한다
     void UpdateUI()
     {
         ResolveUiReferences();
         EnsureTopHpBarPlacement();
 
-        //if (heartUI != null) heartUI.UpdateHearts(currentHp, maxHp);
         foreach (TMP_Text text in GetAllSceneHpTexts())
             text.text = $"{currentHp} / {maxHp}";
 
@@ -488,56 +437,12 @@ public class Player : MonoBehaviour, IBattleUnit
         }
     }
 
-    //void UpdateCooldownUI()
-    //{
-    //    if (cooldownText == null) return;
-
-    //    if (isOnCooldown)
-    //    {
-    //        cooldownText.text = $"쿨타임: {cooldownTimer:F1}초";
-    //        cooldownText.color = Color.yellow;
-
-    //        // 쿨타임 슬라이더 업데이트
-    //        if (cooldownBar != null)
-    //        {
-    //            cooldownBar.value = 1f - (cooldownTimer / defenseActionCooldown);
-    //        }
-    //    }
-    //    else
-    //    {
-    //        cooldownText.text = "방어/회피 준비";
-    //        cooldownText.color = Color.white;
-
-    //        // 쿨타임 슬라이더 완전 채우기
-    //        if (cooldownBar != null)
-    //        {
-    //            cooldownBar.value = 1f;
-    //        }
-    //    }
-    //}
-
-    //void StartCooldown()
-    //{
-    //    isOnCooldown = true;
-    //    cooldownTimer = defenseActionCooldown;
-    //    //UpdateCooldownUI();
-    //}
-
-    //void ShowResult(string message, Color color)
-    //{
-    //    if (resultText != null)
-    //    {
-    //        resultText.text = message;
-    //        resultText.color = color;
-    //        resultDisplayTimer = 0.5f; // 2초 동안 표시
-    //    }
-    //}
-
+    // 공격 파티클 이펙트를 재생한다
     public void PlayAttackEffect()
     {
         if (attackParticle != null)
-            attackParticle.Play(); // 파티클 재생
-    
+            attackParticle.Play();
+
     }
 }
 

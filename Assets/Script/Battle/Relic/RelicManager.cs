@@ -4,20 +4,15 @@ using Battle.UI;
 
 namespace Battle.Relic
 {
-    /// <summary>
-    /// 유물 보유 목록 관리 및 효과 조회.
-    /// relicDefinitions 리스트에서 아이콘/설명을 Inspector에서 직접 편집 가능.
-    /// BattleTestController의 testRelics 필드로 테스트 시작 시 자동 지급.
-    /// </summary>
+    // 유물 보유 목록 관리 및 효과 조회 매니저
     public class RelicManager : MonoBehaviour
     {
-        public static RelicManager Instance { get; private set; }
+        public static RelicManager Instance { get; private set; } // 전역 싱글톤 인스턴스
 
-        /// <summary>비급서: 콤보 성공 시 기본 1s에 더해지는 추가 보너스 초.</summary>
-        public const float COMBO_BONUS_SECONDS_EXTRA = 0.5f;
+        public const float COMBO_BONUS_SECONDS_EXTRA = 0.5f; // 비급서: 콤보 성공 시 추가 보너스 초
 
         [Header("사용 가능한 유물 정의 (아이콘 여기서 설정)")]
-        [SerializeField] private List<RelicDef> relicDefinitions = new List<RelicDef>
+        [SerializeField] private List<RelicDef> relicDefinitions = new List<RelicDef> // 정의된 전체 유물 목록
         {
             new RelicDef
             {
@@ -35,22 +30,24 @@ namespace Battle.Relic
             },
         };
 
-        private readonly List<RelicDef> _owned = new List<RelicDef>();
-        public IReadOnlyList<RelicDef> OwnedRelics => _owned;
-        public IReadOnlyList<RelicDef> RelicDefinitions => relicDefinitions;
+        private readonly List<RelicDef> _owned = new List<RelicDef>(); // 현재 보유 중인 유물
+        public IReadOnlyList<RelicDef> OwnedRelics => _owned; // 보유 유물 읽기 전용 뷰
+        public IReadOnlyList<RelicDef> RelicDefinitions => relicDefinitions; // 정의 목록 읽기 전용 뷰
 
+        // 싱글톤 등록 (중복 시 자신 파괴)
         void Awake()
         {
             if (Instance == null) Instance = this;
             else if (Instance != this) { Destroy(gameObject); return; }
         }
 
+        // 싱글톤 참조 해제
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
         }
 
-        /// <summary>effectType에 해당하는 유물을 definitions에서 찾아 지급.</summary>
+        // 효과 종류로 정의를 찾아 해당 유물 지급
         public void GiveRelicByEffect(RelicEffectType effectType)
         {
             var def = relicDefinitions.Find(r => r.effect == effectType);
@@ -62,6 +59,7 @@ namespace Battle.Relic
             AddRelic(def);
         }
 
+        // 유물을 보유 목록에 추가 (중복 id면 무시)
         public void AddRelic(RelicDef relic)
         {
             if (relic == null) return;
@@ -71,7 +69,7 @@ namespace Battle.Relic
             Debug.Log($"[유물] 획득: {relic.displayName}");
         }
 
-        /// <summary>보유 유물을 모두 비운다. (런 종료/재시작 시 호출 — 다음 런은 유물 0개로 시작)</summary>
+        // 보유 유물을 모두 비움 (런 종료/재시작 시 호출)
         public void ClearOwnedRelics()
         {
             if (_owned.Count == 0)
@@ -85,15 +83,14 @@ namespace Battle.Relic
             Debug.Log("[유물] 보유 목록 초기화");
         }
 
+        // 해당 id의 유물을 보유 중인지 확인
         public bool HasRelicId(string relicId)
         {
             if (string.IsNullOrWhiteSpace(relicId)) return false;
             return _owned.Exists(r => r.id == relicId);
         }
 
-        /// <summary>
-        /// 개발중(효과 미구현) 유물을 아이콘 기반으로 보유 목록에 추가한다.
-        /// </summary>
+        // 효과 미구현(개발중) 유물을 아이콘 기반으로 보유 목록에 추가
         public bool TryAddSpriteOnlyRelic(Sprite sprite, out RelicDef granted)
         {
             granted = null;
@@ -121,6 +118,7 @@ namespace Battle.Relic
             return true;
         }
 
+        // 문자열을 id로 쓸 수 있게 소문자/허용문자만 남기고 정규화
         static string SanitizeId(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return "relic";
@@ -136,6 +134,7 @@ namespace Battle.Relic
             return new string(chars);
         }
 
+        // 해당 효과를 가진 유물을 하나라도 보유 중인지 확인
         public bool HasEffect(RelicEffectType type)
         {
             foreach (var r in _owned)

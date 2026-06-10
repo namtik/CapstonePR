@@ -12,54 +12,55 @@ using Random = UnityEngine.Random;
 public class ComboSystem : MonoBehaviour
 {
     [Header("콤보 슬롯 설정")]
-    public Transform comboSlotParent;
-    public GameObject cardPrefab;
-    public GameObject eleslotPrefab;
-    public Sprite[] cardSprites;
+    public Transform comboSlotParent; // 콤보 슬롯 부모
+    public GameObject cardPrefab; // 카드 프리팹
+    public GameObject eleslotPrefab; // 속성 슬롯 프리팹
+    public Sprite[] cardSprites; // 카드 스프라이트 배열
 
-    private string[] cardTypes = { "Q", "W", "E", "R" };
+    private string[] cardTypes = { "Q", "W", "E", "R" }; // 카드 타입 목록
 
     [Header("스킬 목록 UI 설정")]
-    public Transform skillListParent; // 스킬 목록이 표시될 부모 패널 (세로 정렬)
-    public SkillListItemUI skillListItemPrefab; // 아이콘+이름+커맨드가 있는 프리팹
+    public Transform skillListParent; // 스킬 목록 부모 패널
+    public SkillListItemUI skillListItemPrefab; // 스킬 목록 항목 프리팹
 
-    private List<string> comboInput = new List<string>();
-    private List<GameObject> comboSlotCards = new List<GameObject>();
-    private List<GameObject> emptySlots = new List<GameObject>();
+    private List<string> comboInput = new List<string>(); // 현재 콤보 입력
+    private List<GameObject> comboSlotCards = new List<GameObject>(); // 콤보 슬롯에 표시된 카드
+    private List<GameObject> emptySlots = new List<GameObject>(); // 빈 슬롯 목록
 
     [Header("스킬 발동 알림 UI")]
-    [SerializeField] private TMP_Text skillActivationText;
-    [SerializeField] private string skillActivationTextObjectName = "SkillActivationText";
+    [SerializeField] private TMP_Text skillActivationText; // 스킬 발동 알림 텍스트
+    [SerializeField] private string skillActivationTextObjectName = "SkillActivationText"; // 알림 텍스트 오브젝트 이름
 
     [Header("다음 콤보 힌트 UI")]
-    [SerializeField] private bool enableNextComboHints = true;
-    [SerializeField] private string elementSlotRootName = "ElementSlotRoot";
-    [SerializeField] private string slotObjectPrefix = "Slot_";
-    [SerializeField] private string nextHintObjectPrefix = "NextSkillHint_";
-    [SerializeField] private TMP_FontAsset nextHintFont;
-    [SerializeField] private int nextHintFontSize = 22;
-    [SerializeField] private FontStyles nextHintFontStyle = FontStyles.Bold;
-    [SerializeField] private Color nextHintColor = new Color(1f, 0.9f, 0.4f, 1f);
-    [SerializeField] private Vector2 nextHintOffset = new Vector2(0f, 12f);
-    [SerializeField] private Vector2 nextHintSize = new Vector2(170f, 34f);
-    [SerializeField] private bool nextHintAutoSize = false;
-    private float skillTextTimer = 0f;
-    private bool isShowingSkillText = false;
-    private const float SKILL_TEXT_DISPLAY_TIME = 0.5f;
+    [SerializeField] private bool enableNextComboHints = true; // 다음 콤보 힌트 사용 여부
+    [SerializeField] private string elementSlotRootName = "ElementSlotRoot"; // 속성 슬롯 루트 이름
+    [SerializeField] private string slotObjectPrefix = "Slot_"; // 슬롯 오브젝트 접두사
+    [SerializeField] private string nextHintObjectPrefix = "NextSkillHint_"; // 힌트 오브젝트 접두사
+    [SerializeField] private TMP_FontAsset nextHintFont; // 힌트 폰트
+    [SerializeField] private int nextHintFontSize = 22; // 힌트 폰트 크기
+    [SerializeField] private FontStyles nextHintFontStyle = FontStyles.Bold; // 힌트 폰트 스타일
+    [SerializeField] private Color nextHintColor = new Color(1f, 0.9f, 0.4f, 1f); // 힌트 색상
+    [SerializeField] private Vector2 nextHintOffset = new Vector2(0f, 12f); // 힌트 위치 오프셋
+    [SerializeField] private Vector2 nextHintSize = new Vector2(170f, 34f); // 힌트 크기
+    [SerializeField] private bool nextHintAutoSize = false; // 힌트 자동 크기 조절 여부
+    private float skillTextTimer = 0f; // 스킬 텍스트 표시 타이머
+    private bool isShowingSkillText = false; // 스킬 텍스트 표시 중 여부
+    private const float SKILL_TEXT_DISPLAY_TIME = 0.5f; // 스킬 텍스트 표시 시간
 
-    public List<SkillData> learnedSkills = new List<SkillData>();
-    private Dictionary<string, SkillData> comboLookup = new Dictionary<string, SkillData>();
-    public int learnedSkillCount = 0;
+    public List<SkillData> learnedSkills = new List<SkillData>(); // 습득한 스킬 목록
+    private Dictionary<string, SkillData> comboLookup = new Dictionary<string, SkillData>(); // 콤보→스킬 조회
+    public int learnedSkillCount = 0; // 습득 스킬 수
 
-    private Player player;
-    private EnemyController enemyController;
-    private RoundManager roundManager;
+    private Player player; // 플레이어 참조
+    private EnemyController enemyController; // 적 참조
+    private RoundManager roundManager; // 라운드 매니저 참조
 
-    private readonly Dictionary<string, TMP_Text> nextHintTexts = new Dictionary<string, TMP_Text>();
-    private static readonly string[] hintKeys = { "q", "w", "e", "r" };
+    private readonly Dictionary<string, TMP_Text> nextHintTexts = new Dictionary<string, TMP_Text>(); // 키별 힌트 텍스트
+    private static readonly string[] hintKeys = { "q", "w", "e", "r" }; // 힌트 키 목록
 
-    public static ComboSystem Instance;
+    public static ComboSystem Instance; // 싱글턴 인스턴스
 
+    // 싱글턴 초기화
     void Awake()
     {
         if (Instance == null)
@@ -74,12 +75,12 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 참조 확보 및 UI 초기 생성
     void Start()
     {
         player = Player.Resolve(true);
         RefreshEnemyRef();
 
-        // UI 생성
         CreateComboSlots();
         CreateSkillList();
 
@@ -93,12 +94,12 @@ public class ComboSystem : MonoBehaviour
         UpdateNextComboHints();
     }
 
+    // 초기 스킬 선택 UI 표시
     public void LearnStarterSkill()
     {
         if (SkillDataParser.Instance == null)
             return;
 
-        // Inspector 미연결 시 자동 탐색
         if (SkillDataParser.Instance.SkillRewardUI == null)
             SkillDataParser.Instance.SkillRewardUI = FindFirstObjectByType<SkillRewardUI>(FindObjectsInactive.Include);
 
@@ -112,6 +113,7 @@ public class ComboSystem : MonoBehaviour
         Debug.Log("[ComboSystem] 초기 스킬 선택 UI 표시");
     }
 
+    // 스킬 텍스트 타이머 및 힌트 바인딩 갱신
     void Update()
     {
         if (isShowingSkillText)
@@ -135,6 +137,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 적 참조 및 알림 텍스트 재확보
     void RefreshEnemyRef()
     {
         if (enemyController == null || !enemyController.gameObject.activeInHierarchy)
@@ -144,6 +147,7 @@ public class ComboSystem : MonoBehaviour
             ResolveSkillActivationText();
     }
 
+    // 모든 힌트 바인딩이 준비됐는지 확인
     bool HasAllHintBindings()
     {
         foreach (string key in hintKeys)
@@ -154,6 +158,7 @@ public class ComboSystem : MonoBehaviour
         return true;
     }
 
+    // 슬롯별 다음 콤보 힌트 텍스트 생성/바인딩
     void EnsureNextHintBindings()
     {
         if (!enableNextComboHints) return;
@@ -202,6 +207,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 다음 콤보 힌트 텍스트 초기화
     void ClearNextComboHints()
     {
         foreach (string key in hintKeys)
@@ -212,6 +218,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 현재 입력 기준 다음 콤보 후보 힌트 표시
     void UpdateNextComboHints()
     {
         if (!enableNextComboHints) return;
@@ -243,6 +250,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 스킬 발동 알림 텍스트 오브젝트 탐색
     void ResolveSkillActivationText()
     {
         if (skillActivationText != null) return;
@@ -271,6 +279,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 스킬 발동 알림 텍스트 숨김
     void HideSkillActivationText()
     {
         if (skillActivationText == null) return;
@@ -278,6 +287,7 @@ public class ComboSystem : MonoBehaviour
         skillActivationText.gameObject.SetActive(false);
     }
 
+    // 스킬 습득 및 조회 등록, UI 갱신
     public void LearnSkill(SkillData newSkill)
     {
         learnedSkills.Add(newSkill);
@@ -292,6 +302,7 @@ public class ComboSystem : MonoBehaviour
         UpdateNextComboHints();
     }
 
+    // 스킬 목록 UI 재빌드
     public void RefreshSkillUI()
     {
         if (skillListParent == null || !skillListParent.gameObject.activeInHierarchy)
@@ -308,6 +319,7 @@ public class ComboSystem : MonoBehaviour
         Debug.Log($"[ComboSystem] 스킬 UI 재빌드: {learnedSkills.Count}개");
     }
 
+    // 콤보 슬롯 UI 재구성
     public void RefreshComboSlotUI()
     {
         if (comboSlotParent == null)
@@ -328,8 +340,10 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 습득 스킬 개수 반환
     public int LearnedSkillCount() => learnedSkills.Count;
 
+    // 습득 스킬 ID 집합 반환
     public HashSet<int> GetLearnedSkillIds()
     {
         var ids = new HashSet<int>();
@@ -337,6 +351,7 @@ public class ComboSystem : MonoBehaviour
         return ids;
     }
 
+    // 콤보 슬롯 부모 확보 및 빈 슬롯 생성
     void CreateComboSlots()
     {
         if (comboSlotParent == null)
@@ -373,13 +388,13 @@ public class ComboSystem : MonoBehaviour
         CreateEmptySlots();
     }
 
+    // 빈 콤보 슬롯 확보(기존 자식 우선, 없으면 생성)
     void CreateEmptySlots()
     {
         if (comboSlotParent == null) return;
 
         emptySlots.Clear();
 
-        // 씬에 미리 만들어둔 자식 슬롯이 있으면 그걸 그대로 사용
         if (comboSlotParent.childCount >= 3)
         {
             for (int i = 0; i < comboSlotParent.childCount; i++)
@@ -387,7 +402,6 @@ public class ComboSystem : MonoBehaviour
             return;
         }
 
-        // 미리 만들어둔 슬롯이 없을 때만 런타임으로 생성
         for (int i = 0; i < 3; i++)
         {
             GameObject emptySlot = new GameObject($"EmptySlot_{i}");
@@ -403,6 +417,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 스킬 목록 부모 패널 생성
     void CreateSkillList()
     {
         if (skillListParent == null)
@@ -415,16 +430,14 @@ public class ComboSystem : MonoBehaviour
             listParentObj.transform.SetParent(canvas.transform, false);
 
             RectTransform rect = listParentObj.AddComponent<RectTransform>();
-            // 화면 왼쪽(Left)에 배치
             rect.anchorMin = new Vector2(1f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
-            rect.pivot = new Vector2(1f, 1f); // 기준점을 우측 상단으로
-            rect.anchoredPosition = new Vector2(-150f, -150f); // 오른쪽 끝에서 왼쪽으로 30만큼 띄움
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-150f, -150f);
             rect.sizeDelta = new Vector2(250f, 500f);
 
-            // 세로 정렬 레이아웃 적용
             VerticalLayoutGroup layout = listParentObj.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 15f; // 항목 간격
+            layout.spacing = 15f;
             layout.childAlignment = TextAnchor.UpperLeft;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
@@ -435,6 +448,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 스킬 목록 항목 1개 생성
     void CreateSkillListItem(SkillData skillData)
     {
         if (skillListItemPrefab == null)
@@ -447,6 +461,7 @@ public class ComboSystem : MonoBehaviour
         newItem.Setup(skillData);
     }
 
+    // 콤보 입력 및 슬롯 표시 초기화
     public void ResetComboInput()
     {
         comboInput.Clear();
@@ -458,6 +473,7 @@ public class ComboSystem : MonoBehaviour
         ClearNextComboHints();
     }
 
+    // 카드 입력을 콤보에 누적하고 스킬 발동 검사
     public void OnCardUsed(string cardType)
     {
         string normalizedCardType = NormalizeCombo(cardType);
@@ -474,6 +490,7 @@ public class ComboSystem : MonoBehaviour
         UpdateNextComboHints();
     }
 
+    // 현재 콤보 입력에 맞춰 슬롯 카드 표시 갱신
     void UpdateComboSlotUI()
     {
         foreach (var card in comboSlotCards)
@@ -509,6 +526,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 현재 콤보와 일치하는 스킬을 발동
     void CheckAndActivateSkills()
     {
         string currentCombo = NormalizeCombo(string.Join("", comboInput));
@@ -524,6 +542,7 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 스킬 효과/피해/알림 적용 및 적 공격 횟수 감소
     void ActivateSkill(SkillData skill)
     {
         if (enemyController != null && player != null)
@@ -559,17 +578,20 @@ public class ComboSystem : MonoBehaviour
         }
     }
 
+    // 콤보 문자열을 소문자 정규화
     string NormalizeCombo(string combo)
     {
         if (string.IsNullOrWhiteSpace(combo)) return string.Empty;
         return combo.Trim().ToLowerInvariant();
     }
 
+    // 현재 콤보 입력 복사본 반환
     public List<string> GetComboInput()
     {
         return new List<string>(comboInput);
     }
 
+    // 콤보 입력 순서를 무작위로 섞고 UI 갱신
     public void ShuffleComboInput()
     {
         if (comboInput.Count <= 1) return;
@@ -581,7 +603,6 @@ public class ComboSystem : MonoBehaviour
             comboInput[i] = comboInput[j];
             comboInput[j] = temp;
         }
-        // UI 갱신
         UpdateComboSlotUI();
         UpdateNextComboHints();
 

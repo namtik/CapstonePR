@@ -4,27 +4,27 @@ using UnityEngine;
 public class StatusPanelUI : MonoBehaviour
 {
     [Header("UI ����")]
-    [SerializeField] private StatusIconUI iconPrefab; // ������+���� ������
-    [SerializeField] private StatusIconDatabase iconDatabase; // ������ SO �����ͺ��̽� 1��
+    [SerializeField] private StatusIconUI iconPrefab;   // 아이콘+숫자 프리팹
+    [SerializeField] private StatusIconDatabase iconDatabase;   // 아이콘 SO 데이터베이스
 
-    // ���� ȭ�鿡 ������ �����ܵ��� �����ϴ� ��ųʸ�
+    // 현재 화면에 표시 중인 아이콘들을 저장하는 딕셔너리
     private Dictionary<string, StatusIconUI> activeIcons = new Dictionary<string, StatusIconUI>();
 
-    // �����ͺ��̽��� ������� Ű��(string)�� �̹���(Sprite)�� ������ ã�� ���� ��
+    // 데이터베이스 기반으로 키(string)에서 이미지(Sprite)를 빠르게 찾는 맵
     private Dictionary<string, Sprite> dataMap = new Dictionary<string, Sprite>();
 
-    // �� �г��� ���¸� ������ ���� (Player �Ǵ� EnemyController)
+    // 이 패널이 상태를 표시할 대상(Player 또는 EnemyController)
     private IBattleUnit targetUnit;
 
-    // 적 피격 흔들림을 함께 따라가기 위한 추적 대상(적의 shakeTarget)과 초기 월드 오프셋
-    private Transform followTarget;
-    private Vector3 followWorldOffset;
-    private bool following;
-    private bool followOffsetCaptured;
+    private Transform followTarget;   // 적 피격 흔들림을 따라갈 추적 대상
+    private Vector3 followWorldOffset;   // 추적 대상 대비 초기 월드 오프셋
+    private bool following;   // 추적 활성화 여부
+    private bool followOffsetCaptured;   // 오프셋 캡처 완료 여부
 
+    // 데이터베이스의 아이콘 목록을 키-스프라이트 맵으로 변환한다
     void Awake()
     {
-        // SO �����ͺ��̽� �ȿ� �ִ� ����Ʈ�� ��ųʸ��� ��ȯ
+        // SO 데이터베이스의 리스트를 딕셔너리로 변환
         if (iconDatabase != null)
         {
             foreach (var info in iconDatabase.icons)
@@ -41,24 +41,24 @@ public class StatusPanelUI : MonoBehaviour
         }
     }
 
-    // ���� ���� �� � ������ UI�� ����� �������ִ� �Լ�
+    // 이 패널이 상태를 표시할 대상을 지정하고 이벤트를 다시 연결한다
     public void SetTarget(IBattleUnit unit)
     {
-        // ���� Ÿ���� �־��ٸ� ����(����) ����
+        // 기존 타겟이 있었다면 이벤트 구독 해제
         if (targetUnit != null)
         {
             targetUnit.OnStatusChanged -= UpdateStatusUI;
         }
 
         targetUnit = unit;
-        ClearAllIcons(); // ȭ�� �ʱ�ȭ
+        ClearAllIcons(); // 화면 초기화
 
         if (targetUnit != null)
         {
-            // ���ο� Ÿ���� �����̻� ���� �̺�Ʈ ���� (���� ���� ������ UpdateStatusUI ����)
+            // 새 타겟의 상태이상 변경 이벤트 구독
             targetUnit.OnStatusChanged += UpdateStatusUI;
 
-            // �������ڸ��� �⺻ ��ġ�� 0�� �ƴ� �����̻��� �ִٸ� ���⼭ �ʱ�ȭ
+            // 시작 시 0이 아닌 상태이상이 있다면 여기서 초기화
         }
     }
 
@@ -98,37 +98,37 @@ public class StatusPanelUI : MonoBehaviour
         }
     }
 
-    // Ÿ���� �����̻��� ���� ������ �ڵ����� ȣ��Ǵ� �Լ�
+    // 타겟의 상태이상이 바뀔 때 자동으로 호출되어 아이콘을 갱신한다
     public void UpdateStatusUI(string key, int count)
     {
-        // �����ͺ��̽��� ��ϵ��� ���� �����̻� Ű�� ����
+        // 데이터베이스에 등록되지 않은 상태이상 키는 무시
         if (!dataMap.ContainsKey(key)) return;
 
-        // �̹� ȭ�鿡 ����� �������� �ִٸ�?
+        // 이미 화면에 표시된 아이콘이 있다면
         if (activeIcons.ContainsKey(key))
         {
             if (count > 0)
             {
-                activeIcons[key].UpdateCount(count); // ���ڸ� ����
+                activeIcons[key].UpdateCount(count); // 숫자만 갱신
             }
             else
             {
-                // ��ġ�� 0 ���ϰ� �Ǹ� ������ ����
+                // 수치가 0 이하가 되면 아이콘 제거
                 Destroy(activeIcons[key].gameObject);
                 activeIcons.Remove(key);
             }
         }
-        // ȭ�鿡 �������� ���µ�, ��ġ�� 0���� Ŀ���ٸ�?
+        // 화면에 아이콘이 없는데 수치가 0보다 커졌다면
         else if (count > 0)
         {
-            // �� ������ �������� �����ؼ� ȭ��(�г� ����)�� ���
+            // 새 아이콘을 생성해 화면(패널 자식)에 등록
             StatusIconUI newIcon = Instantiate(iconPrefab, transform);
             newIcon.SetStatus(dataMap[key], count, key);
             activeIcons.Add(key, newIcon);
         }
     }
 
-    // �г� ���� ��� ������ �����
+    // 패널의 모든 아이콘을 제거한다
     private void ClearAllIcons()
     {
         foreach (var icon in activeIcons.Values)

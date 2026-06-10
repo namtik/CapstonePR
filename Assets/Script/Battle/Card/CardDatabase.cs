@@ -4,47 +4,45 @@ using UnityEngine;
 
 namespace Battle.Card
 {
-    /// <summary>
-    /// 카드 전체 정의 (Resources/CardDB/Cards.json 기반).
-    /// 기획자가 Card_DB.xlsx → Tools/ConvertCardDB.py 로 JSON을 갱신하면 게임에 반영.
-    /// 효과 실행은 CardEffectResolver가 id로 분기 (미구현 카드는 효과 없음).
-    /// </summary>
+    // 전체 카드/효과 정의를 로드·조회하는 정적 데이터베이스
     public static class CardDatabase
     {
-        // 파편 ID (Card_DB.xlsx 기준 — 501/502/503)
-        public const int FRAGMENT_1 = 501;
-        public const int FRAGMENT_2 = 502;
-        public const int FRAGMENT_3 = 503;
+        public const int FRAGMENT_1 = 501; // 파편 카드 ID 1
+        public const int FRAGMENT_2 = 502; // 파편 카드 ID 2
+        public const int FRAGMENT_3 = 503; // 파편 카드 ID 3
 
-        /// <summary>방해 행동 등으로 덱에 삽입되는 무속성 더미 카드 ID.</summary>
-        public const int NEUTRAL_FILLER = 500;
+        public const int NEUTRAL_FILLER = 500; // 무속성 더미 카드 ID
 
-        public static readonly int[] FragmentIds = { FRAGMENT_1, FRAGMENT_2, FRAGMENT_3 };
+        public static readonly int[] FragmentIds = { FRAGMENT_1, FRAGMENT_2, FRAGMENT_3 }; // 파편 ID 모음
 
-        const string CARDS_RESOURCE_PATH    = "CardDB/Cards";
-        const string EFFECTS_RESOURCE_PATH  = "CardDB/CardEffects";
+        const string CARDS_RESOURCE_PATH    = "CardDB/Cards";       // 카드 JSON 리소스 경로
+        const string EFFECTS_RESOURCE_PATH  = "CardDB/CardEffects"; // 효과 JSON 리소스 경로
 
-        private static Dictionary<int, CardData> _byId;
-        private static List<CardData> _all;
-        private static Dictionary<int, List<CardEffectData>> _effectsByCard;
+        private static Dictionary<int, CardData> _byId;                         // ID → 카드 데이터 맵
+        private static List<CardData> _all;                                     // 전체 카드 목록
+        private static Dictionary<int, List<CardEffectData>> _effectsByCard;    // 카드 ID → 효과 목록 맵
 
+        // 최초 1회 로드 보장
         public static void EnsureInit()
         {
             if (_byId != null) return;
             LoadAll();
         }
 
+        // ID로 카드 데이터 조회
         public static CardData GetById(int id)
         {
             EnsureInit();
             return _byId.TryGetValue(id, out var data) ? data : null;
         }
 
+        // 전체 카드 목록
         public static IReadOnlyList<CardData> All
         {
             get { EnsureInit(); return _all; }
         }
 
+        // 카드 ID로 효과 목록 조회
         public static IReadOnlyList<CardEffectData> GetEffects(int cardId)
         {
             EnsureInit();
@@ -53,16 +51,14 @@ namespace Battle.Card
                 : (IReadOnlyList<CardEffectData>)Array.Empty<CardEffectData>();
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 시작 덱 구성
-        // ─────────────────────────────────────────────────────────────
-
+        // 덱 구성 한 항목(카드 ID + 수량)
         [Serializable]
         public struct DeckEntry
         {
-            public int cardId;
-            public int count;
+            public int cardId; // 카드 ID
+            public int count;  // 수량
 
+            // 카드 ID와 수량으로 생성
             public DeckEntry(int cardId, int count)
             {
                 this.cardId = cardId;
@@ -70,18 +66,16 @@ namespace Battle.Card
             }
         }
 
-        /// <summary>테스트 기본 덱 (사용자 지정 — 불/물/바람 일부).</summary>
+        // 테스트 전용 프로토타입 기본 덱 구성 반환
         public static List<DeckEntry> DefaultPrototypeDeckEntries()
         {
             return new List<DeckEntry>
             {
-                // 불
                 new DeckEntry(106, 1),
                 new DeckEntry(107, 1),
                 new DeckEntry(115, 1),
                 new DeckEntry(116, 1),
                 new DeckEntry(118, 1),
-                // 물
                 new DeckEntry(203, 2),
                 new DeckEntry(207, 1),
                 new DeckEntry(211, 1),
@@ -89,7 +83,6 @@ namespace Battle.Card
                 new DeckEntry(218, 1),
                 new DeckEntry(220, 1),
                 new DeckEntry(221, 1),
-                // 바람
                 new DeckEntry(308, 2),
                 new DeckEntry(312, 1),
                 new DeckEntry(313, 2),
@@ -98,26 +91,23 @@ namespace Battle.Card
             };
         }
 
-        /// <summary>
-        /// 기획서 0.6v 기본 시작 덱 — 4속성 × (기본 공격 게이지1/피해5, 기본 방어 게이지1/방어도3) = 총 8장.
-        /// 실제 게임 런(RunDeckState)이 이 덱으로 시작. (DefaultPrototypeDeckEntries는 테스트 전용)
-        /// </summary>
+        // 실제 게임 런이 사용하는 기본 시작 덱(4속성 8장) 반환
         public static List<DeckEntry> DefaultStartingDeckEntries()
         {
             return new List<DeckEntry>
             {
-                new DeckEntry(100, 1), // 불 기본 공격 (피해5)
-                new DeckEntry(101, 1), // 불 기본 방어 (방어도3)
-                new DeckEntry(200, 1), // 물 기본 공격
-                new DeckEntry(201, 1), // 물 기본 방어
-                new DeckEntry(300, 1), // 바람 기본 공격
-                new DeckEntry(301, 1), // 바람 기본 방어
-                new DeckEntry(400, 1), // 땅 기본 공격
-                new DeckEntry(401, 1), // 땅 기본 방어
+                new DeckEntry(100, 1),
+                new DeckEntry(101, 1),
+                new DeckEntry(200, 1),
+                new DeckEntry(201, 1),
+                new DeckEntry(300, 1),
+                new DeckEntry(301, 1),
+                new DeckEntry(400, 1),
+                new DeckEntry(401, 1),
             };
         }
 
-        /// <summary>DeckEntry 리스트를 실제 CardInstance 리스트로 변환.</summary>
+        // DeckEntry 목록을 CardInstance 목록으로 변환
         public static List<CardInstance> InstantiateDeck(IList<DeckEntry> entries)
         {
             EnsureInit();
@@ -139,15 +129,13 @@ namespace Battle.Card
             return list;
         }
 
+        // 프로토타입 기본 덱을 인스턴스화해 반환
         public static List<CardInstance> BuildDefaultPrototypeDeck()
         {
             return InstantiateDeck(DefaultPrototypeDeckEntries());
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 파편/무속성 생성
-        // ─────────────────────────────────────────────────────────────
-
+        // 무작위 파편 카드 인스턴스 생성
         public static CardInstance CreateFragmentInstance()
         {
             EnsureInit();
@@ -155,6 +143,7 @@ namespace Battle.Card
             return new CardInstance(_byId[pick], transient: true);
         }
 
+        // 지정 ID의 파편 카드 인스턴스 생성
         public static CardInstance CreateFragmentInstance(int fragmentId)
         {
             EnsureInit();
@@ -162,7 +151,7 @@ namespace Battle.Card
             return new CardInstance(_byId[fragmentId], transient: true);
         }
 
-        /// <summary>무속성 더미 카드(500) 생성 — 방해 행동용.</summary>
+        // 무속성 더미 카드 인스턴스 생성
         public static CardInstance CreateNeutralFillerInstance()
         {
             EnsureInit();
@@ -171,16 +160,14 @@ namespace Battle.Card
                 : null;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // JSON 로드
-        // ─────────────────────────────────────────────────────────────
-
+        // 카드/효과 JSON 전체 로드
         static void LoadAll()
         {
             LoadCards();
             LoadEffects();
         }
 
+        // Cards.json 로드 및 파싱
         static void LoadCards()
         {
             _all = new List<CardData>();
@@ -227,6 +214,7 @@ namespace Battle.Card
             }
         }
 
+        // CardEffects.json 로드 및 파싱
         static void LoadEffects()
         {
             _effectsByCard = new Dictionary<int, List<CardEffectData>>();
@@ -261,6 +249,7 @@ namespace Battle.Card
             }
         }
 
+        // 문자열을 CardElement로 파싱
         static CardElement ParseElement(string raw)
         {
             if (string.IsNullOrEmpty(raw)) return CardElement.Neutral;
@@ -278,6 +267,7 @@ namespace Battle.Card
             }
         }
 
+        // 문자열을 CardType으로 파싱
         static CardType ParseType(string raw)
         {
             if (string.IsNullOrEmpty(raw)) return CardType.Skill;
@@ -292,6 +282,7 @@ namespace Battle.Card
             }
         }
 
+        // 문자열을 CardRarity로 파싱
         static CardRarity ParseRarity(string raw)
         {
             if (string.IsNullOrEmpty(raw)) return CardRarity.Normal;
@@ -306,27 +297,28 @@ namespace Battle.Card
             }
         }
 
-        // JsonUtility 파싱용 DTO (Cards.json 스키마와 1:1).
+        // Cards.json 파싱용 DTO 래퍼
         [Serializable]
         class CardJsonList
         {
-            public List<CardJson> cards = new List<CardJson>();
+            public List<CardJson> cards = new List<CardJson>(); // 카드 원본 리스트
         }
 
+        // Cards.json 한 카드 원본 스키마
         [Serializable]
         class CardJson
         {
-            public int id;
-            public string name;
-            public string element;
-            public string type;
-            public int gauge;
-            public string rarity;
-            public string[] tags;
-            public bool comboSlot;
-            public string effectName;
-            public string skillImg;
-            public string description;
+            public int id;             // 카드 ID
+            public string name;        // 이름
+            public string element;     // 속성 문자열
+            public string type;        // 유형 문자열
+            public int gauge;          // 게이지 코스트
+            public string rarity;      // 등급 문자열
+            public string[] tags;      // 태그 목록
+            public bool comboSlot;     // 콤보 슬롯 여부
+            public string effectName;  // 효과명
+            public string skillImg;    // 스킬 이미지명
+            public string description; // 설명
         }
     }
 }

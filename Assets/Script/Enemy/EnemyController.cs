@@ -6,34 +6,35 @@ using Coffee.UIExtensions;
 public class EnemyController : MonoBehaviour, IBattleUnit
 {
     [Header("공격 설정")]
-    [SerializeField] private int fallbackGaugeFullDamage = 10;
-    [SerializeField] private ParticleSystem hitVFX;
+    [SerializeField] private int fallbackGaugeFullDamage = 10; // 게이지 가득 시 폴백 피해
+    [SerializeField] private ParticleSystem hitVFX; // 적 공격 파티클
     [Tooltip("적 공격 파티클(hitVFX)을 UI 위에 렌더(UIParticle)할 때 배율. 안 보이면 키우고, 너무 크면 줄이세요(플레이로 튜닝).")]
-    [SerializeField] private float hitVfxUiScale = 100f;
+    [SerializeField] private float hitVfxUiScale = 100f; // 공격 파티클 UI 배율
     [Tooltip("적 공격 파티클(hitVFX) 재생 속도 배율 — 1 미만이면 더 천천히(=더 오래) 보인다. 순식간에 사라질 때 낮춰라.")]
     [Range(0.2f, 2f)]
-    [SerializeField] private float hitVfxPlaybackSpeed = 0.7f;
+    [SerializeField] private float hitVfxPlaybackSpeed = 0.7f; // 공격 파티클 재생 속도 배율
 
     [Header("새 전투 시스템 공격 시퀀스 (PDF: 16-18-40 순환)")]
-    [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 };
-    private int _newSystemAttackIndex = 0;
-    // 기획서 0.6v [방해행동-강화]: 다음 공격 1회 한정 +50% 피해
-    private bool _nextAttackBuffed = false;
+    [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 }; // 새 시스템 공격 피해 시퀀스
+    private int _newSystemAttackIndex = 0; // 현재 공격 시퀀스 인덱스
+    private bool _nextAttackBuffed = false; // 다음 공격 +50% 강화 여부
 
-    private EnemyStat stat;
-    private EnemyView view;
-    private Player player;
-    private RoundManager roundManager;
-    private bool isDead = false;
-    private MonsterMidPattern midPattern;
-    private bool _attackPreviewInitialized;
+    private EnemyStat stat; // 적 스탯 컴포넌트
+    private EnemyView view; // 적 뷰 컴포넌트
+    private Player player; // 플레이어 참조
+    private RoundManager roundManager; // 라운드 매니저 참조
+    private bool isDead = false; // 사망 처리 여부
+    private MonsterMidPattern midPattern; // 방해행동 패턴 컴포넌트
+    private bool _attackPreviewInitialized; // 공격 예고 초기화 여부
 
+    // 스탯/뷰 컴포넌트를 캐싱한다
     private void Awake()
     {
         stat = GetComponent<EnemyStat>();
         view = GetComponent<EnemyView>();
     }
 
+    // 참조를 해결하고 이벤트 구독 및 공격 파티클을 설정한다
     private void Start()
     {
         player = Player.Resolve(true);
@@ -73,6 +74,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
     }
 
+    // 이벤트 구독을 해제한다
     void OnDestroy()
     {
         stat.OnDied -= HandleDeath;
@@ -82,6 +84,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (view != null) view.OnAttackMotionLastFrame -= PlayAttackVfx;
     }
 
+    // 새 시스템 공격 예고를 한 번 지연 초기화한다
     void Update()
     {
         if (!stat.IsAlive) return;
@@ -94,7 +97,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
     }
 
-    /// <summary>새 시스템 모드: 다음 공격 시퀀스 값을 EnemyView에 미리 표시.</summary>
+    // 새 시스템 모드에서 다음 공격 시퀀스 값을 뷰에 미리 표시한다
     void UpdateAttackPreviewForNewSystem()
     {
         if (Battle.NewBattleController.Instance == null) return;
@@ -105,6 +108,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         view.SetAttackPreviewDamage(nextDamage);
     }
 
+    // 카드 타입을 고려해 적에게 피해를 가한다
     public void TakeDamage(float damage, string cardtype = "normal")
     {
         if (!stat.IsAlive) return;
@@ -124,12 +128,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
     }
 
+    // 기본 카드 타입으로 피해를 가한다
     public void TakeDamage(float damage)
     {
         TakeDamage(damage, "Default");
     }
 
-    public event Action<string, int> OnStatusChanged;
+    public event Action<string, int> OnStatusChanged; // 상태이상 변경 이벤트
+    // 상태이상 스택을 더하고 변경 신호를 보낸다
     public void AddStatus(string type, int amount)
     {
         if (!stat.statusEffects.ContainsKey(type)) return;
@@ -145,11 +151,13 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         OnStatusChanged?.Invoke(type, stat.statusEffects[type]);
     }
 
+    // 상태이상 스택 값을 조회한다
     public int GetStatus(string type)
     {
         return stat.statusEffects.ContainsKey(type) ? stat.statusEffects[type] : 0;
     }
 
+    // 상태이상 스택을 지정 값으로 설정한다
     public void SetStatus(string type, int amount)
     {
         if (stat.statusEffects.ContainsKey(type))
@@ -159,21 +167,24 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             OnStatusChanged?.Invoke(type, v);
         }
     }
+    // 적 공격력을 반환한다
     public float GetAttackDamage()
     {
         return stat.attackDamage;
     }
 
+    // 방어도를 더한다
     public void AddGuard(float amount)
     {
         stat.guard = Mathf.Clamp(stat.guard + amount, 0f, 999f); // 기획서 0.6v: 방어도 최대 999
     }
-    /// <summary>Called by ElementSlotSystem each time the player uses a slot</summary>
+    // 플레이어가 슬롯을 사용할 때마다 호출 — 게이지를 한 단계 소비한다
     public void OnPlayerAction()
     {
         stat.ConsumeGaugeStep();
     }
 
+    // 방해행동을 실행하고 알림을 표시한다
     void HandleMidPattern()
     {
         string patternMessage = null;
@@ -199,11 +210,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         view?.ShowMidPatternNotice(patternMessage);
     }
 
-    /// <summary>기획서 0.6v [방해행동-강화]: 다음 적 공격 1회를 +50% 강화.</summary>
+    // 기획서 0.6v [방해행동-강화]: 다음 적 공격 1회를 +50% 강화한다
     public void BuffNextAttack() => _nextAttackBuffed = true;
-    /// <summary>다음 공격이 이미 강화(+50%) 걸려 있는지 — 적 AI 중복 강화 방지용.</summary>
-    public bool IsNextAttackBuffed => _nextAttackBuffed;
+    public bool IsNextAttackBuffed => _nextAttackBuffed; // 다음 공격 강화 적용 여부
 
+    // 게이지 가득 시 화상/강화를 처리하고 적 공격을 실행한다
     void HandleGaugeFull()
     {
         midPattern?.OnGauge10();
@@ -256,11 +267,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         UpdateAttackPreviewForNewSystem();
     }
 
-    /// <summary>
-    /// PDF [화상]: 적 공격 시 피격 처리 전 발동
-    /// 1. 화상 스택 N만큼 고정피해
-    /// 2. 화상 스택 n/2 (절반 감소)
-    /// </summary>
+    // PDF [화상]: 적 공격 전 화상 스택만큼 고정피해를 주고 화상을 절반으로 줄인다
     void ApplyBurnBeforeAttack()
     {
         if (stat == null) return;
@@ -284,6 +291,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         OnStatusChanged?.Invoke("burn", after);
         Debug.Log($"[화상] 적 {burn} 고정피해, 잔여 화상={after}{(burnPersists ? " (유지)" : "")}");
     }
+    // 공격 모션과 함께 지정 횟수만큼 연타 피해를 가한다
     IEnumerator ExecuteMultiHit(int count, int damage)
     {
         view?.PlayAttackMotion(); // 공격 모션(이미지 교체) 재생 — 피격 방식과 동일 구조
@@ -299,7 +307,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         Debug.Log($"[EnemyController] {count} hit");
     }
 
-    /// <summary>적 공격 파티클(hitVFX) 재생 — 비활성 시 활성화 보장 후 재시작. 공격 시작/마지막 프레임 양쪽에서 호출.</summary>
+    // 적 공격 파티클을 활성화 보장 후 재생한다
     void PlayAttackVfx()
     {
         if (hitVFX == null) return;
@@ -308,6 +316,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         hitVFX.Stop();
         hitVFX.Play();
     }
+    // 사망 처리 후 피격 연출이 끝나면 적을 제거한다
     void HandleDeath()
     {
         if (isDead) return;
@@ -320,6 +329,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         StartCoroutine(DestroyAfterHitReaction());
     }
 
+    // 피격 연출이 끝날 때까지 대기한 뒤 오브젝트를 파괴한다
     IEnumerator DestroyAfterHitReaction()
     {
         float wait = view != null ? view.HitReactionRemaining : 0f;

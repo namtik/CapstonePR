@@ -3,37 +3,34 @@ using System.Collections.Generic;
 
 namespace Battle.Card
 {
-    /// <summary>
-    /// CardEffects.json 한 줄 = 한 효과 블록.
-    /// 카드 한 장은 EffectIndex 1, 2, ... 로 여러 효과를 가질 수 있다.
-    /// (Phase 1: 데이터로 로드해 메타데이터로 보존. 인터프리터는 단계적으로 확장.)
-    /// </summary>
+    // 카드 효과 한 블록을 나타내는 데이터 모델
     [Serializable]
     public class CardEffectData
     {
-        public int cardId;
-        public int index;
-        public string when;
-        public string ifCond;
-        public string doAction;
-        public string target;
-        public int amount;
-        public string formula;
-        public int hits;
-        public string hitFormula;
-        public string status;
-        public string cardFilter;
-        public string fromZone;
-        public string toZone;
-        public string select;
-        public string repeat;
-        public string extra;
-        public string runtimeKey;
+        public int cardId;        // 대상 카드 ID
+        public int index;         // 효과 순서 인덱스
+        public string when;       // 발동 시점
+        public string ifCond;     // 발동 조건
+        public string doAction;   // 실행 동사
+        public string target;     // 대상
+        public int amount;        // 수치
+        public string formula;    // 수치 공식
+        public int hits;          // 타격 횟수
+        public string hitFormula; // 타격 횟수 공식
+        public string status;     // 상태이상 키
+        public string cardFilter; // 카드 필터
+        public string fromZone;   // 출발 존
+        public string toZone;     // 도착 존
+        public string select;     // 선택 모드
+        public string repeat;     // 반복 모드
+        public string extra;      // 추가 파라미터
+        public string runtimeKey; // 런타임 키
     }
 
+    // 카드 효과 목록(JSON 파싱용 래퍼)
     [Serializable]
     public class CardEffectDataList
     {
-        public List<CardEffectData> effects = new List<CardEffectData>();
+        public List<CardEffectData> effects = new List<CardEffectData>(); // 효과 리스트
     }
 }

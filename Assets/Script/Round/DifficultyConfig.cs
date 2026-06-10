@@ -4,17 +4,17 @@ using UnityEngine;
 public class DifficultyConfig : ScriptableObject
 {
     [Header("ÃÑ ÄÃ·³ ¼ö")]
-    public int totalColumns = 10;
+    public int totalColumns = 10; // ì „ì²´ ì—´(ì»¬ëŸ¼) ìˆ˜
 
     [Header("½ºÅÈ ¹èÀ² Ä¿ºê (x: ÄÃ·³ ÁøÇàµµ 0~1, y: ¹èÀ²)")]
-    public AnimationCurve hpCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 3f);
-    public AnimationCurve attackCountCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 3f);
+    public AnimationCurve hpCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 3f); // ì§„í–‰ë„ë³„ ì²´ë ¥ ë°°ìœ¨ ê³¡ì„ 
+    public AnimationCurve attackCountCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 3f); // ì§„í–‰ë„ë³„ ê³µê²© íšŸìˆ˜ ë°°ìœ¨ ê³¡ì„ 
 
     [Header("Å¸ÀÔº° Ãß°¡ ¹èÀ²")]
-    public float eliteMultiplier = 1.8f;  // Á¤¿¹ ¹èÀ²
-    public float bossMultiplier = 2.0f;  // º¸½º ¹èÀ²    
+    public float eliteMultiplier = 1.8f; // ì •ì˜ˆ ì¶”ê°€ ë°°ìœ¨
+    public float bossMultiplier = 2.0f; // ë³´ìŠ¤ ì¶”ê°€ ë°°ìœ¨
 
-    // ÄÃ·³ ÀÎµ¦½º ¡æ ¹èÀ² °è»ê
+    // ì—´ ì¸ë±ìŠ¤ì™€ ë…¸ë“œ íƒ€ì…ìœ¼ë¡œ ì²´ë ¥ ë°°ìœ¨ì„ ê³„ì‚°í•œë‹¤.
     public float GetHpMultiplier(int column, NodeType type)
     {
         float t = (float)column / totalColumns;
@@ -22,6 +22,7 @@ public class DifficultyConfig : ScriptableObject
         return baseMultiplier * GetTypeMultiplier(type);
     }
 
+    // ê¸°ë³¸ ê³µê²© íšŸìˆ˜ì— ì§„í–‰ë„/íƒ€ì… ë°°ìœ¨ì„ ì ìš©í•´ ìµœì¢… ê³µê²© íšŸìˆ˜ë¥¼ ê³„ì‚°í•œë‹¤.
     public int GetAttackCount(int baseCount, int column, NodeType type)
     {
         float t = (float)column / totalColumns;
@@ -30,6 +31,7 @@ public class DifficultyConfig : ScriptableObject
     }
 
 
+    // ë…¸ë“œ íƒ€ì…ë³„ ì¶”ê°€ ë°°ìœ¨ì„ ë°˜í™˜í•œë‹¤.
     float GetTypeMultiplier(NodeType type) => type switch
     {
         NodeType.Elite => eliteMultiplier,

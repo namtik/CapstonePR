@@ -7,125 +7,123 @@ using UnityEngine.Serialization;
 public class EnemyView : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private bool autoBindOnValidate = true;
-    [SerializeField] private Slider hpBar;
-    [SerializeField] private Slider actionGaugeBar;
-    [SerializeField] private TMP_Text damageText;
-    [SerializeField] private Image enemyImage;
+    [SerializeField] private bool autoBindOnValidate = true; // OnValidate 시 자동 바인딩 여부
+    [SerializeField] private Slider hpBar; // 체력 바
+    [SerializeField] private Slider actionGaugeBar; // 행동 게이지 바
+    [SerializeField] private TMP_Text damageText; // 데미지 텍스트 템플릿
+    [SerializeField] private Image enemyImage; // 적 이미지
 
     [Header("공격 예정 표시")]
-    [SerializeField] private TMP_Text attackPreviewText;
+    [SerializeField] private TMP_Text attackPreviewText; // 다음 공격 예고 텍스트
 
     [Header("게이지 내부 수치 텍스트")]
-    [SerializeField] private TMP_Text hpValueText;
-    [SerializeField] private TMP_Text actionGaugeValueText;
+    [SerializeField] private TMP_Text hpValueText; // HP 수치 텍스트
+    [SerializeField] private TMP_Text actionGaugeValueText; // 게이지 수치 텍스트
 
     [Header("패턴 발동 알림")]
-    [SerializeField] private bool showPatternNotice = true;
-    [SerializeField] private float patternNoticeDuration = 1.6f;
-    [SerializeField] private GameObject patternNoticeObject;
-    [SerializeField] private TMP_Text patternNoticeText;
+    [SerializeField] private bool showPatternNotice = true; // 패턴 알림 표시 여부
+    [SerializeField] private float patternNoticeDuration = 1.6f; // 패턴 알림 표시 시간
+    [SerializeField] private GameObject patternNoticeObject; // 패턴 알림 오브젝트
+    [SerializeField] private TMP_Text patternNoticeText; // 패턴 알림 텍스트
 
     [Header("데미지 연출 설정")]
-    [SerializeField] private float fadeTime = 1f;
-    [SerializeField] private float floatSpeed = 0.5f;
+    [SerializeField] private float fadeTime = 1f; // 데미지 텍스트 페이드 시간
+    [SerializeField] private float floatSpeed = 0.5f; // 데미지 텍스트 상승 속도
     [Tooltip("기본 크기 배율 — 텍스트 원본 폰트 크기에 곱해짐. 1.0=원본, 2.0=두 배.")]
-    [SerializeField] private float baseScale = 2.0f;
+    [SerializeField] private float baseScale = 2.0f; // 데미지 텍스트 기본 배율
     [Tooltip("출현 직후 임팩트 — baseScale에 곱하는 추가 배율. 1.5 = 50% 더 커졌다가 줄어듦.")]
-    [SerializeField] private float burstScale = 1.6f;
+    [SerializeField] private float burstScale = 1.6f; // 출현 임팩트 배율
     [Tooltip("burstScale에서 baseScale로 줄어드는 시간(초).")]
-    [SerializeField] private float burstDuration = 0.15f;
+    [SerializeField] private float burstDuration = 0.15f; // 임팩트 수축 시간
     [Tooltip("연출 색 강조 사용 여부.")]
-    [SerializeField] private bool overrideColor = true;
+    [SerializeField] private bool overrideColor = true; // 색 강조 사용 여부
     [Tooltip("일반 데미지 강조 색.")]
-    [SerializeField] private Color damageColor = new Color(1f, 0.92f, 0.3f, 1f);
+    [SerializeField] private Color damageColor = new Color(1f, 0.92f, 0.3f, 1f); // 일반 데미지 색
     [Tooltip("화상 등 상태이상 피해 색.")]
-    [SerializeField] private Color burnDamageColor = new Color(1f, 0.35f, 0.2f, 1f);
+    [SerializeField] private Color burnDamageColor = new Color(1f, 0.35f, 0.2f, 1f); // 화상 피해 색
     [Tooltip("연속 타격 시 겹침 방지 — 임의 X 오프셋(±). 0이면 비활성.")]
-    [SerializeField] private float randomXOffset = 60f;
+    [SerializeField] private float randomXOffset = 60f; // 데미지 텍스트 X 오프셋
     [Tooltip("연속 타격 시 겹침 방지 — 임의 Y 오프셋(±). 0이면 비활성.")]
-    [SerializeField] private float randomYOffset = 40f;
+    [SerializeField] private float randomYOffset = 40f; // 데미지 텍스트 Y 오프셋
     [Tooltip("연출 텍스트 앞에 표시할 접두어(예: '-').")]
-    [SerializeField] private string damagePrefix = "-";
+    [SerializeField] private string damagePrefix = "-"; // 데미지 접두어
 
     [Header("피격 이펙트 (파티클)")]
     [Tooltip("피격 파티클 재생 속도 배율 — 1 미만이면 더 천천히(=더 오래) 보인다. 순식간에 사라질 때 낮춰라.")]
     [Range(0.2f, 2f)]
-    [SerializeField] private float hitEffectPlaybackSpeed = 0.7f;
-    public ParticleSystem qEffect;
-    public ParticleSystem wEffect;
-    public ParticleSystem eEffect;
-    public ParticleSystem rEffect;
+    [SerializeField] private float hitEffectPlaybackSpeed = 0.7f; // 피격 파티클 재생 속도 배율
+    public ParticleSystem qEffect; // Q 카드 피격 파티클
+    public ParticleSystem wEffect; // W 카드 피격 파티클
+    public ParticleSystem eEffect; // E 카드 피격 파티클
+    public ParticleSystem rEffect; // R 카드 피격 파티클
     [FormerlySerializedAs("LEffect")]
-    public ParticleSystem lEffect;
+    public ParticleSystem lEffect; // 런처 피격 파티클
 
     [Header("피격 반응 (빨강 플래시 + 흔들기)")]
-    [SerializeField] private bool hitReactionEnabled = true;
+    [SerializeField] private bool hitReactionEnabled = true; // 피격 반응 사용 여부
     [Tooltip("흔들 대상. 비우면 몬스터 본체(이 오브젝트)의 RectTransform 사용.")]
-    [SerializeField] private RectTransform shakeTarget;
+    [SerializeField] private RectTransform shakeTarget; // 흔들기 대상
     [Tooltip("플래시(색 변경) 대상 Image. 비우면 enemyImage 사용.")]
-    [SerializeField] private Image flashTarget;
+    [SerializeField] private Image flashTarget; // 플래시 대상 이미지
     [Tooltip("피격 시 잠깐 번쩍이는 색(기본 빨강).")]
-    [SerializeField] private Color hitFlashColor = Color.red;
+    [SerializeField] private Color hitFlashColor = Color.red; // 피격 플래시 색
 
     [Header("피격 반응 — 데미지 3단계 경계")]
     [Tooltip("데미지가 이 값 미만이면 '약'. 기본 20.")]
-    [SerializeField] private float mediumDamageThreshold = 20f;
+    [SerializeField] private float mediumDamageThreshold = 20f; // 중간 단계 경계 데미지
     [Tooltip("데미지가 이 값 이상이면 '강'. 기본 60. (그 사이는 '중')")]
-    [SerializeField] private float strongDamageThreshold = 60f;
+    [SerializeField] private float strongDamageThreshold = 60f; // 강 단계 경계 데미지
 
     [Header("피격 반응 — 단계별 세기 (약/중/강)")]
-    [SerializeField] private HitReactionTier weakHit = new HitReactionTier(0.15f, 6f, 0.10f, 0.5f);
-    [SerializeField] private HitReactionTier mediumHit = new HitReactionTier(0.22f, 14f, 0.13f, 0.75f);
-    [SerializeField] private HitReactionTier strongHit = new HitReactionTier(0.32f, 26f, 0.16f, 1f);
+    [SerializeField] private HitReactionTier weakHit = new HitReactionTier(0.15f, 6f, 0.10f, 0.5f); // 약 단계 세기
+    [SerializeField] private HitReactionTier mediumHit = new HitReactionTier(0.22f, 14f, 0.13f, 0.75f); // 중 단계 세기
+    [SerializeField] private HitReactionTier strongHit = new HitReactionTier(0.32f, 26f, 0.16f, 1f); // 강 단계 세기
 
     [Header("피격 이미지 교체")]
     [Tooltip("피격 시 hitSprite로 잠깐 바꿨다가 원래 이미지로 되돌릴지 여부.")]
-    [SerializeField] private bool hitSpriteSwapEnabled = true;
+    [SerializeField] private bool hitSpriteSwapEnabled = true; // 피격 이미지 교체 사용 여부
     [Tooltip("피격 이미지를 유지하는 시간(초). 이 시간이 지나면 원래 이미지로 복귀.")]
-    [SerializeField] private float hitSpriteDuration = 0.25f;
+    [SerializeField] private float hitSpriteDuration = 0.25f; // 피격 이미지 유지 시간
     [Tooltip("피격 당한 이미지. 보통 EnemyData.hitSprite로 주입되며, 비우면 교체하지 않는다.")]
-    [SerializeField] private Sprite hitSprite;
+    [SerializeField] private Sprite hitSprite; // 피격 시 표시 이미지
 
     [Header("공격 모션 (이미지 교체 — 여러 프레임)")]
     [Tooltip("적 공격 시 attackSprites를 순서대로 잠깐 재생한 뒤 평상시 이미지로 복귀할지 여부.")]
-    [SerializeField] private bool attackMotionEnabled = true;
+    [SerializeField] private bool attackMotionEnabled = true; // 공격 모션 사용 여부
     [Tooltip("프레임당 표시 시간(초). 여러 장이면 이 간격으로 순차 재생. 0이면 모션 없음.")]
-    [SerializeField] private float attackFrameDuration = 0.08f;
+    [SerializeField] private float attackFrameDuration = 0.08f; // 공격 모션 프레임당 시간
     [Tooltip("공격 모션 프레임들. 보통 EnemyData.attackSprites로 주입되며, 비우면 모션이 재생되지 않는다.")]
-    [SerializeField] private Sprite[] attackSprites;
+    [SerializeField] private Sprite[] attackSprites; // 공격 모션 프레임들
 
-    // 피격 반응 런타임 상태
-    private Image _flashImage;
-    private Color _flashBaseColor;
-    private Coroutine _flashCo;
-    private RectTransform _shakeRt;
-    private Vector2 _shakeBasePos;
-    private Coroutine _shakeCo;
-    private float _hitReactionEndTime; // 마지막 피격 연출이 끝나는 시각(Time.time 기준)
+    private Image _flashImage; // 플래시 적용 중인 이미지
+    private Color _flashBaseColor; // 플래시 전 기준 색
+    private Coroutine _flashCo; // 플래시 코루틴
+    private RectTransform _shakeRt; // 흔들기 적용 중인 RectTransform
+    private Vector2 _shakeBasePos; // 흔들기 전 기준 위치
+    private Coroutine _shakeCo; // 흔들기 코루틴
+    private float _hitReactionEndTime; // 마지막 피격 연출이 끝나는 시각
 
-    // 피격 이미지 교체 런타임 상태
-    private Sprite _normalSprite;      // 평상시 스프라이트(피격/공격 모션 후 복귀 대상)
-    private Coroutine _hitSpriteCo;
+    private Sprite _normalSprite; // 평상시 스프라이트(복귀 대상)
+    private Coroutine _hitSpriteCo; // 피격 이미지 교체 코루틴
 
-    // 공격 모션 런타임 상태
-    private Coroutine _attackSpriteCo;
-    private float _attackMotionEndTime; // 진행 중 공격 모션이 끝나는 시각(Time.time 기준)
+    private Coroutine _attackSpriteCo; // 공격 모션 코루틴
+    private float _attackMotionEndTime; // 진행 중 공격 모션이 끝나는 시각
 
-    /// <summary>공격 모션이 마지막 프레임(임팩트 이미지)으로 바뀌는 순간 발생 — 공격 이펙트 동기화용.</summary>
-    public event System.Action OnAttackMotionLastFrame;
+    public event System.Action OnAttackMotionLastFrame; // 공격 모션 마지막 프레임 도달 이벤트
 
-    private EnemyStat stat;
-    private Vector3 damageTextOriginLocalPos;
-    private Color damageTextOriginColor;
-    private Coroutine damageCoroutine;
-    private Coroutine patternNoticeCoroutine;
+    private EnemyStat stat; // 적 스탯 컴포넌트
+    private Vector3 damageTextOriginLocalPos; // 데미지 텍스트 원점 위치
+    private Color damageTextOriginColor; // 데미지 텍스트 원본 색
+    private Coroutine damageCoroutine; // 데미지 연출 코루틴
+    private Coroutine patternNoticeCoroutine; // 패턴 알림 코루틴
 
+    // 인스펙터 리셋 시 참조를 자동 바인딩한다
     void Reset()
     {
         TryAutoBindReferences();
     }
 
+    // 값 변경 시 자동 바인딩을 시도한다
     void OnValidate()
     {
         if (!autoBindOnValidate)
@@ -134,6 +132,7 @@ public class EnemyView : MonoBehaviour
         TryAutoBindReferences();
     }
 
+    // 자식 노드를 찾아 UI/이펙트 참조를 자동으로 채운다
     void TryAutoBindReferences()
     {
         if (enemyImage == null)
@@ -186,6 +185,7 @@ public class EnemyView : MonoBehaviour
             patternNoticeText = patternNoticeObject.GetComponentInChildren<TMP_Text>(true);
     }
 
+    // 스탯 이벤트를 구독하고 캔버스/초기 UI를 설정한다
     void Awake()
     {
         stat = GetComponent<EnemyStat>();
@@ -209,6 +209,7 @@ public class EnemyView : MonoBehaviour
         UpdateActionGauge(stat != null ? (float)stat.GaugeStep / EnemyStat.GAUGE_MAX_STEPS : 0f);
     }
 
+    // 데미지 텍스트 원점/색을 캐싱하고 게이지를 초기화한다
     void Start()
     {
         if (damageText != null)
@@ -228,6 +229,7 @@ public class EnemyView : MonoBehaviour
         if (actionGaugeBar != null) actionGaugeBar.value = 0f;
     }
 
+    // 이벤트 구독을 해제하고 데미지 텍스트를 정리한다
     void OnDestroy()
     {
         stat.OnHpChanged -= UpdateHpBar;
@@ -236,8 +238,7 @@ public class EnemyView : MonoBehaviour
         delDamageText();
     }
 
-    // EnemyStat HP 변경 이벤트 핸들러
-
+    // HP 변경 시 체력 바와 수치 텍스트를 갱신한다
     void UpdateHpBar(float currentHp, float maxHp)
     {
         if (hpBar != null)
@@ -251,6 +252,7 @@ public class EnemyView : MonoBehaviour
         }
     }
 
+    // 행동 게이지 바와 수치 텍스트를 갱신한다
     public void UpdateActionGauge(float ratio) // 0~1
     {
         if (actionGaugeBar != null)
@@ -263,6 +265,7 @@ public class EnemyView : MonoBehaviour
         }
     }
 
+    // 방해행동 알림을 표시하고 일정 시간 후 숨긴다
     public void ShowMidPatternNotice(string message)
     {
         if (!showPatternNotice)
@@ -283,6 +286,7 @@ public class EnemyView : MonoBehaviour
         patternNoticeCoroutine = StartCoroutine(HidePatternNoticeAfterDelay());
     }
 
+    // 지정 시간 후 방해행동 알림을 숨긴다
     IEnumerator HidePatternNoticeAfterDelay()
     {
         yield return new WaitForSeconds(patternNoticeDuration);
@@ -294,6 +298,7 @@ public class EnemyView : MonoBehaviour
             patternNoticeObject.SetActive(false);
     }
 
+    // 공격 횟수 기반으로 공격 예고 텍스트를 갱신한다
     void UpdateAttackPreview(int count)
     {
         if (attackPreviewText == null) return;
@@ -306,17 +311,17 @@ public class EnemyView : MonoBehaviour
         attackPreviewText.text = $"{damagePerHit}x{hitCount}";
     }
 
-    /// <summary>새 전투 시스템: 다음 공격 데미지를 attackPreviewText에 표시.</summary>
+    // 새 전투 시스템: 다음 공격 데미지를 예고 텍스트에 표시한다
     public void SetAttackPreviewDamage(int damage)
     {
         if (attackPreviewText == null) return;
         attackPreviewText.text = damage.ToString();
     }
 
-    // EnemyController가 TakeDamage 직후 호출 — 히트마다 별개 텍스트 인스턴스 생성 (5x5 등 멀티히트 동시 표시)
+    // 일반 데미지 숫자를 띄운다
     public void ShowDamage(float damage) => ShowDamage(damage, isBurn: false);
 
-    /// <summary>isBurn=true이면 화상 색 사용.</summary>
+    // 데미지 숫자를 복제 텍스트로 띄운다(화상 여부에 따라 색 분기)
     public void ShowDamage(float damage, bool isBurn)
     {
         if (damageText == null) return;
@@ -340,6 +345,7 @@ public class EnemyView : MonoBehaviour
         StartCoroutine(FloatingDamageEffectFor(clone, isBurn));
     }
 
+    // 적 이미지 스프라이트를 설정하고 복귀 기준 스프라이트를 갱신한다
     public void SetSprite(Sprite sprite)
     {
         Debug.Log($"[EnemyView] enemyImage={enemyImage != null}, sprite={sprite?.name}");
@@ -348,20 +354,20 @@ public class EnemyView : MonoBehaviour
         if (_hitSpriteCo == null && _attackSpriteCo == null) _normalSprite = sprite;
     }
 
-    /// <summary>EnemyData에서 피격 당한 이미지를 주입. null이면 교체하지 않는다.</summary>
+    // EnemyData에서 피격 이미지를 주입한다
     public void SetHitSprite(Sprite sprite)
     {
         hitSprite = sprite;
     }
 
-    /// <summary>EnemyData에서 공격 모션 프레임들을 주입. 비거나 null이면 기존(인스펙터) 값 유지.</summary>
+    // EnemyData에서 공격 모션 프레임들을 주입한다
     public void SetAttackSprites(Sprite[] sprites)
     {
         if (sprites != null && sprites.Length > 0) attackSprites = sprites;
     }
 
 
-    /// <summary>각 히트마다 복제된 텍스트 인스턴스를 띄우는 코루틴 — 끝나면 자기 자신 파괴.</summary>
+    // 복제된 데미지 텍스트를 떠오르며 사라지게 하고 끝나면 파괴한다
     IEnumerator FloatingDamageEffectFor(TMP_Text textInstance, bool isBurn = false)
     {
         if (textInstance == null) yield break;
@@ -408,6 +414,7 @@ public class EnemyView : MonoBehaviour
         if (textInstance != null) Destroy(textInstance.gameObject);
     }
 
+    // 원본 데미지 텍스트를 초기 상태로 되돌린다
     void delDamageText()
     {
         if (damageText == null) return;
@@ -417,6 +424,7 @@ public class EnemyView : MonoBehaviour
         damageText.color = damageTextOriginColor;
     }
 
+    // 카드 타입에 맞는 피격 파티클을 재생한다
     public void PlayHitEffect(string cardType)
     {
         switch (cardType)
@@ -429,7 +437,7 @@ public class EnemyView : MonoBehaviour
         }
     }
 
-    /// <summary>피격 파티클 재생 — hitEffectPlaybackSpeed로 시뮬레이션 속도를 낮춰 더 오래 보이게 한다.</summary>
+    // 피격 파티클을 재생 속도를 낮춰 재생한다
     void PlayHitParticle(ParticleSystem ps)
     {
         if (ps == null) return;
@@ -445,15 +453,11 @@ public class EnemyView : MonoBehaviour
         ps.Play();
     }
 
-    // ───────────── 피격 반응: 빨강 플래시 + 흔들기 (데미지 3단계) ─────────────
+    public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time); // 피격 연출 잔여 시간(초)
 
-    /// <summary>현재 진행 중인 피격 연출(플래시+흔들기)이 끝날 때까지 남은 시간(초). 없으면 0.</summary>
-    public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time);
+    public RectTransform ShakeTarget => shakeTarget != null ? shakeTarget : (transform as RectTransform); // 흔들기 대상 RectTransform
 
-    /// <summary>피격 흔들림이 적용되는 RectTransform(미지정 시 본체). 상태 패널이 흔들림을 따라갈 때 사용.</summary>
-    public RectTransform ShakeTarget => shakeTarget != null ? shakeTarget : (transform as RectTransform);
-
-    // EnemyStat.OnDamaged 구독 핸들러 — 데미지 크기로 단계를 골라 연출 재생.
+    // 데미지 크기로 단계를 골라 피격 연출을 재생한다
     void HandleDamaged(float damage)
     {
         if (!hitReactionEnabled || damage <= 0f) return;
@@ -471,8 +475,7 @@ public class EnemyView : MonoBehaviour
         PlayHitSpriteSwap();
     }
 
-    // ───────────── 피격 이미지 교체: hitSprite로 잠깐 바꿨다가 원래대로 복귀 ─────────────
-
+    // 피격 시 이미지를 hitSprite로 잠깐 교체한다
     void PlayHitSpriteSwap()
     {
         if (!hitSpriteSwapEnabled || hitSprite == null || hitSpriteDuration <= 0f) return;
@@ -492,6 +495,7 @@ public class EnemyView : MonoBehaviour
         _hitSpriteCo = StartCoroutine(HitSpriteRoutine());
     }
 
+    // 피격 이미지를 일정 시간 보여준 뒤 평상시 이미지로 복귀시키는 코루틴
     IEnumerator HitSpriteRoutine()
     {
         if (enemyImage == null) { _hitSpriteCo = null; yield break; }
@@ -510,15 +514,11 @@ public class EnemyView : MonoBehaviour
         _hitSpriteCo = null;
     }
 
-    // ───────────── 공격 모션: attackSprites를 순서대로 재생 후 평상시 이미지로 복귀 ─────────────
+    public float AttackMotionRemaining => _attackMotionEndTime > 0f ? Mathf.Max(0f, _attackMotionEndTime - Time.time) : 0f; // 공격 모션 잔여 시간(초)
 
-    /// <summary>진행 중인 공격 모션이 끝날 때까지 남은 시간(초). 없으면 0.</summary>
-    public float AttackMotionRemaining => _attackMotionEndTime > 0f ? Mathf.Max(0f, _attackMotionEndTime - Time.time) : 0f;
+    public bool HasAttackMotion => attackMotionEnabled && attackSprites != null && attackSprites.Length > 0; // 공격 모션 재생 가능 여부
 
-    /// <summary>공격 모션(프레임 교체)이 설정되어 재생될지 여부. 없으면 마지막 프레임 이벤트도 발생하지 않는다.</summary>
-    public bool HasAttackMotion => attackMotionEnabled && attackSprites != null && attackSprites.Length > 0;
-
-    /// <summary>적 공격 시 호출 — attackSprites를 프레임마다 잠깐 보여준 뒤 평상시 이미지로 복귀.</summary>
+    // 적 공격 시 공격 모션 프레임을 순서대로 재생한다
     public void PlayAttackMotion()
     {
         if (!attackMotionEnabled || attackSprites == null || attackSprites.Length == 0) return;
@@ -543,6 +543,7 @@ public class EnemyView : MonoBehaviour
         _attackSpriteCo = StartCoroutine(AttackMotionRoutine());
     }
 
+    // 공격 모션 프레임을 순차 재생하고 마지막 프레임에서 이벤트를 발생시킨다
     IEnumerator AttackMotionRoutine()
     {
         if (enemyImage == null) { _attackSpriteCo = null; yield break; }
@@ -569,6 +570,7 @@ public class EnemyView : MonoBehaviour
         _attackSpriteCo = null;
     }
 
+    // 빨강 플래시 연출을 시작한다
     void PlayFlash(HitReactionTier tier)
     {
         if (tier == null || tier.flashDuration <= 0f || tier.flashStrength <= 0f) return;
@@ -589,6 +591,7 @@ public class EnemyView : MonoBehaviour
         _flashCo = StartCoroutine(FlashRoutine(tier));
     }
 
+    // 플래시 색에서 기준색으로 보간 복귀시키는 코루틴
     IEnumerator FlashRoutine(HitReactionTier tier)
     {
         if (_flashImage == null) { _flashCo = null; yield break; }
@@ -609,6 +612,7 @@ public class EnemyView : MonoBehaviour
         _flashCo = null;
     }
 
+    // 흔들기 연출을 시작한다
     void PlayShake(HitReactionTier tier)
     {
         if (tier == null || tier.shakeDuration <= 0f || tier.shakeMagnitude <= 0f) return;
@@ -630,6 +634,7 @@ public class EnemyView : MonoBehaviour
         _shakeCo = StartCoroutine(ShakeRoutine(tier));
     }
 
+    // 감쇠하며 위치를 흔들고 끝나면 기준 위치로 복귀시키는 코루틴
     IEnumerator ShakeRoutine(HitReactionTier tier)
     {
         if (_shakeRt == null) { _shakeCo = null; yield break; }
@@ -650,16 +655,18 @@ public class EnemyView : MonoBehaviour
         _shakeCo = null;
     }
 
-    /// <summary>피격 반응 한 단계의 세기 묶음(인스펙터 노출).</summary>
+    // 피격 반응 한 단계의 세기 묶음(인스펙터 노출)
     [System.Serializable]
     public class HitReactionTier
     {
-        [Tooltip("흔들림 지속시간(초).")] public float shakeDuration;
-        [Tooltip("흔들림 세기(픽셀).")] public float shakeMagnitude;
-        [Tooltip("빨강 플래시 지속시간(초).")] public float flashDuration;
-        [Range(0f, 1f)] [Tooltip("플래시 강도(0=변화 없음, 1=완전히 플래시 색).")] public float flashStrength;
+        [Tooltip("흔들림 지속시간(초).")] public float shakeDuration; // 흔들림 지속시간(초)
+        [Tooltip("흔들림 세기(픽셀).")] public float shakeMagnitude; // 흔들림 세기(픽셀)
+        [Tooltip("빨강 플래시 지속시간(초).")] public float flashDuration; // 플래시 지속시간(초)
+        [Range(0f, 1f)] [Tooltip("플래시 강도(0=변화 없음, 1=완전히 플래시 색).")] public float flashStrength; // 플래시 강도(0~1)
 
+        // 기본 생성자
         public HitReactionTier() { }
+        // 각 세기 값을 받아 초기화한다
         public HitReactionTier(float shakeDuration, float shakeMagnitude, float flashDuration, float flashStrength)
         {
             this.shakeDuration = shakeDuration;

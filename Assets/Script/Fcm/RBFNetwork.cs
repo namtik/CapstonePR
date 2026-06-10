@@ -1,62 +1,46 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// RBFN + 온라인 학습 (트리 모방 + Soft Update)
-/// 
-/// 온라인 학습:
-///   게이지 5: 트리 정답을 슬라이딩 윈도우에 저장
-///   게이지 10: 최소자승법으로 "이상적 가중치" 계산 → Lerp로 점진 적용
-/// 
-/// Soft Update:
-///   weights = Lerp(현재, 새값, adjustedRate)
-///   adjustedRate = learningRate * (버퍼크기 / maxMemory)
-///   → 데이터 적으면 보수적, 많으면 적극적
-///   → 초기 가중치가 자연스럽게 유지되다가 점진적으로 적응
-/// </summary>
+// RBF 네트워크 + 온라인 학습(트리 모방 + Soft Update)
 [System.Serializable]
 public class RBFNetwork
 {
-    public const int InputDim = 5;
-    public const int NumNeurons = 4;
-    public const int OutputDim = 3;
+    public const int InputDim = 5;    // 입력 차원
+    public const int NumNeurons = 4;  // 뉴런(중심) 수
+    public const int OutputDim = 3;   // 출력 행동 수
 
-    // ─── 뉴런 중심 (= FCM 중심점) ───
+    // 뉴런 중심점(= FCM 중심점)
     [SerializeField]
     private float[] centers = new float[]
     {
-        0.9006f, 0.6300f, 0.2852f, 0.4533f, 0.4917f,  // 러시형
-        0.8046f, 0.4385f, 0.4241f, 0.8153f, 0.4407f,  // 의존형
-        0.7454f, 0.4123f, 0.2149f, 0.4026f, 0.6215f,  // 탐색형
-        0.0986f, 0.0142f, 0.5773f, 0.0150f, 0.3609f,  // 버스트형
+        0.9006f, 0.6300f, 0.2852f, 0.4533f, 0.4917f,
+        0.8046f, 0.4385f, 0.4241f, 0.8153f, 0.4407f,
+        0.7454f, 0.4123f, 0.2149f, 0.4026f, 0.6215f,
+        0.0986f, 0.0142f, 0.5773f, 0.0150f, 0.3609f,
     };
 
-    [SerializeField] private float[] sigmas = new float[] { 0.4000f, 0.4000f, 0.4000f, 0.4000f };
+    [SerializeField] private float[] sigmas = new float[] { 0.4000f, 0.4000f, 0.4000f, 0.4000f }; // RBF 폭
 
-    // ─── 가중치 (오프라인 초기값 → Soft Update 갱신) ───
+    // 출력 가중치(오프라인 초기값 → Soft Update 갱신)
     [SerializeField]
     private float[] weights = new float[]
     {
-        0.8789f, -0.9828f, 0.1040f,  // 러시형
-        -0.4298f, 0.4924f, -0.0625f,  // 의존형
-        0.0444f, 0.1719f, -0.2163f,  // 탐색형
-        -0.7558f, -0.1379f, 0.8939f,   // 버스트형
+        0.8789f, -0.9828f, 0.1040f,
+        -0.4298f, 0.4924f, -0.0625f,
+        0.0444f, 0.1719f, -0.2163f,
+        -0.7558f, -0.1379f, 0.8939f,
     };
 
-    [SerializeField] private float[] biases = new float[] { 0.5022f, 0.4383f, 0.0593f };
+    [SerializeField] private float[] biases = new float[] { 0.5022f, 0.4383f, 0.0593f }; // 출력 바이어스
 
-    // ─── 온라인 학습 설정 ───
     [Header("온라인 학습")]
     [Tooltip("새 가중치 반영 비율 (0.1=보수적, 0.3=적극적)")]
-    [SerializeField] private float learningRate = 0.2f;
+    [SerializeField] private float learningRate = 0.2f;   // 학습률
 
-    private const float L2_REGULARIZATION = 0.01f;
-    private const int MIN_SAMPLES_FOR_LEARNING = 5;
+    private const float L2_REGULARIZATION = 0.01f;        // L2 정규화 계수
+    private const int MIN_SAMPLES_FOR_LEARNING = 5;       // 학습 최소 샘플 수
 
-    // ═══════════════════════════════════
-    // 순전파
-    // ═══════════════════════════════════
-
+    // 순전파: 입력 → 행동 확률(softmax)
     public float[] Forward(float[] input)
     {
         float[] phi = CalcActivations(input);
@@ -71,6 +55,7 @@ public class RBFNetwork
         return Softmax(raw);
     }
 
+    // 확률에서 행동 선택(확정 argmax 또는 확률적)
     public int SelectAction(float[] probs, bool deterministic = false)
     {
         if (deterministic)
@@ -90,18 +75,7 @@ public class RBFNetwork
         return OutputDim - 1;
     }
 
-    // ═══════════════════════════════════
-    // 온라인 학습 (최소자승법 + Soft Update)
-    // ═══════════════════════════════════
-
-    /// <summary>
-    /// 1. 최소자승법으로 "이상적 가중치" 계산
-    /// 2. Lerp로 현재 가중치에서 이상적 가중치 방향으로 점진 이동
-    /// 
-    /// adjustedRate = learningRate * (버퍼크기 / maxMemory)
-    /// → 버퍼 5개: 0.2 * 5/30 = 0.033 (거의 안 움직임)
-    /// → 버퍼 30개: 0.2 * 30/30 = 0.2 (정상 학습)
-    /// </summary>
+    // 최소자승으로 이상 가중치 계산 후 Lerp로 점진 적용
     public void RetrainWeightsOnline(List<float[]> recentFeatures, List<int> recentActions,
                                      int maxMemorySize = 30)
     {
@@ -110,7 +84,6 @@ public class RBFNetwork
 
         if (N < MIN_SAMPLES_FOR_LEARNING) return;
 
-        // 1. Phi 행렬 [N x (K+1)]
         float[,] Phi = new float[N, K + 1];
         for (int i = 0; i < N; i++)
         {
@@ -120,7 +93,6 @@ public class RBFNetwork
             Phi[i, K] = 1f;
         }
 
-        // 2. Y 원-핫 정답
         float[,] Y = new float[N, OutputDim];
         for (int i = 0; i < N; i++)
         {
@@ -129,7 +101,6 @@ public class RBFNetwork
                 Y[i, action] = 1f;
         }
 
-        // 3. A = Phi^T * Phi + λI
         float[,] A = new float[K + 1, K + 1];
         for (int i = 0; i < K + 1; i++)
             for (int j = 0; j < K + 1; j++)
@@ -141,7 +112,6 @@ public class RBFNetwork
                 A[i, j] = sum;
             }
 
-        // 4. B = Phi^T * Y
         float[,] B = new float[K + 1, OutputDim];
         for (int i = 0; i < K + 1; i++)
             for (int j = 0; j < OutputDim; j++)
@@ -152,10 +122,8 @@ public class RBFNetwork
                 B[i, j] = sum;
             }
 
-        // 5. W_ideal = A^(-1) * B
         float[,] W = SolveLinearSystem(A, B);
 
-        // 6. Soft Update: 현재 → 이상적 방향으로 점진 이동
         if (W != null)
         {
             float adjustedRate = learningRate * Mathf.Clamp01((float)N / maxMemorySize);
@@ -172,10 +140,7 @@ public class RBFNetwork
         }
     }
 
-    // ═══════════════════════════════════
-    // 가우스-조르단 소거법
-    // ═══════════════════════════════════
-
+    // 가우스-조르단 소거법으로 선형계 A x = B 풀이
     private float[,] SolveLinearSystem(float[,] A, float[,] B)
     {
         int n = A.GetLength(0);
@@ -232,10 +197,7 @@ public class RBFNetwork
         return X;
     }
 
-    // ═══════════════════════════════════
-    // RBF 뉴런
-    // ═══════════════════════════════════
-
+    // 각 RBF 뉴런 활성값(가우시안) 계산
     public float[] CalcActivations(float[] input)
     {
         float[] phi = new float[NumNeurons];
@@ -252,6 +214,7 @@ public class RBFNetwork
         return phi;
     }
 
+    // softmax 정규화
     float[] Softmax(float[] raw)
     {
         float max = raw[0];
@@ -270,10 +233,7 @@ public class RBFNetwork
         return result;
     }
 
-    // ═══════════════════════════════════
-    // 접근자
-    // ═══════════════════════════════════
-
+    // 가중치·바이어스·시그마 외부 설정
     public void SetWeights(float[] w, float[] b, float[] s)
     {
         if (w != null && w.Length == NumNeurons * OutputDim) System.Array.Copy(w, weights, weights.Length);
@@ -281,11 +241,14 @@ public class RBFNetwork
         if (s != null && s.Length == NumNeurons) System.Array.Copy(s, sigmas, sigmas.Length);
     }
 
+    // 중심점 외부 설정
     public void SetCenters(float[] c)
     {
         if (c != null && c.Length == NumNeurons * InputDim) System.Array.Copy(c, centers, centers.Length);
     }
 
+    // 가중치 복사본 반환
     public float[] GetWeights() => (float[])weights.Clone();
+    // 바이어스 복사본 반환
     public float[] GetBiases() => (float[])biases.Clone();
 }

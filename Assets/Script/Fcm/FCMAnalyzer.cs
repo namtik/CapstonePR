@@ -1,24 +1,21 @@
 using UnityEngine;
 
-/// <summary>
-/// FCM 플레이어 유형 분석기 (5차원, 4유형)
-/// 입력: [f1 긴급도, f3 반복성, f5 보충진행, f7 위협밀도, f8 슬롯균형]
-/// </summary>
+// FCM 플레이어 유형 분석기 (5차원 특성 → 4유형 소속도)
 public static class FCMAnalyzer
 {
-    // [임시 중심점] collectData로 데이터 수집 후 fcm_retrain.py로 갱신할 것
-    // 순서: [f1, f3, f5, f7, f8]
+    // 유형별 중심점 [f1,f3,f5,f7,f8]
     private static readonly float[,] Centroids = new float[,]
     {
-        { 0.9006f, 0.6300f, 0.2852f, 0.4533f, 0.4917f },  // 콤보 러시형
-        { 0.8046f, 0.4385f, 0.4241f, 0.8153f, 0.4407f },  // 경로 의존형
-        { 0.7454f, 0.4123f, 0.2149f, 0.4026f, 0.6215f },  // 탐색/분산형
-        { 0.0986f, 0.0142f, 0.5773f, 0.0150f, 0.3609f }  // 버스트형
+        { 0.9006f, 0.6300f, 0.2852f, 0.4533f, 0.4917f },
+        { 0.8046f, 0.4385f, 0.4241f, 0.8153f, 0.4407f },
+        { 0.7454f, 0.4123f, 0.2149f, 0.4026f, 0.6215f },
+        { 0.0986f, 0.0142f, 0.5773f, 0.0150f, 0.3609f }
     };
 
-    public const int ClusterCount = 4;
-    public const int FeatureDim = 5;
+    public const int ClusterCount = 4;   // 유형 수
+    public const int FeatureDim = 5;     // 특성 차원
 
+    // 특성 벡터로 각 유형 소속도 계산
     public static float[] CalcMembership(float[] features)
     {
         float[] distances = new float[ClusterCount];
@@ -58,6 +55,7 @@ public static class FCMAnalyzer
         return membership;
     }
 
+    // 소속도가 가장 높은 유형 인덱스 반환
     public static int GetDominantType(float[] membership)
     {
         int best = 0;
@@ -66,6 +64,7 @@ public static class FCMAnalyzer
         return best;
     }
 
+    // 유형 인덱스를 이름 문자열로 변환
     public static string GetTypeName(int idx) => idx switch
     {
         0 => "콤보 러시형",

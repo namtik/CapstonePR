@@ -7,107 +7,104 @@ using Battle.Card;
 
 namespace Battle.UI
 {
-    /// <summary>
-    /// NewSkillCard 프리팹에 부착하는 카드 표시 + 드래그 컴포넌트.
-    /// 프리팹 자식 이름이 표준 규칙(Nametxt / Desctxt / IconImage / guageCost / attributeImg / Background)이면
-    /// Awake에서 자동 바인딩되며, Inspector에서 직접 연결도 가능.
-    /// </summary>
+    // 카드 표시 + 드래그/호버/클릭을 처리하는 카드 뷰 컴포넌트
     public class NewCardView : MonoBehaviour,
         IBeginDragHandler, IDragHandler, IEndDragHandler,
         IPointerEnterHandler, IPointerExitHandler,
         IPointerClickHandler
     {
+        // cardId와 아이콘 스프라이트 매핑 구조체
         [System.Serializable]
         public struct CardIconEntry
         {
-            public int cardId;
-            public Sprite sprite;
+            public int cardId; // 카드 ID
+            public Sprite sprite; // 아이콘 스프라이트
         }
 
         [Header("Inspector 자동 바인딩 (비우면 자식 이름으로 자동 탐색)")]
-        [SerializeField] private Image iconImage;
-        [SerializeField] private Image attributeImage;
-        [SerializeField] private Image backgroundImage;
-        [SerializeField] private TMP_Text nameText;
-        [SerializeField] private TMP_Text descText;
-        [SerializeField] private TMP_Text gaugeText;
+        [SerializeField] private Image iconImage; // 카드 아이콘 이미지
+        [SerializeField] private Image attributeImage; // 속성 아이콘 이미지
+        [SerializeField] private Image backgroundImage; // 카드 배경 이미지
+        [SerializeField] private TMP_Text nameText; // 카드 이름 텍스트
+        [SerializeField] private TMP_Text descText; // 카드 설명 텍스트
+        [SerializeField] private TMP_Text gaugeText; // 게이지 비용 텍스트
         [Tooltip("카드 타입(공격/스킬/파워) 텍스트. 프리팹 자식 이름 'cardType'.")]
-        [SerializeField] private TMP_Text cardTypeText;
+        [SerializeField] private TMP_Text cardTypeText; // 카드 타입 텍스트
         [Tooltip("카드 타입 배경 Image. 프리팹 자식 이름 'baseCardType'.")]
-        [SerializeField] private Image cardTypeBackground;
+        [SerializeField] private Image cardTypeBackground; // 카드 타입 배경 이미지
 
         [Header("자동 바인딩 옵션")]
         [Tooltip("Awake 시 자식 이름으로 누락된 참조를 채운다.")]
-        [SerializeField] private bool autoBindOnAwake = true;
+        [SerializeField] private bool autoBindOnAwake = true; // Awake 자동 바인딩 여부
 
         [Header("속성 이미지 매핑 (attributeImg sprite)")]
-        [SerializeField] private Sprite fireElementSprite;
-        [SerializeField] private Sprite waterElementSprite;
-        [SerializeField] private Sprite windElementSprite;
-        [SerializeField] private Sprite earthElementSprite;
-        [SerializeField] private Sprite neutralElementSprite;
+        [SerializeField] private Sprite fireElementSprite; // 불 속성 스프라이트
+        [SerializeField] private Sprite waterElementSprite; // 물 속성 스프라이트
+        [SerializeField] private Sprite windElementSprite; // 바람 속성 스프라이트
+        [SerializeField] private Sprite earthElementSprite; // 땅 속성 스프라이트
+        [SerializeField] private Sprite neutralElementSprite; // 무속성 스프라이트
 
         [Header("배경 이미지 매핑 (Background sprite — 속성별)")]
         [Tooltip("ON이면 속성에 따라 Background sprite를 바꾼다.")]
-        [SerializeField] private bool useElementBackgroundSprite = true;
-        [SerializeField] private Sprite fireBackgroundSprite;
-        [SerializeField] private Sprite waterBackgroundSprite;
-        [SerializeField] private Sprite windBackgroundSprite;
-        [SerializeField] private Sprite earthBackgroundSprite;
-        [SerializeField] private Sprite neutralBackgroundSprite;
+        [SerializeField] private bool useElementBackgroundSprite = true; // 속성별 배경 사용 여부
+        [SerializeField] private Sprite fireBackgroundSprite; // 불 배경 스프라이트
+        [SerializeField] private Sprite waterBackgroundSprite; // 물 배경 스프라이트
+        [SerializeField] private Sprite windBackgroundSprite; // 바람 배경 스프라이트
+        [SerializeField] private Sprite earthBackgroundSprite; // 땅 배경 스프라이트
+        [SerializeField] private Sprite neutralBackgroundSprite; // 무속성 배경 스프라이트
 
         [Header("카드 아이콘 매핑 (IconImage sprite — cardId 기준)")]
-        [SerializeField] private List<CardIconEntry> cardIcons = new List<CardIconEntry>();
+        [SerializeField] private List<CardIconEntry> cardIcons = new List<CardIconEntry>(); // cardId별 아이콘 매핑
         [Tooltip("매핑이 없으면 Resources/CardIcons/{cardId}.png 자동 로드 시도.")]
-        [SerializeField] private bool resourcesFallback = true;
+        [SerializeField] private bool resourcesFallback = true; // 리소스 폴백 로드 여부
         [Tooltip("ON이면 카드 아이콘 자리에 속성 sprite를 그대로 사용 (카드 아이콘 미완성 임시).")]
-        [SerializeField] private bool useElementSpriteAsIcon = true;
+        [SerializeField] private bool useElementSpriteAsIcon = true; // 속성 스프라이트를 아이콘 대용
 
         [Header("크기 — 드래그/Hover 시 일시 확대")]
         [Tooltip("드래그 중 카드 크기 배율 (홈 스케일 기준).")]
-        [SerializeField] private float dragScaleMultiplier = 1.15f;
+        [SerializeField] private float dragScaleMultiplier = 1.15f; // 드래그 시 배율
         [Tooltip("Hover(마우스 위) 시 카드 크기 배율 (홈 스케일 기준).")]
-        [SerializeField] private float hoverScaleMultiplier = 1.05f;
+        [SerializeField] private float hoverScaleMultiplier = 1.05f; // 호버 시 배율
         [Tooltip("Hover 시 카드가 위로 떠오를 거리 (UI 좌표 단위).")]
-        [SerializeField] private Vector2 hoverPositionOffset = new Vector2(0f, 100f);
+        [SerializeField] private Vector2 hoverPositionOffset = new Vector2(0f, 100f); // 호버 시 상승 오프셋
 
         [Header("드로우 등장 연출 — 아래에서 위로")]
         [Tooltip("패에 새로 들어온 카드가 아래에서 떠오르는 연출 ON/OFF.")]
-        [SerializeField] private bool drawIntroEnabled = true;
+        [SerializeField] private bool drawIntroEnabled = true; // 등장 연출 사용 여부
         [Tooltip("등장 연출 길이(초).")]
-        [SerializeField] private float drawIntroDuration = 0.28f;
+        [SerializeField] private float drawIntroDuration = 0.28f; // 등장 연출 길이
         [Tooltip("등장 시작 시 홈 위치에서 아래로 떨어져 있을 거리(UI 단위).")]
-        [SerializeField] private float drawIntroRiseDistance = 240f;
+        [SerializeField] private float drawIntroRiseDistance = 240f; // 등장 상승 거리
         [Tooltip("등장 시작 시 카드 크기 배율(홈 스케일 기준). 1이면 크기 변화 없음.")]
-        [SerializeField] private float drawIntroStartScale = 0.92f;
+        [SerializeField] private float drawIntroStartScale = 0.92f; // 등장 시작 배율
 
         [Header("색상 (sprite 매핑이 없을 때 fallback)")]
-        [SerializeField] private bool tintBackgroundByElement = true;
+        [SerializeField] private bool tintBackgroundByElement = true; // 속성 색 틴트 사용 여부
         [Range(0f, 1f)]
-        [SerializeField] private float backgroundTintAlpha = 0.35f;
+        [SerializeField] private float backgroundTintAlpha = 0.35f; // 배경 틴트 강도
         [Tooltip("ON이면 카드 타입 배경(baseCardType)을 타입별 색으로 칠한다.")]
-        [SerializeField] private bool tintCardTypeBackground = false;
+        [SerializeField] private bool tintCardTypeBackground = false; // 타입 배경 틴트 여부
 
-        public CardInstance Card { get; private set; }
-        public int SlotIndex { get; set; }
-        public CardHandHUD Hud { get; set; }
+        public CardInstance Card { get; private set; } // 현재 표시 중인 카드
+        public int SlotIndex { get; set; } // 슬롯 인덱스
+        public CardHandHUD Hud { get; set; } // 소유 HUD 참조
 
-        private RectTransform _rect;
-        private CanvasGroup _canvasGroup;
-        private Vector2 _homeAnchoredPos;
-        private Transform _homeParent;
-        private int _homeSiblingIndex;
-        private Vector3 _homeLocalScale;
-        private Color _originalBackgroundColor;
-        private bool _capturedOriginalBgColor;
-        private bool _isDragging;
-        private bool _isHovering;
-        private int _hoverSlotOriginalSibling = -1;
-        private Coroutine _drawIntroCo;
-        private bool _playingIntro;
-        /// <summary>드로우 등장 연출 진행 중 — CardHandHUD가 슬롯 위치 리셋을 건너뛰는 판단에 사용.</summary>
-        public bool IsPlayingDrawIntro => _playingIntro;
+        private RectTransform _rect; // 자신의 RectTransform
+        private CanvasGroup _canvasGroup; // 알파/레이캐스트 제어용
+        private Vector2 _homeAnchoredPos; // 홈 위치
+        private Transform _homeParent; // 홈 부모
+        private int _homeSiblingIndex; // 홈 형제 인덱스
+        private Vector3 _homeLocalScale; // 홈 스케일
+        private Color _originalBackgroundColor; // 원본 배경 색
+        private bool _capturedOriginalBgColor; // 원본 배경 색 캡처 여부
+        private bool _isDragging; // 드래그 중 여부
+        private bool _isHovering; // 호버 중 여부
+        private int _hoverSlotOriginalSibling = -1; // 호버 전 형제 인덱스
+        private Coroutine _drawIntroCo; // 등장 연출 코루틴
+        private bool _playingIntro; // 등장 연출 진행 중 여부
+        public bool IsPlayingDrawIntro => _playingIntro; // 등장 연출 진행 중 여부
 
+        // 참조 바인딩과 원본 스케일/배경 색을 캡처
         void Awake()
         {
             _rect = GetComponent<RectTransform>();
@@ -115,7 +112,7 @@ namespace Battle.UI
             if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
             if (autoBindOnAwake) AutoBind();
 
-            // 프리팹 원본 스케일 보존 (CaptureHome 호출 전 hover 등에서도 활용)
+            // 프리팹 원본 스케일 보존
             _homeLocalScale = _rect.localScale;
 
             if (backgroundImage != null && !_capturedOriginalBgColor)
@@ -125,20 +122,19 @@ namespace Battle.UI
             }
         }
 
+        // 비활성화 시 연출/드래그 상태를 정리해 재사용을 안전하게 함
         void OnDisable()
         {
-            // 비활성화되면 Unity가 코루틴을 멈추므로 등장 연출 상태를 정리 — 다음 활성화 시 깨끗한 상태 보장
+            // 코루틴이 멈추므로 등장 연출 상태를 정리
             if (_drawIntroCo != null) { StopCoroutine(_drawIntroCo); _drawIntroCo = null; }
             _playingIntro = false;
 
-            // 드래그 도중 비활성화되면(손패가 바뀌어 이 뷰가 꺼지는 경우) OnEndDrag가 호출되지 않아
-            // blocksRaycasts=false로 굳는다 → 이 뷰가 풀에서 재사용될 때 '그 자리'가 영구히 클릭 안 되는
-            // 버그의 직접 원인. 비활성화 시점에 즉시 복구해 둔다(재활성화 시 클릭 가능 보장).
+            // OnEndDrag 누락으로 클릭이 막히는 것을 막기 위해 레이캐스트 복구
             _isDragging = false;
             if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
         }
 
-        /// <summary>외부(콤보 슬롯 UI 등)에서 prefab의 element sprite를 공유받기 위한 접근자.</summary>
+        // 속성에 대응하는 prefab 스프라이트를 반환
         public Sprite GetElementSprite(CardElement element) => element switch
         {
             CardElement.Fire    => fireElementSprite,
@@ -149,6 +145,7 @@ namespace Battle.UI
             _ => null
         };
 
+        // 자식 이름 규칙으로 누락된 참조를 자동 연결
         void AutoBind()
         {
             if (iconImage == null) iconImage = FindChildComponent<Image>("IconImage");
@@ -161,6 +158,7 @@ namespace Battle.UI
             if (cardTypeBackground == null) cardTypeBackground = FindChildComponent<Image>("baseCardType");
         }
 
+        // 이름이 일치하는 자식에서 컴포넌트를 탐색
         T FindChildComponent<T>(string childName) where T : Component
         {
             Transform[] all = GetComponentsInChildren<Transform>(true);
@@ -176,29 +174,24 @@ namespace Battle.UI
             return null;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 바인딩 / 표시
-        // ─────────────────────────────────────────────────────────────
-
+        // HUD와 슬롯 인덱스를 설정
         public void Bind(CardHandHUD hud, int slotIndex)
         {
             Hud = hud;
             SlotIndex = slotIndex;
         }
 
+        // 표시할 카드를 설정하고 상호작용 상태를 정상화
         public void SetCard(CardInstance card)
         {
-            // 뷰가 슬롯에 재배치될 때마다 상호작용 상태를 항상 정상화한다.
-            // 드래그 중 손패가 줄어 뷰가 비활성화되면 OnEndDrag가 안 불려 blocksRaycasts=false로
-            // 굳을 수 있는데, 이 경우 재사용된 카드가 클릭되지 않는다(손패 카드 선택 실패 원인). → 매번 복구.
+            // 재배치 시 클릭이 막히지 않도록 레이캐스트 복구
             _isDragging = false;
             if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
 
-            // 카드가 바뀌면 hover 같은 transient 상태 리셋 — 카드 사용 후 잔여 상태로
-            // 인한 손패 정렬 어긋남 방지(특히 더블클릭 사용 직후 마우스가 같은 위치에 있을 때).
+            // 카드가 바뀌면 hover 등 일시 상태를 리셋
             if (Card != card)
             {
-                CancelDrawIntro(); // 재사용되는 뷰에 남아있던 등장 연출 정리
+                CancelDrawIntro(); // 남아있던 등장 연출 정리
                 _isHovering = false;
                 if (_hoverSlotOriginalSibling >= 0 && transform.parent != null)
                 {
@@ -210,10 +203,7 @@ namespace Battle.UI
             Refresh();
         }
 
-        /// <summary>
-        /// 상점/보상 등 전투 외 UI에서 CardData만으로 NewSkillCard 비주얼을 갱신한다.
-        /// 드래그/사용 상태(Hud, CardInstance)는 건드리지 않고 카드 외형(아이콘/속성/타입/텍스트)만 반영한다.
-        /// </summary>
+        // CardData만으로 카드 외형(아이콘/속성/타입/텍스트)을 갱신
         public void ApplyShopPreview(CardData cardData, Sprite iconOverride = null)
         {
             if (cardData == null) return;
@@ -260,6 +250,7 @@ namespace Battle.UI
             }
         }
 
+        // 현재 카드 데이터로 텍스트/속성/아이콘/배경을 갱신
         public void Refresh()
         {
             if (Card == null)
@@ -268,10 +259,10 @@ namespace Battle.UI
                 return;
             }
             gameObject.SetActive(true);
-            // 등장 연출 중이 아니면 알파를 항상 1로 — 이전 연출 잔여로 카드가 투명하게 남는 것 방지
+            // 등장 연출 중이 아니면 알파를 1로 고정
             if (!_playingIntro && _canvasGroup != null) _canvasGroup.alpha = 1f;
 
-            // 새 전투 시스템: 글로벌 속성 저주 상태를 카드 인스턴스에 동기화 (시각 표시용)
+            // 글로벌 속성 저주 상태를 카드에 동기화
             if (Battle.NewBattleController.Instance != null)
             {
                 Card.cursed = Battle.NewBattleController.Instance.IsElementCursed(Card.Element);
@@ -281,41 +272,42 @@ namespace Battle.UI
             if (descText != null) descText.text = Card.data.description;
             if (gaugeText != null) gaugeText.text = Card.data.gauge.ToString();
 
-            // 카드 타입 (공격/스킬/파워)
+            // 카드 타입 표시
             if (cardTypeText != null) cardTypeText.text = CardTypeName(Card.Type);
             if (tintCardTypeBackground && cardTypeBackground != null)
                 cardTypeBackground.color = ColorForCardType(Card.Type);
 
-            // 속성 이미지
+            // 속성 이미지 적용
             ApplyAttributeSprite(Card.Element);
 
-            // 카드 아이콘
+            // 카드 아이콘 적용
             ApplyCardIcon(Card.Id);
 
-            // 배경 이미지(속성별 sprite 우선, 없으면 색 틴트)
+            // 배경 이미지 적용
             ApplyBackgroundSprite(Card.Element);
         }
 
+        // 속성에 맞는 배경 스프라이트/색을 적용
         void ApplyBackgroundSprite(CardElement element)
         {
             if (backgroundImage == null) return;
 
             bool cursed = Card != null && Card.cursed;
 
-            // 속성별 배경 sprite 우선
+            // 속성별 배경 스프라이트 우선
             if (useElementBackgroundSprite)
             {
                 Sprite s = GetBackgroundSprite(element);
                 if (s != null)
                 {
                     backgroundImage.sprite = s;
-                    // 저주 시 보라 틴트로 구분, 평소엔 원본 색(흰색)
+                    // 저주 시 보라 틴트, 평소엔 흰색
                     backgroundImage.color = cursed ? new Color(0.7f, 0.45f, 0.75f, 1f) : Color.white;
                     return;
                 }
             }
 
-            // sprite 매핑이 없으면 색 틴트 fallback
+            // 매핑이 없으면 색 틴트로 폴백
             if (tintBackgroundByElement)
             {
                 Color baseColor = _capturedOriginalBgColor ? _originalBackgroundColor : Color.white;
@@ -324,6 +316,7 @@ namespace Battle.UI
             }
         }
 
+        // 속성에 대응하는 배경 스프라이트를 반환
         Sprite GetBackgroundSprite(CardElement element) => element switch
         {
             CardElement.Fire    => fireBackgroundSprite,
@@ -334,6 +327,7 @@ namespace Battle.UI
             _ => null
         };
 
+        // 속성 아이콘 스프라이트(없으면 색)를 적용
         void ApplyAttributeSprite(CardElement element)
         {
             if (attributeImage == null) return;
@@ -354,16 +348,17 @@ namespace Battle.UI
             }
             else
             {
-                // sprite 매핑이 없으면 색으로 표시
+                // 매핑이 없으면 색으로 표시
                 attributeImage.color = ColorForElement(element, false);
             }
         }
 
+        // 우선순위에 따라 카드 아이콘 스프라이트를 적용
         void ApplyCardIcon(int cardId)
         {
             if (iconImage == null) return;
 
-            // 1순위: DB의 SkillImg 컬럼 기반 (Resources/CardIcons/{skillImg})
+            // 1순위: DB의 SkillImg 기반 로드
             if (Card != null && !string.IsNullOrEmpty(Card.data.skillImg))
             {
                 Sprite sp = Resources.Load<Sprite>($"CardIcons/{Card.data.skillImg}");
@@ -376,7 +371,7 @@ namespace Battle.UI
                 }
             }
 
-            // 2순위: Inspector 매핑
+            // 2순위: 인스펙터 매핑
             for (int i = 0; i < cardIcons.Count; i++)
             {
                 if (cardIcons[i].cardId == cardId && cardIcons[i].sprite != null)
@@ -388,7 +383,7 @@ namespace Battle.UI
                 }
             }
 
-            // 3순위: Resources/CardIcons/{cardId} (구버전 호환)
+            // 3순위: Resources 경로 로드(구버전 호환)
             if (resourcesFallback)
             {
                 Sprite resourceSprite = Resources.Load<Sprite>($"CardIcons/{cardId}");
@@ -401,7 +396,7 @@ namespace Battle.UI
                 }
             }
 
-            // 4순위(임시): 카드 아이콘 미완성 → 속성 sprite로 대체
+            // 4순위: 속성 스프라이트로 대체
             if (useElementSpriteAsIcon && Card != null)
             {
                 Sprite elementSprite = GetElementSprite(Card.Element);
@@ -414,21 +409,23 @@ namespace Battle.UI
                 }
             }
 
-            // 마지막 fallback: 속성 색만 표시
+            // 마지막 폴백: 속성 색만 표시
             iconImage.sprite = null;
             iconImage.color = ColorForElement(Card != null ? Card.Element : CardElement.Neutral, false);
         }
 
+        // 현재 위치/부모/형제 인덱스를 홈으로 캡처
         public void CaptureHome()
         {
             if (_rect == null) _rect = GetComponent<RectTransform>();
-            // 호출자가 hover offset을 제거한 상태에서 호출한다고 가정 — 여기선 현재 위치를 그대로 캡처
+            // 현재 위치를 그대로 홈으로 캡처
             _homeAnchoredPos = _rect.anchoredPosition;
             _homeParent = _rect.parent;
             _homeSiblingIndex = _rect.GetSiblingIndex();
-            // _homeLocalScale은 Awake에서 한 번 캡처한 베이스를 유지 (hover/drag 배율을 베이스로 저장하는 것을 막음)
+            // _homeLocalScale은 Awake의 베이스를 유지
         }
 
+        // 캡처한 홈 위치/부모/스케일로 복원
         public void ReturnHome()
         {
             if (_homeParent == null) return;
@@ -436,32 +433,24 @@ namespace Battle.UI
             _rect.SetSiblingIndex(_homeSiblingIndex);
             _rect.anchoredPosition = _homeAnchoredPos;
             _rect.localScale = _homeLocalScale;
-            // 슬롯이 fan layout의 회전을 가지고 있으면 localRotation=Identity가 슬롯 회전을 그대로 따름
+            // 슬롯의 fan 회전을 그대로 따름
             _rect.localRotation = Quaternion.identity;
         }
 
-        /// <summary>외부(CardHandHUD.Refresh 등)에서 카드를 슬롯에 강제 복원할 때 스케일도 베이스로 되돌린다.</summary>
+        // 스케일을 홈 베이스 값으로 되돌림
         public void ResetToHomeScale()
         {
             if (_rect == null) _rect = GetComponent<RectTransform>();
             _rect.localScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 드로우 등장 연출 (아래에서 위로 떠오름)
-        // ─────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 패에 새로 들어온 카드를 홈 위치 아래에서 위로 떠오르게 한다.
-        /// CaptureHome() 직후(홈 좌표가 확정된 상태)에 호출해야 한다.
-        /// delay: 연속 드로우 시 카드마다 시작을 늦춰 차례로 올라오는 느낌(stagger).
-        /// </summary>
+        // 새로 들어온 카드를 아래에서 위로 떠오르게 하는 등장 연출 시작
         public void PlayDrawIntro(float delay = 0f)
         {
             if (_rect == null) _rect = GetComponent<RectTransform>();
             if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
 
-            // 연출 비활성 또는 오브젝트 비활성(빈 슬롯) → 그냥 홈에 고정
+            // 연출 비활성 또는 오브젝트 비활성이면 홈에 고정
             if (!drawIntroEnabled || !isActiveAndEnabled)
             {
                 SettleIntro();
@@ -470,11 +459,10 @@ namespace Battle.UI
 
             if (_drawIntroCo != null) StopCoroutine(_drawIntroCo);
 
-            // 부채꼴 슬롯은 회전돼 있으므로, 화면 기준 '수직 아래' 오프셋을 슬롯 로컬 좌표로 변환
-            // (가장자리 카드도 비스듬하지 않고 똑바로 위로 올라오도록).
+            // 화면 기준 아래 오프셋을 슬롯 로컬 좌표로 변환
             Vector2 below = ComputeBelowOffset();
 
-            // 시작 상태를 즉시 적용 — delay(stagger) 동안 홈에서 깜빡이지 않도록 미리 아래에 숨긴다
+            // stagger 동안 깜빡이지 않도록 시작 상태를 즉시 적용
             _playingIntro = true;
             Vector3 baseScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
             _rect.anchoredPosition = _homeAnchoredPos + below;
@@ -484,19 +472,20 @@ namespace Battle.UI
             _drawIntroCo = StartCoroutine(DrawIntroRoutine(delay, baseScale, below));
         }
 
-        /// <summary>화면 기준 '수직 아래로 drawIntroRiseDistance'를 현재 슬롯(부모) 회전을 상쇄한 로컬 오프셋으로 변환.</summary>
+        // 화면 기준 아래 방향 상승 거리를 슬롯 로컬 오프셋으로 변환
         Vector2 ComputeBelowOffset()
         {
             float slotZ = (_rect != null && _rect.parent != null) ? _rect.parent.localEulerAngles.z : 0f;
             float rad = -slotZ * Mathf.Deg2Rad;
             float ry = -drawIntroRiseDistance; // 화면 기준 아래 방향
-            // Rot(rad) * (0, ry)
+            // 회전 행렬 적용
             return new Vector2(-ry * Mathf.Sin(rad), ry * Mathf.Cos(rad));
         }
 
+        // 지연 후 아래에서 홈까지 이동·확대·페이드인하는 등장 코루틴
         System.Collections.IEnumerator DrawIntroRoutine(float delay, Vector3 baseScale, Vector2 below)
         {
-            // stagger 대기 (이 동안 카드는 아래에서 알파 0으로 숨어 있음)
+            // stagger 대기(카드는 아래에서 알파 0으로 숨음)
             while (delay > 0f)
             {
                 delay -= Time.unscaledDeltaTime;
@@ -509,7 +498,7 @@ namespace Battle.UI
             while (t < 1f)
             {
                 t += Time.unscaledDeltaTime / dur;
-                float e = 1f - Mathf.Pow(1f - Mathf.Clamp01(t), 3f); // ease-out cubic — 빠르게 올라와 부드럽게 정착
+                float e = 1f - Mathf.Pow(1f - Mathf.Clamp01(t), 3f); // ease-out cubic
                 _rect.anchoredPosition = Vector2.LerpUnclamped(start, _homeAnchoredPos, e);
                 _rect.localScale = baseScale * Mathf.LerpUnclamped(drawIntroStartScale, 1f, e);
                 if (_canvasGroup != null) _canvasGroup.alpha = Mathf.Clamp01(e);
@@ -520,7 +509,7 @@ namespace Battle.UI
             SettleIntro();
         }
 
-        /// <summary>등장 연출을 즉시 끝내고 홈 위치/스케일/알파로 고정.</summary>
+        // 등장 연출을 즉시 끝내고 홈 위치/스케일/알파로 고정
         void SettleIntro()
         {
             _playingIntro = false;
@@ -532,13 +521,14 @@ namespace Battle.UI
             if (_canvasGroup != null) _canvasGroup.alpha = 1f;
         }
 
-        /// <summary>진행 중인 등장 연출을 취소(드래그/hover 시작·카드 교체 등)하고 홈으로 즉시 정착.</summary>
+        // 진행 중인 등장 연출을 취소하고 홈으로 즉시 정착
         void CancelDrawIntro()
         {
             if (_drawIntroCo != null) { StopCoroutine(_drawIntroCo); _drawIntroCo = null; }
             if (_playingIntro) SettleIntro();
         }
 
+        // 속성/저주 여부에 대응하는 색을 반환
         static Color ColorForElement(CardElement element, bool cursed)
         {
             if (cursed) return new Color(0.4f, 0.1f, 0.4f, 1f);
@@ -553,6 +543,7 @@ namespace Battle.UI
             };
         }
 
+        // 카드 타입의 표시 이름을 반환
         static string CardTypeName(CardType type) => type switch
         {
             CardType.Attack => "공격",
@@ -561,6 +552,7 @@ namespace Battle.UI
             _ => ""
         };
 
+        // 카드 타입에 대응하는 색을 반환
         static Color ColorForCardType(CardType type) => type switch
         {
             CardType.Attack => new Color(0.90f, 0.40f, 0.35f, 1f), // 빨강
@@ -569,16 +561,13 @@ namespace Battle.UI
             _ => Color.white
         };
 
-        // ─────────────────────────────────────────────────────────────
-        // 드래그
-        // ─────────────────────────────────────────────────────────────
-
+        // 드래그 시작 시 홈 캡처·드래그 레이어 이동·확대를 처리
         public void OnBeginDrag(PointerEventData eventData)
         {
             if (Card == null || Hud == null) return;
-            CancelDrawIntro(); // 등장 연출 중 잡으면 즉시 홈으로 정착 후 드래그
+            CancelDrawIntro(); // 등장 연출 중이면 즉시 홈으로 정착
 
-            // hover 상태였다면 hover offset과 슬롯 sibling을 먼저 원래대로 복원
+            // hover 상태였으면 오프셋/형제 순서를 먼저 복원
             if (_isHovering)
             {
                 ApplyHoverOffset(false);
@@ -592,7 +581,7 @@ namespace Battle.UI
             CaptureHome();
             _isDragging = true;
 
-            // dragLayer를 캔버스 최상단으로 끌어올리고 카드를 거기로 이동 (worldPositionStays=true로 시각 위치 유지)
+            // 드래그 레이어를 최상단으로 올리고 카드를 이동
             RectTransform dragLayer = Hud.DragLayer;
             if (dragLayer != null)
             {
@@ -603,16 +592,16 @@ namespace Battle.UI
 
             _canvasGroup.blocksRaycasts = false;
             ApplyScale(dragScaleMultiplier);
-            // 드래그 중엔 카드를 똑바로 (fan layout의 회전 제거)
+            // 드래그 중엔 회전 제거
             _rect.localRotation = Quaternion.identity;
-            // 위치는 그대로 — 카드는 슬롯 시각 위치에서 시작, 이후 OnDrag의 delta로 마우스를 따라감
         }
 
+        // 드래그 이동량을 스케일 보정해 위치에 누적
         public void OnDrag(PointerEventData eventData)
         {
             if (Card == null || Hud == null) return;
 
-            // PointerEventData.delta는 픽셀 이동량 → Canvas Scaler 보정 후 anchoredPosition에 누적
+            // delta를 캔버스 스케일로 보정해 누적
             RectTransform parentRect = _rect.parent as RectTransform;
             if (parentRect == null) return;
 
@@ -623,6 +612,7 @@ namespace Battle.UI
             _rect.anchoredPosition += eventData.delta / scaleFactor;
         }
 
+        // 드래그 종료 시 사용 시도, 실패하면 홈으로 복귀
         public void OnEndDrag(PointerEventData eventData)
         {
             if (Card == null || Hud == null) return;
@@ -633,7 +623,7 @@ namespace Battle.UI
             if (!used)
             {
                 ReturnHome();
-                // hover 상태가 유지될 수 있으므로 hover 표현을 다시 반영
+                // hover 상태면 hover 표현을 다시 반영
                 if (_isHovering)
                 {
                     ApplyScale(hoverScaleMultiplier);
@@ -645,19 +635,19 @@ namespace Battle.UI
                     }
                 }
             }
-            // used인 경우 CardHandHUD.Refresh가 슬롯/스케일을 다시 캡처
         }
 
+        // 호버 진입 시 확대·상승하고 최상단으로 올림
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (Hud == null) return;
             _isHovering = true;
             if (Card == null || _isDragging) return;
-            CancelDrawIntro(); // hover 시작하면 등장 연출을 끝내고 hover 표현으로 전환
+            CancelDrawIntro(); // 등장 연출을 끝내고 hover 표현으로 전환
             ApplyScale(hoverScaleMultiplier);
             ApplyHoverOffset(true);
 
-            // 슬롯 자체를 부모(handRoot) 안에서 마지막 sibling으로 → 다른 카드보다 앞에 렌더
+            // 다른 카드보다 앞에 렌더되도록 최상단으로
             if (transform.parent != null)
             {
                 _hoverSlotOriginalSibling = transform.parent.GetSiblingIndex();
@@ -665,6 +655,7 @@ namespace Battle.UI
             }
         }
 
+        // 호버 종료 시 크기/위치/형제 순서를 복원
         public void OnPointerExit(PointerEventData eventData)
         {
             if (Hud == null) return;
@@ -673,7 +664,7 @@ namespace Battle.UI
             ApplyScale(1f);
             ApplyHoverOffset(false);
 
-            // 원래 sibling 순서로 복귀
+            // 원래 형제 순서로 복귀
             if (transform.parent != null && _hoverSlotOriginalSibling >= 0)
             {
                 transform.parent.SetSiblingIndex(_hoverSlotOriginalSibling);
@@ -681,35 +672,34 @@ namespace Battle.UI
             }
         }
 
+        // 호버 오프셋을 적용/해제
         void ApplyHoverOffset(bool hovering)
         {
             if (_rect == null) return;
             _rect.anchoredPosition = hovering ? _homeAnchoredPos + hoverPositionOffset : _homeAnchoredPos;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 클릭 (카드 선택 모드)
-        // ─────────────────────────────────────────────────────────────
-
+        // 클릭 처리(선택/픽커는 단일 클릭, 일반은 더블클릭 사용)
         public void OnPointerClick(PointerEventData eventData)
         {
             if (Card == null || Hud == null) return;
-            if (_isDragging) return; // 드래그 중인 클릭은 무시
+            if (_isDragging) return; // 드래그 중 클릭 무시
 
-            // 선택/픽커 모드: 단일 클릭으로 선택 처리
+            // 선택/픽커 모드는 단일 클릭으로 선택
             if (Hud.IsSelectionMode || Hud.IsPickerMode)
             {
                 Hud.OnCardClicked(this);
                 return;
             }
 
-            // 일반 모드: 더블클릭(clickCount>=2)으로 카드 사용
+            // 일반 모드는 더블클릭으로 사용
             if (eventData.clickCount >= 2)
             {
                 Hud.TryUseFromClick(this);
             }
         }
 
+        // 홈 베이스 스케일에 배율을 곱해 적용
         void ApplyScale(float multiplier)
         {
             if (_rect == null) return;

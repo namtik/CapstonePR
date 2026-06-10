@@ -5,57 +5,44 @@ using Random = UnityEngine.Random;
 
 namespace Battle.Deck
 {
-    /// <summary>
-    /// 뽑을 카드 더미 / 패 / 버린 카드 더미 / 소멸 더미를 관리한다.
-    /// 카드 효과 자체는 CardEffectResolver가 별도로 다룬다.
-    /// </summary>
+    // 뽑을 더미/패/버린 더미/소멸 더미를 관리하는 시스템
     public class CardDeckSystem
     {
-        /// <summary>기본 손패 한도(PDF 사양). 땅19(418) 등으로 동적 증가 가능.</summary>
-        public const int HAND_LIMIT = 5;
-        /// <summary>UI 슬롯 사전 생성용 절대 상한(Excel Extra: MaxHandLimit=10 기준).</summary>
-        public const int MAX_HAND_LIMIT = 10;
-        /// <summary>현재 손패 한도(런타임 변경 가능 — 땅19/418).</summary>
-        public int HandLimit { get; private set; } = HAND_LIMIT;
+        public const int HAND_LIMIT = 5;      // 기본 손패 한도
+        public const int MAX_HAND_LIMIT = 10; // 손패 절대 상한
+        public int HandLimit { get; private set; } = HAND_LIMIT; // 현재 손패 한도
 
-        private readonly List<CardInstance> _drawPile = new List<CardInstance>();
-        private readonly List<CardInstance> _hand = new List<CardInstance>();
-        private readonly List<CardInstance> _discardPile = new List<CardInstance>();
-        private readonly List<CardInstance> _exilePile = new List<CardInstance>();
+        private readonly List<CardInstance> _drawPile = new List<CardInstance>();    // 뽑을 더미
+        private readonly List<CardInstance> _hand = new List<CardInstance>();        // 패
+        private readonly List<CardInstance> _discardPile = new List<CardInstance>(); // 버린 더미
+        private readonly List<CardInstance> _exilePile = new List<CardInstance>();   // 소멸 더미
 
-        public IReadOnlyList<CardInstance> Hand => _hand;
-        public IReadOnlyList<CardInstance> DrawPile => _drawPile;
-        public IReadOnlyList<CardInstance> DiscardPile => _discardPile;
-        public IReadOnlyList<CardInstance> ExilePile => _exilePile;
+        public IReadOnlyList<CardInstance> Hand => _hand;               // 패 읽기 전용 뷰
+        public IReadOnlyList<CardInstance> DrawPile => _drawPile;       // 뽑을 더미 읽기 전용 뷰
+        public IReadOnlyList<CardInstance> DiscardPile => _discardPile; // 버린 더미 읽기 전용 뷰
+        public IReadOnlyList<CardInstance> ExilePile => _exilePile;     // 소멸 더미 읽기 전용 뷰
 
-        public int HandCount => _hand.Count;
-        public int DrawCount => _drawPile.Count;
-        public int DiscardCount => _discardPile.Count;
-        public bool IsHandFull => _hand.Count >= HandLimit;
+        public int HandCount => _hand.Count;                   // 패 장수
+        public int DrawCount => _drawPile.Count;               // 뽑을 더미 장수
+        public int DiscardCount => _discardPile.Count;         // 버린 더미 장수
+        public bool IsHandFull => _hand.Count >= HandLimit;    // 패 가득참 여부
 
-        /// <summary>땅19(418) 등 — HandLimit를 delta만큼 증가(MAX_HAND_LIMIT 상한).</summary>
+        // 손패 한도를 delta만큼 증가(상한 적용)
         public void IncreaseHandLimit(int delta)
         {
             HandLimit = Mathf.Clamp(HandLimit + delta, HAND_LIMIT, MAX_HAND_LIMIT);
             OnPileChanged?.Invoke();
         }
 
-        /// <summary>전투 시작 시 HandLimit 초기화.</summary>
+        // 손패 한도를 기본값으로 초기화
         public void ResetHandLimit() => HandLimit = HAND_LIMIT;
 
-        public event System.Action OnPileChanged;
-        /// <summary>패로 새로 들어온 카드. gaugeSinceDrawn 리셋 등에 사용.</summary>
-        public event System.Action<CardInstance> OnCardDrawn;
-        /// <summary>패에서 버린 더미로 '버려질' 때(사용 아님) 발생 — ON_SELF_DISCARDED 트리거용.</summary>
-        public event System.Action<CardInstance> OnCardDiscarded;
-        /// <summary>버린 더미가 뽑을 더미로 리셔플될 때 발생(인자=되돌아간 카드 수). 덱 카운트업 연출용.</summary>
-        public event System.Action<int> OnReshuffled;
+        public event System.Action OnPileChanged;                  // 더미 변경 알림
+        public event System.Action<CardInstance> OnCardDrawn;      // 카드 드로우 알림
+        public event System.Action<CardInstance> OnCardDiscarded;  // 카드 버려짐 알림
+        public event System.Action<int> OnReshuffled;             // 리셔플 알림(되돌아간 카드 수)
 
-        // ─────────────────────────────────────────────────────────────
-        // 초기화
-        // ─────────────────────────────────────────────────────────────
-
-        /// <summary>전투 시작 — 시작 덱을 셔플해서 뽑을 더미로.</summary>
+        // 전투 시작 — 시작 덱을 셔플해 뽑을 더미로
         public void StartBattle(IEnumerable<CardInstance> startingDeck)
         {
             _drawPile.Clear();
@@ -69,7 +56,7 @@ namespace Battle.Deck
             OnPileChanged?.Invoke();
         }
 
-        /// <summary>전투 종료 — 임시 카드(파편 등) 제거 및 패/더미 초기화.</summary>
+        // 전투 종료 — 임시 카드 제거 및 패/더미 초기화
         public void EndBattle()
         {
             _hand.Clear();
@@ -79,11 +66,7 @@ namespace Battle.Deck
             OnPileChanged?.Invoke();
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 드로우
-        // ─────────────────────────────────────────────────────────────
-
-        /// <summary>패가 한도까지 차거나 더 이상 뽑을 카드가 없을 때까지 드로우.</summary>
+        // 패 한도까지 또는 카드 고갈까지 드로우
         public int Draw(int count)
         {
             int drawn = 0;
@@ -96,10 +79,9 @@ namespace Battle.Deck
             if (drawn > 0)
             {
                 OnPileChanged?.Invoke();
-                SfxManager.Instance?.PlayDraw(); // 드로우 효과음(배치 드로우도 1회)
+                SfxManager.Instance?.PlayDraw();
             }
 
-            // 손패가 한도에 안 찼는데 못 뽑은 경우 — 더미 고갈 진단 로그
             if (drawn < count && _hand.Count < HandLimit
                 && _drawPile.Count == 0 && _discardPile.Count == 0)
             {
@@ -110,6 +92,7 @@ namespace Battle.Deck
             return drawn;
         }
 
+        // 카드 1장 드로우 시도(더미 비면 리셔플)
         public bool TryDrawOne()
         {
             if (_drawPile.Count == 0) ReshuffleDiscardIntoDraw();
@@ -122,11 +105,11 @@ namespace Battle.Deck
             return true;
         }
 
-        /// <summary>지정 카드를 뽑을 더미에서 패로 이동(데이터 드리븐 효과용). 패가 가득 차면 실패.</summary>
+        // 지정 카드를 뽑을 더미에서 패로 이동
         public bool MoveFromDrawPileToHand(CardInstance card)
         {
             if (card == null) return false;
-            if (_hand.Count >= HandLimit) return false; // 패 한도 초과 방지
+            if (_hand.Count >= HandLimit) return false;
             int idx = _drawPile.IndexOf(card);
             if (idx < 0) return false;
             _drawPile.RemoveAt(idx);
@@ -136,7 +119,7 @@ namespace Battle.Deck
             return true;
         }
 
-        /// <summary>카드를 패에 직접 추가 (한도 초과 시 false).</summary>
+        // 카드를 패에 직접 추가(한도 초과 시 실패)
         public bool AddToHand(CardInstance card)
         {
             if (card == null) return false;
@@ -147,18 +130,19 @@ namespace Battle.Deck
             return true;
         }
 
-        /// <summary>지정 카드를 버린 더미에서 뽑을 더미 맨 위로 이동.</summary>
+        // 지정 카드를 버린 더미에서 뽑을 더미 맨 위로 이동
         public bool MoveFromDiscardToDrawPileTop(CardInstance card)
         {
             if (card == null) return false;
             int idx = _discardPile.IndexOf(card);
             if (idx < 0) return false;
             _discardPile.RemoveAt(idx);
-            _drawPile.Add(card); // 맨 위 = 다음 뽑힐 위치
+            _drawPile.Add(card);
             OnPileChanged?.Invoke();
             return true;
         }
 
+        // 버린 더미를 뽑을 더미로 합치고 셔플
         void ReshuffleDiscardIntoDraw()
         {
             if (_discardPile.Count == 0) return;
@@ -167,13 +151,10 @@ namespace Battle.Deck
             _discardPile.Clear();
             Shuffle(_drawPile);
             Debug.Log("[DeckSystem] 버린 더미 → 뽑을 더미로 셔플");
-            OnReshuffled?.Invoke(moved); // 덱 카운트업 연출 신호(되돌아간 카드 수)
+            OnReshuffled?.Invoke(moved);
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 패/더미 조작
-        // ─────────────────────────────────────────────────────────────
-
+        // 인덱스로 패에서 카드를 버린 더미로 이동
         public void DiscardFromHand(int handIndex)
         {
             if (handIndex < 0 || handIndex >= _hand.Count) return;
@@ -184,7 +165,7 @@ namespace Battle.Deck
             OnCardDiscarded?.Invoke(card);
         }
 
-        /// <summary>카드 인스턴스를 패에서 버린 더미로 이동.</summary>
+        // 카드 인스턴스를 패에서 버린 더미로 이동
         public bool DiscardCardFromHand(CardInstance card)
         {
             if (_hand.Remove(card))
@@ -197,6 +178,7 @@ namespace Battle.Deck
             return false;
         }
 
+        // 패 전체를 버린 더미로 이동
         public int DiscardAllFromHand()
         {
             int count = _hand.Count;
@@ -209,14 +191,13 @@ namespace Battle.Deck
             return count;
         }
 
-        /// <summary>카드 효과 처리 직후 호출 — 파워는 별도 보관, 일반은 버린 더미로, 소멸 키워드는 소멸 더미로.</summary>
+        // 사용 직후 카드를 유형에 따라 적절한 더미로 이동
         public void MoveAfterUse(CardInstance card, bool exile, bool poweredField)
         {
             _hand.Remove(card);
 
             if (poweredField)
             {
-                // 파워 카드는 별도 보관 (현재는 exile에 함께 보관 — 시각적으론 필드 위)
                 _exilePile.Add(card);
             }
             else if (exile)
@@ -230,6 +211,7 @@ namespace Battle.Deck
             OnPileChanged?.Invoke();
         }
 
+        // 패에서 카드를 소멸 더미로 이동
         public void ExileFromHand(CardInstance card)
         {
             if (_hand.Remove(card))
@@ -239,7 +221,7 @@ namespace Battle.Deck
             }
         }
 
-        /// <summary>패에서만 제거하여 어떤 더미에도 두지 않는다. 효과 처리 중 자기 자신 격리용.</summary>
+        // 패에서만 제거(어떤 더미에도 두지 않음)
         public bool PullFromHand(CardInstance card)
         {
             bool ok = _hand.Remove(card);
@@ -247,7 +229,7 @@ namespace Battle.Deck
             return ok;
         }
 
-        /// <summary>외부 호출자가 임시로 꺼낸 카드를 다시 적절한 더미에 배치할 때 사용.</summary>
+        // 임시로 꺼낸 카드를 적절한 더미에 재배치
         public void PlaceCardAfterUse(CardInstance card, bool exile, bool poweredField)
         {
             if (poweredField || exile) _exilePile.Add(card);
@@ -255,11 +237,13 @@ namespace Battle.Deck
             OnPileChanged?.Invoke();
         }
 
+        // 소멸 더미에서 카드 제거
         public void RemoveFromExile(CardInstance card)
         {
             if (_exilePile.Remove(card)) OnPileChanged?.Invoke();
         }
 
+        // 카드를 뽑을 더미에 무작위 위치로 삽입
         public void AddToDrawShuffled(CardInstance card)
         {
             int idx = Random.Range(0, _drawPile.Count + 1);
@@ -267,16 +251,14 @@ namespace Battle.Deck
             OnPileChanged?.Invoke();
         }
 
+        // 카드를 버린 더미에 추가
         public void AddToDiscard(CardInstance card)
         {
             _discardPile.Add(card);
             OnPileChanged?.Invoke();
         }
 
-        /// <summary>
-        /// 패/뽑을 더미/버린 더미를 주어진 스냅샷 내용으로 교체(각성 종료 시 직전 상태 복원).
-        /// null 인자는 빈 더미로 간주. 카드 인스턴스 참조를 그대로 사용한다.
-        /// </summary>
+        // 패/뽑을 더미/버린 더미를 스냅샷 내용으로 교체(상태 복원)
         public void RestorePiles(List<CardInstance> hand, List<CardInstance> draw, List<CardInstance> discard)
         {
             _hand.Clear();
@@ -288,7 +270,7 @@ namespace Battle.Deck
             OnPileChanged?.Invoke();
         }
 
-        /// <summary>뽑을 더미 전체를 소멸 더미로(불110: 패 제외 전체 소멸). 소멸된 수 반환.</summary>
+        // 뽑을 더미 전체를 소멸 더미로 이동(소멸 수 반환)
         public int ExileWholeDrawPile()
         {
             int n = _drawPile.Count;
@@ -296,7 +278,7 @@ namespace Battle.Deck
             return n;
         }
 
-        /// <summary>버린 더미 전체를 소멸 더미로(불110). 소멸된 수 반환.</summary>
+        // 버린 더미 전체를 소멸 더미로 이동(소멸 수 반환)
         public int ExileWholeDiscardPile()
         {
             int n = _discardPile.Count;
@@ -304,7 +286,7 @@ namespace Battle.Deck
             return n;
         }
 
-        /// <summary>뽑을 더미의 특정 카드를 버린 더미로 이동(땅419: 파편 사용 등). 성공 시 true.</summary>
+        // 뽑을 더미의 특정 카드를 버린 더미로 이동
         public bool MoveFromDrawPileToDiscard(CardInstance card)
         {
             if (card == null || !_drawPile.Remove(card)) return false;
@@ -313,7 +295,7 @@ namespace Battle.Deck
             return true;
         }
 
-        /// <summary>버린 더미에서 displayName이 같은 카드 모두 제거.</summary>
+        // 버린 더미에서 같은 이름 카드 모두 제거(제거 수 반환)
         public int RemoveFromDiscardByName(string displayName)
         {
             int removed = 0;
@@ -329,7 +311,7 @@ namespace Battle.Deck
             return removed;
         }
 
-        /// <summary>모든 더미(드로우/패/버린)에서 무속성 카드 추출. F 피버 발동/종료 시 사용.</summary>
+        // 모든 더미에서 콤보 슬롯 미입력 카드 추출(각성 처리용)
         public List<CardInstance> ExtractAllNeutralCards()
         {
             var extracted = new List<CardInstance>();
@@ -340,9 +322,9 @@ namespace Battle.Deck
             return extracted;
         }
 
+        // 소스 리스트에서 콤보 슬롯 미입력 카드를 격리
         static void ExtractNeutral(List<CardInstance> source, List<CardInstance> dest)
         {
-            // 피버 중 콤보 슬롯에 들어가지 않는 카드(무속성 500 + 파편 501~503) 모두 격리.
             for (int i = source.Count - 1; i >= 0; i--)
             {
                 if (source[i].data.BypassComboSlot)
@@ -353,14 +335,14 @@ namespace Battle.Deck
             }
         }
 
-        /// <summary>피버 종료 시 보관된 무속성 카드들을 버린 더미로 반환.</summary>
+        // 보관된 무속성 카드들을 버린 더미로 반환
         public void ReturnNeutralCardsToDiscard(IEnumerable<CardInstance> cards)
         {
             foreach (var c in cards) _discardPile.Add(c);
             OnPileChanged?.Invoke();
         }
 
-        /// <summary>패가 한도를 초과하면 초과분을 버린 더미로 이동.</summary>
+        // 패 한도 초과분을 버린 더미로 이동(이동 수 반환)
         public int TrimHandOverflowToDiscard()
         {
             int trimmed = 0;
@@ -375,8 +357,10 @@ namespace Battle.Deck
             return trimmed;
         }
 
+        // 더미 변경 이벤트를 외부에서 강제 발행
         public void NotifyChanged() => OnPileChanged?.Invoke();
 
+        // 리스트를 Fisher-Yates 방식으로 셔플
         static void Shuffle<T>(List<T> list)
         {
             for (int i = list.Count - 1; i > 0; i--)

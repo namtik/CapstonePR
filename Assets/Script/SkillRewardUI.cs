@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using static SkillDataParser;
 
+// 전투 보상 스킬 3종 선택지를 표시하고 선택을 처리한다
 public class SkillRewardUI : MonoBehaviour
 {
     public GameObject rewardPanel;     // 전체 패널
@@ -11,39 +12,43 @@ public class SkillRewardUI : MonoBehaviour
     public RoundManager roundManager;          // 라운드 매니저 참조
     public MapNode currentNode;                      // 현재 노드 참조
 
-    public int currentStage;
-    [SerializeField] private bool returnToMapAfterSelection = true;
+    public int currentStage; // 현재 스테이지 번호
+    [SerializeField] private bool returnToMapAfterSelection = true; // 선택 후 맵 복귀 여부
     [Header("Auto Resolve (Fallback)")]
-    [SerializeField] private string rewardPanelName = "SkillRewardUI";
-    [SerializeField] private string cardContainerName = "CardContainer";
+    [SerializeField] private string rewardPanelName = "SkillRewardUI"; // 보상 패널 자동 탐색 이름
+    [SerializeField] private string cardContainerName = "CardContainer"; // 카드 컨테이너 자동 탐색 이름
 
-    public System.Action<SkillData> OnSkillSelected;
+    public System.Action<SkillData> OnSkillSelected; // 스킬 선택 완료 이벤트
 
+    // 선택 후 맵 복귀 여부를 설정한다
     public void SetReturnToMapAfterSelection(bool enabled)
     {
         returnToMapAfterSelection = enabled;
     }
 
-    private bool isStarterSelection = false;
+    private bool isStarterSelection = false; // 초기(시작) 스킬 선택 여부
 
+    // 시작 시 참조를 확인한다
     void Awake()
     {
         ResolveReferences();
     }
 
+    // 일반 보상 스킬 선택지를 표시한다
     public void ShowRewardOptions()
     {
         isStarterSelection = false;
         ShowSkillSelection();
     }
 
-    /// <summary>게임 시작 시 초기 스킬 선택 UI 표시</summary>
+    // 게임 시작 시 초기 스킬 선택지를 표시한다
     public void ShowStarterSkillSelection()
     {
         isStarterSelection = true;
         ShowSkillSelection();
     }
 
+    // 패널을 활성화하고 무작위 스킬 카드 3장을 생성한다
     void ShowSkillSelection()
     {
         ResolveReferences();
@@ -71,7 +76,6 @@ public class SkillRewardUI : MonoBehaviour
             return;
         }
 
-        // SkillRewardUIContainer가 비활성이면 활성화 (상위 계층은 건드리지 않음)
         EnsureContainerActive(true);
         ActivateParents(transform);
         ActivateParents(rewardPanel.transform);
@@ -91,14 +95,12 @@ public class SkillRewardUI : MonoBehaviour
         if (panelRect != null && panelRect.localScale == Vector3.zero)
             panelRect.localScale = Vector3.one;
 
-        Time.timeScale = 0f; // 게임 일시정지
+        Time.timeScale = 0f;
 
-        // 기존 카드 제거
         foreach (Transform t in cardContainer) Destroy(t.gameObject);
 
         HashSet<int> learnedSkillIds = ComboSkillRepository.GetLearnedSkillIds();
 
-        // 랜덤 3개 가져오기
         List<SkillData> options = SkillDataParser.Instance.GetRandomSkills(3, learnedSkillIds);
 
         foreach (SkillData skill in options)
@@ -118,6 +120,7 @@ public class SkillRewardUI : MonoBehaviour
         }
     }
 
+    // 선택된 스킬을 학습 처리하고 맥락에 맞게 화면을 정리한다
     void OnSelectSkill(SkillData skill)
     {
         if (skill == null)
@@ -135,7 +138,6 @@ public class SkillRewardUI : MonoBehaviour
 
         OnSkillSelected?.Invoke(skill);
 
-        // 초기 스킬 선택이면 맵 복귀 없이 종료
         if (isStarterSelection)
         {
             isStarterSelection = false;
@@ -154,12 +156,13 @@ public class SkillRewardUI : MonoBehaviour
         }
     }
 
-    /// <summary>SkillRewardUI가 붙은 오브젝트만 활성/비활성 (상위 combatStage 등은 건드리지 않음)</summary>
+    // 이 오브젝트만 활성/비활성한다(상위 계층은 건드리지 않음)
     void EnsureContainerActive(bool active)
     {
         gameObject.SetActive(active);
     }
 
+    // 비어 있는 패널/컨테이너/매니저 참조를 찾거나 생성한다
     void ResolveReferences()
     {
         if (rewardPanel == null)
@@ -182,7 +185,6 @@ public class SkillRewardUI : MonoBehaviour
 
         if (cardContainer == null && rewardPanel != null)
         {
-            // 일부 씬은 rewardPanel 자체가 LayoutGroup 컨테이너 역할을 한다.
             if (rewardPanel.GetComponent<HorizontalLayoutGroup>() != null ||
                 rewardPanel.GetComponent<VerticalLayoutGroup>() != null ||
                 rewardPanel.GetComponent<GridLayoutGroup>() != null)
@@ -222,6 +224,7 @@ public class SkillRewardUI : MonoBehaviour
             roundManager = FindFirstObjectByType<RoundManager>(FindObjectsInactive.Include);
     }
 
+    // 비활성 포함 씬 오브젝트를 이름으로 검색한다
     static GameObject FindGameObjectByNameIncludingInactive(string targetName)
     {
         if (string.IsNullOrEmpty(targetName))
@@ -243,6 +246,7 @@ public class SkillRewardUI : MonoBehaviour
         return null;
     }
 
+    // 자식부터 부모까지 비활성 오브젝트를 모두 활성화한다
     static void ActivateParents(Transform child)
     {
         Transform current = child;

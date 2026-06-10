@@ -8,134 +8,141 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+// 상점 스테이지 진행 및 카드/렐릭/콤보 상품 구성·구매 처리
 public class ShopStageController : MonoBehaviour
 {
     [Header("Canvas 1 (상점 입구)")]
-    [SerializeField] private GameObject shopCanvas1;
-    [SerializeField] private Button shopOwnerButton;
-    [SerializeField] private Button leaveShopButton;
+    [SerializeField] private GameObject shopCanvas1; // 상점 입구 캔버스
+    [SerializeField] private Button shopOwnerButton; // 상점 주인 버튼
+    [SerializeField] private Button leaveShopButton; // 상점 나가기 버튼
 
     [Header("Canvas 1 - 말풍선 타이핑")]
-    [SerializeField] private TextMeshProUGUI shopBubbleText;
-    [SerializeField, TextArea(2, 4)] private string shopBubbleMessage = "무엇을 원하시오, 여행자여?";
-    [SerializeField, Min(1f)] private float shopBubbleCharsPerSecond = 28f;
-    [SerializeField] private bool completeTypingOnOwnerClick = true;
+    [SerializeField] private TextMeshProUGUI shopBubbleText; // 말풍선 텍스트
+    [SerializeField, TextArea(2, 4)] private string shopBubbleMessage = "무엇을 원하시오, 여행자여?"; // 말풍선 기본 문구
+    [SerializeField, Min(1f)] private float shopBubbleCharsPerSecond = 28f; // 타이핑 속도(초당 글자)
+    [SerializeField] private bool completeTypingOnOwnerClick = true; // 주인 클릭 시 타이핑 즉시 완료 여부
 
     [Header("Canvas 2 (상품 화면)")]
-    [SerializeField] private GameObject shopCanvas2;
-    [SerializeField] private Button backToCanvas1Button;
+    [SerializeField] private GameObject shopCanvas2; // 상품 화면 캔버스
+    [SerializeField] private Button backToCanvas1Button; // 뒤로가기 버튼
 
     [Header("Canvas 2 - 상품 루트")]
-    [SerializeField] private Transform cardOffersRoot;
-    [SerializeField] private Transform relicOffersRoot;
-    [SerializeField] private Transform comboOffersRoot;
+    [SerializeField] private Transform cardOffersRoot; // 카드 상품 루트
+    [SerializeField] private Transform relicOffersRoot; // 렐릭 상품 루트
+    [SerializeField] private Transform comboOffersRoot; // 콤보 상품 루트
 
     [Header("구조 강제 루트명")]
-    [SerializeField] private string topCardsRootName = "Top_Cards";
-    [SerializeField] private string bottomLeftRelicsRootName = "Bottom_LeftRelics";
+    [SerializeField] private string topCardsRootName = "Top_Cards"; // 카드 루트 강제 탐색 이름
+    [SerializeField] private string bottomLeftRelicsRootName = "Bottom_LeftRelics"; // 렐릭 루트 강제 탐색 이름
 
     [Header("Canvas 2 - 이름 기반 슬롯 찾기")]
-    [SerializeField] private bool useNamedSlots = true;
-    [SerializeField] private string cardSlotPrefix = "Card";
-    [SerializeField] private string relicSlotPrefix = "Relic";
-    [SerializeField] private string comboSlotPrefix = "ComboSkill";
+    [SerializeField] private bool useNamedSlots = true; // 이름 기반 슬롯 사용 여부
+    [SerializeField] private string cardSlotPrefix = "Card"; // 카드 슬롯 이름 접두사
+    [SerializeField] private string relicSlotPrefix = "Relic"; // 렐릭 슬롯 이름 접두사
+    [SerializeField] private string comboSlotPrefix = "ComboSkill"; // 콤보 슬롯 이름 접두사
 
     [Header("Canvas 2 - 공용 프리팹")]
-    [SerializeField] private GameObject shopOfferItemPrefab;
+    [SerializeField] private GameObject shopOfferItemPrefab; // 공용 상품 아이템 프리팹
 
     [Header("Canvas 2 - 컨테이너별 템플릿 (Optional)")]
-    [SerializeField] private GameObject cardOfferTemplate;
-    [SerializeField] private GameObject relicOfferTemplate;
-    [SerializeField] private GameObject comboOfferTemplate;
+    [SerializeField] private GameObject cardOfferTemplate; // 카드 상품 템플릿
+    [SerializeField] private GameObject relicOfferTemplate; // 렐릭 상품 템플릿
+    [SerializeField] private GameObject comboOfferTemplate; // 콤보 상품 템플릿
 
     [Header("렐릭 소스")]
-    [SerializeField] private RelicStageController relicStageController;
+    [SerializeField] private RelicStageController relicStageController; // 렐릭 후보 제공 컨트롤러
 
     [Header("Canvas 2 - 카드 제거")]
-    [SerializeField] private Button removeCardButton;
-    [SerializeField] private TextMeshProUGUI removeCardCostText;
-    [SerializeField] private int removeCardCost = 120;
+    [SerializeField] private Button removeCardButton; // 카드 제거 버튼
+    [SerializeField] private TextMeshProUGUI removeCardCostText; // 카드 제거 비용 텍스트
+    [SerializeField] private int removeCardCost = 120; // 카드 제거 비용
 
     [Header("표시 개수")]
-    [SerializeField] private int cardOfferCount = 5;
-    [SerializeField] private int relicOfferCount = 3;
-    [SerializeField] private int comboOfferCount = 1;
+    [SerializeField] private int cardOfferCount = 5; // 카드 상품 개수
+    [SerializeField] private int relicOfferCount = 3; // 렐릭 상품 개수
+    [SerializeField] private int comboOfferCount = 1; // 콤보 상품 개수
 
     [Header("가격 범위")]
-    [SerializeField] private int cardMinPrice = 60;
-    [SerializeField] private int cardMaxPrice = 150;
-    [SerializeField] private int relicMinPrice = 140;
-    [SerializeField] private int relicMaxPrice = 260;
-    [SerializeField] private int comboMinPrice = 180;
-    [SerializeField] private int comboMaxPrice = 320;
+    [SerializeField] private int cardMinPrice = 60; // 카드 최소 가격
+    [SerializeField] private int cardMaxPrice = 150; // 카드 최대 가격
+    [SerializeField] private int relicMinPrice = 140; // 렐릭 최소 가격
+    [SerializeField] private int relicMaxPrice = 260; // 렐릭 최대 가격
+    [SerializeField] private int comboMinPrice = 180; // 콤보 최소 가격
+    [SerializeField] private int comboMaxPrice = 320; // 콤보 최대 가격
 
     [Header("카드 표시 (Shop)")]
     [Tooltip("상점 카드(NewSkillCard) 전체 스케일")]
-    [SerializeField, Range(0.5f, 1.2f)] private float shopCardVisualScale = 1f;
+    [SerializeField, Range(0.5f, 1.2f)] private float shopCardVisualScale = 1f; // 상점 카드 비주얼 스케일
     [Tooltip("상점 카드 가격 옆 재화 아이콘 스케일")]
-    [SerializeField, Range(1f, 2.5f)] private float shopMoneyIconScale = 1.35f;
+    [SerializeField, Range(1f, 2.5f)] private float shopMoneyIconScale = 1.35f; // 상점 카드 재화 아이콘 스케일
 
     [Header("렐릭 표시 (Shop)")]
     [Tooltip("상점 렐릭 아이콘 스케일")]
-    [SerializeField, Range(1f, 2.5f)] private float shopRelicIconScale = 1.45f;
+    [SerializeField, Range(1f, 2.5f)] private float shopRelicIconScale = 1.45f; // 상점 렐릭 아이콘 스케일
     [Tooltip("상점 렐릭 가격 텍스트 폰트 크기")]
-    [SerializeField, Range(12f, 72f)] private float shopRelicPriceFontSize = 36f;
+    [SerializeField, Range(12f, 72f)] private float shopRelicPriceFontSize = 36f; // 상점 렐릭 가격 폰트 크기
 
     [Header("콤보 책 표시 (Shop)")]
-    [SerializeField] private BookRewardItemUI comboBookItemPrefab;
-    [SerializeField] private string comboBookMountName = "Mid_Combo";
-    [SerializeField, Range(0.3f, 1.5f)] private float comboBookScale = 1f;
-    [SerializeField] private Sprite comboBookFireSprite;
-    [SerializeField] private Sprite comboBookWaterSprite;
-    [SerializeField] private Sprite comboBookWindSprite;
-    [SerializeField] private Sprite comboBookEarthSprite;
+    [SerializeField] private BookRewardItemUI comboBookItemPrefab; // 콤보 책 아이템 프리팹
+    [SerializeField] private string comboBookMountName = "Mid_Combo"; // 콤보 책 장착 마운트 이름
+    [SerializeField, Range(0.3f, 1.5f)] private float comboBookScale = 1f; // 콤보 책 스케일
+    [SerializeField] private Sprite comboBookFireSprite; // 콤보 책 불 속성 스프라이트
+    [SerializeField] private Sprite comboBookWaterSprite; // 콤보 책 물 속성 스프라이트
+    [SerializeField] private Sprite comboBookWindSprite; // 콤보 책 바람 속성 스프라이트
+    [SerializeField] private Sprite comboBookEarthSprite; // 콤보 책 땅 속성 스프라이트
 
-    private readonly List<CardOffer> cardOffers = new List<CardOffer>();
-    private readonly List<RelicOffer> relicOffers = new List<RelicOffer>();
-    private readonly List<ComboOffer> comboOffers = new List<ComboOffer>();
+    private readonly List<CardOffer> cardOffers = new List<CardOffer>(); // 현재 카드 상품 목록
+    private readonly List<RelicOffer> relicOffers = new List<RelicOffer>(); // 현재 렐릭 상품 목록
+    private readonly List<ComboOffer> comboOffers = new List<ComboOffer>(); // 현재 콤보 상품 목록
 
-    private RoundManager roundManager;
-    private bool bound;
-    private Coroutine bubbleTypingRoutine;
-    private bool isBubbleTyping;
+    private RoundManager roundManager; // 라운드 매니저 참조
+    private bool bound; // 런타임 바인딩 완료 여부
+    private Coroutine bubbleTypingRoutine; // 말풍선 타이핑 코루틴
+    private bool isBubbleTyping; // 말풍선 타이핑 진행 중 여부
 
+    // 카드 상품 한 건의 데이터
     class CardOffer
     {
-        public CardData card;
-        public int price;
-        public bool purchased;
+        public CardData card; // 카드 데이터
+        public int price; // 가격
+        public bool purchased; // 구매 완료 여부
     }
 
+    // 렐릭 상품 한 건의 데이터
     class RelicOffer
     {
-        public RelicDef relic;
-        public bool isSpriteOnly;
-        public Sprite sprite;
-        public string displayName;
-        public string description;
-        public int price;
-        public bool purchased;
+        public RelicDef relic; // 렐릭 정의
+        public bool isSpriteOnly; // 스프라이트 전용(효과 미구현) 여부
+        public Sprite sprite; // 스프라이트
+        public string displayName; // 표시 이름
+        public string description; // 설명
+        public int price; // 가격
+        public bool purchased; // 구매 완료 여부
     }
 
+    // 콤보 상품 한 건의 데이터
     class ComboOffer
     {
-        public ComboSkillDef combo;
-        public int price;
-        public bool purchased;
+        public ComboSkillDef combo; // 콤보 스킬 정의
+        public int price; // 가격
+        public bool purchased; // 구매 완료 여부
     }
 
+    // 런타임 바인딩 및 말풍선 폴백 문구 캡처
     void Awake()
     {
         BindRuntime();
         CaptureBubbleFallbackText();
     }
 
+    // 활성화 시 바인딩 후 상점 진입
     void OnEnable()
     {
         BindRuntime();
         EnterShopStage();
     }
 
+    // 인스펙터 값 변경 시 범위 클램프
     void OnValidate()
     {
         shopCardVisualScale = Mathf.Clamp(shopCardVisualScale, 0.5f, 1.2f);
@@ -145,12 +152,14 @@ public class ShopStageController : MonoBehaviour
         comboBookScale = Mathf.Clamp(comboBookScale, 0.3f, 1.5f);
     }
 
+    // 라운드 매니저를 받아 상점 시작
     public void BeginShop(RoundManager manager)
     {
         roundManager = manager;
         EnterShopStage();
     }
 
+    // 버튼 클릭 리스너를 1회 바인딩
     void BindRuntime()
     {
         if (bound) return;
@@ -182,12 +191,14 @@ public class ShopStageController : MonoBehaviour
         bound = true;
     }
 
+    // 상점 진입: 입구 화면 표시 및 버튼 텍스트 갱신
     void EnterShopStage()
     {
         ShowCanvas1();
         UpdateRemoveCardButtonText();
     }
 
+    // 입구 캔버스를 표시하고 말풍선 타이핑 재생
     void ShowCanvas1()
     {
         if (shopCanvas1 != null) shopCanvas1.SetActive(true);
@@ -195,6 +206,7 @@ public class ShopStageController : MonoBehaviour
         PlayShopBubbleTyping();
     }
 
+    // 상품 화면 열기(타이핑 중이면 먼저 완료)
     void OpenShopCanvas2()
     {
         if (completeTypingOnOwnerClick && isBubbleTyping)
@@ -210,11 +222,13 @@ public class ShopStageController : MonoBehaviour
         RefreshOfferViews();
     }
 
+    // 비활성화 시 말풍선 타이핑 정지
     void OnDisable()
     {
         StopShopBubbleTyping();
     }
 
+    // 빈 문구일 때 현재 텍스트를 폴백 문구로 캡처
     void CaptureBubbleFallbackText()
     {
         if (!string.IsNullOrWhiteSpace(shopBubbleMessage)) return;
@@ -224,6 +238,7 @@ public class ShopStageController : MonoBehaviour
         shopBubbleMessage = shopBubbleText.text;
     }
 
+    // 말풍선 타이핑 연출 시작
     void PlayShopBubbleTyping()
     {
         if (shopBubbleText == null) return;
@@ -238,6 +253,7 @@ public class ShopStageController : MonoBehaviour
         bubbleTypingRoutine = StartCoroutine(TypeBubbleRoutine(message));
     }
 
+    // 글자를 한 자씩 노출하는 타이핑 코루틴
     IEnumerator TypeBubbleRoutine(string message)
     {
         isBubbleTyping = true;
@@ -261,6 +277,7 @@ public class ShopStageController : MonoBehaviour
         bubbleTypingRoutine = null;
     }
 
+    // 타이핑을 즉시 완료해 전체 문구 표시
     void CompleteShopBubbleTyping()
     {
         if (shopBubbleText == null) return;
@@ -271,6 +288,7 @@ public class ShopStageController : MonoBehaviour
         shopBubbleText.maxVisibleCharacters = int.MaxValue;
     }
 
+    // 진행 중인 타이핑 코루틴 정지
     void StopShopBubbleTyping()
     {
         isBubbleTyping = false;
@@ -280,6 +298,7 @@ public class ShopStageController : MonoBehaviour
         bubbleTypingRoutine = null;
     }
 
+    // 카드/렐릭/콤보 상품 목록을 새로 생성
     void RegenerateOffers()
     {
         BuildCardOffers();
@@ -288,6 +307,7 @@ public class ShopStageController : MonoBehaviour
         UpdateRemoveCardButtonText();
     }
 
+    // 보유하지 않은 속성 카드 풀에서 카드 상품 구성
     void BuildCardOffers()
     {
         cardOffers.Clear();
@@ -318,6 +338,7 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
+    // 렐릭 후보(스프라이트 전용)에서 렐릭 상품 구성
     void BuildRelicOffers()
     {
         relicOffers.Clear();
@@ -353,6 +374,7 @@ public class ShopStageController : MonoBehaviour
         Debug.LogWarning("[ShopStageController] RelicStageController의 sprite-only 후보를 찾지 못해 렐릭 상점 목록이 비었습니다.");
     }
 
+    // 미보유 콤보 풀에서 콤보 상품 구성
     void BuildComboOffers()
     {
         comboOffers.Clear();
@@ -392,6 +414,7 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
+    // 모든 상품 뷰 갱신
     void RefreshOfferViews()
     {
         RefreshCardOfferViews();
@@ -400,6 +423,7 @@ public class ShopStageController : MonoBehaviour
         UpdateRemoveCardButtonText();
     }
 
+    // 카드 상품을 이름 기반 슬롯에 바인딩
     void RefreshCardOfferViews()
     {
         Transform strictCardRoot = ResolveStrictCardRoot();
@@ -424,6 +448,7 @@ public class ShopStageController : MonoBehaviour
         Debug.LogWarning("[ShopStageController] 카드 표시는 named slot 모드에서만 지원됩니다. useNamedSlots를 켜주세요.");
     }
 
+    // 렐릭 상품을 이름/직접 슬롯에 바인딩
     void RefreshRelicOfferViews()
     {
         Transform strictRelicRoot = ResolveStrictRelicRoot();
@@ -442,7 +467,6 @@ public class ShopStageController : MonoBehaviour
             }
 
             Debug.LogWarning($"[ShopStageController] Bottom_LeftRelics/{relicSlotPrefix}1~{relicOfferCount} 슬롯을 모두 찾지 못했습니다. ({namedSlots.Count}/{relicOfferCount})");
-            // named slot 일부만 찾힌 경우 direct slot으로 폴백해 1~N 슬롯이 모두 바인딩되도록 한다.
         }
 
         var directSlots = CollectDirectSlots(relicOffersRoot, false);
@@ -455,6 +479,7 @@ public class ShopStageController : MonoBehaviour
         Debug.LogWarning("[ShopStageController] 렐릭 슬롯 바인딩 실패: Bottom_LeftRelics 하위 Relic 슬롯 수를 확인하세요.");
     }
 
+    // 콤보 상품을 슬롯 또는 템플릿으로 바인딩
     void RefreshComboOfferViews()
     {
         if (comboOffersRoot == null) return;
@@ -509,6 +534,7 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
+    // 카드 구매 시도(골드 차감 후 덱에 추가)
     void TryBuyCard(CardOffer offer)
     {
         if (offer == null || offer.card == null) return;
@@ -520,6 +546,7 @@ public class ShopStageController : MonoBehaviour
         RefreshOfferViews();
     }
 
+    // 렐릭 구매 시도(골드 차감 후 보유 추가)
     void TryBuyRelic(RelicOffer offer)
     {
         if (offer == null) return;
@@ -544,6 +571,7 @@ public class ShopStageController : MonoBehaviour
         RefreshOfferViews();
     }
 
+    // 콤보 구매 시도(골드 차감 후 보유 콤보 추가)
     void TryBuyCombo(ComboOffer offer)
     {
         if (offer == null || offer.combo == null) return;
@@ -563,11 +591,13 @@ public class ShopStageController : MonoBehaviour
         RefreshOfferViews();
     }
 
+    // 카드 제거 버튼 클릭(현재 준비 중)
     void OnRemoveCardButtonClicked()
     {
         Debug.Log($"[ShopStageController] 카드 제거 기능은 아직 준비 중입니다. (예정 비용: {removeCardCost})");
     }
 
+    // 골드 차감 시도 후 성공 여부 반환
     bool TrySpendMoney(int amount)
     {
         if (MoneyManager.Instance == null)
@@ -584,12 +614,14 @@ public class ShopStageController : MonoBehaviour
         return spent;
     }
 
+    // 카드 제거 버튼 텍스트 갱신
     void UpdateRemoveCardButtonText()
     {
         if (removeCardCostText != null)
             removeCardCostText.text = "카드 제거 (준비중)";
     }
 
+    // 4속성(불/물/바람/땅) 카드인지 판정
     static bool IsElementCard(CardData card)
     {
         if (card == null) return false;
@@ -599,12 +631,14 @@ public class ShopStageController : MonoBehaviour
             || card.element == CardElement.Earth;
     }
 
+    // 카드의 스킬 이미지 스프라이트를 리소스에서 로드
     static Sprite ResolveCardSprite(CardData card)
     {
         if (card == null || string.IsNullOrWhiteSpace(card.skillImg)) return null;
         return Resources.Load<Sprite>($"CardIcons/{card.skillImg}");
     }
 
+    // 소스 목록에서 중복 없이 count개를 무작위 추출
     static List<T> PickRandom<T>(List<T> source, int count)
     {
         var result = new List<T>();
@@ -623,19 +657,22 @@ public class ShopStageController : MonoBehaviour
         return result;
     }
 
+    // 템플릿 생성 정보
     struct TemplateBinding
     {
-        public GameObject template;
-        public GameObject keepObject;
+        public GameObject template; // 인스턴스화할 템플릿
+        public GameObject keepObject; // 삭제하지 않고 유지할 오브젝트
     }
 
+    // 카드 슬롯 바인딩 정보
     struct CardSlotBinding
     {
-        public Transform container;
-        public ShopOfferItemUI ui;
-        public TextMeshProUGUI priceText;
+        public Transform container; // 슬롯 컨테이너
+        public ShopOfferItemUI ui; // 상품 UI
+        public TextMeshProUGUI priceText; // 가격 텍스트
     }
 
+    // 루트의 직접 자식들에서 상품 UI 슬롯 수집
     static List<ShopOfferItemUI> CollectDirectSlots(Transform root, bool allowNewCardViewAttach)
     {
         var slots = new List<ShopOfferItemUI>();
@@ -651,6 +688,7 @@ public class ShopStageController : MonoBehaviour
         return slots;
     }
 
+    // 직접 슬롯 사용이 적합한지 판정
     static bool ShouldUseDirectSlots(int slotCount, int offerCount)
     {
         if (slotCount <= 0) return false;
@@ -658,6 +696,7 @@ public class ShopStageController : MonoBehaviour
         return slotCount >= offerCount;
     }
 
+    // 접두사+번호 이름의 슬롯들에서 상품 UI 수집
     static List<ShopOfferItemUI> CollectNamedSlots(Transform root, string prefix, int offerCount, bool allowNewCardViewAttach)
     {
         var slots = new List<ShopOfferItemUI>();
@@ -679,6 +718,7 @@ public class ShopStageController : MonoBehaviour
         return slots;
     }
 
+    // 접두사+번호 카드 슬롯들의 컨테이너/UI/가격텍스트 바인딩 수집
     List<CardSlotBinding> CollectCardNamedSlots(Transform root, string prefix, int offerCount)
     {
         var slots = new List<CardSlotBinding>();
@@ -705,6 +745,7 @@ public class ShopStageController : MonoBehaviour
         return slots;
     }
 
+    // 이름이 일치하는 노드를 재귀 탐색(루트 포함)
     static Transform FindChildRecursiveByName(Transform root, string targetName)
     {
         if (root == null || string.IsNullOrWhiteSpace(targetName)) return null;
@@ -722,6 +763,7 @@ public class ShopStageController : MonoBehaviour
         return null;
     }
 
+    // 공백 제거·대소문자 무시로 노드 이름 비교
     static bool IsSameNodeName(string actual, string expected)
     {
         if (string.IsNullOrWhiteSpace(actual) || string.IsNullOrWhiteSpace(expected)) return false;
@@ -731,6 +773,7 @@ public class ShopStageController : MonoBehaviour
         return string.Equals(normalizedActual, normalizedExpected, System.StringComparison.OrdinalIgnoreCase);
     }
 
+    // 대상에서 ShopOfferItemUI를 찾거나 없으면 부착해 반환
     static ShopOfferItemUI GetOrAttachOfferItemUI(GameObject target, bool allowNewCardViewAttach = true)
     {
         if (target == null) return null;
@@ -744,7 +787,6 @@ public class ShopStageController : MonoBehaviour
         if (!allowNewCardViewAttach)
             return target.AddComponent<ShopOfferItemUI>();
 
-        // NewSkillCard(NewCardView) 프리팹을 상점에서 재사용할 때 ShopOfferItemUI를 자동 부착.
         NewCardView cardView = target.GetComponent<NewCardView>();
         if (cardView != null)
             return target.AddComponent<ShopOfferItemUI>();
@@ -756,6 +798,7 @@ public class ShopStageController : MonoBehaviour
         return null;
     }
 
+    // 카드 슬롯의 상품 UI를 찾거나 템플릿으로 생성
     ShopOfferItemUI ResolveOrCreateCardSlotContent(Transform container)
     {
         if (container == null) return null;
@@ -772,6 +815,7 @@ public class ShopStageController : MonoBehaviour
         return GetOrAttachOfferItemUI(instance, true);
     }
 
+    // 이름으로 TMP 텍스트를 탐색(중첩 자식 포함)
     static TextMeshProUGUI FindNamedText(Transform root, string targetName)
     {
         Transform found = FindChildRecursiveByName(root, targetName);
@@ -780,10 +824,10 @@ public class ShopStageController : MonoBehaviour
         TextMeshProUGUI text = found.GetComponent<TextMeshProUGUI>();
         if (text != null) return text;
 
-        // 이름 오브젝트 아래에 실제 TMP가 중첩된 경우 대응
         return found.GetComponentInChildren<TextMeshProUGUI>(true);
     }
 
+    // 카드 상품들을 카드 슬롯에 채워 표시
     void BindCardOffersToNamedSlots(List<CardSlotBinding> slots)
     {
         if (slots == null) return;
@@ -819,6 +863,7 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
+    // 렐릭 상품들을 직접 슬롯에 채워 표시
     void BindRelicOffersToDirectSlots(List<ShopOfferItemUI> slots)
     {
         if (slots == null) return;
@@ -847,6 +892,7 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
+    // 렐릭 상품의 표시 이름 결정
     static string ResolveRelicTitle(RelicOffer offer)
     {
         if (offer == null) return "유물";
@@ -855,6 +901,7 @@ public class ShopStageController : MonoBehaviour
         return offer.sprite != null ? offer.sprite.name : "유물";
     }
 
+    // 렐릭 상품의 설명 결정
     static string ResolveRelicDescription(RelicOffer offer)
     {
         if (offer == null) return "유물 설명 없음";
@@ -863,6 +910,7 @@ public class ShopStageController : MonoBehaviour
         return "유물 설명 없음";
     }
 
+    // 렐릭 상품의 아이콘 결정
     static Sprite ResolveRelicIcon(RelicOffer offer)
     {
         if (offer == null) return null;
@@ -870,15 +918,14 @@ public class ShopStageController : MonoBehaviour
         return offer.relic != null ? offer.relic.icon : null;
     }
 
+    // 콤보 상품을 슬롯 오브젝트에 책 비주얼과 함께 바인딩
     void BindComboOfferToObject(GameObject target, ComboOffer offer)
     {
         if (target == null || offer == null || offer.combo == null) return;
 
-        // 1. 상점 기본 UI 스크립트 가져오기
         ShopOfferItemUI ui = GetOrAttachOfferItemUI(target, false);
         if (ui == null) return;
 
-        // 2. 콤보 책 비주얼(BookRewardItemUI)을 먼저 생성하고 위치시키기
         Transform mount = target.transform;
         if (!string.IsNullOrWhiteSpace(comboBookMountName))
         {
@@ -896,7 +943,6 @@ public class ShopStageController : MonoBehaviour
             bookUI = instance;
         }
 
-        // 3. 책이 생성된 '이후'에 상점 Setup을 실행 (그래야 스크립트가 책 이미지를 인식하고 구매 시 투명하게 숨길 수 있음)
         string title = string.IsNullOrWhiteSpace(offer.combo.displayName) ? "콤보 스킬" : offer.combo.displayName;
         string desc = string.IsNullOrWhiteSpace(offer.combo.descriptionKR)
             ? $"콤보: {offer.combo.ComboString()}"
@@ -907,18 +953,12 @@ public class ShopStageController : MonoBehaviour
         ui.Setup(title, desc, icon, offer.price, () => TryBuyCombo(offer));
         ui.SetRelicIconOnlyMode(false);
 
-        // 슬롯(ComboSkill 슬롯)에도 ButtonHoverScale이 있으면, 카드/렐릭 구매 후 RefreshOfferViews로
-        // 다시 바인딩될 때 직전 호버 상태가 남아 "콤보 아이콘이 계속 확대된 채 호버됨"이 발생한다.
-        // 매 바인딩마다 슬롯 호버 상태를 초기화한다.
         var slotHover = target.GetComponent<ButtonHoverScale>();
         if (slotHover != null)
             slotHover.ResetHoverState();
 
-        // 4. 책의 비주얼 업데이트 및 구매 여부에 따른 '버튼 잠금'
         if (bookUI != null)
         {
-            // 책 루트의 ButtonHoverScale이 매 프레임 localScale을 base로 되돌리므로 직접 대입하면 무시된다.
-            // 호버 컴포넌트의 기준 스케일 자체를 comboBookScale로 갱신한다(없으면 직접 대입 폴백).
             var bookHover = bookUI.GetComponent<ButtonHoverScale>();
             if (bookHover != null)
                 bookHover.SetBaseScale(comboBookScale);
@@ -930,7 +970,6 @@ public class ShopStageController : MonoBehaviour
             Button bookBtn = bookUI.GetComponent<Button>();
 
             if (!offer.purchased) {
-                // 구매 전: 정상적으로 동작하게 바인딩
                 bookUI.Bind(offer.combo, _ => TryBuyCombo(offer));
                 if (bookBtn != null) bookBtn.interactable = true;
             } else {
@@ -939,10 +978,10 @@ public class ShopStageController : MonoBehaviour
             bookUI.SetSelected(false);
         }
 
-        // 5. 최종 구매 상태 반영 (SOLD 텍스트 표시 및 비주얼 반투명화)
         ui.SetPurchasedState(offer.purchased);
     }
 
+    // 명시 템플릿/공용 프리팹/자식 중에서 사용할 템플릿 결정
     TemplateBinding ResolveTemplate(Transform root, GameObject explicitTemplate, bool allowSharedPrefabFallback)
     {
         if (explicitTemplate != null)
@@ -983,6 +1022,7 @@ public class ShopStageController : MonoBehaviour
         return default;
     }
 
+    // 유지 대상을 제외한 모든 자식 제거
     static void ClearChildren(Transform root, GameObject keepObject)
     {
         if (root == null) return;
@@ -994,6 +1034,7 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
+    // 렐릭 컨트롤러 참조를 확보(상태/씬 탐색 폴백)
     RelicStageController ResolveRelicStageController()
     {
         if (relicStageController != null)
@@ -1011,6 +1052,7 @@ public class ShopStageController : MonoBehaviour
         return relicStageController;
     }
 
+    // 강제 이름으로 카드 루트를 탐색해 반환
     Transform ResolveStrictCardRoot()
     {
         if (!string.IsNullOrWhiteSpace(topCardsRootName))
@@ -1022,6 +1064,7 @@ public class ShopStageController : MonoBehaviour
         return cardOffersRoot;
     }
 
+    // 강제 이름으로 렐릭 루트를 탐색해 반환
     Transform ResolveStrictRelicRoot()
     {
         if (!string.IsNullOrWhiteSpace(bottomLeftRelicsRootName))
@@ -1033,6 +1076,7 @@ public class ShopStageController : MonoBehaviour
         return relicOffersRoot;
     }
 
+    // 상점에서 맵으로 복귀(노드 클리어 처리)
     public void ReturnToMapFromShop()
     {
         if (roundManager != null)

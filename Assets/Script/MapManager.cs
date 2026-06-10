@@ -2,93 +2,90 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// MapGenerator�� ����Ͽ� �� ���� �� ������
+// MapGenerator로 생성한 맵을 인스턴스화하고 노드/경로를 그리는 관리자
 public class MapManager : MonoBehaviour
 {
-    public GameObject nodePrefab;
-    public Transform nodesParent;
+    public GameObject nodePrefab; // 노드 프리팹
+    public Transform nodesParent; // 노드들의 부모 트랜스폼
 
     [Header("Path visuals")]
-    public float lineThickness = 8f;
-    public Color lineColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+    public float lineThickness = 8f; // 경로 선 두께
+    public Color lineColor = new Color(0.8f, 0.8f, 0.8f, 1f); // 경로 선 색상
 
     [Header("Player Position Highlight")]
-    public float currentPositionScale = 1.3f;
+    public float currentPositionScale = 1.3f; // 현재 위치 노드 강조 배율
 
     [Header("Map Scroll")]
-    public MapScrollController scrollController;  // : �� ��ũ�� ��Ʈ�ѷ�
+    public MapScrollController scrollController;  // 맵 스크롤 컨트롤러
 
     [Header("Node Visual")]
-    public NodeVisualConfig nodeVisualConfig;  // ��� ���־� ����
+    public NodeVisualConfig nodeVisualConfig;  // 노드 비주얼 설정
 
-    // : MapGenerator�� �ڵ� ������ �� ������ (��Ÿ�� ����)
-    private MapData mapData;
-    private MapGenerator mapGenerator;
+    private MapData mapData; // 생성된 맵 데이터 (런타임 보관)
+    private MapGenerator mapGenerator; // 맵 생성기 참조
 
-    private List<MapNode> nodes = new List<MapNode>();
-    private List<GameObject> pathLines = new List<GameObject>();
-    private Sprite lineSprite;
+    private List<MapNode> nodes = new List<MapNode>(); // 생성된 노드 목록
+    private List<GameObject> pathLines = new List<GameObject>(); // 생성된 경로 선 목록
+    private Sprite lineSprite; // 경로 선용 스프라이트
 
-    public RoundManager roundManager;  // : ���� �Ŵ��� ����
+    public RoundManager roundManager;  // 라운드 관리자 참조
 
     [Header("디버그 — 보스방 바로 진입 (테스트용)")]
     [Tooltip("ON이면 맵에서 아래 키를 눌러 보스방으로 즉시 진입한다.")]
-    [SerializeField] private bool debugBossShortcut = true;
+    [SerializeField] private bool debugBossShortcut = true; // 보스방 단축키 사용 여부
     [Tooltip("보스방 바로 진입 단축키.")]
-    [SerializeField] private KeyCode debugBossKey = KeyCode.B;
+    [SerializeField] private KeyCode debugBossKey = KeyCode.B; // 보스방 진입 단축키
 
-    private bool isMapGenerated = false;  // ���� �̹� �����Ǿ����� ����
+    private bool isMapGenerated = false;  // 맵 생성 완료 여부
 
+    // 초기화: MapGenerator 확보, 경로 선 스프라이트 준비
     void Awake()
     {
-        //  MapGenerator ������Ʈ Ȯ��
         mapGenerator = GetComponent<MapGenerator>();
         if (mapGenerator == null)
         {
             mapGenerator = gameObject.AddComponent<MapGenerator>();
         }
 
-        //  ��μ��� ��������Ʈ �غ�
         if (lineSprite == null)
         {
             lineSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
         }
     }
 
+    // 시작 시 맵을 한 번 생성한다
     void Start()
     {
-        //  ���� ���� �� �� ���� (�� ����)
         if (!isMapGenerated)
         {
             GenerateMap();
             isMapGenerated = true;
         }
     }
-    
-    // �� ���ΰ�ħ (GameStateController���� ȣ��)
-    //  �� ȭ������ ���ƿ� ������ ����
+
+    // 맵을 새로고침한다 (GameStateController에서 호출)
     public void RefreshMap()
     {
-        // ���� ���� ������ ����
+        // 노드가 없거나 데이터가 없으면 새로 생성
         if (nodes.Count == 0 || mapData == null)
         {
             GenerateMap();
         }
         else
         {
-            //  ���� ���� ������ ���¸� ������Ʈ
+            // 기존 노드 상태/활성화/강조 갱신
             UpdateNodeStates();
             UpdateNodeAvailability();
             HighlightCurrentPosition();
-            
-            //  ī�޶� ���� ��ġ�� �̵�
+
+            // 카메라를 현재 위치로 이동
             UpdateScrollPosition();
         }
     }
 
+    // GameStateController의 클리어 정보로 각 노드 상태를 갱신한다
     void UpdateNodeStates()
     {
-        //  GameStateController���� Ŭ���� ���� ����
         var stateController = GameStateController.Instance;
         if (stateController == null) return;
 
@@ -98,35 +95,36 @@ public class MapManager : MonoBehaviour
         }
     }
 
+    // 현재 위치에서 진입 가능한 노드만 버튼을 활성화한다
     void UpdateNodeAvailability()
     {
-        //  ��� ��� ��Ȱ��ȭ
+        // 모든 노드 비활성화
         for (int i = 0; i < nodes.Count; i++)
         {
             var btn = nodes[i].GetComponent<Button>();
             if (btn != null) btn.interactable = false;
         }
 
-        //  GameStateController���� ���� ��ġ Ȯ��
+        // 현재 위치 확인
         var stateController = GameStateController.Instance;
         if (stateController == null) return;
 
         int current = stateController.lastVisitedNodeIndex;
 
-        //  MapData ���� ���� ó��
+        // 맵 데이터 유효성 확인
         if (mapData == null || mapData.nodes == null || mapData.nodes.Count == 0)
         {
             return;
         }
 
-        //  ���� ���� �� - ���� ��常 Ȱ��ȭ
+        // 아직 시작 전이면 시작 노드만 활성화
         if (current < 0)
         {
             if (mapData.startIndex >= 0 && mapData.startIndex < nodes.Count)
             {
                 MapNode startNode = nodes[mapData.startIndex];
                 var btn = startNode.GetComponent<Button>();
-                
+
                 if (btn != null && !startNode.isCleared)
                 {
                     btn.interactable = true;
@@ -135,7 +133,7 @@ public class MapManager : MonoBehaviour
             return;
         }
 
-        //  ���� ����� ����� ���� ��� Ȱ��ȭ
+        // 현재 노드와 연결된 다음 노드 활성화
         if (current >= 0 && current < mapData.nodes.Count)
         {
             var conns = mapData.nodes[current].connections;
@@ -156,30 +154,31 @@ public class MapManager : MonoBehaviour
         }
     }
 
+    // 맵을 새로 생성하고 노드/경로를 만든다
     void GenerateMap()
     {
         ClearNodes();
 
-        //  MapGenerator�� ���� �� ����
+        // MapGenerator로 맵 데이터 생성
         if (mapGenerator != null)
         {
             mapData = mapGenerator.GenerateMap();
         }
 
-        //  MapData Ȯ��
+        // 맵 데이터 유효성 확인
         if (mapData == null || mapData.nodes == null || mapData.nodes.Count == 0)
         {
             return;
         }
 
-        //  ��� ����
+        // 노드 생성
         for (int i = 0; i < mapData.nodes.Count; i++)
         {
             var entry = mapData.nodes[i];
             CreateNode(entry.anchoredPosition, i, entry.roundData, entry.nodeType);
         }
 
-        // ��μ� �׸���
+        // 경로 선 그리기
         for (int i = 0; i < mapData.nodes.Count; i++)
         {
             var entry = mapData.nodes[i];
@@ -193,23 +192,22 @@ public class MapManager : MonoBehaviour
             }
         }
 
-        //  ���� �÷��̾� ��ġ ���̶���Ʈ
+        // 현재 플레이어 위치 강조
         HighlightCurrentPosition();
 
-        //  ��� Ȱ��ȭ ���� ������Ʈ
+        // 노드 활성화 상태 갱신
         UpdateNodeAvailability();
 
-        //  ��ũ���� ���� ���� ��� �̵�
+        // 스크롤을 시작 노드로 즉시 이동
         UpdateScrollPosition(true);
     }
 
-    // ��ũ���� ���� ��ġ ���� �̵�
-    //�� ���� �� ���� ��ġ ����
+    // 스크롤을 현재(또는 시작) 노드 위치로 이동시킨다
     void UpdateScrollPosition(bool snapImmediately = false)
     {
         if (scrollController == null)
         {
-            //  MapScrollController �ڵ� ã��
+            // MapScrollController 자동 탐색
             scrollController = FindFirstObjectByType<MapScrollController>();
             if (scrollController == null) return;
         }
@@ -219,7 +217,7 @@ public class MapManager : MonoBehaviour
 
         int currentPos = stateController.lastVisitedNodeIndex;
 
-        // ���� ���� ���̸� ���� ���� �̵�
+        // 아직 시작 전이면 시작 노드로 이동
         if (currentPos < 0)
         {
             if (mapData != null && mapData.startIndex >= 0 && mapData.startIndex < nodes.Count)
@@ -228,7 +226,7 @@ public class MapManager : MonoBehaviour
 
                 if (snapImmediately)
                 {
-                    //  �� ���� ���Ĵ� ��� �̵�
+                    // 맵 생성 직후엔 즉시 이동
                     scrollController.SnapToNode(startNodeRect);
                 }
                 else
@@ -239,7 +237,7 @@ public class MapManager : MonoBehaviour
             return;
         }
 
-        //  ���� ��ġ ���� �̵�
+        // 현재 위치로 이동
         if (currentPos >= 0 && currentPos < nodes.Count)
         {
             RectTransform currentNodeRect = nodes[currentPos].GetComponent<RectTransform>();
@@ -255,6 +253,7 @@ public class MapManager : MonoBehaviour
         }
     }
 
+    // 현재 플레이어 위치 노드를 강조 표시한다
     void HighlightCurrentPosition()
     {
         var stateController = GameStateController.Instance;
@@ -262,13 +261,13 @@ public class MapManager : MonoBehaviour
 
         int currentPos = stateController.lastVisitedNodeIndex;
 
-        //  ���� ��� ����� ���� ��ġ ǥ�� ����
+        // 모든 노드의 현재 위치 표시 해제
         for (int i = 0; i < nodes.Count; i++)
         {
             nodes[i].ClearCurrentPositionHighlight();
         }
 
-        //  ���� ���� ���̰ų� ��ȿ���� ���� �ε����� ��ŵ
+        // 시작 전이거나 유효하지 않은 인덱스면 스킵
         if (currentPos < 0 || currentPos >= nodes.Count)
         {
             return;
@@ -276,10 +275,11 @@ public class MapManager : MonoBehaviour
 
         MapNode currentNode = nodes[currentPos];
 
-        // ���� ��ġ ��带 Ư���ϰ� ǥ��
+        // 현재 위치 노드를 강조 표시
         currentNode.HighlightAsCurrentPosition(currentPositionScale);
     }
 
+    // 두 노드를 잇는 경로 선 오브젝트를 생성한다
     void CreateLineBetween(RectTransform a, RectTransform b)
     {
         if (a == null || b == null) return;
@@ -304,6 +304,7 @@ public class MapManager : MonoBehaviour
         pathLines.Add(lineObj);
     }
 
+    // 생성된 모든 노드와 경로 선을 제거한다
     void ClearNodes()
     {
         foreach (var n in nodes)
@@ -319,26 +320,27 @@ public class MapManager : MonoBehaviour
         pathLines.Clear();
     }
 
+    // 프리팹으로 노드 하나를 생성하고 초기화/버튼 연결한다
     void CreateNode(Vector2 anchoredPos, int idx, RoundData roundData, NodeType nodeType)
     {
         if (nodePrefab == null) return;
 
         GameObject go = Instantiate(nodePrefab, nodesParent);
         go.name = $"Node_{idx}";
-        
+
         RectTransform rt = go.GetComponent<RectTransform>();
         if (rt != null)
         {
             rt.anchoredPosition = anchoredPos;
         }
-        
-        // ��尡 ��μ����� �տ� ������ (Ŭ�� �����ϰ�)
+
+        // 노드가 경로 선보다 앞에 오도록 (클릭 가능하게)
         go.transform.SetAsLastSibling();
 
         MapNode node = go.GetComponent<MapNode>() ?? go.AddComponent<MapNode>();
         node.nodeIndex = idx;
         node.roundData = roundData;
-        node.nodeType = nodeType;  // NodeType ���� ����
+        node.nodeType = nodeType;  // NodeType 정보 전달
         node.mapManager = this;
 
         // 노드 타입별 크기 적용(NodeVisualConfig.size). (0,0)이면 프리팹 크기 유지. node.nodeType은 roundData가 반영된 실제 타입.
@@ -347,34 +349,34 @@ public class MapManager : MonoBehaviour
             Vector2 typeSize = nodeVisualConfig.GetSizeForType(node.nodeType);
             if (typeSize.x > 0f && typeSize.y > 0f) rt.sizeDelta = typeSize;
         }
-        node.visualConfig = nodeVisualConfig;  // ���־� ���� ����
+        node.visualConfig = nodeVisualConfig;  // 비주얼 설정 전달
 
-        //  GameStateController�� Ŭ���� ���� ����
+        // 클리어 상태 반영
         var stateController = GameStateController.Instance;
         if (stateController != null)
         {
             node.SetCleared(stateController.IsNodeCleared(idx));
         }
 
-        //  ��ư �̺�Ʈ ����
+        // 버튼 이벤트 연결
         var btn = go.GetComponent<Button>();
         if (btn != null)
         {
             btn.onClick.RemoveAllListeners();
-            
-            // ���ٷ� ĸó�ؼ� �ùٸ� ��� ���� ����
+
+            // 람다로 캡처해 올바른 노드 참조 보장
             MapNode capturedNode = node;
             btn.onClick.AddListener(() => capturedNode.OnClicked());
-            
+
             btn.interactable = false;
-            
-            // Navigation�� None���� ����
+
+            // Navigation을 None으로 설정
             var navigation = btn.navigation;
             navigation.mode = UnityEngine.UI.Navigation.Mode.None;
             btn.navigation = navigation;
         }
-        
-        // Image raycastTarget ����
+
+        // Image raycastTarget 설정
         var img = go.GetComponent<Image>();
         if (img != null)
         {
@@ -384,25 +386,26 @@ public class MapManager : MonoBehaviour
         nodes.Add(node);
     }
 
+    // 노드 클릭 시 호출: 해당 노드의 라운드를 시작한다
     public void OnNodeSelected(MapNode node)
     {
-        //  ��ȣ�ۿ� ���� ���� üũ
+        // 상호작용 가능 여부 체크
         var btn = node.GetComponent<Button>();
         if (btn == null || !btn.interactable) return;
 
-        //  GameStateController�� ���� ��� ���
+        // 현재 노드 기록
         var stateController = GameStateController.Instance;
         if (stateController == null) return;
 
         stateController.lastVisitedNodeIndex = node.nodeIndex;
 
-        // ��尡 ���� ������� Ȯ��
+        // 보스 노드인지 확인
         bool isBossNode = (mapData != null && node.nodeIndex == mapData.bossIndex);
 
-        //  ��� Ÿ�Կ� ���� ������ ĵ���� ǥ��
+        // 노드 타입에 맞는 스테이지 표시
         stateController.ShowCanvasForNodeType(node.nodeType, isBossNode);
 
-        //  RoundData ���� �� ���� ����
+        // RoundData가 있으면 라운드 시작
         RoundData roundData = mapData.nodes[node.nodeIndex].roundData;
         if (roundData != null)
         {
@@ -415,10 +418,19 @@ public class MapManager : MonoBehaviour
             else if (roundData is BossRoundData boss)
                 boss.columnIndex = col;
 
+            // 인스펙터 참조가 비어 있으면(클래스 rename 후유증 등) 씬에서 자동 탐색
+            if (roundManager == null)
+                roundManager = FindFirstObjectByType<RoundManager>(FindObjectsInactive.Include);
+            if (roundManager == null)
+            {
+                Debug.LogError("[MapManager] RoundManager를 찾지 못해 라운드를 시작할 수 없습니다. (씬에 RoundManager가 있는지 확인)");
+                return;
+            }
             roundManager.StartRound(roundData);
         }
     }
 
+    // 매 프레임 디버그 보스방 단축키 입력을 감지한다
     void Update()
     {
         // [디버그] 맵 화면에서 단축키로 보스방 즉시 진입 (MapManager가 활성일 때만 동작 = 맵 보기 중).
@@ -426,7 +438,7 @@ public class MapManager : MonoBehaviour
             JumpToBoss();
     }
 
-    /// <summary>[디버그] 맵을 거치지 않고 보스방 전투로 즉시 진입. OnNodeSelected의 보스 분기와 동일하게 동작하되 노드 클릭 게이팅을 우회한다.</summary>
+    // [디버그] 노드 게이팅을 우회해 보스방 전투로 즉시 진입한다
     [ContextMenu("보스방 바로 진입")]
     public void JumpToBoss()
     {

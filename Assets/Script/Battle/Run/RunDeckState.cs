@@ -4,38 +4,31 @@ using Battle.Card;
 
 namespace Battle
 {
-    /// <summary>
-    /// 런(run) 단위 플레이어 덱 보존소. 전투 간 덱을 유지한다.
-    /// 덱은 DeckEntry(카드ID+수량)로 저장하고, 매 전투 InstantiateForBattle()로
-    /// 새 CardInstance를 만들어 NewBattleController에 주입한다.
-    /// (CardInstance는 런타임 상태를 가지므로 재사용하면 오염되기 때문)
-    /// SampleScene은 스테이지 토글 방식의 단일 씬이라 씬 오브젝트가 런 내내 유지된다.
-    /// </summary>
+    // 런 단위로 플레이어 덱을 전투 간 보존하는 컴포넌트
     public class RunDeckState : MonoBehaviour
     {
-        public static RunDeckState Instance { get; private set; }
+        public static RunDeckState Instance { get; private set; } // 싱글톤 인스턴스
 
         [Header("시작 덱 (인스펙터 편집)")]
         [Tooltip("런 시작 덱. 항목을 넣으면 이 덱으로 시작하고, 비우면 기본 8장(DefaultStartingDeckEntries)을 쓴다.\n" +
                  "cardId = 카드 번호(불 100~, 물 200~, 바람 300~, 땅 400~), count = 장수.\n" +
                  "변경은 새 런/리셋부터 반영된다. (인스펙터로 편집하려면 RunDeckState를 씬에 미리 배치)")]
-        [SerializeField] private List<CardDatabase.DeckEntry> startingDeck = new List<CardDatabase.DeckEntry>();
+        [SerializeField] private List<CardDatabase.DeckEntry> startingDeck = new List<CardDatabase.DeckEntry>(); // 인스펙터 시작 덱
 
-        private readonly List<CardDatabase.DeckEntry> _runDeck = new List<CardDatabase.DeckEntry>();
-        private bool _seeded;
-        private int _permanentAttackPower; // 땅410 등: 런 동안 지속되는 영구 공격력 보너스
+        private readonly List<CardDatabase.DeckEntry> _runDeck = new List<CardDatabase.DeckEntry>(); // 현재 런 덱
+        private bool _seeded;               // 시작 덱 시드 완료 여부
+        private int _permanentAttackPower;  // 런 동안 지속되는 영구 공격력 보너스
 
-        // ── 적 AI용 런 플레이어 프로파일 (실제 플레이 패턴: 카테고리 사용빈도 + 평균 코스트 + 각성) ──
-        private const int PROFILE_WINDOW = 15;
-        private readonly Queue<Battle.AI.CardCategory> _recentUses = new Queue<Battle.AI.CardCategory>();
-        private readonly Queue<int> _recentCosts = new Queue<int>();
-        private int _awakenActivations;
-        private int _nonAwakenCardUses;
+        private const int PROFILE_WINDOW = 15; // 최근 사용 프로파일 윈도우 크기
+        private readonly Queue<Battle.AI.CardCategory> _recentUses = new Queue<Battle.AI.CardCategory>(); // 최근 사용 카테고리 큐
+        private readonly Queue<int> _recentCosts = new Queue<int>(); // 최근 사용 코스트 큐
+        private int _awakenActivations;     // 각성 발동 누적 수
+        private int _nonAwakenCardUses;     // 비각성 카드 사용 누적 수
 
-        public IReadOnlyList<CardDatabase.DeckEntry> RunDeck => _runDeck;
+        public IReadOnlyList<CardDatabase.DeckEntry> RunDeck => _runDeck; // 현재 런 덱 읽기 전용 뷰
 
-        /// <summary>땅410 등 영구 공격력 보너스(런 동안 지속). 전투 시작 시 Ctx.attackPowerBonus로 복원.</summary>
-        public int PermanentAttackPower => _permanentAttackPower;
+        public int PermanentAttackPower => _permanentAttackPower; // 영구 공격력 보너스
+        // 영구 공격력 보너스 누적 증가
         public void AddPermanentAttackPower(int n)
         {
             if (n == 0) return;
@@ -43,7 +36,7 @@ namespace Battle
             Debug.Log($"[RunDeck] 영구 공격력 +{n} (누적 {_permanentAttackPower})");
         }
 
-        /// <summary>최근 사용 윈도우에서 해당 카테고리 사용 비율 = 실제 플레이 빈도.</summary>
+        // 최근 사용 윈도우에서 해당 카테고리 사용 비율 계산
         float CategoryUseRatio(Battle.AI.CardCategory cat)
         {
             if (_recentUses.Count == 0) return 0f;
@@ -51,12 +44,11 @@ namespace Battle
             foreach (var c in _recentUses) if (c == cat) n++;
             return n / (float)_recentUses.Count;
         }
-        public float BurnUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Burn);       // f1
-        public float FragmentUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Fragment); // f2
-        public float ChainUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Chain);      // f3
-        /// <summary>f4 방어성향 = 최근 사용 중 방어/회복 비율(실제 플레이).</summary>
-        public float DefenseWindowRatio => CategoryUseRatio(Battle.AI.CardCategory.Defense);
-        /// <summary>최근 사용 카드 평균 코스트(게이지). 저코스트일수록 빠른 각성 빌드업(피버 지향).</summary>
+        public float BurnUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Burn);          // 화상 카드 사용 비율
+        public float FragmentUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Fragment);  // 파편 카드 사용 비율
+        public float ChainUseRatio => CategoryUseRatio(Battle.AI.CardCategory.Chain);        // 연쇄 카드 사용 비율
+        public float DefenseWindowRatio => CategoryUseRatio(Battle.AI.CardCategory.Defense); // 방어/회복 카드 사용 비율
+        // 최근 사용 카드 평균 코스트(게이지)
         public float AvgUsedCost
         {
             get
@@ -67,10 +59,10 @@ namespace Battle
                 return sum / (float)_recentCosts.Count;
             }
         }
-        public int AwakenActivations => _awakenActivations;
-        public int NonAwakenCardUses => _nonAwakenCardUses;
+        public int AwakenActivations => _awakenActivations; // 각성 발동 누적 수
+        public int NonAwakenCardUses => _nonAwakenCardUses; // 비각성 카드 사용 누적 수
 
-        /// <summary>일반(비각성) 카드 1장 사용 기록 — 카테고리·코스트 윈도우 갱신 + 비각성 사용 누적.</summary>
+        // 일반 카드 1장 사용 기록(윈도우 갱신 + 누적)
         public void RecordCardUse(Battle.AI.CardCategory category, int cost)
         {
             _recentUses.Enqueue(category);
@@ -80,10 +72,10 @@ namespace Battle
             _nonAwakenCardUses++;
         }
 
-        /// <summary>각성(피버) 발동 1회 기록.</summary>
+        // 각성 발동 1회 기록
         public void RecordAwakenActivation() => _awakenActivations++;
 
-        /// <summary>덱에 든 카드 총 장수(수량 합).</summary>
+        // 덱에 든 카드 총 장수
         public int TotalCardCount
         {
             get
@@ -94,28 +86,30 @@ namespace Battle
             }
         }
 
+        // 싱글톤 인스턴스 설정(중복 시 자기 파괴)
         void Awake()
         {
             if (Instance == null) Instance = this;
             else if (Instance != this) { Destroy(this); return; }
         }
 
+        // 인스턴스 참조 해제
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
         }
 
-        /// <summary>씬에 없으면 생성해서 Instance를 보장하고 반환.</summary>
+        // 씬에 없으면 생성해 인스턴스 보장 후 반환
         public static RunDeckState EnsureExists()
         {
             if (Instance != null) return Instance;
             var existing = FindFirstObjectByType<RunDeckState>(FindObjectsInactive.Include);
             if (existing != null) { Instance = existing; return existing; }
             var go = new GameObject("RunDeckState");
-            return go.AddComponent<RunDeckState>(); // Awake에서 Instance 설정
+            return go.AddComponent<RunDeckState>();
         }
 
-        /// <summary>비어 있으면 시작 덱으로 시드. 인스펙터 startingDeck이 있으면 그걸, 없으면 기본 8장.</summary>
+        // 비어 있으면 시작 덱으로 시드
         public void EnsureSeeded()
         {
             if (_seeded && _runDeck.Count > 0) return;
@@ -133,14 +127,14 @@ namespace Battle
             _seeded = true;
         }
 
-        /// <summary>이번 전투용으로 보존 덱에서 새 CardInstance 리스트 생성.</summary>
+        // 보존 덱에서 이번 전투용 새 CardInstance 목록 생성
         public List<CardInstance> InstantiateForBattle()
         {
             EnsureSeeded();
             return CardDatabase.InstantiateDeck(_runDeck);
         }
 
-        /// <summary>보상 등으로 카드 1장 추가(같은 ID면 수량 +1).</summary>
+        // 카드 1장 추가(같은 ID면 수량 증가)
         public void AddCard(int cardId)
         {
             EnsureSeeded();
@@ -157,7 +151,7 @@ namespace Battle
                 {
                     var entry = _runDeck[i];
                     entry.count += 1;
-                    _runDeck[i] = entry; // DeckEntry는 struct → 재할당 필요
+                    _runDeck[i] = entry;
                     Debug.Log($"[RunDeck] 카드 추가: {data.displayName} (덱 {TotalCardCount}장)");
                     return;
                 }
@@ -167,7 +161,7 @@ namespace Battle
             Debug.Log($"[RunDeck] 카드 추가: {data.displayName} (덱 {TotalCardCount}장)");
         }
 
-        /// <summary>[테스트] 런 덱을 주어진 엔트리들로 통째로 교체한다. 유효하지 않은 ID/수량은 무시하고, 시드 완료로 표시.</summary>
+        // 런 덱을 주어진 엔트리들로 통째로 교체(테스트용)
         public void ReplaceDeck(IEnumerable<CardDatabase.DeckEntry> entries)
         {
             _runDeck.Clear();
@@ -184,11 +178,11 @@ namespace Battle
                     _runDeck.Add(e);
                 }
             }
-            _seeded = true; // 이후 EnsureSeeded가 기본 덱으로 덮어쓰지 않도록
+            _seeded = true;
             Debug.Log($"[RunDeck] 덱 교체 — {TotalCardCount}장 ({_runDeck.Count}종)");
         }
 
-        /// <summary>현재 런 덱에 보유 중인 카드 ID 집합 반환.</summary>
+        // 현재 런 덱 보유 카드 ID 집합 반환
         public HashSet<int> GetOwnedCardIds()
         {
             EnsureSeeded();
@@ -201,7 +195,7 @@ namespace Battle
             return ids;
         }
 
-        /// <summary>지정 카드 ID 1장을 런 덱에서 제거. 수량이 0이면 엔트리 삭제.</summary>
+        // 지정 카드 1장 제거(수량 0이면 엔트리 삭제)
         public bool TryRemoveCard(int cardId)
         {
             EnsureSeeded();
@@ -228,7 +222,7 @@ namespace Battle
             return false;
         }
 
-        /// <summary>런 재시작 — 덱을 기본값으로 되돌림.</summary>
+        // 런 재시작 — 덱과 누적 상태를 기본값으로 복원
         public void ResetRun()
         {
             _runDeck.Clear();

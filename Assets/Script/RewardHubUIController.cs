@@ -1,27 +1,29 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+// 전투 보상 허브(스킬/카드 업그레이드) 화면 전환을 관리한다
 public class RewardHubUIController : MonoBehaviour
 {
     [Header("UI Roots")]
-    [SerializeField] private GameObject rewardHubRoot;
-    [SerializeField] private GameObject skillRewardRoot;
-    [SerializeField] private GameObject cardUpgradeRoot;
+    [SerializeField] private GameObject rewardHubRoot; // 허브 버튼 화면 루트
+    [SerializeField] private GameObject skillRewardRoot; // 스킬 보상 화면 루트
+    [SerializeField] private GameObject cardUpgradeRoot; // 카드 업그레이드 화면 루트
 
     [Header("References")]
-    [SerializeField] private RoundManager roundManager;
-    [SerializeField] private SkillRewardUI skillRewardUI;
-    [SerializeField] private CardUpgradeUIController cardUpgradeUIController;
-    [SerializeField] private Button comboSkillButton;
+    [SerializeField] private RoundManager roundManager; // 라운드 매니저 참조
+    [SerializeField] private SkillRewardUI skillRewardUI; // 스킬 보상 UI 참조
+    [SerializeField] private CardUpgradeUIController cardUpgradeUIController; // 카드 업그레이드 UI 참조
+    [SerializeField] private Button comboSkillButton; // 콤보 스킬 보상 버튼
 
     [Header("Auto Find Names (Fallback)")]
-    [SerializeField] private string rewardHubRootName = "RewardHubUI";
-    [SerializeField] private string skillRewardRootName = "SkillRewardUIContainer";
-    [SerializeField] private string cardUpgradeRootName = "CardUpgradeUI";
+    [SerializeField] private string rewardHubRootName = "RewardHubUI"; // 허브 루트 자동 탐색 이름
+    [SerializeField] private string skillRewardRootName = "SkillRewardUIContainer"; // 스킬 보상 루트 자동 탐색 이름
+    [SerializeField] private string cardUpgradeRootName = "CardUpgradeUI"; // 카드 업그레이드 루트 자동 탐색 이름
 
-    private bool rewardFlowActive;
-    private bool skillClaimedThisReward;
+    private bool rewardFlowActive; // 보상 플로우 진행 중 여부
+    private bool skillClaimedThisReward; // 이번 보상에서 스킬을 이미 받았는지
 
+    // 참조를 확인하고 모든 화면을 비활성화한 뒤 이벤트를 연결한다
     void Awake()
     {
         ResolveReferences();
@@ -43,12 +45,14 @@ public class RewardHubUIController : MonoBehaviour
         }
     }
 
+    // 스킬 선택 이벤트 구독을 해제한다
     void OnDestroy()
     {
         if (skillRewardUI != null)
             skillRewardUI.OnSkillSelected -= HandleSkillSelected;
     }
 
+    // 보상 허브 화면을 열고 게임을 일시정지한다
     public void OpenHub()
     {
         ResolveReferences();
@@ -71,6 +75,7 @@ public class RewardHubUIController : MonoBehaviour
         SetOnly(rewardHubRoot);
     }
 
+    // 스킬 보상 선택 화면을 열고 선택지를 표시한다
     public void OpenSkillReward()
     {
         if (skillClaimedThisReward) return;
@@ -86,10 +91,7 @@ public class RewardHubUIController : MonoBehaviour
             Debug.LogError("[RewardHubUIController] skillRewardUI reference is missing.");
     }
 
-    /// <summary>
-    /// 허브 버튼 루트 없이 스킬 보상 카드만 단독으로 표시한다.
-    /// 신규 전투(카드 보상 직후)에서 사용.
-    /// </summary>
+    // 허브 없이 스킬 보상 카드만 단독으로 표시한다(신규 전투용)
     public void OpenSkillRewardStandalone()
     {
         ResolveReferences();
@@ -110,6 +112,7 @@ public class RewardHubUIController : MonoBehaviour
         }
     }
 
+    // 카드 업그레이드 선택 화면을 열고 선택지를 표시한다
     public void OpenCardUpgrade()
     {
         if (!rewardFlowActive)
@@ -123,6 +126,7 @@ public class RewardHubUIController : MonoBehaviour
             Debug.LogError("[RewardHubUIController] cardUpgradeUIController reference is missing.");
     }
 
+    // 보상 허브 화면으로 되돌아간다
     public void BackToHub()
     {
         if (!rewardFlowActive)
@@ -131,6 +135,7 @@ public class RewardHubUIController : MonoBehaviour
         SetOnly(rewardHubRoot);
     }
 
+    // 보상을 종료하고 시간을 복구한 뒤 맵으로 돌아간다
     public void TryLeaveToMap()
     {
         rewardFlowActive = false;
@@ -143,6 +148,7 @@ public class RewardHubUIController : MonoBehaviour
             Debug.LogWarning("[RewardHubUIController] RoundManager reference is missing.");
     }
 
+    // 스킬 선택 완료 시 버튼을 잠그고 허브로 복귀한다
     void HandleSkillSelected(SkillDataParser.SkillData _)
     {
         skillClaimedThisReward = true;
@@ -152,6 +158,7 @@ public class RewardHubUIController : MonoBehaviour
             BackToHub();
     }
 
+    // 지정한 루트만 활성화하고 나머지 보상 화면은 끈다
     void SetOnly(GameObject activeRoot)
     {
         if (rewardHubRoot != null)
@@ -167,6 +174,7 @@ public class RewardHubUIController : MonoBehaviour
             ActivateParents(activeRoot.transform);
     }
 
+    // 비어 있는 루트/컴포넌트 참조를 이름·타입으로 찾아 채운다
     void ResolveReferences()
     {
         if (rewardHubRoot == null)
@@ -208,6 +216,7 @@ public class RewardHubUIController : MonoBehaviour
             Debug.LogError("[RewardHubUIController] ResolveReferences failed: RewardHub root not found.");
     }
 
+    // 자식부터 부모까지 비활성 오브젝트를 모두 활성화한다
     static void ActivateParents(Transform child)
     {
         Transform current = child;
@@ -220,6 +229,7 @@ public class RewardHubUIController : MonoBehaviour
         }
     }
 
+    // 비활성 포함 이름으로 게임오브젝트를 검색한다
     static GameObject FindGameObjectByNameIncludingInactive(string targetName)
     {
         if (string.IsNullOrEmpty(targetName))

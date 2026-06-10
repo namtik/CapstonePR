@@ -9,206 +9,195 @@ using Battle.Deck;
 
 namespace Battle.UI
 {
-    /// <summary>
-    /// 5장 손패 HUD. NewSkillCard 프리팹을 인스턴스화해서 슬롯을 구성한다.
-    /// 콤보 슬롯/콤보 스킬 UI는 각성 모드 토글로 표시/숨김.
-    /// </summary>
+    // 손패 HUD — 카드 슬롯 구성·콤보/각성 UI 토글
     public class CardHandHUD : MonoBehaviour
     {
-        /// <summary>UI 슬롯 사전 생성 수 — 동적 패 한도(최대 MAX_HAND_LIMIT) 대응을 위해 상한 기준.</summary>
-        public const int SLOT_COUNT = CardDeckSystem.MAX_HAND_LIMIT;
-        /// <summary>레이아웃 기준 카드 수 — 이 값 기준으로 한 칸 간격이 정해진다(과거 SLOT_COUNT=5 호환).</summary>
-        public const int LAYOUT_REFERENCE_COUNT = CardDeckSystem.HAND_LIMIT;
+        public const int SLOT_COUNT = CardDeckSystem.MAX_HAND_LIMIT; // UI 슬롯 사전 생성 수(패 한도 상한)
+        public const int LAYOUT_REFERENCE_COUNT = CardDeckSystem.HAND_LIMIT; // 레이아웃 기준 카드 수
 
         [Header("프리팹 (필수)")]
-        [SerializeField] private NewCardView cardPrefab;
-        /// <summary>카드 보상 UI 등 외부에서 카드 뷰 프리팹을 재사용하기 위한 읽기 전용 접근자.</summary>
+        [SerializeField] private NewCardView cardPrefab; // 카드 뷰 프리팹
+        // 외부에서 카드 뷰 프리팹을 재사용하기 위한 접근자
         public NewCardView CardPrefab => cardPrefab;
 
         [Header("배치")]
         [Tooltip("카드 슬롯들이 정렬될 부모. 비우면 본 트랜스폼 자식으로 자동 생성.")]
-        [SerializeField] private RectTransform handRoot;
+        [SerializeField] private RectTransform handRoot; // 카드 슬롯 부모
         [Tooltip("드래그 중 카드가 옮겨질 상위 캔버스 레이어. 비우면 같은 캔버스의 최상단을 자동 사용.")]
-        [SerializeField] private RectTransform dragLayer;
+        [SerializeField] private RectTransform dragLayer; // 드래그 레이어
+        // 드래그 레이어 반환(없으면 handRoot)
         public RectTransform DragLayer => dragLayer != null ? dragLayer : handRoot;
 
         [Header("레이아웃 — 슬롯 위치 자동 정렬")]
         [Tooltip("슬롯 간 간격 (x). NewSkillCard 프리팹이 scale=1, 300×400일 때 650~750 권장.")]
-        [SerializeField] private Vector2 slotSpacing = new Vector2(700f, 0f);
-        [SerializeField] private Vector2 handAnchoredPos = new Vector2(0f, 240f);
+        [SerializeField] private Vector2 slotSpacing = new Vector2(700f, 0f); // 슬롯 간 간격
+        [SerializeField] private Vector2 handAnchoredPos = new Vector2(0f, 240f); // 손패 루트 위치
         [Tooltip("드래그 종료 시 스크린 Y가 이 값 이상이면 카드 사용으로 간주.")]
-        [SerializeField] private float useThresholdY = 500f;
+        [SerializeField] private float useThresholdY = 500f; // 카드 사용 판정 Y
 
         [Header("Fan Layout — 손패 부채꼴 연출")]
         [Tooltip("ON이면 카드들이 호 형태로 회전·배치된다.")]
-        [SerializeField] private bool fanLayout = true;
+        [SerializeField] private bool fanLayout = true; // 부채꼴 배치 사용 여부
         [Tooltip("부채꼴 반지름. 클수록 호가 평평해짐.")]
-        [SerializeField] private float fanRadius = 1800f;
+        [SerializeField] private float fanRadius = 1800f; // 부채꼴 반지름
         [Tooltip("부채꼴 전체 각도(도). 클수록 카드 사이 간격이 넓어짐. 5장 기준 36~44 권장.")]
-        [SerializeField] private float fanArcAngle = 40f;
+        [SerializeField] private float fanArcAngle = 40f; // 부채꼴 전체 각도
         [Tooltip("호 위 가장자리에서 카드들이 떨어질 깊이. 작을수록 카드들이 살짝 아래로 호를 그림.")]
-        [SerializeField] private float fanVerticalDip = 50f;
+        [SerializeField] private float fanVerticalDip = 50f; // 호 하강 깊이
 
         [Header("드로우 등장 연출")]
         [Tooltip("여러 장을 동시에 뽑을 때 카드마다 떠오르기 시작을 늦추는 간격(초). 0이면 동시에 올라옴.")]
-        [SerializeField] private float drawIntroStagger = 0.05f;
+        [SerializeField] private float drawIntroStagger = 0.05f; // 드로우 등장 지연 간격
 
         [Header("콤보 UI — 각성 전용")]
         [Tooltip("각성 발동 시 활성화될 콤보 슬롯 패널.")]
-        [SerializeField] private GameObject comboSlotPanel;
+        [SerializeField] private GameObject comboSlotPanel; // 콤보 슬롯 패널
         [Tooltip("각성 발동 시 활성화될 콤보 스킬 목록 패널.")]
-        [SerializeField] private GameObject comboSkillPanel;
+        [SerializeField] private GameObject comboSkillPanel; // 콤보 스킬 패널
         [Tooltip("콤보 슬롯 3칸의 Image. 비워두면 comboSlotPanel 자식에서 자동 탐색.")]
-        [SerializeField] private Image[] comboSlotImages = new Image[3];
-        [SerializeField] private Color emptyComboSlotColor = new Color(0.25f, 0.25f, 0.25f, 0.4f);
+        [SerializeField] private Image[] comboSlotImages = new Image[3]; // 콤보 슬롯 이미지 3칸
+        [SerializeField] private Color emptyComboSlotColor = new Color(0.25f, 0.25f, 0.25f, 0.4f); // 빈 콤보 슬롯 색
 
         [Header("콤보 스킬 목록 (SkillListItem 프리팹)")]
         [Tooltip("콤보 스킬 한 항목을 표현할 프리팹. SkillListItem.prefab 사용.")]
-        [SerializeField] private SkillListItemUI comboSkillItemPrefab;
+        [SerializeField] private SkillListItemUI comboSkillItemPrefab; // 콤보 스킬 항목 프리팹
         [Tooltip("콤보 스킬 항목들이 배치될 컨테이너. 비워두면 comboSkillPanel을 사용.")]
-        [SerializeField] private RectTransform comboSkillItemContainer;
+        [SerializeField] private RectTransform comboSkillItemContainer; // 콤보 스킬 항목 컨테이너
 
         [Header("정보 텍스트")]
-        [SerializeField] private TMP_Text drawCountText;
-        [SerializeField] private TMP_Text discardCountText;
+        [SerializeField] private TMP_Text drawCountText; // 뽑을 더미 수 텍스트
+        [SerializeField] private TMP_Text discardCountText; // 버린 더미 수 텍스트
         [FormerlySerializedAs("feverCountText")]
-        [SerializeField] private TMP_Text awakenCountText;
+        [SerializeField] private TMP_Text awakenCountText; // 각성 카운트 텍스트
 
         [Header("버린 더미 카운트 강조 (숫자 변할 때 팝)")]
         [Tooltip("버린 더미 숫자가 바뀔 때 잠깐 커졌다 줄어드는 팝 연출.")]
-        [SerializeField] private bool discardPopEnabled = true;
+        [SerializeField] private bool discardPopEnabled = true; // 버린 더미 팝 연출 사용 여부
         [Tooltip("팝 시 최대 확대 배율(원본 스케일 기준). 1.6 = 60% 더 커졌다 돌아옴.")]
-        [SerializeField] private float discardPopScale = 1.6f;
+        [SerializeField] private float discardPopScale = 1.6f; // 팝 최대 확대 배율
         [Tooltip("커졌다 원래대로 돌아오는 전체 시간(초).")]
-        [SerializeField] private float discardPopDuration = 0.35f;
+        [SerializeField] private float discardPopDuration = 0.35f; // 팝 전체 시간
 
         [Header("리셔플 카운트업 (묘지→덱 복귀 시 덱 숫자 1,2,3 떨어짐)")]
         [Tooltip("버린 더미가 덱으로 돌아갈 때 덱 숫자가 1씩 위에서 떨어지며 올라가는 연출.")]
-        [SerializeField] private bool reshuffleCountUpEnabled = true;
+        [SerializeField] private bool reshuffleCountUpEnabled = true; // 리셔플 카운트업 사용 여부
         [Tooltip("숫자 하나가 위에서 제자리로 떨어지는 시간(초).")]
-        [SerializeField] private float reshuffleStepDuration = 0.12f;
+        [SerializeField] private float reshuffleStepDuration = 0.12f; // 한 단계 낙하 시간
         [Tooltip("숫자와 숫자 사이 간격(초). 0이면 끊김 없이 연속.")]
-        [SerializeField] private float reshuffleStepGap = 0.04f;
+        [SerializeField] private float reshuffleStepGap = 0.04f; // 단계 간 간격
         [Tooltip("숫자가 떨어지기 시작하는 높이(px, 제자리 기준 위쪽).")]
-        [SerializeField] private float reshuffleDropHeight = 36f;
+        [SerializeField] private float reshuffleDropHeight = 36f; // 낙하 시작 높이
         [Tooltip("착지 시 살짝 커지는 팝 배율(1=없음).")]
-        [SerializeField] private float reshuffleLandScale = 1.35f;
+        [SerializeField] private float reshuffleLandScale = 1.35f; // 착지 팝 배율
         [Tooltip("카운트업으로 표시할 최대 단계 수 — 너무 많으면 길어지므로 상한(이상은 마지막에 실제값으로 정착).")]
-        [SerializeField] private int reshuffleMaxSteps = 12;
+        [SerializeField] private int reshuffleMaxSteps = 12; // 카운트업 최대 단계
 
         [Header("각성 게이지 (HP바 아래)")]
         [Tooltip("게이지 슬라이더 — 비우면 SetAwakenGaugeAnchor 호출 또는 첫 갱신 시 자동 생성.")]
         [FormerlySerializedAs("feverGauge")]
-        [SerializeField] private Slider awakenGauge;
+        [SerializeField] private Slider awakenGauge; // 각성 게이지 슬라이더
         [Tooltip("게이지를 부착할 기준 RectTransform — 보통 Player.hpBar의 RectTransform. 비우면 NewBattleController가 런타임에 넣어줌.")]
         [FormerlySerializedAs("feverGaugeAnchor")]
-        [SerializeField] private RectTransform awakenGaugeAnchor;
+        [SerializeField] private RectTransform awakenGaugeAnchor; // 게이지 부착 기준
         [Tooltip("게이지 자동 생성 시 크기.")]
         [FormerlySerializedAs("feverGaugeSize")]
-        [SerializeField] private Vector2 awakenGaugeSize = new Vector2(300f, 22f);
+        [SerializeField] private Vector2 awakenGaugeSize = new Vector2(300f, 22f); // 게이지 크기
         [Tooltip("anchor 기준 오프셋. y 음수 = 아래(HP바 아래).")]
         [FormerlySerializedAs("feverGaugeOffset")]
-        [SerializeField] private Vector2 awakenGaugeOffset = new Vector2(0f, -32f);
+        [SerializeField] private Vector2 awakenGaugeOffset = new Vector2(0f, -32f); // anchor 기준 오프셋
         [Tooltip("anchor(Player.hpBar) 미배선 시 게이지를 표시할 위치 — 화면 상단 중앙 기준(y 음수=아래로). hpBar 배선되면 무시.")]
-        [SerializeField] private Vector2 awakenGaugeFallbackPos = new Vector2(0f, -40f);
+        [SerializeField] private Vector2 awakenGaugeFallbackPos = new Vector2(0f, -40f); // anchor 없을 때 위치
         [Tooltip("게이지 위에 표시할 라벨 (예: 6/10, 10.0s). 비우면 게이지 자동 생성 시 함께 생성.")]
         [FormerlySerializedAs("feverGaugeLabel")]
-        [SerializeField] private TMP_Text awakenGaugeLabel;
+        [SerializeField] private TMP_Text awakenGaugeLabel; // 게이지 라벨
         [Tooltip("충전 진행 중 색.")]
         [FormerlySerializedAs("feverChargeColor")]
-        [SerializeField] private Color awakenChargeColor = new Color(1f, 0.55f, 0.15f, 1f);
+        [SerializeField] private Color awakenChargeColor = new Color(1f, 0.55f, 0.15f, 1f); // 충전 중 색
         [Tooltip("발동 중 색(카운트다운).")]
         [FormerlySerializedAs("feverActiveColor")]
-        [SerializeField] private Color awakenActiveColor = new Color(0.75f, 0.35f, 1f, 1f);
+        [SerializeField] private Color awakenActiveColor = new Color(0.75f, 0.35f, 1f, 1f); // 발동 중 색
 
         [Header("각성 입력 히스토리 (왼쪽 표시)")]
         [Tooltip("각성 동안 입력된 속성 카드 전체 히스토리가 표시될 부모. 비우면 자동 생성.")]
         [FormerlySerializedAs("feverHistoryContainer")]
-        [SerializeField] private RectTransform awakenHistoryContainer;
+        [SerializeField] private RectTransform awakenHistoryContainer; // 입력 히스토리 부모
         [Tooltip("히스토리 한 칸 크기.")]
         [FormerlySerializedAs("feverHistoryItemSize")]
-        [SerializeField] private Vector2 awakenHistoryItemSize = new Vector2(60f, 60f);
+        [SerializeField] private Vector2 awakenHistoryItemSize = new Vector2(60f, 60f); // 히스토리 칸 크기
         [Tooltip("히스토리 칸 간 세로 간격.")]
         [FormerlySerializedAs("feverHistoryItemSpacing")]
-        [SerializeField] private float awakenHistoryItemSpacing = 8f;
+        [SerializeField] private float awakenHistoryItemSpacing = 8f; // 히스토리 세로 간격
         [Tooltip("한 열에 표시할 최대 항목 수 — 이 이상이면 오른쪽 새 열로 이동.")]
         [FormerlySerializedAs("feverHistoryItemsPerColumn")]
-        [SerializeField] private int awakenHistoryItemsPerColumn = 8;
+        [SerializeField] private int awakenHistoryItemsPerColumn = 8; // 한 열 최대 항목 수
         [Tooltip("열과 열 사이 가로 간격.")]
         [FormerlySerializedAs("feverHistoryColumnSpacing")]
-        [SerializeField] private float awakenHistoryColumnSpacing = 8f;
+        [SerializeField] private float awakenHistoryColumnSpacing = 8f; // 열 간 가로 간격
         [Tooltip("히스토리 컨테이너 위치(앵커 기준). 좌측 가운데 추천.")]
         [FormerlySerializedAs("feverHistoryAnchoredPos")]
-        [SerializeField] private Vector2 awakenHistoryAnchoredPos = new Vector2(80f, 0f);
+        [SerializeField] private Vector2 awakenHistoryAnchoredPos = new Vector2(80f, 0f); // 히스토리 컨테이너 위치
         [Tooltip("표시할 최대 항목 수 — 초과 시 가장 오래된 것부터 숨김.")]
         [FormerlySerializedAs("feverHistoryMaxItems")]
-        [SerializeField] private int awakenHistoryMaxItems = 64;
+        [SerializeField] private int awakenHistoryMaxItems = 64; // 히스토리 최대 항목 수
 
-        private readonly List<NewCardView> _cardViews = new List<NewCardView>();
-        private readonly List<RectTransform> _slotAnchors = new List<RectTransform>();
-        /// <summary>직전 Refresh 시점의 패 구성 — 이번에 새로 들어온 카드만 등장 연출하기 위한 비교용.</summary>
-        private readonly HashSet<CardInstance> _prevHandSet = new HashSet<CardInstance>();
-        private CardDeckSystem _deck;
-        public System.Func<CardInstance, bool> UseCardCallback;
+        private readonly List<NewCardView> _cardViews = new List<NewCardView>(); // 슬롯별 카드 뷰 풀
+        private readonly List<RectTransform> _slotAnchors = new List<RectTransform>(); // 슬롯 앵커 목록
+        private readonly HashSet<CardInstance> _prevHandSet = new HashSet<CardInstance>(); // 직전 패 구성(신규 판별용)
+        private CardDeckSystem _deck; // 바인딩된 덱 시스템
+        public System.Func<CardInstance, bool> UseCardCallback; // 카드 사용 콜백
 
-        // ── 버린 더미 카운트 팝 강조 상태 ──
-        private int _prevDiscardCount = int.MinValue; // 직전 표시한 버린 더미 수(변화 감지용)
-        private Coroutine _discardPopCo;
-        private Vector3 _discardCountBaseScale = Vector3.one;
-        private bool _discardCountBaseCaptured;
+        private int _prevDiscardCount = int.MinValue; // 직전 표시한 버린 더미 수
+        private Coroutine _discardPopCo; // 버린 더미 팝 코루틴
+        private Vector3 _discardCountBaseScale = Vector3.one; // 버린 더미 텍스트 기준 스케일
+        private bool _discardCountBaseCaptured; // 버린 더미 기준 캡처 여부
 
-        // ── 덱(뽑을 더미) 리셔플 카운트업 상태 ──
-        private Coroutine _drawCountCo;
-        private bool _drawCountAnimating;          // 카운트업 중엔 Refresh가 덱 숫자를 덮어쓰지 않음
-        private Vector2 _drawCountHomePos;
-        private Vector3 _drawCountBaseScale = Vector3.one;
-        private bool _drawCountBaseCaptured;
-        /// <summary>카드 선택/픽커 모드가 완료(선택 동작까지 수행)된 직후 호출 — 보류된 각성 발동 등에 사용.</summary>
-        public System.Action SelectionClosedCallback;
+        private Coroutine _drawCountCo; // 리셔플 카운트업 코루틴
+        private bool _drawCountAnimating; // 카운트업 진행 중 여부
+        private Vector2 _drawCountHomePos; // 덱 수 텍스트 홈 위치
+        private Vector3 _drawCountBaseScale = Vector3.one; // 덱 수 텍스트 기준 스케일
+        private bool _drawCountBaseCaptured; // 덱 수 기준 캡처 여부
+        public System.Action SelectionClosedCallback; // 선택/픽커 완료 직후 콜백
 
-        // ── 각성 게이지 내부 상태 ──
-        private Image _awakenGaugeFill;
+        private Image _awakenGaugeFill; // 각성 게이지 채움 이미지
 
-        // ── 카드 선택 모드 (예: 불3 "패에서 카드 하나 선택해 소멸") ──
-        private System.Action<CardInstance> _selectionCallback;
-        private System.Func<CardInstance, bool> _selectionFilter;
-        private CardInstance _selectionExcludeCard;
-        public bool IsSelectionMode => _selectionCallback != null;
+        private System.Action<CardInstance> _selectionCallback; // 선택 모드 콜백
+        private System.Func<CardInstance, bool> _selectionFilter; // 선택 가능 카드 필터
+        private CardInstance _selectionExcludeCard; // 선택 제외 카드
+        public bool IsSelectionMode => _selectionCallback != null; // 선택 모드 여부
 
         [Header("선택 모드 UI")]
         [Tooltip("선택 모드 안내 텍스트. 비워두면 표시 안 함.")]
-        [SerializeField] private TMP_Text selectionPromptText;
+        [SerializeField] private TMP_Text selectionPromptText; // 선택 모드 안내 텍스트
         [Tooltip("선택 모드 시 화면을 덮는 어둡게 처리 오버레이. 비우면 자동 생성.")]
-        [SerializeField] private RectTransform dimOverlay;
+        [SerializeField] private RectTransform dimOverlay; // 화면 딤 오버레이
         [Tooltip("dim 오버레이 색(알파로 어둡기 조절) — 선택/픽커 모드.")]
-        [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f);
+        [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f); // 선택/픽커 딤 색
         [Tooltip("각성 모드 dim 색 — 일반 선택 모드와 다른 톤으로 구분 가능. 카드 선택 dim(dimColor)과 독립.")]
         [FormerlySerializedAs("feverDimColor")]
-        [SerializeField] private Color awakenDimColor = new Color(0.02f, 0.0f, 0.08f, 0.82f);
+        [SerializeField] private Color awakenDimColor = new Color(0.02f, 0.0f, 0.08f, 0.82f); // 각성 모드 딤 색
 
+        // 손패 루트/드래그 레이어/슬롯 셋업 및 초기 상태 구성
         void Awake()
         {
             EnsureHandRoot();
             EnsureDragLayer();
             BuildSlotAnchors();
-            SetAwakenMode(false); // 초기엔 콤보 UI 숨김
-            SetupPileClickHandlers(); // 뽑을/버린 더미 카운트 클릭 → 카드 보기
+            SetAwakenMode(false);
+            SetupPileClickHandlers();
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 더미 보기 (뽑을/버린 더미 카운트 클릭 → 내용 표시, ID 순 정렬)
-        // ─────────────────────────────────────────────────────────────
+        private bool _viewerMode; // 더미 보기 모드 여부
+        private int _viewerPile = -1; // 보는 더미(0=뽑을, 1=버린)
+        public bool IsViewerMode => _viewerMode; // 더미 보기 모드 여부
 
-        private bool _viewerMode;
-        private int _viewerPile = -1; // 0=뽑을 더미, 1=버린 더미
-        public bool IsViewerMode => _viewerMode;
-
+        // 뽑을/버린 더미 카운트 텍스트에 클릭 핸들러 연결
         void SetupPileClickHandlers()
         {
             AttachPileClick(drawCountText, () => TogglePileViewer(0));
             AttachPileClick(discardCountText, () => TogglePileViewer(1));
         }
 
+        // 텍스트에 PointerClick 이벤트 트리거를 부착
         void AttachPileClick(TMP_Text txt, System.Action action)
         {
             if (txt == null) return;
@@ -220,20 +209,21 @@ namespace Battle.UI
             trigger.triggers.Add(entry);
         }
 
-        /// <summary>해당 더미 보기 토글. pile: 0=뽑을 더미, 1=버린 더미.</summary>
+        // 지정 더미 보기를 토글(0=뽑을, 1=버린)
         public void TogglePileViewer(int pile)
         {
             if (_deck == null) return;
-            if (IsSelectionMode || IsPickerMode) return; // 선택/픽커 중에는 무시
+            if (IsSelectionMode || IsPickerMode) return;
             if (_viewerMode && _viewerPile == pile) { CloseViewer(); return; }
 
             var src = pile == 0 ? _deck.DrawPile : _deck.DiscardPile;
             var list = new List<CardInstance>(src);
-            list.Sort((a, b) => a.Id.CompareTo(b.Id)); // ID 순 정렬
+            list.Sort((a, b) => a.Id.CompareTo(b.Id));
             string title = (pile == 0 ? "뽑을 더미" : "버린 더미") + $" ({list.Count})";
             EnterPileViewer(title, list, pile);
         }
 
+        // 더미 보기 화면을 띄우고 카드들을 깐다
         void EnterPileViewer(string title, List<CardInstance> cards, int pile)
         {
             if (cardPrefab == null)
@@ -267,7 +257,7 @@ namespace Battle.UI
             BringAwakenGaugeToFront();
         }
 
-        /// <summary>더미 보기 닫기. (카드/딤 클릭, 또는 같은 더미 재클릭 시)</summary>
+        // 더미 보기 화면을 닫는다
         public void CloseViewer()
         {
             if (!_viewerMode) return;
@@ -281,6 +271,7 @@ namespace Battle.UI
             BringAwakenGaugeToFront();
         }
 
+        // 덱 시스템을 바인딩하고 이벤트 구독을 갱신
         public void Bind(CardDeckSystem deck)
         {
             if (_deck != null)
@@ -297,6 +288,7 @@ namespace Battle.UI
             Refresh();
         }
 
+        // 덱 이벤트 구독을 해제
         void OnDestroy()
         {
             if (_deck != null)
@@ -306,29 +298,23 @@ namespace Battle.UI
             }
         }
 
+        // 각성 카운트 텍스트를 설정
         public void SetAwakenText(string text)
         {
             if (awakenCountText != null) awakenCountText.text = text;
         }
 
-        /// <summary>
-        /// 각성 게이지를 부착할 기준 RectTransform을 외부에서 지정 (보통 Player.hpBar).
-        /// 이미 게이지가 자동 생성됐다면 부모를 재배치한다.
-        /// 매 프레임 호출되어도 안전 — 같은 anchor면 즉시 return.
-        /// </summary>
+        // 각성 게이지 부착 기준을 외부에서 지정
         public void SetAwakenGaugeAnchor(RectTransform anchor)
         {
             if (anchor == null) return;
-            if (awakenGaugeAnchor == anchor && awakenGauge != null) return; // 이미 잡혀 있으면 스킵
+            if (awakenGaugeAnchor == anchor && awakenGauge != null) return;
             awakenGaugeAnchor = anchor;
             EnsureAwakenGauge();
             RefitAwakenGaugeToAnchor();
         }
 
-        /// <summary>
-        /// 각성 게이지 표시 여부를 직접 제어.
-        /// 전투 외 구간(맵/상점/휴식 등)에서는 false로 두어 항상 숨긴다.
-        /// </summary>
+        // 각성 게이지 표시 여부를 제어
         public void SetAwakenGaugeVisible(bool visible)
         {
             if (visible) EnsureAwakenGauge();
@@ -339,12 +325,7 @@ namespace Battle.UI
                 awakenGaugeLabel.gameObject.SetActive(visible);
         }
 
-        /// <summary>
-        /// 각성 상태에 따라 게이지를 갱신.
-        /// chargeCur/chargeMax: 충전 단계(0~10) — active=false일 때 사용.
-        /// active: 발동 중 — timeRemaining/timeMax로 fill 계산. timeMax는 콤보 보너스로 동적 증가.
-        /// 각성은 10장 도달 시 즉시 발동되므로 'READY 대기' 상태가 없다.
-        /// </summary>
+        // 충전/발동 상태에 따라 각성 게이지 fill·색·라벨을 갱신
         public void UpdateAwakenGauge(int chargeCur, int chargeMax, bool active, float timeRemaining, float timeMax)
         {
             EnsureAwakenGauge();
@@ -375,6 +356,7 @@ namespace Battle.UI
             if (awakenGaugeLabel != null) awakenGaugeLabel.text = label;
         }
 
+        // 각성 게이지가 없으면 슬라이더/배경/채움/라벨을 코드로 생성
         void EnsureAwakenGauge()
         {
             if (awakenGauge != null)
@@ -383,7 +365,7 @@ namespace Battle.UI
                 return;
             }
 
-            // 부모 결정: anchor가 있으면 anchor의 부모(같은 레벨에 형제로 두기), 없으면 캔버스
+            // anchor가 있으면 그 부모, 없으면 캔버스를 부모로 결정
             Transform parent = null;
             if (awakenGaugeAnchor != null)
                 parent = awakenGaugeAnchor.parent != null ? awakenGaugeAnchor.parent : (Transform)awakenGaugeAnchor;
@@ -394,7 +376,7 @@ namespace Battle.UI
             }
             Debug.Log($"[CardHandHUD] AwakenGauge 자동 생성 — parent='{(parent != null ? parent.name : "(null)")}', anchor='{(awakenGaugeAnchor != null ? awakenGaugeAnchor.name : "(없음, 캔버스 중앙 fallback)")}'");
 
-            // 루트
+            // 게이지 루트 생성
             var go = new GameObject("AwakenGauge", typeof(RectTransform), typeof(Slider));
             go.transform.SetParent(parent, false);
             var rect = (RectTransform)go.transform;
@@ -403,7 +385,7 @@ namespace Battle.UI
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.sizeDelta = awakenGaugeSize;
 
-            // 배경
+            // 배경 생성
             var bgGo = new GameObject("Background", typeof(RectTransform), typeof(Image));
             bgGo.transform.SetParent(rect, false);
             var bgRect = (RectTransform)bgGo.transform;
@@ -415,7 +397,7 @@ namespace Battle.UI
             bgImg.color = new Color(0f, 0f, 0f, 0.6f);
             bgImg.raycastTarget = false;
 
-            // Fill Area
+            // Fill Area 생성
             var fillAreaGo = new GameObject("Fill Area", typeof(RectTransform));
             fillAreaGo.transform.SetParent(rect, false);
             var fillAreaRect = (RectTransform)fillAreaGo.transform;
@@ -424,7 +406,7 @@ namespace Battle.UI
             fillAreaRect.offsetMin = new Vector2(2f, 2f);
             fillAreaRect.offsetMax = new Vector2(-2f, -2f);
 
-            // Fill
+            // Fill 생성
             var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
             fillGo.transform.SetParent(fillAreaRect, false);
             var fillRect = (RectTransform)fillGo.transform;
@@ -450,7 +432,7 @@ namespace Battle.UI
             awakenGauge = slider;
             _awakenGaugeFill = fillImg;
 
-            // 라벨 자동 생성
+            // 라벨이 없으면 생성
             if (awakenGaugeLabel == null)
             {
                 var labelGo = new GameObject("Label", typeof(RectTransform));
@@ -472,7 +454,7 @@ namespace Battle.UI
 
             RefitAwakenGaugeToAnchor();
 
-            // anchor(Player.hpBar) 미배선 시: 정중앙(0,0)은 적/카드에 가려 안 보이므로 상단 중앙 가시 위치로 배치
+            // anchor 미배선 시 상단 중앙 가시 위치로 배치
             if (awakenGaugeAnchor == null && awakenGauge != null)
             {
                 var grect = (RectTransform)awakenGauge.transform;
@@ -482,6 +464,7 @@ namespace Battle.UI
             }
         }
 
+        // 각성 게이지를 anchor의 정렬/위치에 맞춰 재배치
         void RefitAwakenGaugeToAnchor()
         {
             if (awakenGauge == null || awakenGaugeAnchor == null) return;
@@ -491,13 +474,12 @@ namespace Battle.UI
                 : (Transform)awakenGaugeAnchor;
             if (rect.parent != anchorParent) rect.SetParent(anchorParent, false);
 
-            // 부모에 LayoutGroup(예: HorizontalLayoutGroup)이 있으면 자식의 위치/크기를 강제로 덮어쓰므로,
-            // 게이지는 LayoutElement.ignoreLayout=true로 layout 그룹에서 분리해야 우리가 지정한 좌표 유지됨.
+            // LayoutGroup의 위치 덮어쓰기를 막기 위해 layout에서 분리
             var le = awakenGauge.gameObject.GetComponent<LayoutElement>();
             if (le == null) le = awakenGauge.gameObject.AddComponent<LayoutElement>();
             le.ignoreLayout = true;
 
-            // anchor와 같은 정렬 기준으로 맞춘 후 오프셋 적용
+            // anchor와 같은 정렬 기준에 오프셋 적용
             rect.anchorMin = awakenGaugeAnchor.anchorMin;
             rect.anchorMax = awakenGaugeAnchor.anchorMax;
             rect.pivot = awakenGaugeAnchor.pivot;
@@ -506,13 +488,14 @@ namespace Battle.UI
             rect.SetAsLastSibling();
         }
 
-        /// <summary>외부에서 게이지를 강제로 캔버스 최상단으로 — 다른 오버레이가 게이지를 가렸을 때 사용.</summary>
+        // 각성 게이지를 형제 중 최상단으로 올림
         public void BringAwakenGaugeToFront()
         {
             if (awakenGauge != null)
                 ((RectTransform)awakenGauge.transform).SetAsLastSibling();
         }
 
+        // 슬라이더의 fill Image를 찾아 반환
         static Image ResolveGaugeFill(Slider slider)
         {
             if (slider == null) return null;
@@ -524,7 +507,7 @@ namespace Battle.UI
             return slider.GetComponentInChildren<Image>();
         }
 
-        /// <summary>각성 활성/비활성에 따라 콤보 슬롯/스킬 UI를 토글 + dim 오버레이 처리.</summary>
+        // 각성 활성/비활성에 따라 콤보 UI와 딤을 토글
         public void SetAwakenMode(bool active)
         {
             if (comboSlotPanel != null) comboSlotPanel.SetActive(active);
@@ -535,46 +518,43 @@ namespace Battle.UI
             else HideAwakenDim();
         }
 
+        // 각성 전용 딤을 켜고 손패/콤보 UI를 그 위로 올림
         void ShowAwakenDim()
         {
             EnsureDimOverlay();
             if (dimOverlay != null)
             {
-                // 각성 전용 색으로 변경
+                // 딤 색을 각성 전용으로 변경
                 var img = dimOverlay.GetComponent<Image>();
                 if (img != null) img.color = awakenDimColor;
                 dimOverlay.gameObject.SetActive(true);
                 dimOverlay.SetAsLastSibling();
             }
-            // 손패/콤보 UI를 dim 위로 — dim 위에 있어야 어두워지지 않음
+            // 손패/콤보 UI를 딤 위로 올려 어두워지지 않게 함
             if (handRoot != null) handRoot.SetAsLastSibling();
             if (comboSlotPanel != null) comboSlotPanel.transform.SetAsLastSibling();
             if (comboSkillPanel != null) comboSkillPanel.transform.SetAsLastSibling();
             if (awakenHistoryContainer != null) awakenHistoryContainer.SetAsLastSibling();
             if (awakenCountText != null) awakenCountText.transform.SetAsLastSibling();
-            // 각성 게이지가 hpBar 부모와 같은 캔버스에 있다면 dim에 가려지지 않도록
             BringAwakenGaugeToFront();
         }
 
+        // 각성 딤을 끄고 색을 기본으로 복구
         void HideAwakenDim()
         {
             if (dimOverlay != null)
             {
                 dimOverlay.gameObject.SetActive(false);
-                // 다음 선택/픽커 모드를 위해 색을 원래 dimColor로 복구
+                // 다음 선택/픽커 모드를 위해 기본 딤 색으로 복구
                 var img = dimOverlay.GetComponent<Image>();
                 if (img != null) img.color = dimColor;
             }
-            // handRoot 시블링 위치 복원 (다른 UI보다 너무 위에 있지 않도록)
             if (handRoot != null) handRoot.SetAsLastSibling();
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 각성 입력 히스토리 (왼쪽 세로 표시)
-        // ─────────────────────────────────────────────────────────────
+        private readonly List<Image> _awakenHistoryViews = new List<Image>(); // 입력 히스토리 뷰 풀
 
-        private readonly List<Image> _awakenHistoryViews = new List<Image>();
-
+        // 각성 입력 히스토리를 좌측 세로 격자로 갱신
         public void UpdateAwakenInputHistory(IList<CardElement> history)
         {
             EnsureAwakenHistoryContainer();
@@ -582,11 +562,11 @@ namespace Battle.UI
 
             int total = history != null ? history.Count : 0;
             int max = Mathf.Max(1, awakenHistoryMaxItems);
-            // 표시 슬라이스: 최근 max개만(오래된 게 잘림)
+            // 최근 max개만 표시(오래된 것은 잘림)
             int start = Mathf.Max(0, total - max);
             int visible = total - start;
 
-            // 풀 확장
+            // 필요 만큼 뷰 풀 확장
             while (_awakenHistoryViews.Count < visible)
             {
                 var go = new GameObject($"AwakenHist_{_awakenHistoryViews.Count}", typeof(RectTransform), typeof(Image));
@@ -601,7 +581,7 @@ namespace Battle.UI
                 _awakenHistoryViews.Add(img);
             }
 
-            // 활성/비활성/내용 갱신 — 한 열에 itemsPerColumn개씩, 초과 시 오른쪽 새 열로 wrap
+            // 한 열에 itemsPerColumn개씩 배치하고 초과 시 새 열로 wrap
             int itemsPerCol = Mathf.Max(1, awakenHistoryItemsPerColumn);
             float colW = awakenHistoryItemSize.x + awakenHistoryColumnSpacing;
             float rowH = awakenHistoryItemSize.y + awakenHistoryItemSpacing;
@@ -636,6 +616,7 @@ namespace Battle.UI
             }
         }
 
+        // 각성 입력 히스토리 컨테이너가 없으면 좌측 중앙에 생성
         void EnsureAwakenHistoryContainer()
         {
             if (awakenHistoryContainer != null) return;
@@ -645,17 +626,15 @@ namespace Battle.UI
             var go = new GameObject("AwakenHistoryContainer", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             awakenHistoryContainer = (RectTransform)go.transform;
-            // 좌측 중앙 정렬 (anchor를 좌측에, pivot도 좌측에)
+            // 좌측 중앙 정렬
             awakenHistoryContainer.anchorMin = new Vector2(0f, 0.5f);
             awakenHistoryContainer.anchorMax = new Vector2(0f, 0.5f);
             awakenHistoryContainer.pivot = new Vector2(0f, 0.5f);
             awakenHistoryContainer.anchoredPosition = awakenHistoryAnchoredPos;
             awakenHistoryContainer.sizeDelta = new Vector2(awakenHistoryItemSize.x, 600f);
-            // 기본적으로 active로 생성 — SetAwakenMode가 visibility 제어
-            // (자동 생성 타이밍이 ActivateAwaken 안의 UpdateAwakenInputHistory 호출이라 active 상태가 맞음)
         }
 
-        /// <summary>콤보 슬롯 3칸을 현재 입력 시퀀스로 갱신. 빈 슬롯은 회색.</summary>
+        // 콤보 슬롯 3칸을 현재 입력 시퀀스로 갱신(빈 칸은 회색)
         public void UpdateComboSlot(IList<CardElement> input)
         {
             EnsureComboSlotImagesBound();
@@ -695,7 +674,7 @@ namespace Battle.UI
             }
         }
 
-        /// <summary>인스펙터에 콤보 슬롯 Image가 안 연결됐으면 comboSlotPanel 자식에서 Image 3개를 자동 탐색.</summary>
+        // 콤보 슬롯 Image가 미연결이면 패널 자식에서 3개를 자동 탐색
         void EnsureComboSlotImagesBound()
         {
             bool needBind = comboSlotImages == null || comboSlotImages.Length < 3
@@ -704,20 +683,20 @@ namespace Battle.UI
             if (comboSlotPanel == null) return;
 
             var collected = new List<Image>();
-            // 직계 자식 우선
+            // 직계 자식 우선 수집
             for (int i = 0; i < comboSlotPanel.transform.childCount && collected.Count < 3; i++)
             {
                 var img = comboSlotPanel.transform.GetChild(i).GetComponent<Image>();
                 if (img != null) collected.Add(img);
             }
-            // 부족하면 모든 후손 검색
+            // 부족하면 모든 후손에서 수집
             if (collected.Count < 3)
             {
                 var all = comboSlotPanel.GetComponentsInChildren<Image>(true);
                 foreach (var img in all)
                 {
                     if (img == null) continue;
-                    if (img.gameObject == comboSlotPanel) continue; // 패널 자체는 제외
+                    if (img.gameObject == comboSlotPanel) continue; // 패널 자체 제외
                     if (collected.Contains(img)) continue;
                     collected.Add(img);
                     if (collected.Count >= 3) break;
@@ -731,17 +710,9 @@ namespace Battle.UI
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 콤보 스킬 목록 — SkillListItem 프리팹 인스턴스화
-        // ─────────────────────────────────────────────────────────────
+        private readonly List<SkillListItemUI> _comboSkillItems = new List<SkillListItemUI>(); // 콤보 스킬 항목 풀
 
-        private readonly List<SkillListItemUI> _comboSkillItems = new List<SkillListItemUI>();
-
-        /// <summary>콤보 스킬 목록을 SkillListItem 프리팹으로 표시. 발동된 스킬은 반투명.</summary>
-        /// <summary>
-        /// 콤보 스킬 목록 갱신. cooldownRemaining[i] = 콤보 i의 재사용까지 남은 입력 횟수(0=재사용 가능).
-        /// 쿨다운 중이면 흐리게 + 남은 횟수 표시, 0이면 정상 표시.
-        /// </summary>
+        // 콤보 스킬 목록을 프리팹으로 표시(쿨다운은 흐리게 + 남은 횟수)
         public void UpdateComboSkillList(IList<ComboSkillDef> skills, int[] cooldownRemaining)
         {
             if (comboSkillItemPrefab == null)
@@ -760,7 +731,7 @@ namespace Battle.UI
                 return;
             }
 
-            // 필요 만큼 인스턴스화
+            // 필요 만큼 항목 인스턴스화
             int needed = skills != null ? skills.Count : 0;
             while (_comboSkillItems.Count < needed)
             {
@@ -768,13 +739,13 @@ namespace Battle.UI
                 _comboSkillItems.Add(item);
             }
 
-            // 속성 sprite는 NewSkillCard prefab의 매핑을 공유
+            // 속성 스프라이트는 카드 프리팹 매핑을 공유
             Sprite fireSp  = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Fire)  : null;
             Sprite waterSp = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Water) : null;
             Sprite windSp  = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Wind)  : null;
             Sprite earthSp = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Earth) : null;
 
-            // 표시 갱신
+            // 각 항목 표시 갱신
             for (int i = 0; i < _comboSkillItems.Count; i++)
             {
                 var item = _comboSkillItems[i];
@@ -794,6 +765,7 @@ namespace Battle.UI
             }
         }
 
+        // 속성에 대응하는 표시 색을 반환
         static Color ColorForElement(CardElement element) => element switch
         {
             CardElement.Fire    => new Color(0.95f, 0.55f, 0.40f, 1f),
@@ -804,19 +776,16 @@ namespace Battle.UI
             _ => new Color(0.5f, 0.5f, 0.5f, 1f)
         };
 
-        // ─────────────────────────────────────────────────────────────
-        // 손패 갱신
-        // ─────────────────────────────────────────────────────────────
-
+        // 현재 손패에 맞춰 카드 뷰/슬롯/카운트 텍스트를 갱신
         public void Refresh()
         {
             if (_deck == null) return;
 
             var hand = _deck.Hand;
-            // 손 패 갯수에 맞춰 슬롯 위치 재계산 — 카드가 적으면 가운데로 모임
+            // 손패 수에 맞춰 슬롯 위치 재계산
             PositionSlotAnchorsForCount(hand.Count);
 
-            int newCardOrder = 0; // 이번 Refresh에서 새로 들어온 카드 순번 — 등장 stagger 계산용
+            int newCardOrder = 0; // 이번에 새로 들어온 카드 순번(stagger 계산용)
 
             for (int i = 0; i < SLOT_COUNT; i++)
             {
@@ -829,8 +798,7 @@ namespace Battle.UI
                 }
                 if (view == null) continue;
 
-                // 사용된 카드 view가 DragLayer로 옮겨졌을 수 있으므로 매번 슬롯으로 복원.
-                // 단, 등장 연출 중인 카드는 연출이 위치/스케일을 직접 제어하므로 건드리지 않는다.
+                // 등장 연출 중이 아니면 카드 뷰를 슬롯으로 복원
                 if (i < _slotAnchors.Count && !view.IsPlayingDrawIntro)
                 {
                     RectTransform vrect = (RectTransform)view.transform;
@@ -839,51 +807,47 @@ namespace Battle.UI
                     vrect.anchorMax = new Vector2(0.5f, 0.5f);
                     vrect.pivot = new Vector2(0.5f, 0.5f);
                     vrect.anchoredPosition = Vector2.zero;
-                    vrect.localRotation = Quaternion.identity; // 슬롯의 fan 회전을 그대로 따름
+                    vrect.localRotation = Quaternion.identity; // 슬롯의 fan 회전을 따름
                     view.ResetToHomeScale();
                 }
 
                 CardInstance card = i < hand.Count ? hand[i] : null;
                 bool isNewToHand = card != null && !_prevHandSet.Contains(card);
-                view.SetCard(card); // 카드가 바뀌면 내부에서 진행 중 연출을 취소(홈 정착)함
+                view.SetCard(card);
 
-                // 연출이 여전히 진행 중이면(=같은 카드 유지) 홈 좌표가 이미 확정돼 있으니 재캡처 생략.
-                // (CaptureHome이 연출 중간 위치를 홈으로 잘못 저장하는 것 방지)
+                // 연출 중이 아닐 때만 홈 좌표 재캡처
                 if (!view.IsPlayingDrawIntro)
                     view.CaptureHome();
 
-                // 이번에 새로 패에 들어온 카드만 아래에서 위로 떠오르는 연출 (연속 드로우는 차례로)
+                // 새로 들어온 카드만 등장 연출 재생
                 if (isNewToHand)
                     view.PlayDrawIntro(newCardOrder++ * Mathf.Max(0f, drawIntroStagger));
             }
 
-            // 다음 Refresh의 "새 카드" 판별을 위해 현재 패 구성을 스냅샷으로 저장
+            // 다음 Refresh의 신규 판별용으로 현재 패를 스냅샷
             _prevHandSet.Clear();
             for (int i = 0; i < hand.Count; i++)
                 if (hand[i] != null) _prevHandSet.Add(hand[i]);
 
-            // 리셔플 카운트업 중에는 코루틴이 덱 숫자 텍스트를 직접 제어 — 여기서 덮어쓰지 않음.
+            // 카운트업 중이 아닐 때만 덱 수 텍스트 갱신
             if (drawCountText != null && !_drawCountAnimating) drawCountText.text = $"{_deck.DrawCount}";
             if (discardCountText != null)
             {
                 int discardCount = _deck.DiscardCount;
                 discardCountText.text = $"{discardCount}";
-                // 값이 실제로 바뀌었을 때만 팝 강조 (첫 표시는 강조 생략).
+                // 값이 실제로 바뀐 경우에만 팝 강조
                 if (_prevDiscardCount != int.MinValue && discardCount != _prevDiscardCount)
                     PlayDiscardPop();
                 _prevDiscardCount = discardCount;
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 버린 더미 카운트 팝 강조 — 숫자가 바뀔 때 잠깐 커졌다 줄며 색이 번쩍임
-        // ─────────────────────────────────────────────────────────────
-
+        // 버린 더미 숫자 변화 시 팝 강조를 시작
         void PlayDiscardPop()
         {
             if (!discardPopEnabled || discardCountText == null) return;
 
-            // 기준 스케일은 최초 1회만 캡처 — 연속 팝에도 원본을 잃지 않음.
+            // 기준 스케일은 최초 1회만 캡처
             if (!_discardCountBaseCaptured)
             {
                 _discardCountBaseScale = discardCountText.transform.localScale;
@@ -894,6 +858,7 @@ namespace Battle.UI
             _discardPopCo = StartCoroutine(DiscardPopRoutine());
         }
 
+        // 버린 더미 텍스트를 커졌다 줄이는 팝 코루틴
         System.Collections.IEnumerator DiscardPopRoutine()
         {
             if (discardCountText == null) { _discardPopCo = null; yield break; }
@@ -901,7 +866,7 @@ namespace Battle.UI
             Transform tr = discardCountText.transform;
             Vector3 peak = _discardCountBaseScale * Mathf.Max(1f, discardPopScale);
             float dur = Mathf.Max(0.01f, discardPopDuration);
-            const float upPortion = 0.35f; // 앞 35% 동안 커지고, 나머지 65% 동안 원래대로
+            const float upPortion = 0.35f; // 앞 35%는 확대, 나머지는 복귀 구간
 
             float t = 0f;
             while (t < dur)
@@ -910,7 +875,7 @@ namespace Battle.UI
                 t += Time.deltaTime;
                 float n = Mathf.Clamp01(t / dur);
 
-                // 0→peak (ease-out) 후 peak→base (선형). env 0~1. (색 강조 없이 스케일만)
+                // 0→peak(ease-out) 후 peak→base(선형) 엔벨로프
                 float env = n < upPortion
                     ? 1f - (1f - n / upPortion) * (1f - n / upPortion)
                     : 1f - (n - upPortion) / (1f - upPortion);
@@ -924,10 +889,7 @@ namespace Battle.UI
             _discardPopCo = null;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 리셔플 카운트업 — 묘지→덱 복귀 시 덱 숫자가 1,2,3… 위에서 떨어지며 올라감
-        // ─────────────────────────────────────────────────────────────
-
+        // 리셔플 시 카운트업 연출을 시작
         void HandleReshuffled(int count)
         {
             if (!reshuffleCountUpEnabled || drawCountText == null || count <= 0) return;
@@ -935,12 +897,13 @@ namespace Battle.UI
             _drawCountCo = StartCoroutine(DrawCountUpRoutine(count));
         }
 
+        // 덱 수를 1씩 위에서 떨어뜨리며 올리는 카운트업 코루틴
         System.Collections.IEnumerator DrawCountUpRoutine(int count)
         {
             var rt = drawCountText.transform as RectTransform;
             if (rt == null) { _drawCountCo = null; yield break; }
 
-            // 홈 위치/스케일은 최초 1회만 캡처 — 연속 연출에도 기준을 잃지 않음.
+            // 홈 위치/스케일은 최초 1회만 캡처
             if (!_drawCountBaseCaptured)
             {
                 _drawCountHomePos = rt.anchoredPosition;
@@ -948,7 +911,7 @@ namespace Battle.UI
                 _drawCountBaseCaptured = true;
             }
 
-            _drawCountAnimating = true; // 진행 중엔 Refresh가 덱 숫자를 덮어쓰지 않음
+            _drawCountAnimating = true; // 진행 중 Refresh의 덮어쓰기 차단
 
             int steps = Mathf.Min(count, Mathf.Max(1, reshuffleMaxSteps));
             Vector3 landPeak = _drawCountBaseScale * Mathf.Max(1f, reshuffleLandScale);
@@ -966,10 +929,10 @@ namespace Battle.UI
                     if (drawCountText == null) break;
                     t += Time.deltaTime;
                     float n = Mathf.Clamp01(t / stepDur);
-                    float ease = 1f - (1f - n) * (1f - n); // ease-out — 빠르게 내려와 사뿐히 착지
+                    float ease = 1f - (1f - n) * (1f - n); // ease-out 낙하
                     rt.anchoredPosition = Vector2.Lerp(dropStart, _drawCountHomePos, ease);
 
-                    // 착지 직전(마지막 25%)에 살짝 팝: base→peak→base 삼각 엔벨로프.
+                    // 착지 직전 마지막 25%에 삼각 엔벨로프로 팝
                     float popEnv = 0f;
                     if (n >= 0.75f) { float m = (n - 0.75f) / 0.25f; popEnv = 1f - Mathf.Abs(2f * m - 1f); }
                     rt.localScale = Vector3.Lerp(_drawCountBaseScale, landPeak, Mathf.Clamp01(popEnv));
@@ -982,7 +945,7 @@ namespace Battle.UI
                 if (reshuffleStepGap > 0f) yield return new WaitForSeconds(reshuffleStepGap);
             }
 
-            // 연출 종료 — 실제 현재 덱 수로 정착(그동안 드로우로 줄었을 수 있음).
+            // 연출 종료 후 실제 현재 덱 수로 정착
             if (drawCountText != null) drawCountText.text = $"{(_deck != null ? _deck.DrawCount : steps)}";
             rt.anchoredPosition = _drawCountHomePos;
             rt.localScale = _drawCountBaseScale;
@@ -990,17 +953,18 @@ namespace Battle.UI
             _drawCountCo = null;
         }
 
+        // 드래그 위치가 사용 임계선을 넘으면 카드 사용을 시도
         public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
         {
             if (view.Card == null) return false;
-            // 선택/픽커/더미보기 모드에서는 드래그 사용 금지
+            // 선택/픽커/더미보기 중에는 사용 금지
             if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
             if (ev.position.y < useThresholdY) return false;
             return UseCardCallback(view.Card);
         }
 
-        /// <summary>더블클릭으로 카드 사용 (드래그 없이도 사용 가능).</summary>
+        // 클릭(더블클릭)으로 카드 사용을 시도
         public bool TryUseFromClick(NewCardView view)
         {
             if (view == null || view.Card == null) return false;
@@ -1009,40 +973,29 @@ namespace Battle.UI
             return UseCardCallback(view.Card);
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 카드 사용 연출 — 사용한 카드를 화면 중앙에 잠깐 띄웠다 사라뜨림
-        // ─────────────────────────────────────────────────────────────
-
         [Header("카드 사용 연출 — 중앙 표시")]
         [Tooltip("카드 사용 시 화면 중앙에 카드를 잠깐 띄웠다 사라지게 하는 연출 ON/OFF.")]
-        [SerializeField] private bool cardUsePresentEnabled = true;
+        [SerializeField] private bool cardUsePresentEnabled = true; // 중앙 표시 연출 사용 여부
         [Tooltip("중앙 표시 위치(캔버스 중앙 기준 오프셋). y 양수 = 중앙보다 위.")]
-        [SerializeField] private Vector2 cardUsePresentPos = new Vector2(0f, 60f);
+        [SerializeField] private Vector2 cardUsePresentPos = new Vector2(0f, 60f); // 중앙 표시 위치
         [Tooltip("중앙 표시 시 카드 크기 배율(프리팹 기본 스케일 기준).")]
-        [SerializeField] private float cardUsePresentScale = 1.5f;
+        [SerializeField] private float cardUsePresentScale = 1.5f; // 중앙 표시 크기 배율
         [Tooltip("등장(커지며 나타남) 시간(초).")]
-        [SerializeField] private float cardUsePresentEnterTime = 0.15f;
+        [SerializeField] private float cardUsePresentEnterTime = 0.15f; // 등장 시간
         [Tooltip("중앙에서 머무는 시간(초).")]
-        [SerializeField] private float cardUsePresentHold = 0.35f;
+        [SerializeField] private float cardUsePresentHold = 0.35f; // 유지 시간
         [Tooltip("퇴장(사라짐) 시간(초). 이 직전에 효과가 발동된다.")]
-        [SerializeField] private float cardUsePresentExitTime = 0.2f;
+        [SerializeField] private float cardUsePresentExitTime = 0.2f; // 퇴장 시간
 
-        // 교체 가능(각성용 비차단) 연출 추적 — 빠른 연속 입력 시 직전 연출을 정리하고 새 카드로 교체.
-        private Coroutine _interruptablePresentCo;
-        private NewCardView _interruptablePresentView;
-        // 일반(차단) 연출 추적 — 전투 종료 시 onDisappear 호출 없이 취소하기 위함(보상 화면과 겹침 방지).
-        private Coroutine _normalPresentCo;
-        private NewCardView _normalPresentView;
+        private Coroutine _interruptablePresentCo; // 교체 가능(각성용) 연출 코루틴
+        private NewCardView _interruptablePresentView; // 교체 가능 연출 카드 뷰
+        private Coroutine _normalPresentCo; // 일반(차단) 연출 코루틴
+        private NewCardView _normalPresentView; // 일반 연출 카드 뷰
 
-        /// <summary>
-        /// 사용한 카드를 화면 중앙에 잠깐 띄웠다 사라지게 한다.
-        /// 카드가 사라지기 시작하는 순간 onDisappear를 호출 — 호출자는 이때 실제 효과를 실행한다.
-        /// 연출이 꺼져 있거나 표시 불가 시 onDisappear를 즉시 호출(효과만 실행).
-        /// interruptable=true(각성용): 입력을 막지 않고, 직전 연출이 남아 있으면 교체(항상 최신 카드만 표시).
-        /// </summary>
+        // 사용한 카드를 중앙에 띄웠다 사라뜨리고 사라질 때 onDisappear 호출
         public void PlayCardUsePresentation(CardInstance card, System.Action onDisappear, bool interruptable = false)
         {
-            if (card != null) SfxManager.Instance?.PlayCardUse(); // 카드 사용 효과음(연출 on/off와 무관하게)
+            if (card != null) SfxManager.Instance?.PlayCardUse();
             if (!cardUsePresentEnabled || card == null || cardPrefab == null || !isActiveAndEnabled)
             {
                 onDisappear?.Invoke();
@@ -1051,7 +1004,7 @@ namespace Battle.UI
 
             if (interruptable)
             {
-                // 직전 (각성용) 연출이 진행 중이면 즉시 정리하고 새 카드로 교체
+                // 직전 각성용 연출을 정리하고 새 카드로 교체
                 if (_interruptablePresentCo != null) StopCoroutine(_interruptablePresentCo);
                 if (_interruptablePresentView != null) Destroy(_interruptablePresentView.gameObject);
                 _interruptablePresentView = null;
@@ -1063,10 +1016,7 @@ namespace Battle.UI
             }
         }
 
-        /// <summary>
-        /// 진행 중인 카드 사용 중앙 연출(일반/각성용 모두)을 onDisappear 호출 없이 즉시 정리한다.
-        /// 전투 종료 시 호출 — 지연 효과(ResolveCardUse)가 보상 화면과 겹쳐 실행되는 것을 막는다.
-        /// </summary>
+        // 진행 중인 카드 사용 연출을 onDisappear 호출 없이 즉시 정리
         public void CancelCardUsePresentations()
         {
             if (_normalPresentCo != null) { StopCoroutine(_normalPresentCo); _normalPresentCo = null; }
@@ -1075,12 +1025,13 @@ namespace Battle.UI
             if (_interruptablePresentView != null) { Destroy(_interruptablePresentView.gameObject); _interruptablePresentView = null; }
         }
 
+        // 카드 사용 중앙 표시 연출(등장→유지→효과발동→퇴장) 코루틴
         System.Collections.IEnumerator CardUsePresentationRoutine(CardInstance card, System.Action onDisappear, bool interruptable)
         {
             Canvas canvas = ResolveTargetCanvas();
             Transform parent = canvas != null ? canvas.transform : transform;
 
-            // 중앙 오버레이용 임시 카드 뷰 생성 (손패 풀과 독립 — Refresh 영향 없음)
+            // 손패 풀과 독립된 임시 카드 뷰 생성
             var view = Instantiate(cardPrefab, parent);
             if (interruptable) _interruptablePresentView = view;
             else _normalPresentView = view;
@@ -1100,11 +1051,11 @@ namespace Battle.UI
 
             Vector3 targetScale = vrect.localScale * Mathf.Max(0.01f, cardUsePresentScale);
 
-            // 시작 상태 — 작게 + 투명
+            // 시작 상태는 작고 투명
             vrect.localScale = targetScale * 0.6f;
             cg.alpha = 0f;
 
-            // 1) 등장 — 작게+투명 → 목표 크기+불투명 (ease-out)
+            // 1) 등장 — 목표 크기·불투명으로 확대
             float t = 0f;
             float enter = Mathf.Max(0.0001f, cardUsePresentEnterTime);
             while (t < 1f)
@@ -1118,14 +1069,14 @@ namespace Battle.UI
             vrect.localScale = targetScale;
             cg.alpha = 1f;
 
-            // 2) 유지
+            // 2) 유지 대기
             float hold = Mathf.Max(0f, cardUsePresentHold);
             while (hold > 0f) { hold -= Time.unscaledDeltaTime; yield return null; }
 
-            // 3) 사라지기 시작 — 이 순간 효과 발동
+            // 3) 사라지는 순간 효과 발동
             onDisappear?.Invoke();
 
-            // 4) 퇴장 — 페이드아웃 + 살짝 확대
+            // 4) 퇴장 — 페이드아웃 + 확대
             t = 0f;
             float exit = Mathf.Max(0.0001f, cardUsePresentExitTime);
             Vector3 exitScale = targetScale * 1.12f;
@@ -1151,14 +1102,7 @@ namespace Battle.UI
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 카드 선택 모드 (불3 등)
-        // ─────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 패에서 카드 1장 직접 선택을 받는다. filter가 null이면 모든 카드 허용.
-        /// excludeCard는 제외(예: 효과를 시전한 카드 자기 자신).
-        /// </summary>
+        // 패에서 카드 1장 선택을 받는 모드로 진입(필터/제외 카드 적용)
         public void EnterSelectionMode(string promptMessage, System.Action<CardInstance> callback,
             System.Func<CardInstance, bool> filter = null, CardInstance excludeCard = null)
         {
@@ -1166,23 +1110,24 @@ namespace Battle.UI
             _selectionFilter = filter;
             _selectionExcludeCard = excludeCard;
 
-            // 화면 어둡게 + 손패를 오버레이 위로 올려 강조
+            // 화면을 어둡게 하고 손패를 위로 올려 강조
             EnsureDimOverlay();
             if (dimOverlay != null)
             {
                 dimOverlay.gameObject.SetActive(true);
-                dimOverlay.SetAsLastSibling();           // 오버레이를 다른 UI 위로
+                dimOverlay.SetAsLastSibling();
             }
-            if (handRoot != null) handRoot.SetAsLastSibling(); // 손패를 오버레이보다 더 위로
+            if (handRoot != null) handRoot.SetAsLastSibling();
 
             if (selectionPromptText != null)
             {
                 selectionPromptText.text = promptMessage;
                 selectionPromptText.gameObject.SetActive(true);
-                selectionPromptText.transform.SetAsLastSibling(); // 안내문도 오버레이 위로
+                selectionPromptText.transform.SetAsLastSibling();
             }
         }
 
+        // 카드 선택 모드를 종료하고 딤/안내를 끔
         public void ExitSelectionMode()
         {
             _selectionCallback = null;
@@ -1195,34 +1140,28 @@ namespace Battle.UI
                 selectionPromptText.gameObject.SetActive(false);
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 카드 픽커 모드 (버린 더미/뽑을 더미/파편 풀 등에서 1장 선택)
-        // ─────────────────────────────────────────────────────────────
-
-        private RectTransform _pickerRoot;       // 화면 중앙 컨테이너 (ScrollRect 부착)
-        private RectTransform _pickerViewport;   // 마스크 영역 (잘림 처리)
-        private RectTransform _pickerContent;    // 실제 카드들이 들어가는 가변 높이 컨테이너
-        private readonly List<NewCardView> _pickerViews = new List<NewCardView>();
-        private System.Action<CardInstance> _pickerCallback;
-        public bool IsPickerMode => _pickerCallback != null;
+        private RectTransform _pickerRoot;       // 픽커 중앙 컨테이너(ScrollRect)
+        private RectTransform _pickerViewport;   // 픽커 마스크 영역
+        private RectTransform _pickerContent;    // 픽커 카드들이 들어가는 가변 높이 컨테이너
+        private readonly List<NewCardView> _pickerViews = new List<NewCardView>(); // 픽커 카드 뷰 목록
+        private System.Action<CardInstance> _pickerCallback; // 픽커 선택 콜백
+        public bool IsPickerMode => _pickerCallback != null; // 픽커 모드 여부
 
         [Header("카드 픽커 — 그리드/스크롤")]
         [Tooltip("픽커 한 행에 표시할 최대 카드 수.")]
-        [SerializeField] private int pickerColumns = 4;
+        [SerializeField] private int pickerColumns = 4; // 한 행 최대 카드 수
         [Tooltip("픽커 카드 가로 간격(중심→중심, 픽셀). 카드 폭 300 기준 360~520 권장.")]
-        [SerializeField] private float pickerColumnSpacing = 480f;
+        [SerializeField] private float pickerColumnSpacing = 480f; // 픽커 가로 간격
         [Tooltip("픽커 카드 세로 간격(중심→중심, 픽셀). 카드 높이 400 기준 480~640 권장.")]
-        [SerializeField] private float pickerRowSpacing = 620f;
+        [SerializeField] private float pickerRowSpacing = 620f; // 픽커 세로 간격
         [Tooltip("픽커 viewport(보이는 영역) 크기. 가로는 columns × columnSpacing 이상 + 좌우 패딩 권장.")]
-        [SerializeField] private Vector2 pickerViewportSize = new Vector2(1800f, 900f);
+        [SerializeField] private Vector2 pickerViewportSize = new Vector2(1800f, 900f); // 픽커 뷰포트 크기
         [Tooltip("컨텐츠 위쪽/아래쪽 패딩 — 첫/마지막 행이 viewport 가장자리에 붙지 않도록.")]
-        [SerializeField] private Vector2 pickerContentPadding = new Vector2(0f, 240f);
+        [SerializeField] private Vector2 pickerContentPadding = new Vector2(0f, 240f); // 픽커 컨텐츠 패딩
         [Tooltip("마우스 휠 스크롤 감도.")]
-        [SerializeField] private float pickerScrollSensitivity = 60f;
+        [SerializeField] private float pickerScrollSensitivity = 60f; // 스크롤 감도
 
-        /// <summary>
-        /// 임의의 카드 목록에서 1장을 선택받는다. 임시 카드 뷰를 그리드로 깔고 클릭 시 콜백 발화.
-        /// </summary>
+        // 임의 카드 목록에서 1장을 선택받는 픽커 모드로 진입
         public void EnterCardPickerMode(string promptMessage, IList<CardInstance> cards,
             System.Action<CardInstance> callback)
         {
@@ -1243,7 +1182,7 @@ namespace Battle.UI
             EnsureDimOverlay();
             EnsurePickerRoot();
 
-            // 순서: handRoot(맨 뒤) → dim → 안내문 → pickerRoot(최상단)
+            // handRoot(맨 뒤) → dim → 안내문 → pickerRoot(최상단) 순으로 정렬
             if (handRoot != null) handRoot.SetAsFirstSibling();
             if (dimOverlay != null)
             {
@@ -1259,10 +1198,10 @@ namespace Battle.UI
             _pickerRoot.gameObject.SetActive(true);
             _pickerRoot.SetAsLastSibling();
             BuildPickerCards(cards);
-            // 게이지가 다른 캔버스라도 항상 위로 — 픽커 dim에 가려지지 않도록
             BringAwakenGaugeToFront();
         }
 
+        // 픽커 모드를 종료하고 카드/딤/안내를 정리
         public void ExitPickerMode()
         {
             _pickerCallback = null;
@@ -1270,18 +1209,19 @@ namespace Battle.UI
             if (_pickerRoot != null) _pickerRoot.gameObject.SetActive(false);
             if (dimOverlay != null) dimOverlay.gameObject.SetActive(false);
             if (selectionPromptText != null) selectionPromptText.gameObject.SetActive(false);
-            // 손패가 SetAsFirstSibling 됐던 것 복원 — 최상단으로 다시 올림
+            // 뒤로 보냈던 손패를 다시 최상단으로 복원
             if (handRoot != null) handRoot.SetAsLastSibling();
             BringAwakenGaugeToFront();
         }
 
+        // 픽커 루트(ScrollRect/뷰포트/콘텐츠)가 없으면 생성
         void EnsurePickerRoot()
         {
             if (_pickerRoot != null) return;
             Canvas canvas = ResolveTargetCanvas();
             Transform parent = canvas != null ? canvas.transform : transform;
 
-            // 루트 (ScrollRect 부착)
+            // 루트(ScrollRect) 생성
             var rootGo = new GameObject("CardPickerRoot", typeof(RectTransform), typeof(ScrollRect));
             rootGo.transform.SetParent(parent, false);
             _pickerRoot = (RectTransform)rootGo.transform;
@@ -1291,9 +1231,7 @@ namespace Battle.UI
             _pickerRoot.anchoredPosition = Vector2.zero;
             _pickerRoot.sizeDelta = pickerViewportSize;
 
-            // Viewport (RectMask2D로 RectTransform 영역만 잘림)
-            // RectMask2D는 Image 알파에 의존하지 않으므로 자식이 안 잘림.
-            // Image는 휠/드래그 raycast 수신용 (raycastTarget=true 필요).
+            // Viewport 생성(RectMask2D로 영역 클립, Image는 raycast 수신용)
             var viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
             viewportGo.transform.SetParent(_pickerRoot, false);
             _pickerViewport = (RectTransform)viewportGo.transform;
@@ -1302,10 +1240,10 @@ namespace Battle.UI
             _pickerViewport.offsetMin = Vector2.zero;
             _pickerViewport.offsetMax = Vector2.zero;
             var viewportImg = viewportGo.GetComponent<Image>();
-            viewportImg.color = new Color(0f, 0f, 0f, 0f); // 완전 투명 — 알파는 마스크에 영향 X
+            viewportImg.color = new Color(0f, 0f, 0f, 0f); // 완전 투명
             viewportImg.raycastTarget = true;
 
-            // Content (위에서 아래로 가변 높이)
+            // Content 생성(위에서 아래로 가변 높이)
             var contentGo = new GameObject("Content", typeof(RectTransform));
             contentGo.transform.SetParent(_pickerViewport, false);
             _pickerContent = (RectTransform)contentGo.transform;
@@ -1313,7 +1251,7 @@ namespace Battle.UI
             _pickerContent.anchorMax = new Vector2(1f, 1f);
             _pickerContent.pivot = new Vector2(0.5f, 1f);
             _pickerContent.anchoredPosition = Vector2.zero;
-            _pickerContent.sizeDelta = new Vector2(0f, 0f); // BuildPickerCards에서 행 수에 따라 갱신
+            _pickerContent.sizeDelta = new Vector2(0f, 0f); // 행 수에 따라 이후 갱신
 
             // ScrollRect 결선
             var scroll = rootGo.GetComponent<ScrollRect>();
@@ -1328,6 +1266,7 @@ namespace Battle.UI
             scroll.scrollSensitivity = pickerScrollSensitivity;
         }
 
+        // 생성된 픽커 카드 뷰들을 모두 파괴
         void ClearPickerViews()
         {
             for (int i = 0; i < _pickerViews.Count; i++)
@@ -1337,6 +1276,7 @@ namespace Battle.UI
             _pickerViews.Clear();
         }
 
+        // 카드 목록을 그리드로 배치해 픽커 카드 뷰를 생성
         void BuildPickerCards(IList<CardInstance> cards)
         {
             ClearPickerViews();
@@ -1347,11 +1287,10 @@ namespace Battle.UI
             int total = cards.Count;
             int rows = Mathf.CeilToInt(total / (float)maxPerRow);
 
-            // Content 높이 = (행 수 × rowSpacing) + 위아래 패딩. 가변.
-            // 한 행의 카드 중심 Y = -(padding.y/2) - (row + 0.5) * rowSpacing  (top-center 좌표계, 아래로 음)
+            // 컨텐츠 높이 = 행 수 × rowSpacing + 패딩
             float contentHeight = rows * rowSpacing + pickerContentPadding.y;
             _pickerContent.sizeDelta = new Vector2(0f, contentHeight);
-            // 스크롤 위치는 항상 맨 위에서 시작
+            // 스크롤은 맨 위에서 시작
             _pickerContent.anchoredPosition = Vector2.zero;
 
             for (int i = 0; i < total; i++)
@@ -1361,11 +1300,11 @@ namespace Battle.UI
                 int cardsInRow = (row == rows - 1) ? (total - row * maxPerRow) : maxPerRow;
                 float rowWidth = colSpacing * (cardsInRow - 1);
                 float x = -rowWidth * 0.5f + col * colSpacing;
-                // top-center 기준: 첫 행이 viewport 상단에서 padding/2 + rowSpacing/2 아래에 위치
+                // top-center 기준 각 카드의 중심 Y 계산
                 float y = -(pickerContentPadding.y * 0.5f) - (row * rowSpacing) - (rowSpacing * 0.5f);
 
                 var view = Instantiate(cardPrefab, _pickerContent);
-                view.Bind(this, -1); // 슬롯 인덱스 -1 = 픽커 뷰
+                view.Bind(this, -1); // 슬롯 인덱스 -1은 픽커 뷰
                 var vrect = (RectTransform)view.transform;
                 vrect.anchorMin = new Vector2(0.5f, 1f);
                 vrect.anchorMax = new Vector2(0.5f, 1f);
@@ -1378,6 +1317,7 @@ namespace Battle.UI
             }
         }
 
+        // 픽커 모드일 때 카드 클릭을 처리하고 콜백 발화
         bool TryHandlePickerClick(NewCardView view)
         {
             if (_pickerCallback == null) return false;
@@ -1388,11 +1328,11 @@ namespace Battle.UI
             CardInstance picked = view.Card;
             ExitPickerMode();
             cb?.Invoke(picked);
-            SelectionClosedCallback?.Invoke(); // 선택 동작 수행 후 — 보류 각성 발동 트리거
+            SelectionClosedCallback?.Invoke(); // 선택 후 보류 각성 발동 트리거
             return true;
         }
 
-        /// <summary>선택 모드용 전체 화면 어둡게 처리 오버레이 생성(캔버스 안에).</summary>
+        // 전체 화면 딤 오버레이가 없으면 캔버스 안에 생성
         void EnsureDimOverlay()
         {
             if (dimOverlay != null) return;
@@ -1410,9 +1350,9 @@ namespace Battle.UI
 
             var img = go.GetComponent<Image>();
             img.color = dimColor;
-            img.raycastTarget = true; // 오버레이 뒤쪽 UI 클릭 차단
+            img.raycastTarget = true; // 뒤쪽 UI 클릭 차단
 
-            // 더미 보기 중 빈 곳(딤) 클릭 시 닫기 (다른 모드에서는 무시)
+            // 더미 보기 중 딤 클릭 시 닫기
             var trigger = go.AddComponent<EventTrigger>();
             var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
             entry.callback.AddListener(_ => { if (_viewerMode) CloseViewer(); });
@@ -1422,13 +1362,13 @@ namespace Battle.UI
             dimOverlay.gameObject.SetActive(false);
         }
 
-        /// <summary>NewCardView가 클릭됐을 때 호출. 픽커/선택 모드면 콜백 발동.</summary>
+        // 카드 클릭 시 더미보기/픽커/선택 모드를 순서대로 처리
         public void OnCardClicked(NewCardView view)
         {
-            // 더미 보기 모드: 카드 클릭 시 보기 닫기 (선택 동작 없음)
+            // 더미 보기 중에는 클릭으로 보기 닫기
             if (_viewerMode) { CloseViewer(); return; }
 
-            // 픽커 모드 우선
+            // 픽커 모드 우선 처리
             if (TryHandlePickerClick(view)) return;
 
             if (!IsSelectionMode) return;
@@ -1440,32 +1380,29 @@ namespace Battle.UI
             CardInstance selected = view.Card;
             ExitSelectionMode();
             cb?.Invoke(selected);
-            SelectionClosedCallback?.Invoke(); // 선택 동작 수행 후 — 보류 각성 발동 트리거
+            SelectionClosedCallback?.Invoke(); // 선택 후 보류 각성 발동 트리거
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 루트/슬롯 자동 셋업
-        // ─────────────────────────────────────────────────────────────
-
-        /// <summary>UI 좌표계를 보장하기 위해 캔버스를 우선순위대로 탐색.</summary>
+        // UI 좌표계를 보장할 대상 캔버스를 우선순위대로 탐색
         Canvas ResolveTargetCanvas()
         {
-            // 1) CardHandHUD 자신의 부모 캔버스 (CardHandHUD가 캔버스 안일 때)
+            // 1) 자신의 부모 캔버스
             Canvas canvas = GetComponentInParent<Canvas>();
-            // 2) handRoot가 인스펙터로 연결되어 있으면 그 캔버스
+            // 2) handRoot의 부모 캔버스
             if (canvas == null && handRoot != null) canvas = handRoot.GetComponentInParent<Canvas>();
-            // 3) dragLayer가 연결되어 있으면 그 캔버스
+            // 3) dragLayer의 부모 캔버스
             if (canvas == null && dragLayer != null) canvas = dragLayer.GetComponentInParent<Canvas>();
-            // 4) 씬 전체 캔버스 검색
+            // 4) 씬 전체 검색
             if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
             return canvas;
         }
 
+        // handRoot가 없으면 캔버스 안에 자동 생성
         void EnsureHandRoot()
         {
             if (handRoot != null) return;
 
-            // CardHandHUD가 캔버스 밖에 있어도 슬롯이 보이도록 캔버스 안에 강제 생성
+            // 캔버스 밖이어도 슬롯이 보이도록 캔버스 안에 생성
             Canvas canvas = ResolveTargetCanvas();
             Transform parent = canvas != null ? canvas.transform : transform;
             if (canvas == null)
@@ -1481,12 +1418,12 @@ namespace Battle.UI
             handRoot.sizeDelta = new Vector2(slotSpacing.x * SLOT_COUNT, 400f);
         }
 
+        // dragLayer가 없으면 캔버스 안에 자동 생성
         void EnsureDragLayer()
         {
             if (dragLayer != null) return;
 
-            // CardHandHUD가 캔버스 밖에 있더라도 dragLayer는 반드시 캔버스 안에 만들어야
-            // ScreenPointToWorldPointInRectangle 좌표 변환이 정확하게 동작
+            // 좌표 변환 정확성을 위해 dragLayer는 캔버스 안에 생성
             Canvas canvas = ResolveTargetCanvas();
             Transform parent = canvas != null ? canvas.transform : transform;
             if (canvas == null)
@@ -1502,6 +1439,7 @@ namespace Battle.UI
             dragLayer.SetAsLastSibling();
         }
 
+        // 레이아웃 설정에 따라 슬롯 앵커를 생성
         void BuildSlotAnchors()
         {
             _slotAnchors.Clear();
@@ -1509,7 +1447,7 @@ namespace Battle.UI
             else BuildLinearSlotAnchors();
         }
 
-        /// <summary>활성 카드 갯수에 맞춰 슬롯 위치를 재계산. 카드가 적을 때 가운데 정렬.</summary>
+        // 활성 카드 수에 맞춰 슬롯 위치를 재계산(중앙 정렬)
         void PositionSlotAnchorsForCount(int activeCount)
         {
             if (_slotAnchors == null || _slotAnchors.Count == 0) return;
@@ -1517,11 +1455,11 @@ namespace Battle.UI
             else PositionLinearForCount(activeCount);
         }
 
+        // 부채꼴 슬롯 위치를 활성 카드 수에 맞춰 재계산
         void PositionFanForCount(int activeCount)
         {
             int total = _slotAnchors.Count;
-            // 활성 카드 사이 간격은 기준 카드 수(=HAND_LIMIT=5) 기준 유지.
-            // 전체 호는 카드 수에 비례해서 줄어듦 → 자연스러운 중앙 정렬.
+            // 카드 간격은 기준 카드 수로 유지하고 전체 호만 카드 수에 비례해 축소
             float perStep = fanArcAngle / Mathf.Max(1, LAYOUT_REFERENCE_COUNT - 1);
             float effectiveArc = activeCount > 1 ? perStep * (activeCount - 1) : 0f;
             float startAngle = -effectiveArc * 0.5f;
@@ -1543,13 +1481,14 @@ namespace Battle.UI
                 }
                 else
                 {
-                    // 비활성 슬롯 — 화면 밖으로 (카드 view가 같이 따라가지만 SetActive(false)되어 안 보임)
+                    // 비활성 슬롯은 화면 밖으로 보냄
                     rect.anchoredPosition = new Vector2(0f, -10000f);
                     rect.localRotation = Quaternion.identity;
                 }
             }
         }
 
+        // 일렬 슬롯 위치를 활성 카드 수에 맞춰 재계산
         void PositionLinearForCount(int activeCount)
         {
             int total = _slotAnchors.Count;
@@ -1567,6 +1506,7 @@ namespace Battle.UI
             }
         }
 
+        // 일렬 배치로 슬롯 앵커들을 생성
         void BuildLinearSlotAnchors()
         {
             float totalWidth = slotSpacing.x * (SLOT_COUNT - 1);
@@ -1586,20 +1526,20 @@ namespace Battle.UI
             }
         }
 
-        /// <summary>카드 게임 손패 연출 — 호(arc) 위에 카드들을 회전·배치.</summary>
+        // 호 위에 회전·배치되는 부채꼴 슬롯 앵커들을 생성
         void BuildFanSlotAnchors()
         {
             int n = SLOT_COUNT;
             float startAngle = -fanArcAngle * 0.5f;
             float angleStep = n > 1 ? fanArcAngle / (n - 1) : 0f;
 
-            // 호의 가장 위쪽 점이 (0, 0)이 되도록 — 원의 중심은 (0, -fanRadius)
+            // 호의 최상단이 (0,0)이 되도록 원 중심을 아래에 둠
             for (int i = 0; i < n; i++)
             {
                 float angleDeg = startAngle + i * angleStep;
                 float angleRad = angleDeg * Mathf.Deg2Rad;
 
-                // 원 위의 점: 중심에서 위로 fanRadius 떨어진 호
+                // 원 위의 점 좌표 계산
                 float x = Mathf.Sin(angleRad) * fanRadius;
                 float y = (Mathf.Cos(angleRad) - 1f) * fanRadius - fanVerticalDip;
 
@@ -1610,7 +1550,7 @@ namespace Battle.UI
                 rect.anchorMax = new Vector2(0.5f, 0.5f);
                 rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.anchoredPosition = new Vector2(x, y);
-                rect.localRotation = Quaternion.Euler(0f, 0f, -angleDeg); // 호 방향으로 회전
+                rect.localRotation = Quaternion.Euler(0f, 0f, -angleDeg); // 호 방향 회전
                 rect.sizeDelta = Vector2.zero;
                 _slotAnchors.Add(rect);
             }

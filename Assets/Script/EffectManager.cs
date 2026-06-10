@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class EffectManager : MonoBehaviour
 {
-    public static EffectManager Instance;
-    private Dictionary<string, StatusEffectBase> effectDictionary;
+    public static EffectManager Instance; // 싱글턴 인스턴스
+    private Dictionary<string, StatusEffectBase> effectDictionary; // 효과 타입→효과 객체 매핑
 
+    // 싱글턴 설정 및 효과 사전 초기화
     void Awake()
     {
         if (Instance == null) Instance = this;
@@ -25,6 +26,7 @@ public class EffectManager : MonoBehaviour
         };
     }
 
+    // 상태 타입에 맞는 효과를 시전
     public void ApplySkillEffect(string statusType, int amount, IBattleUnit caster, IBattleUnit target)
     {
         if (string.IsNullOrEmpty(statusType) || statusType == "0" || statusType.ToLower() == "none") return;
@@ -35,7 +37,7 @@ public class EffectManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[EffectManager] ���ǵ��� ���� Ư�� ȿ�� Ÿ���Դϴ�: {statusType}");
+            Debug.LogWarning($"[EffectManager] 정의되지 않은 특수 효과 타입입니다: {statusType}");
         }
     }
 }

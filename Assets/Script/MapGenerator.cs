@@ -2,88 +2,81 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-// 맵 노드 생성 로직
-// 기본: 시작 컬럼부터 보스 컬럼까지 연결되는 10개 일반 컬럼 + 보스 컬럼
+// 맵 노드를 절차적으로 생성하는 컴포넌트 (일반 컬럼 + 보스 컬럼)
 public class MapGenerator : MonoBehaviour
 {
     [Header("맵 생성 설정")]
     [Tooltip("일반 컬럼의 개수")]
-    public int totalColumns = 10;
-    
+    public int totalColumns = 10; // 일반 컬럼 수
+
     [Tooltip("정예 노드 등장 확률 (0~1)")]
     [Range(0f, 1f)]
-    public float eliteChance = 0.2f;
+    public float eliteChance = 0.2f; // 정예 노드 등장 확률
     [Tooltip("정예 노드가 등장 가능한 최소 컬럼")]
-    public int eliteColumnMin = 3;
+    public int eliteColumnMin = 3; // 정예 등장 최소 컬럼
 
     [Tooltip("각 컬럼의 최소 노드 수")]
-    public int minNodesPerColumn = 3;
-    
+    public int minNodesPerColumn = 3; // 컬럼당 최소 노드 수
+
     [Tooltip("각 컬럼의 최대 노드 수")]
-    public int maxNodesPerColumn = 4;
-    
+    public int maxNodesPerColumn = 4; // 컬럼당 최대 노드 수
+
     [Header("배치 설정")]
     [Tooltip("컬럼 간 가로 간격")]
-    public float columnSpacing = 250f;
-    
+    public float columnSpacing = 250f; // 컬럼 가로 간격
+
     [Tooltip("노드 간 최소 세로 간격")]
-    public float minNodeSpacing = 100f;
-    
+    public float minNodeSpacing = 100f; // 노드 최소 세로 간격
+
     [Tooltip("노드 간 최대 세로 간격")]
-    public float maxNodeSpacing = 200f;
-    
+    public float maxNodeSpacing = 200f; // 노드 최대 세로 간격
+
     [Tooltip("연결 가능한 최대 Y축 거리")]
-    public float maxConnectionDistance = 300f;
-    
+    public float maxConnectionDistance = 300f; // 연결 허용 최대 Y거리
+
     [Header("특수 노드 배치 (랜덤 범위)")]
     [Tooltip("상점 노드 최소 컬럼 인덱스")]
-    public int shopColumnMin = 5;
+    public int shopColumnMin = 5; // 상점 최소 컬럼
     [Tooltip("상점 노드 최대 컬럼 인덱스")]
-    public int shopColumnMax = 4;
-    
+    public int shopColumnMax = 4; // 상점 최대 컬럼
+
     [Tooltip("휴식 노드 최소 컬럼 인덱스")]
-    public int restColumnMin = 9;
+    public int restColumnMin = 9; // 휴식 최소 컬럼
     [Tooltip("휴식 노드 최대 컬럼 인덱스")]
-    public int restColumnMax = 8;
-    
+    public int restColumnMax = 8; // 휴식 최대 컬럼
+
     [Header("이벤트 노드 설정")]
     [Tooltip("이벤트 노드 최소 개수")]
-    public int minEventNodes = 1;
+    public int minEventNodes = 1; // 이벤트 노드 최소 개수
     [Tooltip("이벤트 노드 최대 개수")]
-    public int maxEventNodes = 2;
+    public int maxEventNodes = 2; // 이벤트 노드 최대 개수
     [Tooltip("이벤트 노드가 등장 가능한 최소 컬럼 (상점/휴식 제외)")]
-    public int eventColumnMin = 2;
+    public int eventColumnMin = 2; // 이벤트 등장 최소 컬럼
     [Tooltip("이벤트 노드가 등장 가능한 최대 컬럼 (보스 직전)")]
-    public int eventColumnMax = 7;
+    public int eventColumnMax = 7; // 이벤트 등장 최대 컬럼
 
     [Header("유물 노드 설정")]
     [Tooltip("유물 노드 최소 개수")]
-    public int minRelicNodes = 1;
+    public int minRelicNodes = 1; // 유물 노드 최소 개수
     [Tooltip("유물 노드 최대 개수")]
-    public int maxRelicNodes = 1;
+    public int maxRelicNodes = 1; // 유물 노드 최대 개수
     [Tooltip("유물 노드가 등장 가능한 최소 컬럼 (상점/휴식/이벤트 제외)")]
-    public int relicColumnMin = 2;
+    public int relicColumnMin = 2; // 유물 등장 최소 컬럼
     [Tooltip("유물 노드가 등장 가능한 최대 컬럼")]
-    public int relicColumnMax = 8;
+    public int relicColumnMax = 8; // 유물 등장 최대 컬럼
 
-    [SerializeField] private RoundDataConfig roundDataConfig;
+    [SerializeField] private RoundDataConfig roundDataConfig; // 노드 타입별 라운드 데이터 설정
 
-    // 생성된 맵 데이터
-    private MapData generatedMapData;
-    
-    // 각 컬럼별 노드 인덱스 목록 (연결 계산용)
-    private List<List<int>> columnNodes = new List<List<int>>();
-    
-    // 이번 생성에 실제로 배정된 특수 노드 컬럼 (랜덤 결과)
-    private int actualShopColumn;
-    private int actualRestColumn;
-    private List<int> actualEventColumns = new List<int>();
-    private List<int> actualRelicColumns = new List<int>();
+    private MapData generatedMapData; // 생성된 맵 데이터
 
-    /// <summary>
-    /// 맵 데이터를 새로 생성한다.
-    /// 이 함수를 호출하면 새로운 맵 구조가 만들어진다.
-    /// </summary>
+    private List<List<int>> columnNodes = new List<List<int>>(); // 컬럼별 노드 인덱스 목록 (연결 계산용)
+
+    private int actualShopColumn; // 이번에 배정된 상점 컬럼
+    private int actualRestColumn; // 이번에 배정된 휴식 컬럼
+    private List<int> actualEventColumns = new List<int>(); // 이번에 배정된 이벤트 컬럼들
+    private List<int> actualRelicColumns = new List<int>(); // 이번에 배정된 유물 컬럼들
+
+    // 맵 데이터를 새로 생성해 반환한다
     public MapData GenerateMap()
     {
         // 1. MapData 초기화
@@ -94,11 +87,11 @@ public class MapGenerator : MonoBehaviour
         // 특수 노드 컬럼을 랜덤 선택
         actualShopColumn = Random.Range(shopColumnMin, shopColumnMax + 1);
         actualRestColumn = Random.Range(restColumnMin, restColumnMax + 1);
-        
+
         // 이벤트 컬럼 개수 결정 (1~2개)
         actualEventColumns.Clear();
         int eventCount = Random.Range(minEventNodes, maxEventNodes + 1);
-        
+
         // 상점/휴식 컬럼을 제외한 이벤트 가능 컬럼 수집
         List<int> availableColumns = new List<int>();
         for (int i = eventColumnMin; i <= eventColumnMax; i++)
@@ -108,7 +101,7 @@ public class MapGenerator : MonoBehaviour
                 availableColumns.Add(i);
             }
         }
-        
+
         // 이벤트 컬럼을 랜덤 추출
         for (int i = 0; i < eventCount && availableColumns.Count > 0; i++)
         {
@@ -135,7 +128,7 @@ public class MapGenerator : MonoBehaviour
             actualRelicColumns.Add(relicAvailableColumns[randomIndex]);
             relicAvailableColumns.RemoveAt(randomIndex);
         }
-        
+
         Debug.Log($"맵 생성: 상점={actualShopColumn}열, 휴식={actualRestColumn}열, 이벤트={string.Join(",", actualEventColumns)}열, 유물={string.Join(",", actualRelicColumns)}열");
 
         int nodeIndex = 0;
@@ -144,7 +137,7 @@ public class MapGenerator : MonoBehaviour
         for (int col = 0; col < totalColumns; col++)
         {
             List<int> currentColumnIndices = new List<int>();
-            
+
             // 0열(시작)은 항상 1개, 나머지는 범위 내 랜덤
             int nodeCount;
             if (col == 0)
@@ -155,10 +148,10 @@ public class MapGenerator : MonoBehaviour
             {
                 nodeCount = Random.Range(minNodesPerColumn, maxNodesPerColumn + 1);
             }
-            
+
             // Y축 배치 계산
             float[] yPositions = GenerateYPositions(nodeCount);
-            
+
             for (int i = 0; i < nodeCount; i++)
             {
                 NodeType nodeType = DetermineNodeType(col, i, nodeCount);
@@ -173,12 +166,12 @@ public class MapGenerator : MonoBehaviour
                     column = col,
                     connections = new List<int>()
                 };
-                
+
                 generatedMapData.nodes.Add(node);
                 currentColumnIndices.Add(nodeIndex);
                 nodeIndex++;
             }
-            
+
             columnNodes.Add(currentColumnIndices);
         }
 
@@ -196,7 +189,7 @@ public class MapGenerator : MonoBehaviour
         generatedMapData.nodes.Add(bossNode);
         int bossIndex = nodeIndex;
         generatedMapData.bossIndex = bossIndex;
-        
+
         // 4. 시작 노드 인덱스 설정
         if (columnNodes.Count > 0 && columnNodes[0].Count > 0)
         {
@@ -210,49 +203,43 @@ public class MapGenerator : MonoBehaviour
         return generatedMapData;
     }
 
-    /// <summary>
-    /// Y축 위치 생성 (균등 배치 + 랜덤 오프셋)
-    /// 노드가 겹치지 않도록 간격을 유지한다.
-    /// </summary>
+    // 노드 수만큼 Y축 위치를 균등 배치 + 랜덤 오프셋으로 계산한다
     float[] GenerateYPositions(int count)
     {
         float[] positions = new float[count];
-        
+
         // 전체 높이 기준 계산
         float totalHeight = (count - 1) * ((minNodeSpacing + maxNodeSpacing) / 2f);
         float startY = -totalHeight / 2f;
-        
+
         for (int i = 0; i < count; i++)
         {
             // 기본 균등 배치
             float baseY = startY + i * ((minNodeSpacing + maxNodeSpacing) / 2f);
-            
+
             // 랜덤 오프셋 추가 (과도한 겹침 방지)
             float randomOffset = Random.Range(-30f, 30f);
             positions[i] = baseY + randomOffset;
         }
-        
+
         return positions;
     }
 
-    /// <summary>
-    /// 노드 타입 결정
-    /// 시작/특수 노드 우선 배치 후, 나머지는 일반/정예로 결정.
-    /// </summary>
+    // 컬럼/위치 조건에 따라 노드 타입(시작/특수/정예/일반)을 결정한다
     NodeType DetermineNodeType(int columnIndex, int nodeIndexInColumn, int totalNodesInColumn)
     {
         // 시작 컬럼은 전투 고정
         if (columnIndex == 0)
             return NodeType.Combat;
-        
+
         // 상점 컬럼 중앙 노드
         if (columnIndex == actualShopColumn && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Shop;
-        
+
         // 휴식 컬럼 중앙 노드
         if (columnIndex == actualRestColumn && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Rest;
-        
+
         // 이벤트 컬럼 중앙 노드
         if (actualEventColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Event;
@@ -260,7 +247,7 @@ public class MapGenerator : MonoBehaviour
         // 유물 컬럼 중앙 노드
         if (actualRelicColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Relic;
-        
+
         if (columnIndex >= eliteColumnMin && Random.value < eliteChance)
             return NodeType.Elite;
 
@@ -268,17 +255,14 @@ public class MapGenerator : MonoBehaviour
         return NodeType.Combat;
     }
 
-    /// <summary>
-    /// 노드 간 연결 생성
-    /// 각 컬럼에서 다음 컬럼으로 연결한다.
-    /// </summary>
+    // 각 컬럼을 다음 컬럼으로 연결하고 단절 노드를 보정한다
     void ConnectNodes()
     {
         // 1. 일반 컬럼 간 연결 (0->1, 1->2, ..., 마지막->보스)
         for (int col = 0; col < columnNodes.Count; col++)
         {
             List<int> currentColumn = columnNodes[col];
-            
+
             // 다음 컬럼 결정
             List<int> nextColumn = null;
             if (col < columnNodes.Count - 1)
@@ -303,14 +287,11 @@ public class MapGenerator : MonoBehaviour
         EnsureAllNodesConnected();
     }
 
-    /// <summary>
-    /// 한 노드를 다음 컬럼 노드들과 연결
-    /// Y축 거리가 가까운 노드 우선으로 1~2개 연결한다.
-    /// </summary>
+    // 한 노드를 Y거리가 가까운 다음 컬럼 노드 1~2개와 연결한다
     void ConnectToNextColumn(int fromIndex, List<int> nextColumnIndices)
     {
         Vector2 fromPos = generatedMapData.nodes[fromIndex].anchoredPosition;
-        
+
         // Y축 거리 기준 정렬
         var sortedTargets = nextColumnIndices
             .Select(idx => new {
@@ -323,11 +304,11 @@ public class MapGenerator : MonoBehaviour
 
         // 최소 1개, 최대 2개 연결
         int connectCount = Mathf.Min(Random.Range(1, 3), sortedTargets.Count);
-        
+
         for (int i = 0; i < connectCount; i++)
         {
             int targetIndex = sortedTargets[i].Index;
-            
+
             // 중복 연결 방지
             if (!generatedMapData.nodes[fromIndex].connections.Contains(targetIndex))
             {
@@ -336,15 +317,12 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 모든 노드가 최소 1개의 진입 경로를 갖도록 보정
-    /// 진입이 없는 노드는 이전 컬럼의 가장 가까운 노드와 연결한다.
-    /// </summary>
+    // 모든 노드가 최소 1개의 진입 경로를 갖도록 보정한다
     void EnsureAllNodesConnected()
     {
         // 각 노드의 진입 연결 여부 체크
         HashSet<int> nodesWithIncoming = new HashSet<int>();
-        
+
         for (int i = 0; i < generatedMapData.nodes.Count; i++)
         {
             foreach (int target in generatedMapData.nodes[i].connections)
@@ -363,11 +341,11 @@ public class MapGenerator : MonoBehaviour
                     // 이전 컬럼에서 가장 가까운 노드 찾기
                     List<int> prevColumn = columnNodes[col - 1];
                     Vector2 targetPos = generatedMapData.nodes[nodeIndex].anchoredPosition;
-                    
+
                     int closestIndex = prevColumn
                         .OrderBy(idx => Mathf.Abs(generatedMapData.nodes[idx].anchoredPosition.y - targetPos.y))
                         .First();
-                    
+
                     // 연결 추가
                     if (!generatedMapData.nodes[closestIndex].connections.Contains(nodeIndex))
                     {
@@ -393,16 +371,14 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 디버그용: 생성된 맵 정보 출력
-    /// </summary>
+    // 디버그용: 생성된 맵 정보를 콘솔에 출력한다
     public void PrintMapInfo()
     {
         Debug.Log("=== 맵 생성 정보 ===");
         Debug.Log($"총 노드 수: {generatedMapData.nodes.Count}");
         Debug.Log($"시작 노드: {generatedMapData.startIndex}");
         Debug.Log($"보스 노드: {generatedMapData.bossIndex}");
-        
+
         for (int i = 0; i < generatedMapData.nodes.Count; i++)
         {
             var node = generatedMapData.nodes[i];
