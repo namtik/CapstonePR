@@ -170,7 +170,7 @@ public class FCMDebugOverlay : MonoBehaviour
         }
         else
         {
-            rewardText.text = "보상 대기 (onlineLearning ON 필요)";
+            rewardText.text = "보상 대기...";
             rewardText.color = GREY;
         }
     }

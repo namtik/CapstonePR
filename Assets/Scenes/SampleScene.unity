@@ -9031,7 +9031,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38264bfed934fe6459c964d46ed3100d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.RunDeckState
-  startingDeck: []
+  startingDeck:
+  - cardId: 104
+    count: 2
+  - cardId: 105
+    count: 1
+  - cardId: 114
+    count: 1
+  - cardId: 116
+    count: 1
+  - cardId: 303
+    count: 2
+  - cardId: 307
+    count: 1
+  - cardId: 317
+    count: 2
+  - cardId: 415
+    count: 2
+  - cardId: 424
+    count: 1
+  - cardId: 205
+    count: 2
+  - cardId: 106
+    count: 2
+  - cardId: 124
+    count: 1
+  - cardId: 126
+    count: 1
+  - cardId: 117
+    count: 2
 --- !u!4 &1362271643
 Transform:
   m_ObjectHideFlags: 0
@@ -9623,7 +9651,8 @@ MonoBehaviour:
   aiExplorationEpsilon: 0.15
   logAiDecisions: 1
   onlineLearning: 1
-  disruptionTrackTimeout: 25
+  aiRewardGamma: 0.6
+  disruptionTrackTimeout: 5
 --- !u!1 &1401766510
 GameObject:
   m_ObjectHideFlags: 0

@@ -1269,12 +1269,10 @@ namespace Battle
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
                             $" → 선택={Battle.AI.EnemyAiModel.ActionNames[pick]}{(decision.explored ? " (탐험)" : "")}");
                     if (logAiDecisions) Battle.AI.DisruptionLogger.Log(decision);
-                    if (onlineLearning)
-                    {
-                        rewardDecision = decision;
-                        // TD: 이번 결정이 직전 전이들의 s'가 된다 → 채우고 완성분 학습, 새 전이 시작.
-                        if (aiRewardGamma > 0f) TdOnDecision(decision);
-                    }
+                    // 보상 추적/표시는 항상 수행(디버그 관찰용). 가중치 학습만 onlineLearning ON일 때(학습 호출 4곳에 가드).
+                    rewardDecision = decision;
+                    // TD: 이번 결정이 직전 전이들의 s'가 된다 → 채우고, 완성분 게시(+ON이면 학습), 새 전이 시작.
+                    if (aiRewardGamma > 0f) TdOnDecision(decision);
                 }
                 catch (System.Exception e)
                 {
@@ -1390,11 +1388,11 @@ namespace Battle
         {
             reward = Mathf.Clamp(reward, -1f, 1f);
             if (aiRewardGamma > 0f) { TdSetReward(decision, reward, immediate: true); return; }
-            Battle.AI.OnlineQLearner.Observe(decision.membership, decision.context, action, reward);
+            if (onlineLearning) Battle.AI.OnlineQLearner.Observe(decision.membership, decision.context, action, reward);
             float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
-            Battle.AI.AiDebug.PublishReward(action, reward, true, drift); // 디버그 오버레이용
+            Battle.AI.AiDebug.PublishReward(action, reward, true, drift); // 디버그 오버레이용(학습 OFF여도 항상 게시)
             if (logVerbose)
-                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[action]} r={reward:+0.00;-0.00} (즉시) drift={drift:F3}");
+                Log($"[적AI{(onlineLearning ? "학습" : "관찰")}] {Battle.AI.EnemyAiModel.ActionNames[action]} r={reward:+0.00;-0.00} (즉시) drift={drift:F3}");
         }
 
         // 지연형 발현 → 보상 확정. (즉시형과 동일하게 γ로 분기)
@@ -1404,11 +1402,11 @@ namespace Battle
             var t = _track; _track = null;
             reward = Mathf.Clamp(reward, -1f, 1f);
             if (aiRewardGamma > 0f) { TdSetReward(t.decision, reward, immediate: false); return; }
-            Battle.AI.OnlineQLearner.Observe(t.decision.membership, t.decision.context, t.action, reward);
+            if (onlineLearning) Battle.AI.OnlineQLearner.Observe(t.decision.membership, t.decision.context, t.action, reward);
             float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
-            Battle.AI.AiDebug.PublishReward(t.action, reward, false, drift); // 디버그 오버레이용
+            Battle.AI.AiDebug.PublishReward(t.action, reward, false, drift); // 디버그 오버레이용(학습 OFF여도 항상 게시)
             if (logVerbose)
-                Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={reward:+0.00;-0.00} (발현) drift={drift:F3}");
+                Log($"[적AI{(onlineLearning ? "학습" : "관찰")}] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={reward:+0.00;-0.00} (발현) drift={drift:F3}");
         }
 
         // ── TD(0) 전이 큐 관리 (aiRewardGamma>0 일 때만 사용) ─────────────────────
@@ -1447,11 +1445,11 @@ namespace Battle
             {
                 var t = _tdQueue[i];
                 if (!(t.hasReward && t.hasNext)) continue;
-                Battle.AI.OnlineQLearner.ObserveTD(t.mu, t.ctx, t.action, t.reward, t.nextMu, t.nextCtx, aiRewardGamma);
+                if (onlineLearning) Battle.AI.OnlineQLearner.ObserveTD(t.mu, t.ctx, t.action, t.reward, t.nextMu, t.nextCtx, aiRewardGamma);
                 float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
                 Battle.AI.AiDebug.PublishReward(t.action, t.reward, t.immediate, drift);
                 if (logVerbose)
-                    Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={t.reward:+0.00;-0.00} " +
+                    Log($"[적AI{(onlineLearning ? "학습" : "관찰")}] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={t.reward:+0.00;-0.00} " +
                         $"(TD γ={aiRewardGamma:F2}{(t.immediate ? ", 즉시" : ", 발현")}) drift={drift:F3}");
                 _tdQueue.RemoveAt(i);
             }
@@ -1464,7 +1462,7 @@ namespace Battle
             {
                 var t = _tdQueue[i];
                 if (!t.hasReward) continue;
-                Battle.AI.OnlineQLearner.ObserveTD(t.mu, t.ctx, t.action, t.reward, null, null, aiRewardGamma);
+                if (onlineLearning) Battle.AI.OnlineQLearner.ObserveTD(t.mu, t.ctx, t.action, t.reward, null, null, aiRewardGamma);
                 float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
                 Battle.AI.AiDebug.PublishReward(t.action, t.reward, t.immediate, drift);
                 if (logVerbose)
