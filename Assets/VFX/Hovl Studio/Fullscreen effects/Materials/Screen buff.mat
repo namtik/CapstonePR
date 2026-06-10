@@ -115,7 +115,7 @@ Material:
     - _EnableFogOnTransparent: 1
     - _ExcludeFromTUAndAA: 0
     - _Multiply: 30
-    - _Opacity: 1
+    - _Opacity: 0.311
     - _OpaqueCullMode: 2
     - _PerPixelSorting: 0
     - _Polar_coordinates: 0
@@ -155,7 +155,7 @@ Material:
     - _ZTestTransparent: 4
     - _ZWrite: 0
     m_Colors:
-    - _Color: {r: 0.3066038, g: 0.43020782, b: 1, a: 1}
+    - _Color: {r: 0.7882353, g: 0.9855064, b: 1, a: 1}
     - _DistortionSpeedXYPowerZ: {r: 0, g: 0, b: 0, a: 0}
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}

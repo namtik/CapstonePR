@@ -118,7 +118,7 @@ Material:
     - _EnableFogOnTransparent: 1
     - _ExcludeFromTUAndAA: 0
     - _Multiply: 10
-    - _Opacity: 1
+    - _Opacity: 0.223
     - _OpaqueCullMode: 2
     - _PerPixelSorting: 0
     - _Polar_coordinates: 1
