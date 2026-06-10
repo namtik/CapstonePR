@@ -45,6 +45,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnGaugeStepChanged += view.UpdateActionGauge;
         midPattern = GetComponent<MonsterMidPattern>();
 
+        // 공격 모션이 마지막(임팩트) 프레임에 도달할 때 공격 이펙트를 한 번 더 재생
+        if (view != null) view.OnAttackMotionLastFrame += PlayAttackVfx;
+
         // 적 공격 파티클(hitVFX)이 Screen Space - Overlay UI 뒤로 가려지지 않도록 UIParticle로
         // UI 레이어 안에서 렌더한다. (월드 ParticleSystem은 어떤 sortingOrder로도 Overlay UI 위로 못 올라옴 →
         // CardEffectOverlay와 동일하게 UIParticle 사용)
@@ -76,6 +79,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnMidPattern  -= HandleMidPattern;
         stat.OnGaugeFull   -= HandleGaugeFull;
         stat.OnGaugeStepChanged -= view.UpdateActionGauge;
+        if (view != null) view.OnAttackMotionLastFrame -= PlayAttackVfx;
     }
 
     void Update()
@@ -286,19 +290,23 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         for (int i = 0; i < count; i++)
         {
             player.TakeDamage(damage);
-
-            if (hitVFX != null)
-            {
-                // VFX 오브젝트가 비활성 상태면 Play()해도 보이지 않으므로 먼저 활성화 보장(공격 이펙트 누락 방지)
-                if (!hitVFX.gameObject.activeSelf) hitVFX.gameObject.SetActive(true);
-                hitVFX.Stop();
-                hitVFX.Play();
-            }
+            // 공격 모션이 있으면 마지막(임팩트) 프레임에서만 이펙트(이벤트로 처리). 모션이 없을 때만 시작 시 폴백 재생.
+            if (view == null || !view.HasAttackMotion) PlayAttackVfx();
 
             // 타격 사이의 짧은 간격 (0.1~0.15초 정도가 적당합니다)
             yield return new WaitForSeconds(0.15f);
         }
         Debug.Log($"[EnemyController] {count} hit");
+    }
+
+    /// <summary>적 공격 파티클(hitVFX) 재생 — 비활성 시 활성화 보장 후 재시작. 공격 시작/마지막 프레임 양쪽에서 호출.</summary>
+    void PlayAttackVfx()
+    {
+        if (hitVFX == null) return;
+        // VFX 오브젝트가 비활성 상태면 Play()해도 보이지 않으므로 먼저 활성화 보장(공격 이펙트 누락 방지)
+        if (!hitVFX.gameObject.activeSelf) hitVFX.gameObject.SetActive(true);
+        hitVFX.Stop();
+        hitVFX.Play();
     }
     void HandleDeath()
     {

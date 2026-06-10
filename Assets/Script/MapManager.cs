@@ -340,6 +340,13 @@ public class MapManager : MonoBehaviour
         node.roundData = roundData;
         node.nodeType = nodeType;  // NodeType ���� ����
         node.mapManager = this;
+
+        // 노드 타입별 크기 적용(NodeVisualConfig.size). (0,0)이면 프리팹 크기 유지. node.nodeType은 roundData가 반영된 실제 타입.
+        if (rt != null && nodeVisualConfig != null)
+        {
+            Vector2 typeSize = nodeVisualConfig.GetSizeForType(node.nodeType);
+            if (typeSize.x > 0f && typeSize.y > 0f) rt.sizeDelta = typeSize;
+        }
         node.visualConfig = nodeVisualConfig;  // ���־� ���� ����
 
         //  GameStateController�� Ŭ���� ���� ����

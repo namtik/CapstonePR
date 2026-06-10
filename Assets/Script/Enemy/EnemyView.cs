@@ -110,6 +110,9 @@ public class EnemyView : MonoBehaviour
     private Coroutine _attackSpriteCo;
     private float _attackMotionEndTime; // 진행 중 공격 모션이 끝나는 시각(Time.time 기준)
 
+    /// <summary>공격 모션이 마지막 프레임(임팩트 이미지)으로 바뀌는 순간 발생 — 공격 이펙트 동기화용.</summary>
+    public event System.Action OnAttackMotionLastFrame;
+
     private EnemyStat stat;
     private Vector3 damageTextOriginLocalPos;
     private Color damageTextOriginColor;
@@ -510,6 +513,9 @@ public class EnemyView : MonoBehaviour
     /// <summary>진행 중인 공격 모션이 끝날 때까지 남은 시간(초). 없으면 0.</summary>
     public float AttackMotionRemaining => _attackMotionEndTime > 0f ? Mathf.Max(0f, _attackMotionEndTime - Time.time) : 0f;
 
+    /// <summary>공격 모션(프레임 교체)이 설정되어 재생될지 여부. 없으면 마지막 프레임 이벤트도 발생하지 않는다.</summary>
+    public bool HasAttackMotion => attackMotionEnabled && attackSprites != null && attackSprites.Length > 0;
+
     /// <summary>적 공격 시 호출 — attackSprites를 프레임마다 잠깐 보여준 뒤 평상시 이미지로 복귀.</summary>
     public void PlayAttackMotion()
     {
@@ -545,6 +551,7 @@ public class EnemyView : MonoBehaviour
         {
             if (enemyImage == null) { _attackSpriteCo = null; yield break; }
             if (attackSprites[i] != null) enemyImage.sprite = attackSprites[i];
+            if (i == attackSprites.Length - 1) OnAttackMotionLastFrame?.Invoke(); // 마지막(임팩트) 프레임 도달 — 공격 이펙트 동기화
 
             float t = 0f;
             while (t < attackFrameDuration)

@@ -9,6 +9,8 @@ public class NodeVisualConfig : ScriptableObject
         public NodeType nodeType;
         public Sprite sprite;
         public Color fallbackColor = Color.white;
+        [Tooltip("이 노드 타입의 크기(px, 가로x세로). (0,0)이면 프리팹 기본 크기를 사용.")]
+        public Vector2 size = Vector2.zero;
     }
 
     [Header("��� Ÿ�Ժ� ���־� ����")]
@@ -44,5 +46,16 @@ public class NodeVisualConfig : ScriptableObject
                 return visual.fallbackColor;
         }
         return Color.white;
+    }
+
+    /// <summary>해당 노드 타입의 크기(px). (0,0)이면 미설정 — 프리팹 크기를 사용.</summary>
+    public Vector2 GetSizeForType(NodeType type)
+    {
+        foreach (var visual in nodeVisuals)
+        {
+            if (visual.nodeType == type)
+                return visual.size;
+        }
+        return Vector2.zero;
     }
 }
