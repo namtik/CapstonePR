@@ -29,6 +29,18 @@
 
 ---
 
+## 🆕 추가 (2026-06-10) — 온라인 Q-러닝에 TD(0) 적용 (컴파일 ✓, 플레이검증 대기)
+
+밴딧(즉시보상 회귀)이던 온라인 학습을 **TD(0)** 로 확장. "스텝"=**방해행동 결정 1회**(게이지 도달), 실제 시간 아님 → 게이지 턴제와 정합. `target = r + γ·max_a' Q(s',a')`, s'=다음 방해결정 상태.
+
+- **인스펙터 신규**: `NewBattleController.aiRewardGamma`(Range 0~0.95, **기본 0.6**). `γ=0`이면 기존 즉시보상과 **정확히 동일**(롤백 스위치 겸용). onlineLearning ON일 때만 적용.
+- `OnlineQLearner`: `ObserveTD(mu,ctx,a,r,nextMu,nextCtx,γ)` + `AddExperience`/`MaxQ` 추가. 버퍼 `Experience.reward`→`target`. 타깃 [-2,2] 클램프(발산 방지). L2-to-base·리플레이·LR 안정화 그대로.
+- `NewBattleController`: `TdTransition` 큐 + `TdOnDecision`(결정 시 직전 전이 s' 채우고 완성분 학습→새 전이 적재) / `TdSetReward`(membership 레퍼런스로 매칭) / `TdFlush` / `TdFlushTerminal`(전투종료=부트스트랩0). `ObserveDisruption`·`ResolveTrack`이 γ>0이면 큐로 라우팅. 전투 시작 시 `_track=null`+`_tdQueue.Clear()`, `EndBattle`에서 `TdFlushTerminal()`.
+- **검증 추가**: `logVerbose` 로그가 `(TD γ=0.60, 즉시/발현)` 또는 `(TD 터미널)` 로 뜨는지, γ 바꿔가며(0=기존, 0.6) drift 거동 확인. γ=0이면 로그가 다시 `(즉시)/(발현)`.
+- 검증 환경 메모: Unity 생성 `Assembly-CSharp.csproj`가 **stale**(삭제파일 62개 참조 + 신규파일 누락 ex.`ComboSkillShopItem.cs`) → `dotnet build` 직접은 실패함. 디스크 실제 .cs로 컴파일목록 재생성한 임시 csproj로 검증 = **오류 0**. Unity 에디터 열면 csproj 자동 재생성됨.
+
+---
+
 ## ✅ 이번 세션 완료 (`dotnet build Assembly-CSharp.csproj` → 오류 0 / 신규 경고 0)
 
 ### 적 AI 보상 ① "효과추적(의도 달성)"으로 재설계 — `stash@{0}` 수동 병합

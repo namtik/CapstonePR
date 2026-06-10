@@ -82,6 +82,9 @@ namespace Battle
         [SerializeField] private bool logAiDecisions = false;
         [Tooltip("ON이면 게임 중 실제 결과로 적 AI Q-가중치를 미세조정(세션 단위 누적, 오프라인 베이스에서 시작).")]
         [SerializeField] private bool onlineLearning = false;
+        [Tooltip("온라인 학습 TD 할인율 γ. 0=즉시 효과보상만(기존 동작·롤백), 0.6 권장. '스텝'은 시간이 아니라 방해행동 결정 횟수 — 행동 간 연계 가치를 학습. onlineLearning ON일 때만 적용.")]
+        [Range(0f, 0.95f)]
+        [SerializeField] private float aiRewardGamma = 0.6f;
 
         private readonly CardDeckSystem _deck = new CardDeckSystem();
         private readonly CardEffectResolver _resolver = new CardEffectResolver();
@@ -150,6 +153,24 @@ namespace Battle
             public int curseHits;             // 저주: 실제 자해 발생 횟수
             public CardInstance exhaustCard;  // 탈진: 삽입한 카드 인스턴스
             public int playerHpAtFire;        // 강화: 발동 시 플레이어 HP
+        }
+
+        // ── TD(0) 전이 큐 — (s,a,r,s')가 모두 모이면 학습(target=r+γ·maxQ(s')) ──
+        // "스텝"=방해행동 결정 1회(게이지 도달 이벤트). s'=다음 방해결정의 상태(=시간 아님).
+        // onlineLearning ON + aiRewardGamma>0 일 때만 채워진다. γ=0이면 큐 미사용(Observe 즉시 학습).
+        // 즉시형(흡수/회복/버리기)은 보상이 결정 시점에, 지연형(저주/탈진/강화)은 발현 시점에 채워지므로
+        // 보상은 결정과 레퍼런스(membership 배열 인스턴스)로 매칭한다.
+        private readonly List<TdTransition> _tdQueue = new List<TdTransition>();
+
+        class TdTransition
+        {
+            public float[] mu, ctx;          // s (membership 배열 = 결정 식별자)
+            public int action;               // a
+            public float reward;             // r
+            public bool hasReward;
+            public bool immediate;           // 디버그 라벨용(즉시형/지연형)
+            public float[] nextMu, nextCtx;  // s' (다음 결정 상태). null이면 미확정
+            public bool hasNext;
         }
 
         // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
@@ -336,6 +357,8 @@ namespace Battle
             _awakenMaxTime = 0f;
             _usedFireCardCount = 0;
             _recoverCooldown = 0;
+            _track = null;            // 직전 전투의 미마감 지연추적 잔재 제거
+            _tdQueue.Clear();         // TD 전이 큐 초기화(세션 누적은 OnlineQLearner가 관리)
 
             // 각성 게이지를 Player.hpBar 아래에 자동 배치
             if (handHud != null && _player != null && _player.hpBar != null)
@@ -353,6 +376,7 @@ namespace Battle
             _awakenActive = false;
             _awakenPending = false;
             ResolveTrackUnfired(); // 온라인 학습: 진행 중 지연 추적을 미발현으로 마감
+            TdFlushTerminal();     // TD: 남은 전이를 터미널(부트스트랩 0)로 마감
             _deck.EndBattle();
             if (handHud != null)
             {
@@ -1245,7 +1269,12 @@ namespace Battle
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
                             $" → 선택={Battle.AI.EnemyAiModel.ActionNames[pick]}{(decision.explored ? " (탐험)" : "")}");
                     if (logAiDecisions) Battle.AI.DisruptionLogger.Log(decision);
-                    if (onlineLearning) rewardDecision = decision;
+                    if (onlineLearning)
+                    {
+                        rewardDecision = decision;
+                        // TD: 이번 결정이 직전 전이들의 s'가 된다 → 채우고 완성분 학습, 새 전이 시작.
+                        if (aiRewardGamma > 0f) TdOnDecision(decision);
+                    }
                 }
                 catch (System.Exception e)
                 {
@@ -1355,10 +1384,12 @@ namespace Battle
             _track = new DisruptionTrack { decision = decision, action = action };
         }
 
-        // 즉시형(흡수/회복/버리기): 발동 시점 가치로 바로 학습.
+        // 즉시형(흡수/회복/버리기): 발동 시점 가치로 보상 확정.
+        // γ>0이면 TD 큐에 보상만 채우고 다음 결정(s' 확정) 때 학습, γ=0이면 즉시 학습.
         void ObserveDisruption(Battle.AI.AiDecision decision, int action, float reward)
         {
             reward = Mathf.Clamp(reward, -1f, 1f);
+            if (aiRewardGamma > 0f) { TdSetReward(decision, reward, immediate: true); return; }
             Battle.AI.OnlineQLearner.Observe(decision.membership, decision.context, action, reward);
             float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
             Battle.AI.AiDebug.PublishReward(action, reward, true, drift); // 디버그 오버레이용
@@ -1366,17 +1397,80 @@ namespace Battle
                 Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[action]} r={reward:+0.00;-0.00} (즉시) drift={drift:F3}");
         }
 
-        // 지연형 발현 → 보상 확정.
+        // 지연형 발현 → 보상 확정. (즉시형과 동일하게 γ로 분기)
         void ResolveTrack(float reward)
         {
             if (_track == null) return;
             var t = _track; _track = null;
             reward = Mathf.Clamp(reward, -1f, 1f);
+            if (aiRewardGamma > 0f) { TdSetReward(t.decision, reward, immediate: false); return; }
             Battle.AI.OnlineQLearner.Observe(t.decision.membership, t.decision.context, t.action, reward);
             float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
             Battle.AI.AiDebug.PublishReward(t.action, reward, false, drift); // 디버그 오버레이용
             if (logVerbose)
                 Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={reward:+0.00;-0.00} (발현) drift={drift:F3}");
+        }
+
+        // ── TD(0) 전이 큐 관리 (aiRewardGamma>0 일 때만 사용) ─────────────────────
+        // 새 방해결정: 직전 전이들의 s'를 이번 결정 상태로 채우고, (s,a,r,s') 완성분을 학습한 뒤 새 전이를 적재.
+        void TdOnDecision(Battle.AI.AiDecision decision)
+        {
+            for (int i = 0; i < _tdQueue.Count; i++)
+                if (!_tdQueue[i].hasNext)
+                {
+                    _tdQueue[i].nextMu = decision.membership;
+                    _tdQueue[i].nextCtx = decision.context;
+                    _tdQueue[i].hasNext = true;
+                }
+            TdFlush();
+            _tdQueue.Add(new TdTransition { mu = decision.membership, ctx = decision.context, action = decision.action });
+        }
+
+        // 보상 확정: 같은 결정(membership 레퍼런스)의 전이에 보상을 채운다. 완성되면 학습.
+        void TdSetReward(Battle.AI.AiDecision decision, float reward, bool immediate)
+        {
+            for (int i = 0; i < _tdQueue.Count; i++)
+                if (!_tdQueue[i].hasReward && ReferenceEquals(_tdQueue[i].mu, decision.membership))
+                {
+                    _tdQueue[i].reward = reward;
+                    _tdQueue[i].hasReward = true;
+                    _tdQueue[i].immediate = immediate;
+                    break;
+                }
+            TdFlush();
+        }
+
+        // 보상과 s'가 모두 확정된 전이를 TD 학습(target=r+γ·maxQ(s'))시키고 큐에서 제거.
+        void TdFlush()
+        {
+            for (int i = _tdQueue.Count - 1; i >= 0; i--)
+            {
+                var t = _tdQueue[i];
+                if (!(t.hasReward && t.hasNext)) continue;
+                Battle.AI.OnlineQLearner.ObserveTD(t.mu, t.ctx, t.action, t.reward, t.nextMu, t.nextCtx, aiRewardGamma);
+                float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
+                Battle.AI.AiDebug.PublishReward(t.action, t.reward, t.immediate, drift);
+                if (logVerbose)
+                    Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={t.reward:+0.00;-0.00} " +
+                        $"(TD γ={aiRewardGamma:F2}{(t.immediate ? ", 즉시" : ", 발현")}) drift={drift:F3}");
+                _tdQueue.RemoveAt(i);
+            }
+        }
+
+        // 전투 종료/리셋: 남은 전이는 터미널(s'=null → 부트스트랩 0)로 학습. 보상 미확정분은 결과가 없어 버린다.
+        void TdFlushTerminal()
+        {
+            for (int i = 0; i < _tdQueue.Count; i++)
+            {
+                var t = _tdQueue[i];
+                if (!t.hasReward) continue;
+                Battle.AI.OnlineQLearner.ObserveTD(t.mu, t.ctx, t.action, t.reward, null, null, aiRewardGamma);
+                float drift = Battle.AI.OnlineQLearner.WeightDriftFromBase();
+                Battle.AI.AiDebug.PublishReward(t.action, t.reward, t.immediate, drift);
+                if (logVerbose)
+                    Log($"[적AI학습] {Battle.AI.EnemyAiModel.ActionNames[t.action]} r={t.reward:+0.00;-0.00} (TD 터미널) drift={drift:F3}");
+            }
+            _tdQueue.Clear();
         }
 
         // 발현 못 하고 끝남(타임아웃/전투종료) → 저주는 자해/회피분 반영, 그 외 미발현 음수.

@@ -6,7 +6,8 @@ namespace Battle.AI
     /// <summary>
     /// 하이브리드 온라인 학습기 — 오프라인 베이스(EnemyAiModel)에서 warm-start 후,
     /// 게임 중 실제 결과 보상으로 RBFN Q-가중치만 미세조정한다. FCM 중심점/공분산은 고정(여기서 안 다룸).
-    /// 안정화: 베이스로의 L2 정규화 + 작은 학습률 + 미니배치 리플레이.
+    /// 학습 타깃: 즉시보상(Observe, γ=0) 또는 TD(0) r+γ·max_a' Q(s',a')(ObserveTD). s'=다음 방해결정 상태.
+    /// 안정화: 베이스로의 L2 정규화 + 작은 학습률 + 미니배치 리플레이 + 타깃 클램프.
     /// 지속: 세션 단위(인메모리 static). 런 리셋에는 영향 없음. 게임(Play) 재시작 시 자동 베이스 복귀.
     /// </summary>
     public static class OnlineQLearner
@@ -16,7 +17,7 @@ namespace Battle.AI
         public const int BATCH = 4;          // 미니배치 크기
         public const int BUFFER_MAX = 256;   // 리플레이 버퍼 상한
 
-        struct Experience { public float[] state; public int action; public float reward; }
+        struct Experience { public float[] state; public int action; public float target; }
 
         static float[,] _qType;   // [TYPES, ACTIONS] 온라인 가중치
         static float[,] _qCtx;    // [CTX, ACTIONS]
@@ -58,22 +59,52 @@ namespace Battle.AI
             return q;
         }
 
-        /// <summary>경험(상태=[μ;ctx], 행동, 보상) 추가 후 미니배치 1스텝 학습.</summary>
+        /// <summary>경험(상태=[μ;ctx], 행동, 즉시보상) 추가 후 미니배치 1스텝 학습. 부트스트랩 없음(밴딧).</summary>
         public static void Observe(float[] mu, float[] ctx, int action, float reward)
         {
             EnsureInit();
             if (mu == null || ctx == null || action < 0 || action >= EnemyAiModel.ACTIONS) return;
+            AddExperience(mu, ctx, action, Mathf.Clamp(reward, -1f, 1f));
+        }
 
+        /// <summary>
+        /// TD(0) 경험 추가 — 회귀 타깃 = r + γ·max_a' Q(s',a'). s'(다음 결정 상태)이 null이면 터미널(부트스트랩 0).
+        /// 여기서 "스텝"은 실제 시간이 아니라 적의 방해행동 결정 횟수다(게이지 턴제와 정합).
+        /// </summary>
+        public static void ObserveTD(float[] mu, float[] ctx, int action, float reward,
+                                     float[] nextMu, float[] nextCtx, float gamma)
+        {
+            EnsureInit();
+            if (mu == null || ctx == null || action < 0 || action >= EnemyAiModel.ACTIONS) return;
+
+            float target = Mathf.Clamp(reward, -1f, 1f);
+            if (gamma > 0f && nextMu != null && nextCtx != null)
+                target += gamma * MaxQ(nextMu, nextCtx); // 다음 결정 상태의 최대 행동가치로 부트스트랩
+            AddExperience(mu, ctx, action, Mathf.Clamp(target, -2f, 2f)); // 발산 방지 안전 클램프
+        }
+
+        // 상태 벡터 구성 + 버퍼 적재 + 1스텝 학습 (Observe/ObserveTD 공통).
+        static void AddExperience(float[] mu, float[] ctx, int action, float target)
+        {
             var state = new float[EnemyAiModel.TYPES + EnemyAiModel.CTX];
             for (int i = 0; i < EnemyAiModel.TYPES; i++) state[i] = mu[i];
             for (int j = 0; j < EnemyAiModel.CTX; j++) state[EnemyAiModel.TYPES + j] = ctx[j];
 
-            _buffer.Add(new Experience { state = state, action = action, reward = Mathf.Clamp(reward, -1f, 1f) });
+            _buffer.Add(new Experience { state = state, action = action, target = target });
             if (_buffer.Count > BUFFER_MAX) _buffer.RemoveAt(0);
             TrainMinibatch();
         }
 
-        // Q_total(s,a) = state·W[:,a] + b[a] — 선택된 행동의 Q를 보상으로 회귀(SGD) + 베이스로의 L2.
+        // 온라인 가중치 기준 max_a Q(s,a) — TD 부트스트랩 항(전 행동 대상, 표준 Q-러닝).
+        static float MaxQ(float[] mu, float[] ctx)
+        {
+            var q = QTotal(mu, ctx);
+            float best = q[0];
+            for (int a = 1; a < q.Length; a++) if (q[a] > best) best = q[a];
+            return best;
+        }
+
+        // Q_total(s,a) = state·W[:,a] + b[a] — 선택된 행동의 Q를 타깃(즉시보상 또는 r+γ·maxQ')으로 회귀(SGD) + 베이스로의 L2.
         static void TrainMinibatch()
         {
             int n = _buffer.Count;
@@ -88,7 +119,7 @@ namespace Battle.AI
                 float pred = _qBias[a];
                 for (int i = 0; i < K; i++) pred += e.state[i] * _qType[i, a];
                 for (int j = 0; j < C; j++) pred += e.state[K + j] * _qCtx[j, a];
-                float err = pred - e.reward;
+                float err = pred - e.target;
 
                 for (int i = 0; i < K; i++)
                 {
