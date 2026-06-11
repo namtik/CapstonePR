@@ -542,13 +542,44 @@ namespace Battle.UI
                 dimOverlay.gameObject.SetActive(true);
                 dimOverlay.SetAsLastSibling();
             }
-            // 손패/콤보 UI를 딤 위로 올려 어두워지지 않게 함
+            // 각성 표식 레이어를 딤 바로 위에 둠(아래 손패/콤보 UI보다는 뒤 → 다른 UI를 가리지 않음)
+            EnsureAwakenMarkerLayer();
+            if (_awakenMarkerLayer != null)
+            {
+                _awakenMarkerLayer.gameObject.SetActive(true);
+                _awakenMarkerLayer.SetAsLastSibling();
+            }
+
+            // 손패/콤보 UI를 딤·표식 위로 올려 어두워지거나 가려지지 않게 함
             if (handRoot != null) handRoot.SetAsLastSibling();
             if (comboSlotPanel != null) comboSlotPanel.transform.SetAsLastSibling();
             if (comboSkillPanel != null) comboSkillPanel.transform.SetAsLastSibling();
             if (awakenHistoryContainer != null) awakenHistoryContainer.SetAsLastSibling();
             if (awakenCountText != null) awakenCountText.transform.SetAsLastSibling();
             BringAwakenGaugeToFront();
+        }
+
+        private RectTransform _awakenMarkerLayer; // 각성 표식 레이어(딤 바로 위, 다른 UI 아래)
+        // 각성 표식을 생성할 레이어를 외부에 노출(딤 바로 위 정렬은 ShowAwakenDim에서 보장)
+        public RectTransform AwakenMarkerLayer => _awakenMarkerLayer;
+
+        // 각성 표식 레이어가 없으면 전투 캔버스(딤과 같은 캔버스)에 풀스크린으로 생성
+        void EnsureAwakenMarkerLayer()
+        {
+            if (_awakenMarkerLayer != null) return;
+            Canvas canvas = ResolveTargetCanvas();
+            Transform parent = canvas != null ? canvas.transform : transform;
+
+            var go = new GameObject("AwakenMarkerLayer", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.localScale = Vector3.one;
+            _awakenMarkerLayer = rect;
+            _awakenMarkerLayer.gameObject.SetActive(false);
         }
 
         // 각성 딤을 끄고 색을 기본으로 복구

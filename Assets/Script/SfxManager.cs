@@ -15,6 +15,8 @@ public class SfxManager : MonoBehaviour
     [SerializeField] private AudioClip cardUseClip; // 카드 사용 효과음
     [Tooltip("카드 드로우 시 재생.")]
     [SerializeField] private AudioClip drawClip; // 카드 드로우 효과음
+    [Tooltip("각성 중 콤보가 완성(매칭)될 때마다 재생 — 표식이 뜨는 순간 소리.")]
+    [SerializeField] private AudioClip comboCompleteClip; // 콤보 완성 효과음
     [Tooltip("카드/콤보 이펙트 재생 시 기본 소리(아래 effectName 매핑이 없을 때).")]
     [SerializeField] private AudioClip effectDefaultClip; // 이펙트 기본 효과음
 
@@ -34,6 +36,7 @@ public class SfxManager : MonoBehaviour
     [Header("볼륨")]
     [Range(0f, 1f)] [SerializeField] private float cardUseVolume = 1f; // 카드 사용 볼륨
     [Range(0f, 1f)] [SerializeField] private float drawVolume = 1f; // 드로우 볼륨
+    [Range(0f, 1f)] [SerializeField] private float comboCompleteVolume = 1f; // 콤보 완성 볼륨
     [Range(0f, 1f)] [SerializeField] private float effectVolume = 1f; // 이펙트 볼륨
 
     // 싱글톤 등록 및 오디오 소스 초기화
@@ -56,6 +59,9 @@ public class SfxManager : MonoBehaviour
 
     // 카드 드로우 효과음을 재생한다
     public void PlayDraw() => Play(drawClip, drawVolume);
+
+    // 콤보 완성 효과음을 재생한다(각성 중 콤보 매칭 시)
+    public void PlayComboComplete() => Play(comboCompleteClip, comboCompleteVolume);
 
     // 이펙트 효과음을 재생한다(이름별 오버라이드 우선)
     public void PlayEffect(string effectName) => Play(ResolveEffectClip(effectName), effectVolume);

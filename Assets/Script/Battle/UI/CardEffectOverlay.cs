@@ -177,11 +177,12 @@ namespace Battle.UI
         }
 
         // 각성 콤보 표식을 anchoredPos에 생성하고 핸들 반환(콤보 성공 시 호출)
-        public GameObject SpawnAwakenMarker(Vector2 anchoredPos)
+        // parentOverride를 주면 그 RectTransform 자식으로 생성(딤 바로 위 레이어 등). 풀스크린 부모여야 좌표가 일치.
+        public GameObject SpawnAwakenMarker(Vector2 anchoredPos, RectTransform parentOverride = null)
         {
             var go = new GameObject("AwakenMarker", typeof(RectTransform), typeof(Image), typeof(AwakenMarkerView));
             var rt = (RectTransform)go.transform;
-            rt.SetParent(Rect, false);
+            rt.SetParent(parentOverride != null ? parentOverride : Rect, false);
             rt.anchorMin = new Vector2(0.5f, 0.5f);
             rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);

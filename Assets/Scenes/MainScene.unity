@@ -8179,9 +8179,9 @@ MonoBehaviour:
   defaultFps: 24
   playbackSpeed: 1
   foregroundSortingOrder: 30000
-  awakenMarkerSprite: {fileID: 21300000, guid: bcf2cfb1ec36f8243a0351746af2b0f0, type: 3}
-  awakenMarkerSize: 120
-  awakenMarkerColor: {r: 1, g: 1, b: 1, a: 0.40392157}
+  awakenMarkerSprite: {fileID: 21300000, guid: 6b1ecc952ff24e944a5dc1ed5285e50c, type: 3}
+  awakenMarkerSize: 200
+  awakenMarkerColor: {r: 1, g: 0.94457, b: 0.6179246, a: 0.74509805}
   positionOverrides:
   - effectName: Burn_EFF
     anchoredPos: {x: 0, y: 150}
@@ -14102,6 +14102,7 @@ MonoBehaviour:
   source: {fileID: 0}
   cardUseClip: {fileID: 8300000, guid: 71f5859fcb950d34a86a1f984f086a7b, type: 3}
   drawClip: {fileID: 8300000, guid: ed069c02b40828c4cbf36d8ee893a807, type: 3}
+  comboCompleteClip: {fileID: 0}
   effectDefaultClip: {fileID: 0}
   effectClips:
   - effectName: Fire_ATK
@@ -14114,6 +14115,7 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: c766b95afb78b3440993fcd0c20c9417, type: 3}
   cardUseVolume: 0.4
   drawVolume: 0.4
+  comboCompleteVolume: 1
   effectVolume: 0.3
 --- !u!82 &1349267145
 AudioSource:
@@ -14490,6 +14492,8 @@ MonoBehaviour:
   awakenMarkerSequence: 1
   awakenMarkerRadius: 230
   awakenMarkerRadiusGrowth: 14
+  awakenMarkerMaxRadius: 0
+  awakenMarkerCenterOffset: {x: 0, y: 0}
   awakenMarkerVerticalSquash: 0.72
   awakenExplosionInterval: 0.18
   frostAppliedEffectName: Frost_EFF

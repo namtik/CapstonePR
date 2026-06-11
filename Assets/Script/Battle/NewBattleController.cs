@@ -67,10 +67,14 @@ namespace Battle
         [Tooltip("ON이면 각성 중 콤보 성공마다 몬스터 주위에 표식을 띄우고, 종료 시 표식을 하나씩 차례로 터뜨린다. " +
                  "OFF면 기존처럼 종료 시 한 번에 일괄 발동.")]
         [SerializeField] private bool awakenMarkerSequence = true;     // 표식 순차 폭발 사용 여부
-        [Tooltip("표식을 몬스터 중심에서 배치할 기본 반경(px).")]
+        [Tooltip("표식을 몬스터 중심에서 배치할 기본 반경(px). 범위를 키우려면 이 값을 올려라.")]
         [SerializeField] private float awakenMarkerRadius = 230f;      // 표식 배치 반경
         [Tooltip("표식이 많아질수록 반경을 키우는 증가량(px/개). 0이면 고정 반경.")]
         [SerializeField] private float awakenMarkerRadiusGrowth = 14f; // 표식 반경 증가량
+        [Tooltip("표식이 퍼질 최대 반경(px) — 이 값으로 범위 상한 제한. 0 이하면 무제한.")]
+        [SerializeField] private float awakenMarkerMaxRadius = 0f;     // 표식 최대 반경(범위 상한)
+        [Tooltip("표식 무리의 중심을 몬스터 기준에서 추가로 이동(px). 표식 뜨는 위치 미세조정.")]
+        [SerializeField] private Vector2 awakenMarkerCenterOffset = Vector2.zero; // 표식 중심 오프셋
         [Tooltip("표식 배치 세로 눌림 비율 — 1=정원, <1이면 가로로 넓은 타원(화면에 자연스럽게 둘러싸이는 느낌).")]
         [Range(0.3f, 1f)]
         [SerializeField] private float awakenMarkerVerticalSquash = 0.72f; // 표식 세로 눌림
@@ -764,8 +768,9 @@ namespace Battle
                     Log($"[각성] ⏱ 콤보 매칭 → 시간 +{totalBonus:F1}s ({before:F2}s → {_awakenTimeRemaining:F2}s, max={_awakenMaxTime:F2}s)" +
                         (extraBonus > 0f ? " [비급서]" : ""));
 
-                    // 콤보 성공 → 몬스터 주위에 표식 1개(종료 시 차례로 폭발)
+                    // 콤보 성공 → 몬스터 주위에 표식 1개(종료 시 차례로 폭발) + 완성 효과음
                     SpawnAwakenComboMarker();
+                    SfxManager.Instance?.PlayComboComplete();
                 }
 
                 Log($"[각성] {card.data.displayName} → 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은시간={_awakenTimeRemaining:F2}s");
@@ -1176,7 +1181,9 @@ namespace Battle
         {
             if (!awakenMarkerSequence || effectOverlay == null) return;
             Vector2 pos = ComputeAwakenMarkerPosition(_awakenMarkerPositions.Count);
-            GameObject handle = effectOverlay.SpawnAwakenMarker(pos);
+            // 표식은 딤 바로 위 레이어(다른 UI 아래)에 생성 — 레이어 없으면 effectOverlay 기본 위치로 폴백
+            RectTransform layer = handHud != null ? handHud.AwakenMarkerLayer : null;
+            GameObject handle = effectOverlay.SpawnAwakenMarker(pos, layer);
             _awakenMarkerPositions.Add(pos);
             _awakenMarkerHandles.Add(handle);
         }
@@ -1184,10 +1191,13 @@ namespace Battle
         // idx번째 표식의 배치 위치 — 몬스터 중심 기준 황금각 분산(겹침 최소화)
         Vector2 ComputeAwakenMarkerPosition(int idx)
         {
-            Vector2 center = effectOverlay != null ? effectOverlay.EnemyAnchoredPos : new Vector2(0f, 300f);
+            Vector2 center = (effectOverlay != null ? effectOverlay.EnemyAnchoredPos : new Vector2(0f, 300f))
+                             + awakenMarkerCenterOffset;
             const float goldenAngle = 137.50776f * Mathf.Deg2Rad;
             float angle = idx * goldenAngle;
             float radius = awakenMarkerRadius + idx * awakenMarkerRadiusGrowth;
+            // 최대 반경으로 범위 제한(0 이하면 무제한)
+            if (awakenMarkerMaxRadius > 0f) radius = Mathf.Min(radius, awakenMarkerMaxRadius);
             return center + new Vector2(Mathf.Cos(angle) * radius,
                                        Mathf.Sin(angle) * radius * awakenMarkerVerticalSquash);
         }
