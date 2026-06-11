@@ -63,6 +63,20 @@ namespace Battle
         [FormerlySerializedAs("feverShakeIntensityMax")]
         [SerializeField] private float awakenShakeIntensityMax = 2.0f; // 셰이크 강도 상한
 
+        [Header("각성 콤보 표식 순차 폭발")]
+        [Tooltip("ON이면 각성 중 콤보 성공마다 몬스터 주위에 표식을 띄우고, 종료 시 표식을 하나씩 차례로 터뜨린다. " +
+                 "OFF면 기존처럼 종료 시 한 번에 일괄 발동.")]
+        [SerializeField] private bool awakenMarkerSequence = true;     // 표식 순차 폭발 사용 여부
+        [Tooltip("표식을 몬스터 중심에서 배치할 기본 반경(px).")]
+        [SerializeField] private float awakenMarkerRadius = 230f;      // 표식 배치 반경
+        [Tooltip("표식이 많아질수록 반경을 키우는 증가량(px/개). 0이면 고정 반경.")]
+        [SerializeField] private float awakenMarkerRadiusGrowth = 14f; // 표식 반경 증가량
+        [Tooltip("표식 배치 세로 눌림 비율 — 1=정원, <1이면 가로로 넓은 타원(화면에 자연스럽게 둘러싸이는 느낌).")]
+        [Range(0.3f, 1f)]
+        [SerializeField] private float awakenMarkerVerticalSquash = 0.72f; // 표식 세로 눌림
+        [Tooltip("각성 종료 후 표식이 하나씩 터지는 간격(초).")]
+        [SerializeField] private float awakenExplosionInterval = 0.18f; // 순차 폭발 간격
+
         [Header("각성 화면 효과 (Screen wind 등)")]
         [Tooltip("각성 동안 화면 전체에 유지될 프리팹(예: Hovl 'Screen wind'). 각성 발동 시 루프 재생되고 종료 시 정지된다. " +
                  "UIParticle로 전투 UI 위에 렌더되며, 프리팹의 카메라 부착 스크립트(HS_ScreenEffect)는 자동 비활성된다. " +
@@ -117,6 +131,9 @@ namespace Battle
         private int[] _comboCooldown = System.Array.Empty<int>(); // 콤보별 재사용 쿨다운(남은 입력 횟수)
         private readonly List<ComboSkillDef> _queuedComboSkills = new List<ComboSkillDef>(); // 각성 종료 시 발동할 콤보 큐
         private readonly List<CardElement> _awakenInputHistory = new List<CardElement>(); // 각성 중 입력 속성 전체 기록
+        private readonly List<Vector2> _awakenMarkerPositions = new List<Vector2>(); // 콤보 큐와 1:1 표식 위치
+        private readonly List<GameObject> _awakenMarkerHandles = new List<GameObject>(); // 콤보 큐와 1:1 표식 핸들
+        private Coroutine _awakenExplosionRoutine; // 진행 중인 표식 순차 폭발 코루틴
 
         private int _usedFireCardCount;       // 이번 전투 불 카드 사용 수
         private int _awakenFragmentExhausted; // 각성 진입 시 격리된 파편 수
@@ -366,6 +383,9 @@ namespace Battle
                 handHud.SetAwakenGaugeVisible(false);
             }
             if (awakenTimerGauge != null) awakenTimerGauge.Hide();
+            if (_awakenExplosionRoutine != null) { StopCoroutine(_awakenExplosionRoutine); _awakenExplosionRoutine = null; }
+            _awakenMarkerPositions.Clear();
+            _awakenMarkerHandles.Clear();
             if (effectOverlay != null) effectOverlay.ClearAll();
             _awakenScreenEffectInstance = null;
             Log("전투 종료");
@@ -692,6 +712,9 @@ namespace Battle
                     _awakenMaxTime += totalBonus;
                     Log($"[각성] ⏱ 콤보 매칭 → 시간 +{totalBonus:F1}s ({before:F2}s → {_awakenTimeRemaining:F2}s, max={_awakenMaxTime:F2}s)" +
                         (extraBonus > 0f ? " [비급서]" : ""));
+
+                    // 콤보 성공 → 몬스터 주위에 표식 1개(종료 시 차례로 폭발)
+                    SpawnAwakenComboMarker();
                 }
 
                 Log($"[각성] {card.data.displayName} → 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은시간={_awakenTimeRemaining:F2}s");
@@ -969,6 +992,8 @@ namespace Battle
             _comboCooldown = new int[ownedComboSkills != null ? ownedComboSkills.Count : 0];
             _queuedComboSkills.Clear();
             _awakenInputHistory.Clear();
+            _awakenMarkerPositions.Clear();
+            _awakenMarkerHandles.Clear();
 
             if (handHud != null)
             {
@@ -1010,13 +1035,11 @@ namespace Battle
 
             if (_queuedComboSkills.Count > 0)
             {
-                // Damage 콤보 수를 먼저 세어 이펙트 좌우 분산에 사용
+                // Damage 콤보 수를 먼저 세어 이펙트 분산/로그에 사용
                 int damageCount = 0;
                 for (int i = 0; i < _queuedComboSkills.Count; i++)
                     if (_queuedComboSkills[i] != null && _queuedComboSkills[i].effect == ComboEffectType.Damage)
                         damageCount++;
-
-                Log($"[각성] 종료 — 콤보 {_queuedComboSkills.Count}건 일괄 발동 (Damage {damageCount}건)");
 
                 // DB 콤보 반복 공식용: 이번 각성 발동 콤보 총수 + refComboId별 발동 횟수
                 _awakenComboCountThisEnd = _queuedComboSkills.Count;
@@ -1028,41 +1051,53 @@ namespace Battle
                     _comboSelfUseCount[s.refComboId] = c + 1;
                 }
 
-                int damageIndex = 0;
-                for (int i = 0; i < _queuedComboSkills.Count; i++)
+                if (awakenMarkerSequence)
                 {
-                    var skill = _queuedComboSkills[i];
-                    if (skill == null) continue;
-                    ActivateComboSkill(skill);
+                    // 표식을 하나씩 터뜨리며 콤보를 순차 발동(큐/표식을 로컬로 넘겨 멤버는 즉시 비움)
+                    Log($"[각성] 종료 — 표식 {_queuedComboSkills.Count}개 순차 폭발 (Damage {damageCount}건)");
+                    var skills = new List<ComboSkillDef>(_queuedComboSkills);
+                    var positions = new List<Vector2>(_awakenMarkerPositions);
+                    var handles = new List<GameObject>(_awakenMarkerHandles);
+                    _queuedComboSkills.Clear();
+                    _awakenMarkerPositions.Clear();
+                    _awakenMarkerHandles.Clear();
 
-                    if (skill.effect == ComboEffectType.Damage)
+                    if (_awakenExplosionRoutine != null) StopCoroutine(_awakenExplosionRoutine);
+                    _awakenExplosionRoutine = StartCoroutine(ExplodeMarkersSequentially(skills, positions, handles, damageCount));
+                }
+                else
+                {
+                    // (기존) 종료 시 한 번에 일괄 발동
+                    Log($"[각성] 종료 — 콤보 {_queuedComboSkills.Count}건 일괄 발동 (Damage {damageCount}건)");
+
+                    int damageIndex = 0;
+                    for (int i = 0; i < _queuedComboSkills.Count; i++)
                     {
-                        if (effectOverlay != null && !string.IsNullOrEmpty(awakenDamageEffectName))
+                        var skill = _queuedComboSkills[i];
+                        if (skill == null) continue;
+                        ActivateComboSkill(skill);
+
+                        if (skill.effect == ComboEffectType.Damage)
                         {
-                            Vector2 offset = ComputeAwakenDamageOffset(damageIndex, damageCount);
-                            effectOverlay.PlayByNameAtOffset(awakenDamageEffectName, offset);
+                            if (effectOverlay != null && !string.IsNullOrEmpty(awakenDamageEffectName))
+                            {
+                                Vector2 offset = ComputeAwakenDamageOffset(damageIndex, damageCount);
+                                effectOverlay.PlayByNameAtOffset(awakenDamageEffectName, offset);
+                            }
+                            damageIndex++;
                         }
-                        damageIndex++;
                     }
-                }
 
-                // Damage 콤보가 1건 이상이면 임팩트 강조용 셰이크 (콤보 수 비례, 상한 있음)
-                if (damageCount > 0 && damageOverlay != null && awakenShakeIntensityPerHit > 0f)
-                {
-                    float intensity = Mathf.Min(damageCount * awakenShakeIntensityPerHit, awakenShakeIntensityMax);
-                    damageOverlay.TriggerShake(intensity);
-                }
+                    // Damage 콤보가 1건 이상이면 임팩트 강조용 셰이크 (콤보 수 비례, 상한 있음)
+                    if (damageCount > 0 && damageOverlay != null && awakenShakeIntensityPerHit > 0f)
+                    {
+                        float intensity = Mathf.Min(damageCount * awakenShakeIntensityPerHit, awakenShakeIntensityMax);
+                        damageOverlay.TriggerShake(intensity);
+                    }
 
-                // 이무기의 여의주: 성공 콤보 수만큼 각성 게이지 회복 (즉시 재발동 방지 max-1 상한)
-                if (RelicManager.Instance != null &&
-                    RelicManager.Instance.HasEffect(RelicEffectType.AwakenGaugeRecoverPerCombo))
-                {
-                    int recover = Mathf.Min(_queuedComboSkills.Count, EffectiveAwakenInput - 1);
-                    _elementInputCount = recover;
-                    Log($"[유물] 이무기의 여의주 — 각성 게이지 {_elementInputCount}/{EffectiveAwakenInput} 회복");
+                    ApplyAwakenComboGaugeRecovery(_queuedComboSkills.Count);
+                    _queuedComboSkills.Clear();
                 }
-
-                _queuedComboSkills.Clear();
             }
             else
             {
@@ -1080,6 +1115,72 @@ namespace Battle
                 handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
                 handHud.UpdateAwakenInputHistory(_awakenInputHistory);
             }
+        }
+
+        // 각성 중 콤보 성공 시 몬스터 주위에 표식 1개 생성(콤보 큐와 1:1 정렬)
+        void SpawnAwakenComboMarker()
+        {
+            if (!awakenMarkerSequence || effectOverlay == null) return;
+            Vector2 pos = ComputeAwakenMarkerPosition(_awakenMarkerPositions.Count);
+            GameObject handle = effectOverlay.SpawnAwakenMarker(pos);
+            _awakenMarkerPositions.Add(pos);
+            _awakenMarkerHandles.Add(handle);
+        }
+
+        // idx번째 표식의 배치 위치 — 몬스터 중심 기준 황금각 분산(겹침 최소화)
+        Vector2 ComputeAwakenMarkerPosition(int idx)
+        {
+            Vector2 center = effectOverlay != null ? effectOverlay.EnemyAnchoredPos : new Vector2(0f, 300f);
+            const float goldenAngle = 137.50776f * Mathf.Deg2Rad;
+            float angle = idx * goldenAngle;
+            float radius = awakenMarkerRadius + idx * awakenMarkerRadiusGrowth;
+            return center + new Vector2(Mathf.Cos(angle) * radius,
+                                       Mathf.Sin(angle) * radius * awakenMarkerVerticalSquash);
+        }
+
+        // 각성 종료 후 표식을 하나씩 터뜨리며 콤보를 순차 발동
+        IEnumerator ExplodeMarkersSequentially(List<ComboSkillDef> skills, List<Vector2> positions,
+                                               List<GameObject> handles, int damageCount)
+        {
+            var wait = awakenExplosionInterval > 0f ? new WaitForSeconds(awakenExplosionInterval) : null;
+
+            for (int i = 0; i < skills.Count; i++)
+            {
+                if (!_inBattle) break; // 전투가 끝났으면 잔여 폭발 중단
+
+                var skill = skills[i];
+                if (skill == null) continue;
+
+                Vector2 pos = i < positions.Count
+                    ? positions[i]
+                    : (effectOverlay != null ? effectOverlay.EnemyAnchoredPos : Vector2.zero);
+
+                // 표식 제거 + 그 자리에서 폭발 이펙트
+                if (i < handles.Count && effectOverlay != null) effectOverlay.DestroyAwakenMarker(handles[i]);
+                if (effectOverlay != null && !string.IsNullOrEmpty(awakenDamageEffectName))
+                    effectOverlay.PlayByNameAtPosition(awakenDamageEffectName, pos);
+
+                // 콤보 효과 적용 — 데미지면 한 발씩 셰이크
+                ActivateComboSkill(skill);
+                if (skill.effect == ComboEffectType.Damage && damageOverlay != null && awakenShakeIntensityPerHit > 0f)
+                    damageOverlay.TriggerShake(Mathf.Min(awakenShakeIntensityPerHit, awakenShakeIntensityMax));
+
+                if (i < skills.Count - 1 && wait != null) yield return wait;
+            }
+
+            ApplyAwakenComboGaugeRecovery(skills.Count);
+            _awakenExplosionRoutine = null;
+        }
+
+        // 이무기의 여의주: 성공 콤보 수만큼 각성 게이지 회복 (즉시 재발동 방지 max-1 상한)
+        void ApplyAwakenComboGaugeRecovery(int comboCount)
+        {
+            if (RelicManager.Instance == null ||
+                !RelicManager.Instance.HasEffect(RelicEffectType.AwakenGaugeRecoverPerCombo)) return;
+
+            _elementInputCount = Mathf.Min(comboCount, EffectiveAwakenInput - 1);
+            UpdateAwakenText();
+            Log($"[유물] 이무기의 여의주 — 각성 게이지 {_elementInputCount}/{EffectiveAwakenInput} 회복");
         }
 
         // 콤보 슬롯에 속성 추가(윈도우 3장 유지) + 히스토리 누적

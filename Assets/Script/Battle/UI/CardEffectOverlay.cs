@@ -29,6 +29,17 @@ namespace Battle.UI
         [Tooltip("이펙트를 손패 등 다른 UI보다 앞에 그리기 위한 Sort Order. 자체 Canvas+Override Sorting을 자동 설정한다. 손패보다 뒤면 값을 키우세요.")]
         [SerializeField] private int foregroundSortingOrder = 1000; // 전경 정렬 순서
 
+        // 적 대상 효과 기준 위치(각성 표식을 몬스터 주위에 배치할 때 사용)
+        public Vector2 EnemyAnchoredPos => enemyAnchoredPos;
+
+        [Header("각성 콤보 표식 (콤보 성공 시 몬스터 주위에 표시)")]
+        [Tooltip("각성 중 콤보 성공마다 몬스터 주위에 띄울 표식 스프라이트. 비우면 내장 원형 UI 스프라이트를 사용.")]
+        [SerializeField] private Sprite awakenMarkerSprite; // 표식 스프라이트(없으면 기본 원형)
+        [Tooltip("표식 한 변 크기(px).")]
+        [SerializeField] private float awakenMarkerSize = 120f; // 표식 크기
+        [Tooltip("표식 색(은은한 발광을 위해 알파를 약간 낮추는 것을 권장).")]
+        [SerializeField] private Color awakenMarkerColor = new Color(1f, 0.55f, 0.18f, 0.95f); // 표식 색
+
         [Header("개별 효과 위치 오버라이드 (Inspector에서 effectName 매핑)")]
         [SerializeField] private List<EffectPositionOverride> positionOverrides = new List<EffectPositionOverride>(); // 효과별 위치 오버라이드
 
@@ -115,10 +126,20 @@ namespace Battle.UI
         public void PlayByNameAtOffset(string effectName, Vector2 offsetFromDefault)
         {
             if (string.IsNullOrEmpty(effectName)) return;
+            PlayAtCore(effectName, ResolvePositionFor(effectName) + offsetFromDefault);
+        }
 
+        // 절대 anchored 위치에 효과를 재생(각성 표식 폭발 등 위치 직접 지정용)
+        public void PlayByNameAtPosition(string effectName, Vector2 anchoredPos)
+        {
+            if (string.IsNullOrEmpty(effectName)) return;
+            PlayAtCore(effectName, anchoredPos);
+        }
+
+        // 지정된 anchored 위치에서 프리팹/시트 효과를 재생(공통 코어)
+        void PlayAtCore(string effectName, Vector2 pos)
+        {
             SfxManager.Instance?.PlayEffect(effectName);
-
-            Vector2 pos = ResolvePositionFor(effectName) + offsetFromDefault;
 
             // 1순위로 파티클 프리팹이 있으면 사용
             if (preferParticlePrefab)
@@ -153,6 +174,48 @@ namespace Battle.UI
                 if (go != null) Destroy(go);
             }
             _activeFx.Clear();
+        }
+
+        // 각성 콤보 표식을 anchoredPos에 생성하고 핸들 반환(콤보 성공 시 호출)
+        public GameObject SpawnAwakenMarker(Vector2 anchoredPos)
+        {
+            var go = new GameObject("AwakenMarker", typeof(RectTransform), typeof(Image), typeof(AwakenMarkerView));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(Rect, false);
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = new Vector2(awakenMarkerSize, awakenMarkerSize);
+            rt.localRotation = Quaternion.identity;
+            rt.SetAsLastSibling();
+            _activeFx.Add(go);
+
+            var img = go.GetComponent<Image>();
+            img.sprite = awakenMarkerSprite != null ? awakenMarkerSprite : DefaultMarkerSprite();
+            img.color = awakenMarkerColor;
+            img.raycastTarget = false;
+            img.preserveAspect = true;
+
+            go.GetComponent<AwakenMarkerView>().Begin();
+            return go;
+        }
+
+        // 각성 콤보 표식을 제거(폭발 이펙트는 호출 측에서 별도 재생)
+        public void DestroyAwakenMarker(GameObject handle)
+        {
+            if (handle == null) return;
+            _activeFx.Remove(handle);
+            Destroy(handle);
+        }
+
+        private Sprite _defaultMarkerSprite; // 내장 원형 스프라이트 캐시
+        // 표식 기본 비주얼용 내장 원형 스프라이트(Knob)
+        Sprite DefaultMarkerSprite()
+        {
+            if (_defaultMarkerSprite != null) return _defaultMarkerSprite;
+            _defaultMarkerSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
+            return _defaultMarkerSprite;
         }
 
         // effectName에 해당하는 시트 프레임들을 로드(캐시)
