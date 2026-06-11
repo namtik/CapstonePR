@@ -39,10 +39,11 @@ namespace Battle
         }
 
         // 콤보 시퀀스를 짧은 한글 문자열로 표현
-        public string ComboString()
-        {
-            return $"{Short(slot1)}-{Short(slot2)}-{Short(slot3)}";
-        }
+        public string ComboString() => ElementsLabel(slot1, slot2, slot3);
+
+        // 세 속성을 "불-땅-땅" 형태의 짧은 한글 라벨로 변환
+        public static string ElementsLabel(CardElement a, CardElement b, CardElement c)
+            => $"{Short(a)}-{Short(b)}-{Short(c)}";
 
         // 속성을 짧은 한글 약자로 변환
         static string Short(CardElement e) => e switch

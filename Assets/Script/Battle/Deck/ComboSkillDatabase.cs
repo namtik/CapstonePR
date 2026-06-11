@@ -69,33 +69,93 @@ namespace Battle
             var result = new List<ComboSkillDef>();
             foreach (var kv in canonicalByRef)
             {
-                int refId = kv.Key;
-                if (owned != null && !owned.Contains(refId)) continue;
-
-                var data = kv.Value;
-                var effects = _effectsByRef.TryGetValue(refId, out var list) ? list : new List<ComboEffectData>();
-
-                var def = new ComboSkillDef
-                {
-                    fromDatabase  = true,
-                    refComboId    = refId,
-                    slot1         = ParseElement(data.slot1),
-                    slot2         = ParseElement(data.slot2),
-                    slot3         = ParseElement(data.slot3),
-                    skillImg      = data.skillImg,
-                    skillIcon     = ResolveSkillIcon(data.skillImg),
-                    descriptionKR = data.description,
-                    dbEffects     = effects,
-                    displayName   = !string.IsNullOrEmpty(data.comboName)
-                                    ? data.comboName
-                                    : $"콤보 {refId}",
-                    effect        = HasDamage(effects) ? ComboEffectType.Damage : ComboEffectType.Draw,
-                };
-                result.Add(def);
+                if (owned != null && !owned.Contains(kv.Key)) continue;
+                result.Add(BuildDef(kv.Value));
             }
 
             result.Sort((a, b) => a.refComboId.CompareTo(b.refComboId));
             return result;
+        }
+
+        // 콤보 행 1개를 런타임 정의로 변환 (슬롯=커맨드, refComboId=효과)
+        static ComboSkillDef BuildDef(ComboSkillData data)
+        {
+            int refId = data.refComboId;
+            var effects = _effectsByRef.TryGetValue(refId, out var list) ? list : new List<ComboEffectData>();
+            return new ComboSkillDef
+            {
+                fromDatabase  = true,
+                refComboId    = refId,
+                slot1         = ParseElement(data.slot1),
+                slot2         = ParseElement(data.slot2),
+                slot3         = ParseElement(data.slot3),
+                skillImg      = data.skillImg,
+                skillIcon     = ResolveSkillIcon(data.skillImg),
+                descriptionKR = data.description,
+                dbEffects     = effects,
+                displayName   = !string.IsNullOrEmpty(data.comboName) ? data.comboName : $"콤보 {refId}",
+                effect        = HasDamage(effects) ? ComboEffectType.Damage : ComboEffectType.Draw,
+            };
+        }
+
+        // 특정 콤보 행 id 목록으로 콤보 정의 구성 (각 행 슬롯=커맨드, refComboId=효과)
+        public static List<ComboSkillDef> BuildCombosByIds(IEnumerable<int> comboIds)
+        {
+            EnsureInit();
+            var result = new List<ComboSkillDef>();
+            if (comboIds == null) return result;
+
+            var byId = new Dictionary<int, ComboSkillData>();
+            foreach (var c in _all) byId[c.id] = c;
+
+            var seen = new HashSet<int>();
+            foreach (int id in comboIds)
+            {
+                if (!seen.Add(id)) continue;
+                if (byId.TryGetValue(id, out var data)) result.Add(BuildDef(data));
+            }
+
+            result.Sort((a, b) => a.refComboId.CompareTo(b.refComboId));
+            return result;
+        }
+
+        // 에디터 피커용: 효과(refComboId)의 커맨드(슬롯 순서) 옵션 1개
+        public struct ComboCommandOption
+        {
+            public int comboId;  // 행 id (효과+커맨드 고유)
+            public string label; // "불-땅-땅"
+        }
+
+        // 특정 효과의 선택 가능한 커맨드 옵션 목록 (DB 행 순서)
+        public static List<ComboCommandOption> GetCommandOptions(int refComboId)
+        {
+            EnsureInit();
+            var list = new List<ComboCommandOption>();
+            foreach (var c in _all)
+            {
+                if (c.refComboId != refComboId) continue;
+                list.Add(new ComboCommandOption
+                {
+                    comboId = c.id,
+                    label = ComboSkillDef.ElementsLabel(
+                        ParseElement(c.slot1), ParseElement(c.slot2), ParseElement(c.slot3)),
+                });
+            }
+            return list;
+        }
+
+        // 효과의 대표 커맨드 id — 정규 행(id==refComboId) 우선, 없으면 첫 행
+        public static int GetRepresentativeCommandId(int refComboId)
+        {
+            EnsureInit();
+            int first = -1;
+            foreach (var c in _all)
+            {
+                if (c.refComboId != refComboId) continue;
+                if (c.id == refComboId) return c.id;
+                if (first < 0) first = c.id;
+            }
+            return first >= 0 ? first : refComboId;
         }
 
         // 효과 목록에 DAMAGE 동사 포함 여부 판정

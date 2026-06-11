@@ -40,8 +40,8 @@ namespace Battle
         [Tooltip("ON이면 Resources/ComboDB의 데이터 드리븐 콤보를 사용 (Inspector의 ownedComboSkills를 덮어씀). " +
                  "OFF면 위 Inspector 수동 리스트 사용.")]
         [SerializeField] private bool useComboDatabase = true;        // 콤보 DB 사용 여부
-        [Tooltip("보유할 콤보 RefComboID(1000~1019). 비우면 전체 보유. 예: 1000,1004,1008")]
-        [SerializeField] private List<int> ownedComboRefIds = new List<int>(); // 보유할 콤보 RefComboID 목록
+        [Tooltip("보유할 콤보 ID(효과별 커맨드 1개). 비우면 효과별 대표 커맨드로 전체 보유. 아래 커스텀 인스펙터에서 효과→커맨드로 편집.")]
+        [SerializeField] private List<int> ownedComboIds = new List<int>(); // 보유 콤보 ID(행=효과+커맨드) 목록
         [Tooltip("[테스트] 콤보 보상 UI 전까지 수동 획득용 — 이 RefComboID(1000~1019)를 컨텍스트 메뉴 '콤보 1개 추가'로 보유에 더함.")]
         [SerializeField] private int debugAddComboRefId = 1000;       // 디버그 수동 콤보 추가용 RefComboID
 
@@ -298,9 +298,9 @@ namespace Battle
 
             if (useComboDatabase)
             {
-                ownedComboSkills = ComboSkillDatabase.BuildOwnedCombos(ownedComboRefIds);
+                ownedComboSkills = BuildOwnedComboDefs();
                 Log($"콤보 DB 로드 — 보유 콤보 {ownedComboSkills.Count}개" +
-                    (ownedComboRefIds != null && ownedComboRefIds.Count > 0 ? $" (지정 {ownedComboRefIds.Count}종)" : " (전체)"));
+                    (ownedComboIds != null && ownedComboIds.Count > 0 ? $" (지정 {ownedComboIds.Count}개)" : " (전체)"));
             }
 
             if (handHud == null) handHud = ResolveOrCreateHandHud();
@@ -371,7 +371,7 @@ namespace Battle
             Log("전투 종료");
         }
 
-        // [테스트] 인스펙터 ownedComboRefIds를 즉시 적용(각성 중에는 보류)
+        // [테스트] 인스펙터 보유 콤보(ownedComboIds)를 즉시 적용(각성 중에는 보류)
         [ContextMenu("[테스트] 보유 콤보 갱신 (인스펙터 리스트 적용)")]
         public void RefreshOwnedCombosRuntime()
         {
@@ -385,27 +385,34 @@ namespace Battle
                 Debug.LogWarning("[NewBattle] 각성 중에는 콤보 갱신 보류 — 다음 각성부터 반영됩니다.");
                 return;
             }
-            ownedComboSkills = ComboSkillDatabase.BuildOwnedCombos(ownedComboRefIds);
+            ownedComboSkills = BuildOwnedComboDefs();
             _comboCooldown = new int[ownedComboSkills.Count];
             if (handHud != null) handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
             Debug.Log($"[NewBattle] 보유 콤보 갱신 — {ownedComboSkills.Count}개 " +
-                      (ownedComboRefIds != null && ownedComboRefIds.Count > 0
-                          ? $"(refIds: {string.Join(",", ownedComboRefIds)})" : "(전체)"));
+                      (ownedComboIds != null && ownedComboIds.Count > 0
+                          ? $"(ids: {string.Join(",", ownedComboIds)})" : "(전체)"));
         }
 
-        // 콤보 1개(refComboId) 추가 후 즉시 적용
+        // 보유 콤보 정의 구성 — 지정 ID(효과+커맨드)가 있으면 그걸로, 없으면 효과별 대표 전체
+        List<ComboSkillDef> BuildOwnedComboDefs()
+            => (ownedComboIds != null && ownedComboIds.Count > 0)
+                ? ComboSkillDatabase.BuildCombosByIds(ownedComboIds)
+                : ComboSkillDatabase.BuildOwnedCombos(null);
+
+        // 콤보 1개(효과 refComboId의 대표 커맨드) 추가 후 즉시 적용
         public void AddOwnedCombo(int refComboId)
         {
-            if (ownedComboRefIds == null) ownedComboRefIds = new List<int>();
-            if (ownedComboRefIds.Contains(refComboId))
+            if (ownedComboIds == null) ownedComboIds = new List<int>();
+            int commandId = ComboSkillDatabase.GetRepresentativeCommandId(refComboId);
+            if (ownedComboIds.Contains(commandId))
             {
                 Debug.Log($"[NewBattle] 콤보 {refComboId} 이미 보유 중.");
                 return;
             }
-            ownedComboRefIds.Add(refComboId);
+            ownedComboIds.Add(commandId);
             useComboDatabase = true;
             RefreshOwnedCombosRuntime();
-            Debug.Log($"[NewBattle] 콤보 추가: {refComboId}");
+            Debug.Log($"[NewBattle] 콤보 추가: 효과 {refComboId} → 커맨드 {commandId}");
         }
 
         // [테스트] debugAddComboRefId 콤보 1개 추가
