@@ -6,12 +6,7 @@ using Battle.Card;
 using Battle.Relic;
 using Battle.UI;
 
-/// <summary>
-/// 전투 단일 라운드 테스트용 진입점.
-/// GameStateController/MapManager 흐름을 우회하고 Inspector 값으로
-/// Player/Enemy/Round를 직접 세팅한 뒤 RoundManager를 호출한다.
-/// 새 카드슬롯/콤보 시스템 프로토타입을 격리된 환경에서 시험할 때 사용.
-/// </summary>
+// 전투 단일 라운드 테스트용 진입점.
 [DefaultExecutionOrder(-1000)]
 public class BattleTestController : MonoBehaviour
 {
@@ -75,7 +70,7 @@ public class BattleTestController : MonoBehaviour
             if (stateCtrl != null) stateCtrl.enabled = false;
         }
 
-        // 새 전투 시스템 사용 시 — 다른 Awake 실행 전에 레거시 시스템을 차단
+        // 새 전투 시스템 사용 시 — 다른 Awake 실행 전에 시스템을 차단
         if (useNewBattleSystem)
             PreDisableLegacyCombatObjects();
 
@@ -88,7 +83,6 @@ public class BattleTestController : MonoBehaviour
 
     void PreDisableLegacyCombatObjects()
     {
-        // 비활성 오브젝트까지 포함해서 찾는다(아직 Awake 전이라도 SetActive(false) 처리)
         var slotSystems = FindObjectsByType<ElementSlotSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var s in slotSystems) if (s != null) s.gameObject.SetActive(false);
 
@@ -138,7 +132,7 @@ public class BattleTestController : MonoBehaviour
 
     System.Collections.IEnumerator StartNewBattleAfterFrame()
     {
-        // RoundManager가 적을 스폰할 시간을 한 프레임 줌
+        // RoundManager가 적을 스폰할 시간을 한 프레임 
         yield return null;
         yield return null;
 
@@ -152,7 +146,7 @@ public class BattleTestController : MonoBehaviour
             Debug.Log("[BattleTest] NewBattleController가 자동 생성되었습니다.");
         }
 
-        // RelicManager 자동 생성
+        // RelicManager 생성
         if (RelicManager.Instance == null)
         {
             var rmGo = new GameObject("RelicManager");
@@ -166,7 +160,7 @@ public class BattleTestController : MonoBehaviour
                 RelicManager.Instance?.GiveRelicByEffect(effectType);
         }
 
-        // RelicHUD 자동 생성
+        // RelicHUD 생성
         if (RelicHUD.Instance == null)
         {
             Canvas canvas = FindFirstObjectByType<Canvas>();
@@ -178,7 +172,7 @@ public class BattleTestController : MonoBehaviour
             }
         }
 
-        // 인스펙터 덱 → CardInstance 리스트로 변환 후 주입
+        // 인스펙터 덱 → CardInstance 리스트로 변환 후 사용
         var deck = ResolveStartingDeck();
         newBattleController.SetCustomStartingDeck(deck);
         newBattleController.StartBattle();

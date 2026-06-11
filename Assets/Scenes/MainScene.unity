@@ -5831,37 +5831,20 @@ MonoBehaviour:
   rewardHubUIController: {fileID: 0}
   cardRewardTitleFont: {fileID: 12800000, guid: 5175f24c0e704b54db9f862115bd798f, type: 3}
   cardRewardTitleFontSize: 48
-  cardRewardTitleColor:
-    r: 1
-    g: 1
-    b: 1
-    a: 1
+  cardRewardTitleColor: {r: 1, g: 1, b: 1, a: 1}
   cardRewardTitlePosition: {x: 0, y: 440}
   cardRewardSkipButtonStyle:
     label: "\uC120\uD0DD\uD558\uC9C0 \uC54A\uAE30"
     font: {fileID: 12800000, guid: 5175f24c0e704b54db9f862115bd798f, type: 3}
     fontSize: 32
-    textColor:
-      r: 1
-      g: 1
-      b: 1
-      a: 1
+    textColor: {r: 1, g: 1, b: 1, a: 1}
     buttonImage: {fileID: 21300000, guid: e94cd10613d90e246b5fc8e67dd7ce8e, type: 3}
-    buttonColor:
-      r: 1
-      g: 0.9803922
-      b: 0.9803922
-      a: 1
+    buttonColor: {r: 1, g: 0.9803922, b: 0.9803922, a: 1}
     sliced: 1
     size: {x: 320, y: 80}
     anchoredPosition: {x: 0, y: -440}
   cardRewardCardScale: 1.5
   cardRewardCardSpacing: 480
-  currentRoundData: {fileID: 0}
-  currentEnemyIndex: 0
-  currentEnemy: {fileID: 0}
-  clearedCombatCount: 0
-  pendingRoundData: {fileID: 0}
 --- !u!1 &638207295
 GameObject:
   m_ObjectHideFlags: 0
@@ -14469,7 +14452,7 @@ MonoBehaviour:
   awakenTimerGauge: {fileID: 2033277085}
   ownedComboSkills: []
   useComboDatabase: 1
-  ownedComboRefIds: f8030000
+  ownedComboRefIds: f9030000
   debugAddComboRefId: 1000
   awakenDamageEffectName: Fire_ATK
   awakenDamageEffectSpread: {x: 220, y: 80}
@@ -16816,7 +16799,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MoneyManager
   moneyPerKill: 1000
   moneyIconSprite: {fileID: 21300000, guid: 4f314a0b3683b014b9f26988b908f4b1, type: 3}
-  normalCombatGoldRange: {x: 1000, y: 1000}
+  normalCombatGoldRange: {x: 30, y: 50}
   eliteCombatGoldRange: {x: 100, y: 150}
   bossCombatGoldRange: {x: 200, y: 250}
 --- !u!4 &1595079662
@@ -18493,8 +18476,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CombatStageController
   backgroundImage: {fileID: 1642830529}
   normalSprite: {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}
-  eliteSprite: {fileID: 21300000, guid: 8835bf49b399d1140b18f15567743c84, type: 3}
-  bossSprite: {fileID: 21300000, guid: bb90d2fa48cd9024faf848e6887819f7, type: 3}
+  eliteSprite: {fileID: 21300000, guid: 5bea49d0d346dc842ab0640ce071d4d9, type: 3}
+  bossSprite: {fileID: 21300000, guid: 2304a1efdea1f5745a9e6ed948e4c945, type: 3}
 --- !u!1 &1780902705
 GameObject:
   m_ObjectHideFlags: 0
@@ -20399,7 +20382,7 @@ MonoBehaviour:
   toggleKey: 9
   displayDuration: 6
   alwaysVisible: 1
-  overlayEnabled: 1
+  overlayEnabled: 0
   koreanFont: {fileID: 0}
   uiScale: 1.4
 --- !u!1 &1961588214
@@ -20813,7 +20796,7 @@ MonoBehaviour:
     count: 1
   - cardId: 114
     count: 2
-  useAsStartingDeck: 1
+  useAsStartingDeck: 0
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:
