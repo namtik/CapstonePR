@@ -149,5 +149,13 @@ namespace Battle.Relic
                 if (r.effect == type) return true;
             return false;
         }
+
+        // 보유 중 해당 효과를 가진 첫 유물 정의를 반환(없으면 null) — 발동 팝업 표시용
+        public RelicDef GetOwnedRelicByEffect(RelicEffectType type)
+        {
+            foreach (var r in _owned)
+                if (r.effect == type) return r;
+            return null;
+        }
     }
 }

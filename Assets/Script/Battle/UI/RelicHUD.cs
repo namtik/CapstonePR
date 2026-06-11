@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -41,6 +42,22 @@ namespace Battle.UI
         [Tooltip("툴팁 최소 세로 높이(px)")]
         [SerializeField] private float tooltipMinHeight = 90f; // 툴팁 최소 높이
 
+        [Header("유물 발동 펄스 (좌상단 아이콘이 커졌다 돌아옴)")]
+        [Tooltip("유물 발동 시 해당 아이콘이 커지는 최대 배율(원본 기준). 1.4 = 40% 커졌다 복귀.")]
+        [SerializeField] private float relicPulseScale = 1.4f;    // 펄스 확대 배율
+        [Tooltip("커졌다 원래대로 돌아오는 전체 시간(초). 이 펄스가 끝난 뒤 효과가 발동된다.")]
+        [SerializeField] private float relicPulseDuration = 0.35f; // 펄스 전체 시간
+
+        [Header("유물 발동 텍스트 (아이콘 아래 표시)")]
+        [Tooltip("발동 시 아이콘 아래에 잠깐 표시할 텍스트 글자 크기.")]
+        [SerializeField] private float relicLabelFontSize = 16f;  // 발동 텍스트 글자 크기
+        [Tooltip("발동 텍스트 색.")]
+        [SerializeField] private Color relicLabelColor = new Color(0.95f, 0.85f, 0.35f, 1f); // 발동 텍스트 색
+        [Tooltip("발동 텍스트가 떠 있는 유지 시간(초) — 이후 페이드아웃.")]
+        [SerializeField] private float relicLabelHoldTime = 1.0f; // 발동 텍스트 유지 시간
+        [Tooltip("발동 텍스트 페이드아웃 시간(초).")]
+        [SerializeField] private float relicLabelFadeTime = 0.35f; // 발동 텍스트 페이드 시간
+
         private RectTransform   _iconContainer; // 아이콘 컨테이너
         private GameObject      _tooltip; // 툴팁 루트
         private Image           _tooltipIcon; // 툴팁 아이콘
@@ -53,6 +70,10 @@ namespace Battle.UI
 
         private readonly List<RelicDef>   _relics    = new List<RelicDef>(); // 보유 유물 목록
         private readonly List<GameObject> _iconItems = new List<GameObject>(); // 생성된 아이콘 목록
+
+        private Coroutine       _pulseCo;         // 진행 중인 아이콘 펄스 코루틴
+        private TextMeshProUGUI _activationLabel; // 발동 텍스트(아이콘 아래)
+        private Coroutine       _labelCo;         // 진행 중인 발동 텍스트 페이드 코루틴
 
         // 싱글톤 인스턴스를 설정
         void Awake()
@@ -275,6 +296,134 @@ namespace Battle.UI
 
             _tooltipRect.anchoredPosition = new Vector2(iconX, iconY - ICON_SIZE - 4f);
             _tooltip.SetActive(true);
+        }
+
+        // 유물 발동 시 좌상단 해당 아이콘을 펄스(커졌다 복귀)하고 아래에 텍스트를 띄운 뒤, 끝나면 onShown 호출
+        public void PulseRelicIcon(RelicDef relic, string labelText, System.Action onShown)
+        {
+            if (relic == null) { onShown?.Invoke(); return; }
+
+            int idx = _relics.IndexOf(relic);
+            GameObject iconGo = (idx >= 0 && idx < _iconItems.Count) ? _iconItems[idx] : null;
+            if (iconGo == null) { onShown?.Invoke(); return; } // 아이콘이 없으면 즉시 효과
+
+            if (!string.IsNullOrEmpty(labelText)) ShowActivationLabel(idx, labelText);
+
+            if (_pulseCo != null) StopCoroutine(_pulseCo);
+            _pulseCo = StartCoroutine(PulseRoutine(iconGo.transform, onShown));
+        }
+
+        // 아이콘을 커졌다 원래대로 돌려놓는 펄스 코루틴(복귀 후 onShown 호출)
+        IEnumerator PulseRoutine(Transform iconTr, System.Action onShown)
+        {
+            Vector3 baseScale = iconTr != null ? iconTr.localScale : Vector3.one;
+            Vector3 peak = baseScale * Mathf.Max(1f, relicPulseScale);
+            float dur = Mathf.Max(0.01f, relicPulseDuration);
+            const float upPortion = 0.4f; // 앞 40%는 확대, 나머지는 복귀
+
+            float t = 0f;
+            while (t < dur)
+            {
+                if (iconTr == null) { onShown?.Invoke(); _pulseCo = null; yield break; }
+                t += Time.unscaledDeltaTime;
+                float n = Mathf.Clamp01(t / dur);
+
+                // 0→peak(ease-out) 후 peak→base(선형) 엔벨로프
+                float env = n < upPortion
+                    ? 1f - (1f - n / upPortion) * (1f - n / upPortion)
+                    : 1f - (n - upPortion) / (1f - upPortion);
+                iconTr.localScale = Vector3.LerpUnclamped(baseScale, peak, Mathf.Clamp01(env));
+                yield return null;
+            }
+
+            if (iconTr != null) iconTr.localScale = baseScale;
+            _pulseCo = null;
+
+            // 펄스가 끝난 뒤 효과 발동(빙결 부여 → 이펙트)
+            onShown?.Invoke();
+        }
+
+        // iconIndex번째 아이콘 아래에 발동 텍스트를 띄우고 유지 후 페이드아웃
+        void ShowActivationLabel(int iconIndex, string text)
+        {
+            EnsureActivationLabel();
+            if (_activationLabel == null) return;
+
+            // 툴팁과 동일한 좌상단 앵커 기준으로 아이콘 중앙 아래에 배치
+            float iconX = hudAnchoredPosition.x + hudBackgroundPadding.x + iconIndex * (ICON_SIZE + ICON_SPACING);
+            float iconY = hudAnchoredPosition.y - hudBackgroundPadding.z;
+            var rect = (RectTransform)_activationLabel.transform;
+            rect.SetAsLastSibling();
+
+            _activationLabel.text = text;
+            _activationLabel.color = relicLabelColor;
+            _activationLabel.gameObject.SetActive(true);
+
+            // 텍스트 상자를 즉시 글자 크기에 맞게 재계산한 뒤 위치 지정(아이콘 왼쪽 아래)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+            rect.anchoredPosition = new Vector2(iconX, iconY - ICON_SIZE - 4f);
+
+            if (_labelCo != null) StopCoroutine(_labelCo);
+            _labelCo = StartCoroutine(LabelFadeRoutine());
+        }
+
+        // 발동 텍스트를 유지 시간 후 페이드아웃하고 숨김
+        IEnumerator LabelFadeRoutine()
+        {
+            float hold = Mathf.Max(0f, relicLabelHoldTime);
+            while (hold > 0f) { hold -= Time.unscaledDeltaTime; yield return null; }
+
+            float fade = Mathf.Max(0.0001f, relicLabelFadeTime);
+            float t = 0f;
+            while (t < 1f)
+            {
+                if (_activationLabel == null) { _labelCo = null; yield break; }
+                t += Time.unscaledDeltaTime / fade;
+                var c = relicLabelColor;
+                c.a = relicLabelColor.a * (1f - Mathf.Clamp01(t));
+                _activationLabel.color = c;
+                yield return null;
+            }
+
+            if (_activationLabel != null)
+            {
+                _activationLabel.gameObject.SetActive(false);
+                _activationLabel.color = relicLabelColor;
+            }
+            _labelCo = null;
+        }
+
+        // 발동 텍스트(아이콘 아래)를 1회 생성
+        void EnsureActivationLabel()
+        {
+            if (_activationLabel != null) return;
+
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
+            if (canvas == null) return;
+
+            var go = new GameObject("RelicActivationLabel", typeof(RectTransform));
+            go.transform.SetParent(canvas.transform, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f); // 아이콘 왼쪽 아래에서 오른쪽으로 흐름(좌상단이라 화면 밖 방지)
+
+            _activationLabel = go.AddComponent<TextMeshProUGUI>();
+            _activationLabel.fontSize = relicLabelFontSize;
+            _activationLabel.fontStyle = FontStyles.Bold;
+            _activationLabel.alignment = TextAlignmentOptions.TopLeft;
+            _activationLabel.color = relicLabelColor;
+            _activationLabel.raycastTarget = false;
+            _activationLabel.overflowMode = TextOverflowModes.Overflow;
+            if (tooltipFont != null) _activationLabel.font = tooltipFont;
+
+            // 글자 크기/길이에 맞춰 텍스트 상자를 자동으로 늘림(작아서 잘리는 문제 방지)
+            var fitter = go.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fitter.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+
+            go.SetActive(false);
         }
     }
 }

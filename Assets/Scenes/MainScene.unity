@@ -2174,6 +2174,12 @@ MonoBehaviour:
   descFontSize: 32
   tooltipWidth: 500
   tooltipMinHeight: 200
+  relicPulseScale: 1.6
+  relicPulseDuration: 0.35
+  relicLabelFontSize: 50
+  relicLabelColor: {r: 0.95, g: 0.85, b: 0.35, a: 1}
+  relicLabelHoldTime: 1.5
+  relicLabelFadeTime: 0.35
 --- !u!1 &245139812
 GameObject:
   m_ObjectHideFlags: 0
@@ -14096,7 +14102,7 @@ MonoBehaviour:
   source: {fileID: 0}
   cardUseClip: {fileID: 8300000, guid: 71f5859fcb950d34a86a1f984f086a7b, type: 3}
   drawClip: {fileID: 8300000, guid: ed069c02b40828c4cbf36d8ee893a807, type: 3}
-  effectDefaultClip: {fileID: 8300000, guid: 2a2b8444e5fc40a4aa24d138221ff8d5, type: 3}
+  effectDefaultClip: {fileID: 0}
   effectClips:
   - effectName: Fire_ATK
     clip: {fileID: 8300000, guid: ffae41f8f11c27e4e8cd77744a7eaa01, type: 3}
@@ -14486,7 +14492,7 @@ MonoBehaviour:
   awakenMarkerRadiusGrowth: 14
   awakenMarkerVerticalSquash: 0.72
   awakenExplosionInterval: 0.18
-  frostAppliedEffectName: Water_ATK
+  frostAppliedEffectName: Frost_EFF
   awakenScreenEffectPrefab: {fileID: 3942825033974895155, guid: 7297fe0a5e06fb644a731296af23d579, type: 3}
   awakenScreenEffectScale: 110
   logVerbose: 1

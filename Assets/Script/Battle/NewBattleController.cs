@@ -376,7 +376,7 @@ namespace Battle
             Log($"전투 시작 — {START_DRAW}장 드로우");
         }
 
-        // 전투 진입 시 발동하는 유물 효과 처리 (한설의 결정: 적에게 빙결 부여)
+        // 전투 진입 시 발동하는 유물 효과 처리 (서리화: 적에게 빙결 부여)
         void ApplyBattleStartRelics()
         {
             if (_enemy == null || RelicManager.Instance == null) return;
@@ -384,8 +384,26 @@ namespace Battle
             if (RelicManager.Instance.HasEffect(RelicEffectType.FrostEnemyOnBattleStart))
             {
                 int amount = RelicManager.FROST_ON_BATTLE_START_AMOUNT;
-                _enemy.AddStatus("frost", amount); // 양수 부여 → OnStatusApplied로 빙결 연출 트리거
-                Log($"[유물] 한설의 결정 — 전투 진입, 적에게 빙결 {amount} 부여");
+                var def = RelicManager.Instance.GetOwnedRelicByEffect(RelicEffectType.FrostEnemyOnBattleStart);
+
+                // 빙결 부여(이펙트 트리거) — 팝업 등장 후 실행되도록 콜백으로 지연
+                System.Action applyFrost = () =>
+                {
+                    if (_enemy == null) return;
+                    _enemy.AddStatus("frost", amount); // 양수 부여 → OnStatusApplied로 빙결 연출 트리거
+                    Log($"[유물] 서리화 — 적에게 빙결 {amount} 부여");
+                };
+
+                // 좌상단 유물 아이콘을 펄스 + 아래 텍스트 표시 후, 펄스가 끝나면 빙결/이펙트가 나오게 한다
+                if (RelicHUD.Instance != null && def != null)
+                {
+                    Log("[유물] 서리화 — 전투 진입, 아이콘 펄스 후 빙결 발동");
+                    RelicHUD.Instance.PulseRelicIcon(def, $"유물 {def.displayName} 발동", applyFrost);
+                }
+                else
+                {
+                    applyFrost(); // 펄스 불가 시 즉시 적용(기능 유지)
+                }
             }
         }
 
