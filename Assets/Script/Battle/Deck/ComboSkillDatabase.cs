@@ -49,22 +49,11 @@ namespace Battle
         {
             EnsureInit();
 
-            var ordersByRef = new Dictionary<int, HashSet<string>>();
             var canonicalByRef = new Dictionary<int, ComboSkillData>();
 
             foreach (var c in _all)
             {
-                CardElement e1 = ParseElement(c.slot1);
-                CardElement e2 = ParseElement(c.slot2);
-                CardElement e3 = ParseElement(c.slot3);
-
-                if (!ordersByRef.TryGetValue(c.refComboId, out var set))
-                {
-                    set = new HashSet<string>();
-                    ordersByRef[c.refComboId] = set;
-                }
-                set.Add(ComboSkillDef.OrderKey(e1, e2, e3));
-
+                // refComboId의 대표 행 선택 — 정규 행(id==refComboId) 우선, 없으면 첫 행
                 bool isCanonical = c.id == c.refComboId;
                 if (isCanonical || !canonicalByRef.ContainsKey(c.refComboId))
                     canonicalByRef[c.refComboId] = c;
@@ -97,7 +86,6 @@ namespace Battle
                     skillIcon     = ResolveSkillIcon(data.skillImg),
                     descriptionKR = data.description,
                     dbEffects     = effects,
-                    acceptedOrders = ordersByRef[refId],
                     displayName   = !string.IsNullOrEmpty(data.comboName)
                                     ? data.comboName
                                     : $"콤보 {refId}",

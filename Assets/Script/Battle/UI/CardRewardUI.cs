@@ -124,6 +124,8 @@ namespace Battle.UI
                 if (c == null) continue;
                 // 기본 덱 카드(BASIC)는 보상 제외
                 if (c.HasTag("BASIC")) continue;
+                // 전투 중 임시 생성되는 카드(파편 등)는 보상 풀에서 제외
+                if (c.HasTag("TEMPORARY_ON_CREATE") || c.HasTag("FRAGMENT")) continue;
                 // 4속성 카드만 보상 대상
                 switch (c.element)
                 {

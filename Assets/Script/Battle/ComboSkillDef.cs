@@ -31,22 +31,12 @@ namespace Battle
         [System.NonSerialized] public Sprite skillIcon;      // 로드된 스킬 아이콘
         [System.NonSerialized] public string descriptionKR;  // 한글 설명
         [System.NonSerialized] public List<ComboEffectData> dbEffects; // DB 다중 효과 목록
-        [System.NonSerialized] public HashSet<string> acceptedOrders;  // 순서무관 매칭용 허용 순서 키 집합
-
-        // 입력 속성 시퀀스가 이 콤보와 매칭되는지 판정
+        // 입력 속성 시퀀스가 이 콤보와 매칭되는지 판정 — 슬롯 순서대로 입력해야 발동(순차)
         public bool Matches(IList<CardElement> input)
         {
             if (input == null || input.Count < 3) return false;
-
-            if (fromDatabase && acceptedOrders != null)
-                return acceptedOrders.Contains(OrderKey(input[0], input[1], input[2]));
-
             return input[0] == slot1 && input[1] == slot2 && input[2] == slot3;
         }
-
-        // 세 속성을 순서 키 문자열로 변환
-        public static string OrderKey(CardElement a, CardElement b, CardElement c)
-            => $"{a},{b},{c}";
 
         // 콤보 시퀀스를 짧은 한글 문자열로 표현
         public string ComboString()
