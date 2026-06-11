@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class StatusPanelUI : MonoBehaviour
 {
-    [Header("UI ����")]
+    [Header("UI 아이콘")]
     [SerializeField] private StatusIconUI iconPrefab;   // 아이콘+숫자 프리팹
     [SerializeField] private StatusIconDatabase iconDatabase;   // 아이콘 SO 데이터베이스
 
