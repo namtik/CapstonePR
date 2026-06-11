@@ -10,6 +10,7 @@ namespace Battle.Relic
         public static RelicManager Instance { get; private set; } // 전역 싱글톤 인스턴스
 
         public const float COMBO_BONUS_SECONDS_EXTRA = 0.5f; // 비급서: 콤보 성공 시 추가 보너스 초
+        public const int FROST_ON_BATTLE_START_AMOUNT = 7; // 한설의 결정: 전투 진입 시 적에게 부여할 빙결량
 
         [Header("사용 가능한 유물 정의 (아이콘 여기서 설정)")]
         [SerializeField] private List<RelicDef> relicDefinitions = new List<RelicDef> // 정의된 전체 유물 목록
@@ -27,6 +28,13 @@ namespace Battle.Relic
                 displayName = "비급서",
                 description = "각성 상태에서 콤보 발동 성공 시\n회복되는 시간이 0.5초 추가된다.",
                 effect      = RelicEffectType.ComboBonusSecondsBoost,
+            },
+            new RelicDef
+            {
+                id          = "frosted_flower",
+                displayName = "서리화",
+                description = "전투 라운드에 진입할 때\n적에게 빙결 7을 부여한다.",
+                effect      = RelicEffectType.FrostEnemyOnBattleStart,
             },
         };
 

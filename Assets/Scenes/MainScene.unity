@@ -2167,7 +2167,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.UI.RelicHUD
   hudAnchoredPosition: {x: 30, y: -65}
-  hudBackgroundColor: {r: 0, g: 0, b: 0, a: 0.7019608}
+  hudBackgroundColor: {r: 1, g: 1, b: 1, a: 0}
   hudBackgroundPadding: {x: 10, y: 10, z: 8, w: 8}
   tooltipFont: {fileID: 11400000, guid: 624ba3875d81cfd41b8f6058c7c3e447, type: 2}
   nameFontSize: 50
@@ -8173,6 +8173,9 @@ MonoBehaviour:
   defaultFps: 24
   playbackSpeed: 1
   foregroundSortingOrder: 30000
+  awakenMarkerSprite: {fileID: 21300000, guid: bcf2cfb1ec36f8243a0351746af2b0f0, type: 3}
+  awakenMarkerSize: 120
+  awakenMarkerColor: {r: 1, g: 1, b: 1, a: 0.40392157}
   positionOverrides:
   - effectName: Burn_EFF
     anchoredPos: {x: 0, y: 150}
@@ -8981,6 +8984,10 @@ MonoBehaviour:
     description: "\uC801\uC758 \uACF5\uACA9\uC744 \uBC29\uC5B4 \uD560 \uB54C\uB9C8\uB2E4
       \uBC29\uC5B4\uD55C \uACF5\uACA9\uC758 30%\uC5D0 \uD574\uB2F9\uD558\uB294 \uB370\uBBF8\uC9C0\uB97C
       \uD574\uB2F9 \uC801\uC5D0\uAC8C \uC785\uD78C\uB2E4."
+  - sprite: {fileID: 21300000, guid: 5a0b9bc41464e6c4e921b9c68b2a608d, type: 3}
+    displayName: "\uC11C\uB9AC\uD654"
+    description: "\uC804\uD22C \uB77C\uC6B4\uB4DC \uC9C4\uC785 \uC2DC \uC801\uC5D0\uAC8C
+      \uBE59\uACB0 7\uC744 \uBD80\uC5EC\uD55C"
   itemHoverScaleMultiplier: 1.08
   itemHoverScaleLerpSpeed: 10
   fallbackRewardSprite: {fileID: 0}
@@ -10892,6 +10899,12 @@ MonoBehaviour:
       \uCD94\uAC00\uB41C\uB2E4."
     icon: {fileID: 0}
     effect: 2
+  - id: frosted_flower
+    displayName: "\uC11C\uB9AC\uD654"
+    description: "\uC804\uD22C \uB77C\uC6B4\uB4DC\uC5D0 \uC9C4\uC785\uD560 \uB54C\n\uC801\uC5D0\uAC8C
+      \uBE59\uACB0 7\uC744 \uBD80\uC5EC\uD55C\uB2E4."
+    icon: {fileID: 21300000, guid: 5a0b9bc41464e6c4e921b9c68b2a608d, type: 3}
+    effect: 3
 --- !u!4 &1062229288
 Transform:
   m_ObjectHideFlags: 0
@@ -14090,7 +14103,9 @@ MonoBehaviour:
   - effectName: Land_ATK
     clip: {fileID: 8300000, guid: de4d8a2e9f374554a86bda6b505653f7, type: 3}
   - effectName: Water_ATK
-    clip: {fileID: 8300000, guid: 1ced1c6e76713f040aeec89c06a4c333, type: 3}
+    clip: {fileID: 8300000, guid: 39307fd4be1d8e24192ee3ef1e988f6f, type: 3}
+  - effectName: Frost_EFF
+    clip: {fileID: 8300000, guid: c766b95afb78b3440993fcd0c20c9417, type: 3}
   cardUseVolume: 0.4
   drawVolume: 0.4
   effectVolume: 0.3
@@ -14342,6 +14357,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: awakenHistoryEnabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: cardUsePresentExitTime
       value: 0.1
       objectReference: {fileID: 0}
@@ -14353,6 +14372,10 @@ PrefabInstance:
       propertyPath: comboSkillItemContainer
       value: 
       objectReference: {fileID: 799876078}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: awakenCardUsePresentEnabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4654442579791755405, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.42953998
@@ -14452,12 +14475,18 @@ MonoBehaviour:
   awakenTimerGauge: {fileID: 2033277085}
   ownedComboSkills: []
   useComboDatabase: 1
-  ownedComboRefIds: f9030000
+  ownedComboIds: 
   debugAddComboRefId: 1000
   awakenDamageEffectName: Fire_ATK
   awakenDamageEffectSpread: {x: 220, y: 80}
   awakenShakeIntensityPerHit: 0.6
   awakenShakeIntensityMax: 2
+  awakenMarkerSequence: 1
+  awakenMarkerRadius: 230
+  awakenMarkerRadiusGrowth: 14
+  awakenMarkerVerticalSquash: 0.72
+  awakenExplosionInterval: 0.18
+  frostAppliedEffectName: Water_ATK
   awakenScreenEffectPrefab: {fileID: 3942825033974895155, guid: 7297fe0a5e06fb644a731296af23d579, type: 3}
   awakenScreenEffectScale: 110
   logVerbose: 1
@@ -19208,7 +19237,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9bf42127dc19824b958c8e65efbf19e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.NewBattleSystemBootstrap
-  startingRelics: 
+  startingRelics: 03000000
 --- !u!114 &1853841586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20796,7 +20825,7 @@ MonoBehaviour:
     count: 1
   - cardId: 114
     count: 2
-  useAsStartingDeck: 0
+  useAsStartingDeck: 1
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:

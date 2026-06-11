@@ -135,6 +135,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     }
 
     public event Action<string, int> OnStatusChanged; // 상태이상 변경 이벤트
+    public event Action<string, int> OnStatusApplied; // 상태이상 '부여'(양수 증가) 이벤트 — 연출용
     // 상태이상 스택을 더하고 변경 신호를 보낸다
     public void AddStatus(string type, int amount)
     {
@@ -149,6 +150,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
         // 일반적인 상태이상 추가 시 갱신 신호 발송
         OnStatusChanged?.Invoke(type, stat.statusEffects[type]);
+
+        // 양수 부여일 때만 '부여' 신호(빙결 등 연출 트리거용)
+        if (amount > 0) OnStatusApplied?.Invoke(type, amount);
     }
 
     // 상태이상 스택 값을 조회한다

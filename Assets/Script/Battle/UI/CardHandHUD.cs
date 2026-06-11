@@ -58,6 +58,16 @@ namespace Battle.UI
         [SerializeField] private Image[] comboSlotImages = new Image[3]; // 콤보 슬롯 이미지 3칸
         [SerializeField] private Color emptyComboSlotColor = new Color(0.25f, 0.25f, 0.25f, 0.4f); // 빈 콤보 슬롯 색
 
+        [Header("콤보 슬롯 입력 연출 (각성 중 속성이 슬롯에 들어올 때)")]
+        [Tooltip("각성 중 콤보 슬롯에 속성이 들어올 때 해당 칸을 팝(확대→복귀)시키는 연출 ON/OFF.")]
+        [SerializeField] private bool comboSlotPopEnabled = true; // 콤보 슬롯 팝 연출 사용 여부
+        [Tooltip("팝 시 최대 확대 배율(원본 스케일 기준). 1.5 = 50% 커졌다 돌아옴.")]
+        [SerializeField] private float comboSlotPopScale = 1.5f; // 팝 최대 확대 배율
+        [Tooltip("커졌다 원래대로 돌아오는 전체 시간(초).")]
+        [SerializeField] private float comboSlotPopDuration = 0.28f; // 팝 전체 시간
+        [Tooltip("입력 순간 칸을 흰색으로 잠깐 플래시할지 여부.")]
+        [SerializeField] private bool comboSlotFlashEnabled = true; // 입력 칸 플래시 사용 여부
+
         [Header("콤보 스킬 목록 (SkillListItem 프리팹)")]
         [Tooltip("콤보 스킬 한 항목을 표현할 프리팹. SkillListItem.prefab 사용.")]
         [SerializeField] private SkillListItemUI comboSkillItemPrefab; // 콤보 스킬 항목 프리팹
@@ -118,6 +128,8 @@ namespace Battle.UI
         [SerializeField] private Color awakenActiveColor = new Color(0.75f, 0.35f, 1f, 1f); // 발동 중 색
 
         [Header("각성 입력 히스토리 (왼쪽 표시)")]
+        [Tooltip("OFF면 각성 입력 히스토리(왼쪽 세로 격자)를 표시하지 않는다. 콤보 슬롯/스킬 목록에는 영향 없음.")]
+        [SerializeField] private bool awakenHistoryEnabled = true; // 입력 히스토리 표시 여부
         [Tooltip("각성 동안 입력된 속성 카드 전체 히스토리가 표시될 부모. 비우면 자동 생성.")]
         [FormerlySerializedAs("feverHistoryContainer")]
         [SerializeField] private RectTransform awakenHistoryContainer; // 입력 히스토리 부모
@@ -512,7 +524,7 @@ namespace Battle.UI
         {
             if (comboSlotPanel != null) comboSlotPanel.SetActive(active);
             if (comboSkillPanel != null) comboSkillPanel.SetActive(active);
-            if (awakenHistoryContainer != null) awakenHistoryContainer.gameObject.SetActive(active);
+            if (awakenHistoryContainer != null) awakenHistoryContainer.gameObject.SetActive(active && awakenHistoryEnabled);
 
             if (active) ShowAwakenDim();
             else HideAwakenDim();
@@ -554,9 +566,24 @@ namespace Battle.UI
 
         private readonly List<Image> _awakenHistoryViews = new List<Image>(); // 입력 히스토리 뷰 풀
 
+        // 각성 입력 히스토리 표시 여부를 런타임에 토글
+        public void SetAwakenHistoryEnabled(bool enabled)
+        {
+            awakenHistoryEnabled = enabled;
+            if (!enabled && awakenHistoryContainer != null)
+                awakenHistoryContainer.gameObject.SetActive(false);
+        }
+
         // 각성 입력 히스토리를 좌측 세로 격자로 갱신
         public void UpdateAwakenInputHistory(IList<CardElement> history)
         {
+            // 비활성화 상태면 컨테이너를 생성하지 않고 숨김
+            if (!awakenHistoryEnabled)
+            {
+                if (awakenHistoryContainer != null) awakenHistoryContainer.gameObject.SetActive(false);
+                return;
+            }
+
             EnsureAwakenHistoryContainer();
             if (awakenHistoryContainer == null) return;
 
@@ -708,6 +735,67 @@ namespace Battle.UI
                 comboSlotImages = new Image[3] { collected[0], collected[1], collected[2] };
                 Debug.Log("[CardHandHUD] 콤보 슬롯 Image 3개 자동 바인딩 완료.");
             }
+        }
+
+        private Coroutine[] _comboSlotPopCos;   // 콤보 슬롯 칸별 팝 코루틴
+        private Vector3[] _comboSlotBaseScales; // 콤보 슬롯 칸별 기준 스케일
+
+        // 콤보 슬롯 slotIndex 칸을 팝(+플래시)으로 강조 — 각성 중 속성이 들어올 때 호출
+        public void PlayComboSlotInputEffect(int slotIndex)
+        {
+            if (!comboSlotPopEnabled) return;
+            EnsureComboSlotImagesBound();
+            if (comboSlotImages == null || slotIndex < 0 || slotIndex >= comboSlotImages.Length) return;
+            if (comboSlotImages[slotIndex] == null) return;
+
+            // 칸 수에 맞춰 풀/기준 스케일 초기화
+            if (_comboSlotPopCos == null || _comboSlotPopCos.Length != comboSlotImages.Length)
+            {
+                _comboSlotPopCos = new Coroutine[comboSlotImages.Length];
+                _comboSlotBaseScales = new Vector3[comboSlotImages.Length];
+                for (int i = 0; i < comboSlotImages.Length; i++)
+                    _comboSlotBaseScales[i] = comboSlotImages[i] != null
+                        ? comboSlotImages[i].transform.localScale : Vector3.one;
+            }
+
+            if (_comboSlotPopCos[slotIndex] != null) StopCoroutine(_comboSlotPopCos[slotIndex]);
+            _comboSlotPopCos[slotIndex] = StartCoroutine(ComboSlotPopRoutine(slotIndex));
+        }
+
+        // 콤보 슬롯 한 칸을 커졌다 줄이며(+흰색 플래시) 강조하는 코루틴
+        System.Collections.IEnumerator ComboSlotPopRoutine(int slotIndex)
+        {
+            var img = comboSlotImages[slotIndex];
+            if (img == null) { _comboSlotPopCos[slotIndex] = null; yield break; }
+
+            Transform tr = img.transform;
+            Vector3 baseScale = _comboSlotBaseScales[slotIndex];
+            Vector3 peak = baseScale * Mathf.Max(1f, comboSlotPopScale);
+            Color baseColor = img.color; // UpdateComboSlot가 직전에 칠한 속성 색
+            float dur = Mathf.Max(0.01f, comboSlotPopDuration);
+            const float upPortion = 0.3f; // 앞 30%는 확대, 나머지는 복귀 구간
+
+            float t = 0f;
+            while (t < dur)
+            {
+                if (img == null) { _comboSlotPopCos[slotIndex] = null; yield break; }
+                t += Time.deltaTime;
+                float n = Mathf.Clamp01(t / dur);
+
+                // 0→peak(ease-out) 후 peak→base(선형) 엔벨로프
+                float env = n < upPortion
+                    ? 1f - (1f - n / upPortion) * (1f - n / upPortion)
+                    : 1f - (n - upPortion) / (1f - upPortion);
+                env = Mathf.Clamp01(env);
+
+                tr.localScale = Vector3.Lerp(baseScale, peak, env);
+                if (comboSlotFlashEnabled) img.color = Color.Lerp(baseColor, Color.white, env * 0.7f);
+                yield return null;
+            }
+
+            tr.localScale = baseScale;
+            img.color = baseColor;
+            _comboSlotPopCos[slotIndex] = null;
         }
 
         private readonly List<SkillListItemUI> _comboSkillItems = new List<SkillListItemUI>(); // 콤보 스킬 항목 풀
@@ -976,6 +1064,8 @@ namespace Battle.UI
         [Header("카드 사용 연출 — 중앙 표시")]
         [Tooltip("카드 사용 시 화면 중앙에 카드를 잠깐 띄웠다 사라지게 하는 연출 ON/OFF.")]
         [SerializeField] private bool cardUsePresentEnabled = true; // 중앙 표시 연출 사용 여부
+        [Tooltip("각성 중 카드 사용 시 중앙 표시 연출을 켤지 여부. OFF면 각성 중에는 중앙 카드 연출을 생략(효과음은 유지). 일반 사용에는 영향 없음.")]
+        [SerializeField] private bool awakenCardUsePresentEnabled = true; // 각성 중 중앙 표시 연출 사용 여부
         [Tooltip("중앙 표시 위치(캔버스 중앙 기준 오프셋). y 양수 = 중앙보다 위.")]
         [SerializeField] private Vector2 cardUsePresentPos = new Vector2(0f, 60f); // 중앙 표시 위치
         [Tooltip("중앙 표시 시 카드 크기 배율(프리팹 기본 스케일 기준).")]
@@ -996,7 +1086,9 @@ namespace Battle.UI
         public void PlayCardUsePresentation(CardInstance card, System.Action onDisappear, bool interruptable = false)
         {
             if (card != null) SfxManager.Instance?.PlayCardUse();
-            if (!cardUsePresentEnabled || card == null || cardPrefab == null || !isActiveAndEnabled)
+            // interruptable == true 는 각성 중 카드 사용 경로 — 전용 토글로 중앙 연출만 생략(효과음은 위에서 이미 재생)
+            bool presentEnabled = cardUsePresentEnabled && (!interruptable || awakenCardUsePresentEnabled);
+            if (!presentEnabled || card == null || cardPrefab == null || !isActiveAndEnabled)
             {
                 onDisappear?.Invoke();
                 return;

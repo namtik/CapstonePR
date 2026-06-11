@@ -77,10 +77,13 @@ namespace Battle
         [Tooltip("각성 종료 후 표식이 하나씩 터지는 간격(초).")]
         [SerializeField] private float awakenExplosionInterval = 0.18f; // 순차 폭발 간격
 
-        [Header("각성 화면 효과 (Screen wind 등)")]
-        [Tooltip("각성 동안 화면 전체에 유지될 프리팹(예: Hovl 'Screen wind'). 각성 발동 시 루프 재생되고 종료 시 정지된다. " +
-                 "UIParticle로 전투 UI 위에 렌더되며, 프리팹의 카메라 부착 스크립트(HS_ScreenEffect)는 자동 비활성된다. " +
-                 "비우면 화면 효과 없음.")]
+        [Header("상태이상 연출")]
+        [Tooltip("적에게 빙결(frost)이 부여될 때마다 적 위치에서 재생할 이펙트 이름. " +
+                 "Resources/CardEffects/{이름} 프리팹/시트를 찾음. 비우거나 에셋이 없으면 조용히 스킵.")]
+        [SerializeField] private string frostAppliedEffectName = "Frost_EFF"; // 빙결 부여 이펙트 이름
+
+        [Header("각성 화면 효과")]
+        [Tooltip("각성 동안 화면 전체에 유지될 프리팹. 각성 발동 시 루프 재생되고 종료 시 정지된다. " + "비우면 화면 효과 없음.")]
         [SerializeField] private GameObject awakenScreenEffectPrefab; // 각성 화면 효과 프리팹
         [Tooltip("각성 화면 효과 UIParticle 스케일 — 화면을 덮도록 플레이로 튜닝(클수록 큼). 0 이하면 오버레이 기본 스케일 사용.")]
         [SerializeField] private float awakenScreenEffectScale = 100f; // 각성 화면 효과 스케일
@@ -310,6 +313,12 @@ namespace Battle
                 _enemyStat.OnGaugeFull += OnEnemyAttackFiredHandler;
             }
 
+            if (_enemy != null)
+            {
+                _enemy.OnStatusApplied -= OnEnemyStatusAppliedHandler;
+                _enemy.OnStatusApplied += OnEnemyStatusAppliedHandler;
+            }
+
             var startingDeck = _customStartingDeck ?? CardDatabase.BuildDefaultPrototypeDeck();
             _deck.StartBattle(startingDeck);
 
@@ -360,9 +369,32 @@ namespace Battle
             if (handHud != null)
                 handHud.SetAwakenGaugeVisible(true);
 
+            ApplyBattleStartRelics();
+
             _deck.Draw(START_DRAW);
             UpdateAwakenText();
             Log($"전투 시작 — {START_DRAW}장 드로우");
+        }
+
+        // 전투 진입 시 발동하는 유물 효과 처리 (한설의 결정: 적에게 빙결 부여)
+        void ApplyBattleStartRelics()
+        {
+            if (_enemy == null || RelicManager.Instance == null) return;
+
+            if (RelicManager.Instance.HasEffect(RelicEffectType.FrostEnemyOnBattleStart))
+            {
+                int amount = RelicManager.FROST_ON_BATTLE_START_AMOUNT;
+                _enemy.AddStatus("frost", amount); // 양수 부여 → OnStatusApplied로 빙결 연출 트리거
+                Log($"[유물] 한설의 결정 — 전투 진입, 적에게 빙결 {amount} 부여");
+            }
+        }
+
+        // 적에게 상태이상이 '부여'될 때 — 빙결이면 적 위치에서 연출 재생
+        void OnEnemyStatusAppliedHandler(string type, int amount)
+        {
+            if (amount <= 0 || type != "frost") return;
+            if (effectOverlay == null || string.IsNullOrEmpty(frostAppliedEffectName)) return;
+            effectOverlay.PlayByNameAtPosition(frostAppliedEffectName, effectOverlay.EnemyAnchoredPos);
         }
 
         // 전투 종료 — 추적/큐 마감·덱 종료·UI/이펙트 정리
@@ -372,6 +404,7 @@ namespace Battle
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
+            if (_enemy != null) _enemy.OnStatusApplied -= OnEnemyStatusAppliedHandler;
             ResolveTrackUnfired();
             TdFlushTerminal();
             _deck.EndBattle();
@@ -722,6 +755,9 @@ namespace Battle
                 if (handHud != null)
                 {
                     handHud.UpdateComboSlot(_comboInput);
+                    // 속성이 슬롯에 들어왔을 때만 해당 칸 강조(가장 최근 = 마지막 칸)
+                    if (card.data.comboSlot && _comboInput.Count > 0)
+                        handHud.PlayComboSlotInputEffect(_comboInput.Count - 1);
                     handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
                     handHud.UpdateAwakenInputHistory(_awakenInputHistory);
                     handHud.PlayCardUsePresentation(card, null, interruptable: true);

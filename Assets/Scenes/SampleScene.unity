@@ -2562,7 +2562,7 @@ RectTransform:
   m_GameObject: {fileID: 255929688}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.3, y: 1.3, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1652772477}
@@ -2572,7 +2572,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 490}
+  m_AnchoredPosition: {x: 0, y: 514}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!1 &265790866
@@ -8173,7 +8173,7 @@ MonoBehaviour:
   defaultFps: 24
   playbackSpeed: 1
   foregroundSortingOrder: 30000
-  awakenMarkerSprite: {fileID: 0}
+  awakenMarkerSprite: {fileID: 21300000, guid: af9c093a0c8d9f840bad1a385a825369, type: 3}
   awakenMarkerSize: 120
   awakenMarkerColor: {r: 1, g: 0.55, b: 0.18, a: 0.95}
   positionOverrides:
@@ -14345,6 +14345,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: awakenHistoryEnabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: cardUsePresentExitTime
       value: 0.1
       objectReference: {fileID: 0}
@@ -14356,6 +14360,10 @@ PrefabInstance:
       propertyPath: comboSkillItemContainer
       value: 
       objectReference: {fileID: 799876078}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: awakenCardUsePresentEnabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4654442579791755405, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0.42953998
@@ -14466,6 +14474,7 @@ MonoBehaviour:
   awakenMarkerRadiusGrowth: 14
   awakenMarkerVerticalSquash: 0.72
   awakenExplosionInterval: 0.18
+  frostAppliedEffectName: Frost_EFF
   awakenScreenEffectPrefab: {fileID: 3942825033974895155, guid: 7297fe0a5e06fb644a731296af23d579, type: 3}
   awakenScreenEffectScale: 110
   logVerbose: 1
