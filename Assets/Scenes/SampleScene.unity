@@ -2174,6 +2174,12 @@ MonoBehaviour:
   descFontSize: 32
   tooltipWidth: 500
   tooltipMinHeight: 200
+  relicPulseScale: 1.4
+  relicPulseDuration: 0.35
+  relicLabelFontSize: 16
+  relicLabelColor: {r: 0.95, g: 0.85, b: 0.35, a: 1}
+  relicLabelHoldTime: 1
+  relicLabelFadeTime: 0.35
 --- !u!1 &245139812
 GameObject:
   m_ObjectHideFlags: 0
@@ -13485,9 +13491,9 @@ RectTransform:
   - {fileID: 1011349064}
   m_Father: {fileID: 1422808018}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 765, y: -50}
   m_SizeDelta: {x: 450, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1295309243
@@ -14086,6 +14092,7 @@ MonoBehaviour:
   source: {fileID: 0}
   cardUseClip: {fileID: 8300000, guid: 71f5859fcb950d34a86a1f984f086a7b, type: 3}
   drawClip: {fileID: 8300000, guid: ed069c02b40828c4cbf36d8ee893a807, type: 3}
+  comboCompleteClip: {fileID: 0}
   effectDefaultClip: {fileID: 8300000, guid: 2a2b8444e5fc40a4aa24d138221ff8d5, type: 3}
   effectClips:
   - effectName: Fire_ATK
@@ -14096,6 +14103,7 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 1ced1c6e76713f040aeec89c06a4c333, type: 3}
   cardUseVolume: 0.4
   drawVolume: 0.4
+  comboCompleteVolume: 1
   effectVolume: 0.3
 --- !u!82 &1349267145
 AudioSource:
@@ -14472,6 +14480,8 @@ MonoBehaviour:
   awakenMarkerSequence: 1
   awakenMarkerRadius: 230
   awakenMarkerRadiusGrowth: 14
+  awakenMarkerMaxRadius: 0
+  awakenMarkerCenterOffset: {x: 0, y: 0}
   awakenMarkerVerticalSquash: 0.72
   awakenExplosionInterval: 0.18
   frostAppliedEffectName: Frost_EFF
@@ -16012,9 +16022,9 @@ RectTransform:
   - {fileID: 2064051015}
   m_Father: {fileID: 1422808018}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 225, y: -50}
   m_SizeDelta: {x: 450, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1463317185
@@ -19176,6 +19186,7 @@ MonoBehaviour:
   roundManager: {fileID: 610804760}
   lastVisitedNodeIndex: -1
   clearedNodes: 
+  bossDefeatCount: 0
 --- !u!114 &1853841584
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20184,7 +20195,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 113969877568408591, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 696245774759462229, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -20987,7 +20998,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &2001783389
 MonoBehaviour:
   m_ObjectHideFlags: 0

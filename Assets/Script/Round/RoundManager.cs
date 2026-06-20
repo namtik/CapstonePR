@@ -7,6 +7,22 @@ using Battle.Relic;
 public class RoundManager : MonoBehaviour
 {
     [SerializeField] private DifficultyConfig difficultyConfig; // 난이도 스케일 설정
+
+    public DifficultyConfig DifficultyConfig => difficultyConfig;
+
+    // 맵 컬럼을 현재 바퀴 기준 누적 난이도 컬럼으로 변환한다.
+    public int ResolveDifficultyColumn(int mapColumn)
+    {
+        if (difficultyConfig == null)
+            return mapColumn;
+
+        int completedLaps = GameStateController.Instance != null
+            ? GameStateController.Instance.bossDefeatCount
+            : 0;
+
+        return difficultyConfig.GetEffectiveColumn(mapColumn, completedLaps);
+    }
+
     [SerializeField] private GameObject enemyPrefab; // 적 프리팹
     [SerializeField] private Transform enemySpawnPoint; // 적 스폰 위치
     [SerializeField] private CombatStageController combatStageController; // 전투 스테이지 배경 제어
@@ -531,7 +547,7 @@ public class RoundManager : MonoBehaviour
         Debug.Log($"[보상] 전투 골드 +{gold}");
     }
 
-    // 보상 처리 후 노드를 클리어 표시하고 맵으로 복귀한다(보스 클리어 시 게임 클리어 화면).
+    // 보상 처리 후 노드를 클리어 표시하고 맵으로 복귀한다(최종 보스 클리어 시 게임 클리어 화면).
     public void ReturnToMap()
     {
         if (!IsNewBattleSystemActive())
@@ -544,16 +560,30 @@ public class RoundManager : MonoBehaviour
             return;
         }
 
-        stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
-
-        if (currentRoundData is BossRoundData
-            && GameClearController.Instance != null
-            && GameClearController.Instance.IsReady)
+        if (currentRoundData is BossRoundData)
         {
-            GameClearController.Instance.ShowGameClear();
+            stateController.RegisterBossDefeat();
+
+            if (stateController.HasMoreLapsRemaining)
+            {
+                stateController.BeginNextLap();
+                stateController.ShowMap();
+                return;
+            }
+
+            stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
+
+            if (GameClearController.Instance != null && GameClearController.Instance.IsReady)
+            {
+                GameClearController.Instance.ShowGameClear();
+                return;
+            }
+
+            stateController.ShowMap();
             return;
         }
 
+        stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
         stateController.ShowMap();
     }
 

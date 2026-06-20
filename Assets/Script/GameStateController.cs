@@ -30,6 +30,17 @@ public class GameStateController : MonoBehaviour
     public int lastVisitedNodeIndex = -1; // 마지막으로 방문한 노드 인덱스
     public System.Collections.Generic.List<int> clearedNodes = new System.Collections.Generic.List<int>(); // 클리어한 노드 인덱스 목록
 
+    [Header("Run Lap")]
+    [Tooltip("게임 클리어에 필요한 보스 처치 횟수(= 맵 바퀴 수).")]
+    public const int RequiredBossDefeats = 2;
+    public int bossDefeatCount = 0; // 이번 런에서 처치한 보스 수
+
+    // 현재 진행 중인 바퀴 (1부터 시작)
+    public int CurrentLap => bossDefeatCount + 1;
+
+    // 아직 클리어에 필요한 보스 처치가 남았는지
+    public bool HasMoreLapsRemaining => bossDefeatCount < RequiredBossDefeats;
+
     // 초기화: 싱글턴 중복 방지
     void Awake()
     {
@@ -66,6 +77,9 @@ public class GameStateController : MonoBehaviour
     {
         if (mainMenuStage != null)
             mainMenuStage.SetActive(false);
+
+        if (mapManager != null)
+            mapManager.RegenerateMap();
 
         ShowMap();
     }
@@ -245,6 +259,35 @@ public class GameStateController : MonoBehaviour
         }
     }
 
+    // 보스 처치를 기록한다
+    public void RegisterBossDefeat()
+    {
+        bossDefeatCount++;
+        Debug.Log($"[GameState] 보스 처치 {bossDefeatCount}/{RequiredBossDefeats}");
+    }
+
+    // 다음 바퀴 맵 진행을 위해 노드 클리어/위치를 초기화하고 새 맵을 생성한다 (덱·유물·골드·HP는 유지)
+    public void BeginNextLap()
+    {
+        clearedNodes.Clear();
+        lastVisitedNodeIndex = -1;
+
+        if (mapManager != null)
+            mapManager.RegenerateMap();
+
+        Debug.Log($"[GameState] {CurrentLap}바퀴째 맵 진행 시작 (난이도 오프셋 컬럼 +{GetDifficultyColumnOffset()})");
+    }
+
+    // 현재 바퀴 기준 누적 난이도 컬럼 오프셋 (1바퀴=0, 2바퀴=11, …)
+    public int GetDifficultyColumnOffset()
+    {
+        if (roundManager != null && roundManager.DifficultyConfig != null)
+            return roundManager.DifficultyConfig.GetEffectiveColumn(0, bossDefeatCount);
+
+        // DifficultyConfig 미연결 시 기본값(컬럼 10 + 보스 1 = 11)
+        return bossDefeatCount * 11;
+    }
+
     // 런을 처음부터 재시작하고 맵으로 돌아간다
     public void RestartRunToMap()
     {
@@ -256,6 +299,7 @@ public class GameStateController : MonoBehaviour
 
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
+        bossDefeatCount = 0;
 
         // 신규 전투 시스템: 런 덱을 기본값으로 리셋
         Battle.RunDeckState.Instance?.ResetRun();
@@ -265,6 +309,9 @@ public class GameStateController : MonoBehaviour
 
         // 골드도 초기화 (다음 런은 0골드로 시작)
         MoneyManager.Instance?.ResetMoney();
+
+        if (mapManager != null)
+            mapManager.RegenerateMap();
 
         ShowMap();
     }
@@ -281,6 +328,7 @@ public class GameStateController : MonoBehaviour
         // 런 상태 초기화 (메인으로 나가면 현재 런을 포기)
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
+        bossDefeatCount = 0;
         Battle.RunDeckState.Instance?.ResetRun();
 
         // 유물 보유 현황도 초기화 (메인으로 나가면 현재 런을 포기 → 다음 런은 유물 0개로 시작)
