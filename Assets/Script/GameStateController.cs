@@ -41,6 +41,15 @@ public class GameStateController : MonoBehaviour
     // 아직 클리어에 필요한 보스 처치가 남았는지
     public bool HasMoreLapsRemaining => bossDefeatCount < RequiredBossDefeats;
 
+    [Header("Stage Display")]
+    [Tooltip("현재 바퀴 내 스테이지 번호 (1~11, 맵 컬럼+1).")]
+    public int currentMapStageNumber = 1;
+
+    public int CurrentDisplayLap => CurrentLap;
+    public int CurrentDisplayStage => currentMapStageNumber;
+
+    public event System.Action OnRunStageDisplayChanged;
+
     // 초기화: 싱글턴 중복 방지
     void Awake()
     {
@@ -77,6 +86,9 @@ public class GameStateController : MonoBehaviour
     {
         if (mainMenuStage != null)
             mainMenuStage.SetActive(false);
+
+        bossDefeatCount = 0;
+        ResetMapStageForLapStart();
 
         if (mapManager != null)
             mapManager.RegenerateMap();
@@ -266,11 +278,29 @@ public class GameStateController : MonoBehaviour
         Debug.Log($"[GameState] 보스 처치 {bossDefeatCount}/{RequiredBossDefeats}");
     }
 
+    public void SetCurrentMapStageFromColumn(int mapColumn)
+    {
+        currentMapStageNumber = Mathf.Max(1, mapColumn + 1);
+        NotifyRunStageDisplayChanged();
+    }
+
+    public void ResetMapStageForLapStart()
+    {
+        currentMapStageNumber = 1;
+        NotifyRunStageDisplayChanged();
+    }
+
+    public void NotifyRunStageDisplayChanged()
+    {
+        OnRunStageDisplayChanged?.Invoke();
+    }
+
     // 다음 바퀴 맵 진행을 위해 노드 클리어/위치를 초기화하고 새 맵을 생성한다 (덱·유물·골드·HP는 유지)
     public void BeginNextLap()
     {
         clearedNodes.Clear();
         lastVisitedNodeIndex = -1;
+        ResetMapStageForLapStart();
 
         if (mapManager != null)
             mapManager.RegenerateMap();
@@ -300,6 +330,7 @@ public class GameStateController : MonoBehaviour
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
         bossDefeatCount = 0;
+        ResetMapStageForLapStart();
 
         // 신규 전투 시스템: 런 덱을 기본값으로 리셋
         Battle.RunDeckState.Instance?.ResetRun();
@@ -329,6 +360,7 @@ public class GameStateController : MonoBehaviour
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
         bossDefeatCount = 0;
+        ResetMapStageForLapStart();
         Battle.RunDeckState.Instance?.ResetRun();
 
         // 유물 보유 현황도 초기화 (메인으로 나가면 현재 런을 포기 → 다음 런은 유물 0개로 시작)

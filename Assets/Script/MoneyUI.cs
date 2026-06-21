@@ -2,29 +2,37 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// 화폐량을 TextMeshPro 텍스트로 표시하는 UI 컴포넌트
-[RequireComponent(typeof(TMP_Text))]
+// 메뉴바 재화 표시. pill 배경 위에 아이콘 + 숫자를 함께 표시한다.
 public class MoneyUI : MonoBehaviour
 {
-    [Header("��ȭ ������ (���û���)")]
-    [SerializeField] private Image moneyIconImage;  // 화폐 아이콘 이미지
+    [Header("UI References")]
+    [SerializeField] private Image backgroundImage;
+    [SerializeField] private Image moneyIconImage;
+    [SerializeField] private TMP_Text moneyText;
 
-    private TMP_Text moneyText; // 화폐량을 출력할 텍스트
+    [Header("Background")]
+    [Tooltip("배경 스프라이트. 지정하면 backgroundImage에 자동 적용.")]
+    [SerializeField] private Sprite backgroundSprite;
 
-    // 텍스트 참조와 화폐 아이콘을 초기화한다
+    [Header("Text Style (Inspector)")]
+    [SerializeField] private TMP_FontAsset fontAsset;
+    [SerializeField] private float fontSize = 36f;
+    [SerializeField] private Color textColor = Color.white;
+
     void Awake()
     {
-        moneyText = GetComponent<TMP_Text>();
-
-        if (moneyIconImage != null && MoneyManager.Instance != null && MoneyManager.Instance.MoneyIcon != null)
-        {
-            moneyIconImage.sprite = MoneyManager.Instance.MoneyIcon;
-        }
+        ResolveReferences();
+        ApplyBackgroundSprite();
+        ApplyMoneyIcon();
     }
 
-    // 화폐 변경 이벤트를 구독하고 현재 값을 표시한다
     void OnEnable()
     {
+        ResolveReferences();
+        ApplyBackgroundSprite();
+        ApplyMoneyIcon();
+        ApplyTextStyle();
+
         if (MoneyManager.Instance != null)
         {
             MoneyManager.Instance.OnMoneyChanged += UpdateMoneyDisplay;
@@ -32,35 +40,76 @@ public class MoneyUI : MonoBehaviour
         }
     }
 
-    // 화폐 변경 이벤트 구독을 해제한다
     void OnDisable()
     {
         if (MoneyManager.Instance != null)
-        {
             MoneyManager.Instance.OnMoneyChanged -= UpdateMoneyDisplay;
-        }
     }
 
-    // 파괴 시 처리(현재 동작 없음)
-    void OnDestroy()
+#if UNITY_EDITOR
+    void OnValidate()
     {
+        ApplyBackgroundSprite();
+        ApplyTextStyle();
     }
+#endif
 
-    // 시작 시 초기 화폐량을 표시한다
-    void Start()
+    void ResolveReferences()
     {
-        if (MoneyManager.Instance != null)
+        if (backgroundImage == null)
+            backgroundImage = GetComponent<Image>();
+
+        if (moneyIconImage == null)
         {
-            UpdateMoneyDisplay(MoneyManager.Instance.CurrentMoney);
+            Transform iconTransform = transform.Find("MoneyIcon");
+            if (iconTransform != null)
+                moneyIconImage = iconTransform.GetComponent<Image>();
+        }
+
+        if (moneyText == null)
+        {
+            Transform textTransform = transform.Find("MoneyAmountText");
+            if (textTransform != null)
+                moneyText = textTransform.GetComponent<TMP_Text>();
         }
     }
 
-    // 화폐 텍스트를 주어진 값으로 갱신한다
+    void ApplyBackgroundSprite()
+    {
+        if (backgroundImage == null || backgroundSprite == null)
+            return;
+
+        backgroundImage.sprite = backgroundSprite;
+        backgroundImage.type = Image.Type.Simple;
+        backgroundImage.preserveAspect = false;
+        backgroundImage.raycastTarget = false;
+    }
+
+    void ApplyMoneyIcon()
+    {
+        if (moneyIconImage == null || MoneyManager.Instance == null || MoneyManager.Instance.MoneyIcon == null)
+            return;
+
+        moneyIconImage.sprite = MoneyManager.Instance.MoneyIcon;
+        moneyIconImage.preserveAspect = true;
+        moneyIconImage.raycastTarget = false;
+    }
+
+    void ApplyTextStyle()
+    {
+        if (moneyText == null)
+            return;
+
+        if (fontAsset != null)
+            moneyText.font = fontAsset;
+
+        moneyText.fontSize = fontSize;
+        moneyText.color = textColor;
+    }
+
     void UpdateMoneyDisplay(int money)
     {
         if (moneyText != null)
-        {
-            moneyText.text = $"{money}";
-        }
+            moneyText.text = money.ToString();
     }
 }

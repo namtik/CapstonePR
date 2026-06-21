@@ -80,6 +80,8 @@ public class MapManager : MonoBehaviour
 
             // 카메라를 현재 위치로 이동
             UpdateScrollPosition();
+
+            SyncRunStageDisplay();
         }
     }
 
@@ -207,6 +209,28 @@ public class MapManager : MonoBehaviour
 
         // 스크롤을 시작 노드로 즉시 이동
         UpdateScrollPosition(true);
+
+        SyncRunStageDisplay();
+    }
+
+    // 현재 맵 위치 기준으로 메뉴바 스테이지 표시(n-n)를 동기화한다.
+    public void SyncRunStageDisplay()
+    {
+        var stateController = GameStateController.Instance;
+        if (stateController == null)
+            return;
+
+        if (stateController.lastVisitedNodeIndex < 0 || mapData == null)
+        {
+            stateController.ResetMapStageForLapStart();
+            return;
+        }
+
+        int nodeIndex = stateController.lastVisitedNodeIndex;
+        if (nodeIndex < 0 || nodeIndex >= mapData.nodes.Count)
+            return;
+
+        stateController.SetCurrentMapStageFromColumn(mapData.nodes[nodeIndex].column);
     }
 
     // 스크롤을 현재(또는 시작) 노드 위치로 이동시킨다
@@ -406,6 +430,9 @@ public class MapManager : MonoBehaviour
 
         stateController.lastVisitedNodeIndex = node.nodeIndex;
 
+        int mapColumn = mapData.nodes[node.nodeIndex].column;
+        stateController.SetCurrentMapStageFromColumn(mapColumn);
+
         // 보스 노드인지 확인
         bool isBossNode = (mapData != null && node.nodeIndex == mapData.bossIndex);
 
@@ -465,6 +492,7 @@ public class MapManager : MonoBehaviour
         var bossEntry = mapData.nodes[bossIndex];
 
         stateController.lastVisitedNodeIndex = bossIndex;
+        stateController.SetCurrentMapStageFromColumn(bossEntry.column);
         stateController.ShowCanvasForNodeType(NodeType.Boss, true);
 
         RoundData roundData = bossEntry.roundData;
