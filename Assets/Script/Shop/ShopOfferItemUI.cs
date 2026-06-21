@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using Battle.Card;
 using Battle.UI;
 
@@ -43,6 +44,9 @@ public class ShopOfferItemUI : MonoBehaviour
     private bool runtimeOfferIconCreated; // 런타임 상품 아이콘 생성 여부
     private readonly System.Collections.Generic.List<Graphic> cardVisualGraphics = new System.Collections.Generic.List<Graphic>(); // 카드 비주얼 그래픽 캐시
     private bool relicIconOnlyMode; // 렐릭 아이콘 전용 모드 여부
+    private string offerTitle; // 호버 툴팁용 상품 이름
+    private string offerDescription; // 호버 툴팁용 상품 설명
+    private bool hoverTooltipWired; // 호버 툴팁 이벤트 연결 여부
     private Vector2 iconBaseSizeDelta; // 아이콘 기준 크기
     private Vector3 iconBaseScale = Vector3.one; // 아이콘 기준 스케일
     private bool iconBaseCaptured; // 아이콘 기준값 캡처 여부
@@ -60,6 +64,8 @@ public class ShopOfferItemUI : MonoBehaviour
         cardVisualGraphics.Clear();
         price = Mathf.Max(0, offerPrice);
         onBuy = onBuyClick;
+        offerTitle = title;
+        offerDescription = description;
 
         ApplyCardVisualScale();
         EnsureOfferIconReady();
@@ -300,11 +306,37 @@ public class ShopOfferItemUI : MonoBehaviour
             newCardView.enabled = !enabled;
 
         if (relicIconOnlyMode)
+        {
             EnableIconOnlyPurchaseMode();
+            WireHoverTooltip();
+        }
         else
             BindRootPurchaseIfNeeded();
 
         ApplyRelicIconOnlyMode();
+    }
+
+    // 렐릭 아이콘에 호버 시 이름/설명 툴팁을 띄우는 이벤트 연결(1회)
+    void WireHoverTooltip()
+    {
+        if (hoverTooltipWired || iconImage == null) return;
+
+        var trigger = iconImage.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = iconImage.gameObject.AddComponent<EventTrigger>();
+
+        var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+        enter.callback.AddListener(_ =>
+        {
+            var font = titleText != null ? titleText.font : null;
+            ShopRelicTooltip.Instance?.Show(offerTitle, offerDescription, font);
+        });
+        trigger.triggers.Add(enter);
+
+        var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        exit.callback.AddListener(_ => ShopRelicTooltip.Instance?.Hide());
+        trigger.triggers.Add(exit);
+
+        hoverTooltipWired = true;
     }
 
     // 아이콘 클릭만 구매로 처리하고 다른 구매 버튼 비활성화

@@ -10,8 +10,8 @@ namespace Battle
     public class NewBattleSystemBootstrap : MonoBehaviour
     {
         [Header("시작 유물 (테스트/밸런스)")]
-        [Tooltip("런 시작 시 자동 지급할 유물. 이무기의 여의주=AwakenGaugeRecoverPerCombo, 비급서=ComboBonusSecondsBoost")]
-        [SerializeField] private List<RelicEffectType> startingRelics = new List<RelicEffectType>(); // 런 시작 시 지급할 유물 목록
+        [Tooltip("런 시작 시 자동 지급할 유물 에셋(RelicSO). 비우면 지급 안 함.")]
+        [SerializeField] private List<RelicSO> startingRelics = new List<RelicSO>(); // 런 시작 시 지급할 유물 목록
 
         // 레거시 전투 오브젝트 차단 후 신규 컨트롤러/유물/런덱 준비 (실행 순서 -1000)
         void Awake()
@@ -27,8 +27,8 @@ namespace Battle
         void Start()
         {
             if (startingRelics != null && startingRelics.Count > 0 && RelicManager.Instance != null)
-                foreach (var fx in startingRelics)
-                    RelicManager.Instance.GiveRelicByEffect(fx);
+                foreach (var relic in startingRelics)
+                    RelicManager.Instance.AddRelic(relic);
         }
 
         // 씬에 남은 레거시 전투 오브젝트(4슬롯/콤보/구 손패)를 비활성화

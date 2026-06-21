@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3f0ab994b0dad343913e54534f720c9, type: 3}
+  m_Name: 10013_CostReductionHandLimitRelic
+  m_EditorClassIdentifier: Assembly-CSharp::Battle.Relic.CostReductionHandLimitRelic
+  id: 10013
+  displayName: "\uB3C5\uC8FC"
+  description: "\uBAA8\uB4E0 \uCE74\uB4DC\uC758 \uCF54\uC2A4\uD2B8\uAC00 1\uB9CC\uD07C
+    \uC904\uC5B4\uB4E0\uB2E4. \uC804\uD22C \uC911 \uD328\uC5D0 \uCE74\uB4DC\uB97C
+    1\uC7A5\uB9CC \uBCF4\uC720\uD560 \uC218 \uC788\uB2E4."
+  icon: {fileID: 21300000, guid: 01fc74aed5cd63848bd0b5232ffcf454, type: 3}
+  category: 0
+  gaugeCostDelta: -1
+  handLimit: 1

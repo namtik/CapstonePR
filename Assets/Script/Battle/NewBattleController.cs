@@ -11,7 +11,7 @@ using Battle.UI;
 namespace Battle
 {
     // 새 전투 시스템 진입점 (5장 손패·드래그 사용·각성·콤보·적 AI 방해)
-    public class NewBattleController : MonoBehaviour
+    public class NewBattleController : MonoBehaviour, Battle.Relic.IRelicBattleContext
     {
         public const int AWAKEN_ACTIVATION_INPUT = 10;                  // 각성 발동에 필요한 속성 카드 사용 횟수
         public const float AWAKEN_DURATION_SECONDS = 4f;               // 각성 기본 지속 시간(초)
@@ -186,6 +186,11 @@ namespace Battle
         private int _skipNextGaugeCount;      // 바람14(313): 다음 카드 게이지 소모 스킵 횟수
         private CardInstance _lastResolvedCard; // 물12(211): 마지막으로 사용한 카드(재사용 대상)
 
+        private int _cardsPlayedThisBattle;        // 유물(웃는 탈 10006): 이번 전투 일반 카드 사용 누적 수
+        private bool _hpLostThisBattle;            // 유물(혈묵주 10003): 이번 전투 체력 손실 발생 여부
+        private bool _relicForceAwakenPending;     // 유물(황룡옥적 10010): 시작 드로우 후 강제 각성 예약
+        private bool _relicFirstCardRecastPending; // 유물(복사경 10015): 첫 사용 카드 효과 1회 재발동 예약
+
         public bool IsAwakenActive => _awakenActive;        // 각성 활성 여부 노출
         public CardDeckSystem Deck => _deck;                // 덱 시스템 노출
         public CardInstance LastResolvedCard => _lastResolvedCard; // 마지막 사용 카드 노출
@@ -220,6 +225,7 @@ namespace Battle
             {
                 _player.OnPlayerHit -= OnPlayerHitHandler;
                 _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
+                _player.OnHpDecreased -= OnPlayerHpDecreasedHandler;
             }
             if (_enemyStat != null) _enemyStat.OnGaugeFull -= OnEnemyAttackFiredHandler;
             if (Instance == this) Instance = null;
@@ -301,7 +307,10 @@ namespace Battle
             _ctx.deck = _deck;
             ResetContextFlags();
             if (RunDeckState.Instance != null)
+            {
                 _ctx.attackPowerBonus += RunDeckState.Instance.PermanentAttackPower;
+                _ctx.doubleBasicCardEffects = RunDeckState.Instance.DoubleBasicCardEffects; // 태초의 서 10004
+            }
 
             if (_player != null)
             {
@@ -309,6 +318,8 @@ namespace Battle
                 _player.OnPlayerHit += OnPlayerHitHandler;
                 _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
                 _player.OnBlockConsumedByAttack += OnBlockConsumedHandler;
+                _player.OnHpDecreased -= OnPlayerHpDecreasedHandler;
+                _player.OnHpDecreased += OnPlayerHpDecreasedHandler;
             }
 
             if (_enemyStat != null)
@@ -325,6 +336,10 @@ namespace Battle
 
             var startingDeck = _customStartingDeck ?? CardDatabase.BuildDefaultPrototypeDeck();
             _deck.StartBattle(startingDeck);
+
+            // 유물(독주 10013): 손패 한도 강제 오버라이드 (deck.StartBattle이 한도를 리셋한 뒤 적용)
+            int handLimitOverride = RelicManager.Instance != null ? RelicManager.Instance.GetHandLimitOverride() : -1;
+            if (handLimitOverride > 0) _deck.SetHandLimitOverride(handLimitOverride);
 
             if (useComboDatabase)
             {
@@ -364,6 +379,10 @@ namespace Battle
             _recoverCooldown = 0;
             _track = null;
             _tdQueue.Clear();
+            _cardsPlayedThisBattle = 0;
+            _hpLostThisBattle = false;
+            _relicForceAwakenPending = false;
+            _relicFirstCardRecastPending = false;
 
             if (handHud != null)
             {
@@ -378,37 +397,20 @@ namespace Battle
             _deck.Draw(START_DRAW);
             UpdateAwakenText();
             Log($"전투 시작 — {START_DRAW}장 드로우");
+
+            // 유물(황룡옥적 10010): 시작 드로우 후 즉시 각성 진입
+            if (_relicForceAwakenPending)
+            {
+                _relicForceAwakenPending = false;
+                _awakenPending = false;
+                if (!_awakenActive) { ActivateAwaken(); Log("[유물] 황룡옥적 — 전투 시작 시 각성 진입"); }
+            }
         }
 
-        // 전투 진입 시 발동하는 유물 효과 처리 (서리화: 적에게 빙결 부여)
+        // 전투 진입 시 발동하는 유물 효과 처리 — 보유 유물의 OnBattleStart 디스패치
         void ApplyBattleStartRelics()
         {
-            if (_enemy == null || RelicManager.Instance == null) return;
-
-            if (RelicManager.Instance.HasEffect(RelicEffectType.FrostEnemyOnBattleStart))
-            {
-                int amount = RelicManager.FROST_ON_BATTLE_START_AMOUNT;
-                var def = RelicManager.Instance.GetOwnedRelicByEffect(RelicEffectType.FrostEnemyOnBattleStart);
-
-                // 빙결 부여(이펙트 트리거) — 팝업 등장 후 실행되도록 콜백으로 지연
-                System.Action applyFrost = () =>
-                {
-                    if (_enemy == null) return;
-                    _enemy.AddStatus("frost", amount); // 양수 부여 → OnStatusApplied로 빙결 연출 트리거
-                    Log($"[유물] 서리화 — 적에게 빙결 {amount} 부여");
-                };
-
-                // 좌상단 유물 아이콘을 펄스 + 아래 텍스트 표시 후, 펄스가 끝나면 빙결/이펙트가 나오게 한다
-                if (RelicHUD.Instance != null && def != null)
-                {
-                    Log("[유물] 서리화 — 전투 진입, 아이콘 펄스 후 빙결 발동");
-                    RelicHUD.Instance.PulseRelicIcon(def, $"유물 {def.displayName} 발동", applyFrost);
-                }
-                else
-                {
-                    applyFrost(); // 펄스 불가 시 즉시 적용(기능 유지)
-                }
-            }
+            RelicManager.Instance?.NotifyBattleStart(this);
         }
 
         // 적에게 상태이상이 '부여'될 때 — 빙결이면 적 위치에서 연출 재생
@@ -560,6 +562,7 @@ namespace Battle
             _ctx.burnPersistsOnEnemyTurn = false;
             _ctx.awakenGaugeMaxDelta = 0;
             _ctx.FrostTriggerReentrancy = false;
+            _ctx.doubleBasicCardEffects = false;
 
             _skipNextGaugeCount = 0;
             _lastResolvedCard = null;
@@ -604,6 +607,15 @@ namespace Battle
         {
             if (_ctx.healOnPlayerHitActive && _ctx.player != null)
                 _ctx.player.Heal(1);
+        }
+
+        // 플레이어가 실제 체력을 잃었을 때 — 유물(혈묵주 10003, 피 묻은 가시 10019) 디스패치
+        void OnPlayerHpDecreasedHandler(int amount)
+        {
+            if (amount <= 0) return;
+            bool first = !_hpLostThisBattle;
+            _hpLostThisBattle = true;
+            RelicManager.Instance?.NotifyPlayerHpLost(this, amount, first);
         }
 
         // 땅18(417): 방어도 소모 시 무작위 파편 1장 버린 더미에
@@ -716,9 +728,20 @@ namespace Battle
             }
         }
 
-        // D 드로우 시도 — 1장 뽑고 적 게이지 +1
+        // D 드로우 시도 — 1장 뽑고 적 게이지 +1 (비급서 10011 보유 시 패 전부 버리고 5장)
         void TryDDraw()
         {
+            // 유물(비급서 10011): D 드로우가 "현재 패 모두 버리고 5장 뽑기"로 교체
+            if (RelicManager.Instance != null && RelicManager.Instance.HasDDrawOverride())
+            {
+                int discarded = _deck.DiscardAllFromHand();
+                int redrawn = _deck.Draw(5);
+                if (redrawn > 0) AccrueEnemyGauge(1);
+                handHud?.Refresh();
+                Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우");
+                return;
+            }
+
             if (_deck.IsHandFull)
             {
                 Log("D 드로우 불가 — 손패 가득 참");
@@ -758,15 +781,12 @@ namespace Battle
 
                 if (comboTriggered)
                 {
-                    float extraBonus = (RelicManager.Instance != null &&
-                                        RelicManager.Instance.HasEffect(RelicEffectType.ComboBonusSecondsBoost))
-                                       ? RelicManager.COMBO_BONUS_SECONDS_EXTRA : 0f;
-                    float totalBonus = COMBO_BONUS_SECONDS + extraBonus;
                     float before = _awakenTimeRemaining;
-                    _awakenTimeRemaining += totalBonus;
-                    _awakenMaxTime += totalBonus;
-                    Log($"[각성] ⏱ 콤보 매칭 → 시간 +{totalBonus:F1}s ({before:F2}s → {_awakenTimeRemaining:F2}s, max={_awakenMaxTime:F2}s)" +
-                        (extraBonus > 0f ? " [비급서]" : ""));
+                    _awakenTimeRemaining += COMBO_BONUS_SECONDS;
+                    _awakenMaxTime += COMBO_BONUS_SECONDS;
+                    // 유물(비급서 등)이 콤보 성공 시 각성 시간을 추가로 늘림 — AddAwakenTimeSeconds로 더해짐
+                    RelicManager.Instance?.NotifyComboTriggered(this);
+                    Log($"[각성] ⏱ 콤보 매칭 → 시간 ({before:F2}s → {_awakenTimeRemaining:F2}s, max={_awakenMaxTime:F2}s)");
 
                     // 콤보 성공 → 몬스터 주위에 표식 1개(종료 시 차례로 폭발) + 완성 효과음
                     SpawnAwakenComboMarker();
@@ -817,6 +837,14 @@ namespace Battle
             var result = _resolver.Resolve(card);
 
             card.selfUseCount++;
+
+            // 유물(복사경 10015): 이번 전투 첫 사용 카드면 효과를 한 번 더 발동
+            if (_relicFirstCardRecastPending)
+            {
+                _relicFirstCardRecastPending = false;
+                _resolver.Resolve(card);
+                Log("[유물] 복사경 — 첫 카드 효과 재발동");
+            }
 
             // 바람314: 버린 더미 대신 패로 복귀 (소멸이 아닐 때만)
             if (result.returnToHandInsteadOfDiscard && !result.exile && !result.keepOnField)
@@ -937,6 +965,9 @@ namespace Battle
 
             // 게이지 누적
             int gaugeCost = card.Gauge;
+            // 유물(독주 10013): 모든 카드 코스트 가감 (하한 0)
+            int relicCostDelta = RelicManager.Instance != null ? RelicManager.Instance.GetGaugeCostDelta() : 0;
+            if (relicCostDelta != 0) gaugeCost = Mathf.Max(0, gaugeCost + relicCostDelta);
             if (result.currentCardFreeThisUse) gaugeCost = 0;
             if (_ctx.firstCardAfterAttackFreeActive && _ctx.firstCardAfterEnemyAttack)
                 gaugeCost = 0;
@@ -960,6 +991,10 @@ namespace Battle
             if (result.skipNextGaugeCost) _skipNextGaugeCount++;
 
             UpdateUsageStats(card);
+
+            // 유물(웃는 탈 10006): 일반 카드 사용 누적 → 3장마다 등 카드 사용 훅
+            _cardsPlayedThisBattle++;
+            RelicManager.Instance?.NotifyCardPlayed(this, card, _cardsPlayedThisBattle);
 
             if (card.data.comboSlot) AccumulateAwakenInput();
 
@@ -1028,6 +1063,8 @@ namespace Battle
             _elementInputCount = 0;
             int ownedComboCount = ownedComboSkills != null ? ownedComboSkills.Count : 0;
             float awakenDuration = AWAKEN_DURATION_SECONDS + ownedComboCount * AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS;
+            // 유물(각성 지속시간 증가류)이 있으면 합산
+            if (RelicManager.Instance != null) awakenDuration += RelicManager.Instance.GetAwakenDurationBonus();
             _awakenTimeRemaining = awakenDuration;
             _awakenMaxTime = awakenDuration;
 
@@ -1236,15 +1273,10 @@ namespace Battle
             _awakenExplosionRoutine = null;
         }
 
-        // 이무기의 여의주: 성공 콤보 수만큼 각성 게이지 회복 (즉시 재발동 방지 max-1 상한)
+        // 각성 종료 시 유물 효과 디스패치 (이무기의 여의주: 성공 콤보 수만큼 게이지 회복 등)
         void ApplyAwakenComboGaugeRecovery(int comboCount)
         {
-            if (RelicManager.Instance == null ||
-                !RelicManager.Instance.HasEffect(RelicEffectType.AwakenGaugeRecoverPerCombo)) return;
-
-            _elementInputCount = Mathf.Min(comboCount, EffectiveAwakenInput - 1);
-            UpdateAwakenText();
-            Log($"[유물] 이무기의 여의주 — 각성 게이지 {_elementInputCount}/{EffectiveAwakenInput} 회복");
+            RelicManager.Instance?.NotifyAwakenEnded(this, comboCount);
         }
 
         // 콤보 슬롯에 속성 추가(윈도우 3장 유지) + 히스토리 누적
@@ -1798,6 +1830,94 @@ namespace Battle
                 rect.SetAsLastSibling();
             }
             return go.AddComponent<PlayerDamageOverlay>();
+        }
+
+        // ── IRelicBattleContext 구현 (유물이 전투에 영향을 주는 동작) ──────────────
+        // 적에게 빙결 부여 (양수 → OnStatusApplied로 빙결 연출 트리거)
+        public void ApplyFrostToEnemy(int amount)
+        {
+            if (_enemy == null || amount <= 0) return;
+            _enemy.AddStatus("frost", amount);
+            Log($"[유물] 적에게 빙결 {amount} 부여");
+        }
+
+        // 플레이어 방어도 획득
+        public void AddPlayerGuard(int amount)
+        {
+            if (_player == null || amount <= 0) return;
+            _player.AddGuard(amount);
+            Log($"[유물] 방어도 +{amount}");
+        }
+
+        // 뽑을 더미에 무작위 파편 카드를 섞어 넣음
+        public void ShuffleFragmentsIntoDrawPile(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                var frag = CardDatabase.CreateFragmentInstance();
+                if (frag != null) _deck.AddToDrawShuffled(frag);
+            }
+            handHud?.Refresh();
+            if (count > 0) Log($"[유물] 파편 {count}장 뽑을 더미에 삽입");
+        }
+
+        // 카드 드로우
+        public void DrawCards(int count)
+        {
+            if (count > 0) _deck.Draw(count);
+        }
+
+        // 각성 남은시간/최대시간을 함께 증가
+        public void AddAwakenTimeSeconds(float seconds)
+        {
+            if (seconds == 0f) return;
+            _awakenTimeRemaining += seconds;
+            _awakenMaxTime += seconds;
+        }
+
+        // 각성 종료 후 성공 콤보 수만큼 각성 게이지 회복 (즉시 재발동 방지 max-1 상한)
+        public void RecoverAwakenGauge(int successCombos)
+        {
+            _elementInputCount = Mathf.Min(successCombos, EffectiveAwakenInput - 1);
+            UpdateAwakenText();
+            Log($"[유물] 각성 게이지 {_elementInputCount}/{EffectiveAwakenInput} 회복");
+        }
+
+        // 연쇄 스택 증가 (다음 Update의 SyncChainStatus가 UI 반영)
+        public void AddChain(int amount)
+        {
+            if (amount == 0) return;
+            _ctx.chainCount += amount;
+            Log($"[유물] 연쇄 +{amount} (현재 {_ctx.chainCount})");
+        }
+
+        // 무작위 적에게 즉시 피해 (현재 단일 적)
+        public void DealDamageToRandomEnemy(int amount)
+        {
+            if (_enemy == null || amount <= 0) return;
+            _enemy.TakeDamage(amount);
+            Log($"[유물] 적에게 {amount} 피해");
+        }
+
+        // 각성 진입 예약 — 전투 시작 시 OnBattleStart에서 호출됨. 시작 드로우 후 StartBattle이 발동.
+        public void ForceActivateAwaken()
+        {
+            _relicForceAwakenPending = true;
+        }
+
+        // 이번 전투 첫 사용 카드의 효과를 한 번 더 발동하도록 예약
+        public void EnableFirstCardRecast()
+        {
+            _relicFirstCardRecastPending = true;
+        }
+
+        // 좌상단 유물 아이콘 펄스 연출 후 onShown 호출 (HUD 없으면 즉시 실행)
+        public void PulseRelic(Battle.Relic.RelicSO relic, string label, System.Action onShown)
+        {
+            if (RelicHUD.Instance != null && relic != null)
+                RelicHUD.Instance.PulseRelicIcon(relic, label, onShown);
+            else
+                onShown?.Invoke();
         }
     }
 }

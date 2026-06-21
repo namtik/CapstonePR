@@ -10890,27 +10890,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce00666487f50a2438b7c12ad00cb468, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.Relic.RelicManager
-  relicDefinitions:
-  - id: imugi_yeouiju
-    displayName: "\uC774\uBB34\uAE30\uC758 \uC5EC\uC758\uC8FC"
-    description: "\uAC01\uC131 \uC0C1\uD0DC\uC5D0\uC11C \uC131\uACF5\uD55C \uCF64\uBCF4
-      \uD69F\uC218\uB9CC\uD07C\n\uAC01\uC131 \uC885\uB8CC \uD6C4 \uAC01\uC131 \uAC8C\uC774\uC9C0\uB97C
-      \uD68C\uBCF5\uD55C\uB2E4."
-    icon: {fileID: 0}
-    effect: 1
-  - id: secret_manual
-    displayName: "\uBE44\uAE09\uC11C"
-    description: "\uAC01\uC131 \uC0C1\uD0DC\uC5D0\uC11C \uCF64\uBCF4 \uBC1C\uB3D9
-      \uC131\uACF5 \uC2DC\n\uD68C\uBCF5\uB418\uB294 \uC2DC\uAC04\uC774 0.5\uCD08
-      \uCD94\uAC00\uB41C\uB2E4."
-    icon: {fileID: 0}
-    effect: 2
-  - id: frosted_flower
-    displayName: "\uC11C\uB9AC\uD654"
-    description: "\uC804\uD22C \uB77C\uC6B4\uB4DC\uC5D0 \uC9C4\uC785\uD560 \uB54C\n\uC801\uC5D0\uAC8C
-      \uBE59\uACB0 7\uC744 \uBD80\uC5EC\uD55C\uB2E4."
-    icon: {fileID: 21300000, guid: 5a0b9bc41464e6c4e921b9c68b2a608d, type: 3}
-    effect: 3
+  database: {fileID: 0}
 --- !u!4 &1062229288
 Transform:
   m_ObjectHideFlags: 0
@@ -14483,7 +14463,7 @@ MonoBehaviour:
   awakenTimerGauge: {fileID: 2033277085}
   ownedComboSkills: []
   useComboDatabase: 1
-  ownedComboIds: 
+  ownedComboIds: e8030000fd03000010040000f3030000
   debugAddComboRefId: 1000
   awakenDamageEffectName: Fire_ATK
   awakenDamageEffectSpread: {x: 220, y: 80}
@@ -19247,7 +19227,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9bf42127dc19824b958c8e65efbf19e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.NewBattleSystemBootstrap
-  startingRelics: 03000000
+  startingRelics:
+  - {fileID: 11400000, guid: d7cda75059b219a429075b852b0c4b4d, type: 2}
+  - {fileID: 11400000, guid: 0b04b290f1612d144ac462e4e6a0adda, type: 2}
 --- !u!114 &1853841586
 MonoBehaviour:
   m_ObjectHideFlags: 0

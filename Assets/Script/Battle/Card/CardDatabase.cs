@@ -15,6 +15,11 @@ namespace Battle.Card
 
         public static readonly int[] FragmentIds = { FRAGMENT_1, FRAGMENT_2, FRAGMENT_3 }; // 파편 ID 모음
 
+        // 기본 덱 카드 ID(4속성 공격·방어 8장) — 유물(태초의 서 10004) 대상 판별용
+        public static readonly HashSet<int> BasicCardIds = new HashSet<int> { 100, 101, 200, 201, 300, 301, 400, 401 };
+        // 지정 ID가 기본 카드인지 여부
+        public static bool IsBasicCard(int id) => BasicCardIds.Contains(id);
+
         const string CARDS_RESOURCE_PATH    = "CardDB/Cards";       // 카드 JSON 리소스 경로
         const string EFFECTS_RESOURCE_PATH  = "CardDB/CardEffects"; // 효과 JSON 리소스 경로
 

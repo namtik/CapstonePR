@@ -111,7 +111,7 @@ public class ShopStageController : MonoBehaviour
     // 렐릭 상품 한 건의 데이터
     class RelicOffer
     {
-        public RelicDef relic; // 렐릭 정의
+        public RelicSO relic; // 렐릭 정의
         public bool isSpriteOnly; // 스프라이트 전용(효과 미구현) 여부
         public Sprite sprite; // 스프라이트
         public string displayName; // 표시 이름
@@ -333,12 +333,22 @@ public class ShopStageController : MonoBehaviour
             cardOffers.Add(new CardOffer
             {
                 card = picks[i],
-                price = Random.Range(cardMinPrice, cardMaxPrice + 1),
+                price = ApplyRelicShopDiscount(Random.Range(cardMinPrice, cardMaxPrice + 1)),
             });
         }
     }
 
-    // 렐릭 후보(스프라이트 전용)에서 렐릭 상품 구성
+    // 유물(할인패 10001) 보유 시 상점 가격에 할인 배수 적용
+    int ApplyRelicShopDiscount(int basePrice)
+    {
+        var mgr = RelicManager.Instance;
+        if (mgr == null) return basePrice;
+        float mul = mgr.GetShopPriceMultiplier();
+        if (Mathf.Approximately(mul, 1f)) return basePrice;
+        return Mathf.Max(0, Mathf.RoundToInt(basePrice * mul));
+    }
+
+    // 미보유 실제 유물(RelicSO) 후보에서 렐릭 상품 구성
     void BuildRelicOffers()
     {
         relicOffers.Clear();
@@ -351,7 +361,8 @@ public class ShopStageController : MonoBehaviour
         if (relicStageController != null)
         {
             List<RelicStageController.ShopRelicCandidate> candidates = relicStageController.GetShopRelicCandidates(manager);
-            candidates.RemoveAll(c => !c.isSpriteOnly || c.sprite == null);
+            // 실제 효과가 있는 유물만 판매 (효과 없는 sprite-only placeholder 제외)
+            candidates.RemoveAll(c => c.isSpriteOnly || c.relic == null || c.sprite == null);
             List<RelicStageController.ShopRelicCandidate> selectedCandidates = PickRandom(candidates, relicOfferCount);
             for (int i = 0; i < selectedCandidates.Count; i++)
             {
@@ -363,7 +374,7 @@ public class ShopStageController : MonoBehaviour
                     sprite = pick.sprite,
                     displayName = pick.displayName,
                     description = pick.description,
-                    price = Random.Range(relicMinPrice, relicMaxPrice + 1),
+                    price = ApplyRelicShopDiscount(Random.Range(relicMinPrice, relicMaxPrice + 1)),
                 });
             }
 
@@ -371,7 +382,7 @@ public class ShopStageController : MonoBehaviour
                 return;
         }
 
-        Debug.LogWarning("[ShopStageController] RelicStageController의 sprite-only 후보를 찾지 못해 렐릭 상점 목록이 비었습니다.");
+        Debug.LogWarning("[ShopStageController] 판매 가능한 유물 후보가 없어 렐릭 상점 목록이 비었습니다. (RelicDatabase 등록/미보유 유물 확인)");
     }
 
     // 미보유 콤보 풀에서 콤보 상품 구성
@@ -409,7 +420,7 @@ public class ShopStageController : MonoBehaviour
             comboOffers.Add(new ComboOffer
             {
                 combo = picks[i],
-                price = Random.Range(comboMinPrice, comboMaxPrice + 1),
+                price = ApplyRelicShopDiscount(Random.Range(comboMinPrice, comboMaxPrice + 1)),
             });
         }
     }

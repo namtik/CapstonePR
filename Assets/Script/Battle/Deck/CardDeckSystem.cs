@@ -37,6 +37,13 @@ namespace Battle.Deck
         // 손패 한도를 기본값으로 초기화
         public void ResetHandLimit() => HandLimit = HAND_LIMIT;
 
+        // 손패 한도를 강제 지정 (기본 하한 무시, 1~MAX) — 유물(독주 10013)용
+        public void SetHandLimitOverride(int limit)
+        {
+            HandLimit = Mathf.Clamp(limit, 1, MAX_HAND_LIMIT);
+            OnPileChanged?.Invoke();
+        }
+
         public event System.Action OnPileChanged;                  // 더미 변경 알림
         public event System.Action<CardInstance> OnCardDrawn;      // 카드 드로우 알림
         public event System.Action<CardInstance> OnCardDiscarded;  // 카드 버려짐 알림

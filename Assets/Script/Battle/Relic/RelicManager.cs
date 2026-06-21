@@ -4,49 +4,30 @@ using Battle.UI;
 
 namespace Battle.Relic
 {
-    // 유물 보유 목록 관리 및 효과 조회 매니저
+    // 유물 보유 목록 관리 + 효과 디스패치/질의 매니저
     public class RelicManager : MonoBehaviour
     {
         public static RelicManager Instance { get; private set; } // 전역 싱글톤 인스턴스
 
-        public const float COMBO_BONUS_SECONDS_EXTRA = 0.5f; // 비급서: 콤보 성공 시 추가 보너스 초
-        public const int FROST_ON_BATTLE_START_AMOUNT = 7; // 한설의 결정: 전투 진입 시 적에게 부여할 빙결량
+        [Header("유물 데이터베이스")]
+        [Tooltip("등장 가능한 전체 유물 목록(RelicDatabase 에셋). 비우면 Resources/RelicDatabase를 자동 로드.")]
+        [SerializeField] private RelicDatabase database; // 전체 유물 정의 DB
 
-        [Header("사용 가능한 유물 정의 (아이콘 여기서 설정)")]
-        [SerializeField] private List<RelicDef> relicDefinitions = new List<RelicDef> // 정의된 전체 유물 목록
-        {
-            new RelicDef
-            {
-                id          = "imugi_yeouiju",
-                displayName = "이무기의 여의주",
-                description = "각성 상태에서 성공한 콤보 횟수만큼\n각성 종료 후 각성 게이지를 회복한다.",
-                effect      = RelicEffectType.AwakenGaugeRecoverPerCombo,
-            },
-            new RelicDef
-            {
-                id          = "secret_manual",
-                displayName = "비급서",
-                description = "각성 상태에서 콤보 발동 성공 시\n회복되는 시간이 0.5초 추가된다.",
-                effect      = RelicEffectType.ComboBonusSecondsBoost,
-            },
-            new RelicDef
-            {
-                id          = "frosted_flower",
-                displayName = "서리화",
-                description = "전투 라운드에 진입할 때\n적에게 빙결 7을 부여한다.",
-                effect      = RelicEffectType.FrostEnemyOnBattleStart,
-            },
-        };
+        private readonly List<RelicSO> _owned = new List<RelicSO>(); // 현재 보유 중인 유물
+        public IReadOnlyList<RelicSO> OwnedRelics => _owned; // 보유 유물 읽기 전용 뷰
 
-        private readonly List<RelicDef> _owned = new List<RelicDef>(); // 현재 보유 중인 유물
-        public IReadOnlyList<RelicDef> OwnedRelics => _owned; // 보유 유물 읽기 전용 뷰
-        public IReadOnlyList<RelicDef> RelicDefinitions => relicDefinitions; // 정의 목록 읽기 전용 뷰
+        // 전체 유물 정의 목록(보상/상점 후보 풀). DB 미설정 시 빈 목록.
+        public IReadOnlyList<RelicSO> RelicDefinitions =>
+            database != null ? database.Relics : System.Array.Empty<RelicSO>();
 
-        // 싱글톤 등록 (중복 시 자신 파괴)
+        // 싱글톤 등록 + DB 자동 로드
         void Awake()
         {
             if (Instance == null) Instance = this;
             else if (Instance != this) { Destroy(gameObject); return; }
+
+            if (database == null)
+                database = Resources.Load<RelicDatabase>("RelicDatabase");
         }
 
         // 싱글톤 참조 해제
@@ -55,26 +36,17 @@ namespace Battle.Relic
             if (Instance == this) Instance = null;
         }
 
-        // 효과 종류로 정의를 찾아 해당 유물 지급
-        public void GiveRelicByEffect(RelicEffectType effectType)
-        {
-            var def = relicDefinitions.Find(r => r.effect == effectType);
-            if (def == null)
-            {
-                Debug.LogWarning($"[유물] 정의를 찾을 수 없음: {effectType}");
-                return;
-            }
-            AddRelic(def);
-        }
+        private readonly RelicRunContext _runCtx = new RelicRunContext(); // 획득 시 런 효과 적용용
 
-        // 유물을 보유 목록에 추가 (중복 id면 무시)
-        public void AddRelic(RelicDef relic)
+        // 유물을 보유 목록에 추가 (중복 id면 무시) — 획득 시 런 레벨 효과(OnAcquired) 발동
+        public void AddRelic(RelicSO relic)
         {
             if (relic == null) return;
-            if (_owned.Exists(r => r.id == relic.id)) return;
+            if (_owned.Exists(r => r != null && r.id == relic.id)) return;
             _owned.Add(relic);
             RelicHUD.Instance?.Refresh(_owned);
-            Debug.Log($"[유물] 획득: {relic.displayName}");
+            Debug.Log($"[유물] 획득: {relic.DisplayLabel}");
+            relic.OnAcquired(_runCtx);
         }
 
         // 보유 유물을 모두 비움 (런 종료/재시작 시 호출)
@@ -95,11 +67,11 @@ namespace Battle.Relic
         public bool HasRelicId(string relicId)
         {
             if (string.IsNullOrWhiteSpace(relicId)) return false;
-            return _owned.Exists(r => r.id == relicId);
+            return _owned.Exists(r => r != null && r.id == relicId);
         }
 
         // 효과 미구현(개발중) 유물을 아이콘 기반으로 보유 목록에 추가
-        public bool TryAddSpriteOnlyRelic(Sprite sprite, out RelicDef granted)
+        public bool TryAddSpriteOnlyRelic(Sprite sprite, out RelicSO granted)
         {
             granted = null;
             if (sprite == null) return false;
@@ -109,18 +81,16 @@ namespace Battle.Relic
 
             if (HasRelicId(relicId)) return false;
 
-            var relic = new RelicDef
-            {
-                id = relicId,
-                displayName = spriteName,
-                description = "개발중인 유물",
-                icon = sprite,
-                effect = RelicEffectType.None,
-            };
+            var relic = ScriptableObject.CreateInstance<NoEffectRelic>();
+            relic.id = relicId;
+            relic.displayName = spriteName;
+            relic.description = "개발중인 유물";
+            relic.icon = sprite;
+            relic.category = RelicCategory.Combat;
 
             _owned.Add(relic);
             RelicHUD.Instance?.Refresh(_owned);
-            Debug.Log($"[유물] 획득(이미지 전용): {relic.displayName}");
+            Debug.Log($"[유물] 획득(이미지 전용): {relic.DisplayLabel}");
 
             granted = relic;
             return true;
@@ -142,20 +112,88 @@ namespace Battle.Relic
             return new string(chars);
         }
 
-        // 해당 효과를 가진 유물을 하나라도 보유 중인지 확인
-        public bool HasEffect(RelicEffectType type)
+        // ── 이벤트 디스패치 (보유 유물 전체에 훅 전달) ──────────────────────
+        // 전투 진입
+        public void NotifyBattleStart(IRelicBattleContext ctx)
         {
-            foreach (var r in _owned)
-                if (r.effect == type) return true;
-            return false;
+            for (int i = 0; i < _owned.Count; i++) _owned[i]?.OnBattleStart(ctx);
+        }
+        // 일반 카드 사용
+        public void NotifyCardPlayed(IRelicBattleContext ctx, Card.CardInstance card, int cardsPlayedThisBattle)
+        {
+            for (int i = 0; i < _owned.Count; i++) _owned[i]?.OnCardPlayed(ctx, card, cardsPlayedThisBattle);
+        }
+        // 플레이어 체력 손실
+        public void NotifyPlayerHpLost(IRelicBattleContext ctx, int amount, bool firstThisBattle)
+        {
+            for (int i = 0; i < _owned.Count; i++) _owned[i]?.OnPlayerHpLost(ctx, amount, firstThisBattle);
+        }
+        // 콤보 매칭 성공
+        public void NotifyComboTriggered(IRelicBattleContext ctx)
+        {
+            for (int i = 0; i < _owned.Count; i++) _owned[i]?.OnComboTriggered(ctx);
+        }
+        // 각성 종료
+        public void NotifyAwakenEnded(IRelicBattleContext ctx, int successCombos)
+        {
+            for (int i = 0; i < _owned.Count; i++) _owned[i]?.OnAwakenEnded(ctx, successCombos);
         }
 
-        // 보유 중 해당 효과를 가진 첫 유물 정의를 반환(없으면 null) — 발동 팝업 표시용
-        public RelicDef GetOwnedRelicByEffect(RelicEffectType type)
+        // ── 질의형 수정자 합산 (사용처에서 읽음) ───────────────────────────
+        public int GetMaxHpBonus()
         {
-            foreach (var r in _owned)
-                if (r.effect == type) return r;
-            return null;
+            int sum = 0;
+            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) sum += _owned[i].ModifyMaxHp();
+            return sum;
+        }
+        public float GetAwakenDurationBonus()
+        {
+            float sum = 0f;
+            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) sum += _owned[i].ModifyAwakenDurationSeconds();
+            return sum;
+        }
+        public int GetGaugeCostDelta()
+        {
+            int sum = 0;
+            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) sum += _owned[i].ModifyGaugeCostPerCard();
+            return sum;
+        }
+        // 손패 한도 강제값 — 보유 유물 중 가장 작은(가장 제한적인) 오버라이드, 없으면 -1
+        public int GetHandLimitOverride()
+        {
+            int result = -1;
+            for (int i = 0; i < _owned.Count; i++)
+            {
+                if (_owned[i] == null) continue;
+                int ov = _owned[i].OverrideHandLimit();
+                if (ov < 0) continue;
+                result = result < 0 ? ov : Mathf.Min(result, ov);
+            }
+            return result;
+        }
+        public float GetShopPriceMultiplier()
+        {
+            float mul = 1f;
+            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) mul *= _owned[i].ShopPriceMultiplier();
+            return mul;
+        }
+        public int GetGoldRewardBonus()
+        {
+            int sum = 0;
+            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) sum += _owned[i].GoldRewardBonus();
+            return sum;
+        }
+        // D 드로우 동작을 교체하는 유물 보유 여부 (비급서 10011)
+        public bool HasDDrawOverride()
+        {
+            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null && _owned[i].OverridesDDraw) return true;
+            return false;
+        }
+        // 유물 라운드서 후보를 전부 획득시키는 유물 보유 여부 (유물 호리병 10018)
+        public bool HasGrantAllRelicsInStage()
+        {
+            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null && _owned[i].GrantsAllRelicsInStage) return true;
+            return false;
         }
     }
 }

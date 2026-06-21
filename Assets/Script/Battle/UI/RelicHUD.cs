@@ -68,7 +68,7 @@ namespace Battle.UI
         private float           _textW; // 툴팁 텍스트 폭
         private float           _nameH; // 이름 줄 높이
 
-        private readonly List<RelicDef>   _relics    = new List<RelicDef>(); // 보유 유물 목록
+        private readonly List<RelicSO>    _relics    = new List<RelicSO>(); // 보유 유물 목록
         private readonly List<GameObject> _iconItems = new List<GameObject>(); // 생성된 아이콘 목록
 
         private Coroutine       _pulseCo;         // 진행 중인 아이콘 펄스 코루틴
@@ -97,7 +97,7 @@ namespace Battle.UI
         }
 
         // 보유 유물 목록을 갱신하고 아이콘을 재구성
-        public void Refresh(IReadOnlyList<RelicDef> relics)
+        public void Refresh(IReadOnlyList<RelicSO> relics)
         {
             _relics.Clear();
             _relics.AddRange(relics);
@@ -225,7 +225,7 @@ namespace Battle.UI
         }
 
         // 유물 1개의 아이콘 오브젝트를 생성하고 호버 트리거를 연결
-        GameObject CreateIconItem(RelicDef relic, int index)
+        GameObject CreateIconItem(RelicSO relic, int index)
         {
             var go = new GameObject($"Relic_{relic.id}", typeof(RectTransform));
             go.transform.SetParent(_iconContainer, false);
@@ -264,7 +264,7 @@ namespace Battle.UI
         }
 
         // 해당 유물의 툴팁 내용을 채우고 아이콘 위치에 표시
-        void ShowTooltip(RelicDef relic, int iconIndex)
+        void ShowTooltip(RelicSO relic, int iconIndex)
         {
             if (_tooltip == null || _tooltipRect == null) return;
 
@@ -299,7 +299,7 @@ namespace Battle.UI
         }
 
         // 유물 발동 시 좌상단 해당 아이콘을 펄스(커졌다 복귀)하고 아래에 텍스트를 띄운 뒤, 끝나면 onShown 호출
-        public void PulseRelicIcon(RelicDef relic, string labelText, System.Action onShown)
+        public void PulseRelicIcon(RelicSO relic, string labelText, System.Action onShown)
         {
             if (relic == null) { onShown?.Invoke(); return; }
 

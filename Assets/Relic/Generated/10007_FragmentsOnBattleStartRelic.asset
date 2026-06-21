@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 707791059fb79a84cac8a8afeee4f6a9, type: 3}
+  m_Name: 10007_FragmentsOnBattleStartRelic
+  m_EditorClassIdentifier: Assembly-CSharp::Battle.Relic.FragmentsOnBattleStartRelic
+  id: 10007
+  displayName: "\uAE68\uC9C4 \uBD88\uC0C1"
+  description: "\uB9E4 \uC804\uD22C \uC2DC\uC791 \uC2DC, \uBF51\uC744 \uCE74\uB4DC
+    \uB354\uBBF8\uC5D0 \uBB34\uC791\uC704 \uD30C\uD3B8 \uCE74\uB4DC 5\uC7A5\uC744
+    \uC11E\uC5B4 \uB123\uB294\uB2E4."
+  icon: {fileID: 21300000, guid: 02c3dc0ecbb7fb441b0d106f87f0fb5e, type: 3}
+  category: 0
+  fragmentCount: 5
