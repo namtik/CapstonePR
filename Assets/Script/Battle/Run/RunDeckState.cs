@@ -18,6 +18,7 @@ namespace Battle
         private readonly List<CardDatabase.DeckEntry> _runDeck = new List<CardDatabase.DeckEntry>(); // 현재 런 덱
         private bool _seeded;               // 시작 덱 시드 완료 여부
         private int _permanentAttackPower;  // 런 동안 지속되는 영구 공격력 보너스
+        private int _basicCardStatMultiplier = 1; // BASIC 태그 카드 DAMAGE/GAIN_BLOCK 배율
 
         private const int PROFILE_WINDOW = 15; // 최근 사용 프로파일 윈도우 크기
         private readonly Queue<Battle.AI.CardCategory> _recentUses = new Queue<Battle.AI.CardCategory>(); // 최근 사용 카테고리 큐
@@ -28,6 +29,14 @@ namespace Battle
         public IReadOnlyList<CardDatabase.DeckEntry> RunDeck => _runDeck; // 현재 런 덱 읽기 전용 뷰
 
         public int PermanentAttackPower => _permanentAttackPower; // 영구 공격력 보너스
+        public int BasicCardStatMultiplier => _basicCardStatMultiplier; // BASIC 카드 공격/방어 배율
+
+        // BASIC 태그 카드의 DAMAGE·GAIN_BLOCK 수치 배율을 2배로 누적
+        public void DoubleBasicCardStats()
+        {
+            _basicCardStatMultiplier *= 2;
+            Debug.Log($"[RunDeck] BASIC 카드 공격/방어 배율 x{_basicCardStatMultiplier}");
+        }
         // 영구 공격력 보너스 누적 증가
         public void AddPermanentAttackPower(int n)
         {
@@ -228,6 +237,7 @@ namespace Battle
             _runDeck.Clear();
             _seeded = false;
             _permanentAttackPower = 0;
+            _basicCardStatMultiplier = 1;
             _recentUses.Clear();
             _recentCosts.Clear();
             _awakenActivations = 0;

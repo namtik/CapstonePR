@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Battle;
 using Battle.Card;
 
 namespace Battle.Deck
@@ -830,6 +831,8 @@ namespace Battle.Deck
                 if (hf > 0) hits = hf;
             }
 
+            amount = ScaleBasicCardEffectAmount(card, verb, amount);
+
             switch (verb)
             {
                 case "DAMAGE":
@@ -1342,6 +1345,22 @@ namespace Battle.Deck
                 int j = UnityEngine.Random.Range(0, i + 1);
                 (list[i], list[j]) = (list[j], list[i]);
             }
+        }
+
+        static int ScaleBasicCardEffectAmount(CardInstance card, string verb, int amount)
+        {
+            if (amount <= 0 || card?.data == null)
+                return amount;
+
+            if (!card.data.HasTag("BASIC"))
+                return amount;
+
+            string normalizedVerb = (verb ?? string.Empty).Trim().ToUpperInvariant();
+            if (normalizedVerb != "DAMAGE" && normalizedVerb != "GAIN_BLOCK")
+                return amount;
+
+            int multiplier = RunDeckState.Instance?.BasicCardStatMultiplier ?? 1;
+            return multiplier <= 1 ? amount : amount * multiplier;
         }
     }
 }
