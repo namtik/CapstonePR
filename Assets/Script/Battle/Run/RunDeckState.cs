@@ -18,6 +18,7 @@ namespace Battle
         private readonly List<CardDatabase.DeckEntry> _runDeck = new List<CardDatabase.DeckEntry>(); // 현재 런 덱
         private bool _seeded;               // 시작 덱 시드 완료 여부
         private int _permanentAttackPower;  // 런 동안 지속되는 영구 공격력 보너스
+        private int _basicCardStatMultiplier = 1; // BASIC 태그 카드 DAMAGE/GAIN_BLOCK 배율
         private bool _doubleBasicCardEffects; // 유물(태초의 서 10004): 기본 카드 효과 2배 (런 지속)
 
         private const int PROFILE_WINDOW = 15; // 최근 사용 프로파일 윈도우 크기
@@ -29,6 +30,13 @@ namespace Battle
         public IReadOnlyList<CardDatabase.DeckEntry> RunDeck => _runDeck; // 현재 런 덱 읽기 전용 뷰
 
         public int PermanentAttackPower => _permanentAttackPower; // 영구 공격력 보너스
+        public int BasicCardStatMultiplier => _basicCardStatMultiplier; // BASIC 카드 공격/방어 배율
+
+        // BASIC 태그 카드의 DAMAGE·GAIN_BLOCK 수치 배율을 2배로 누적
+        public void DoubleBasicCardStats()
+        {
+            _basicCardStatMultiplier *= 2;
+            Debug.Log($"[RunDeck] BASIC 카드 공격/방어 배율 x{_basicCardStatMultiplier}");
 
         public bool DoubleBasicCardEffects => _doubleBasicCardEffects; // 기본 카드 효과 2배 여부
         // 기본 카드 효과 2배 활성화 (태초의 서 10004)
@@ -268,6 +276,7 @@ namespace Battle
             _runDeck.Clear();
             _seeded = false;
             _permanentAttackPower = 0;
+            _basicCardStatMultiplier = 1;
             _doubleBasicCardEffects = false;
             _recentUses.Clear();
             _recentCosts.Clear();

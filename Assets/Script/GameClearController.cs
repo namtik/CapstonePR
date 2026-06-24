@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// 보스 스테이지 클리어 시 게임 클리어 화면을 표시하는 컨트롤러
+// 최종 보스(RequiredBossDefeats회) 클리어 시 게임 클리어 화면을 표시하는 컨트롤러
 public class GameClearController : MonoBehaviour
 {
     // 전역 싱글턴 인스턴스
@@ -50,7 +50,7 @@ public class GameClearController : MonoBehaviour
             Instance = null;
     }
 
-    // 게임 클리어 화면을 표시한다 (보스 클리어 시 RoundManager가 호출)
+    // 게임 클리어 화면을 표시한다 (최종 보스 클리어 시 RoundManager가 호출)
     public void ShowGameClear()
     {
         if (gameClearCanvas == null)

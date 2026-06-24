@@ -80,7 +80,16 @@ public class MapManager : MonoBehaviour
 
             // 카메라를 현재 위치로 이동
             UpdateScrollPosition();
+
+            SyncRunStageDisplay();
         }
+    }
+
+    // 새 맵을 생성한다 (2바퀴 진입·런 재시작 시)
+    public void RegenerateMap()
+    {
+        GenerateMap();
+        isMapGenerated = true;
     }
 
     // GameStateController의 클리어 정보로 각 노드 상태를 갱신한다
@@ -200,6 +209,28 @@ public class MapManager : MonoBehaviour
 
         // 스크롤을 시작 노드로 즉시 이동
         UpdateScrollPosition(true);
+
+        SyncRunStageDisplay();
+    }
+
+    // 현재 맵 위치 기준으로 메뉴바 스테이지 표시(n-n)를 동기화한다.
+    public void SyncRunStageDisplay()
+    {
+        var stateController = GameStateController.Instance;
+        if (stateController == null)
+            return;
+
+        if (stateController.lastVisitedNodeIndex < 0 || mapData == null)
+        {
+            stateController.ResetMapStageForLapStart();
+            return;
+        }
+
+        int nodeIndex = stateController.lastVisitedNodeIndex;
+        if (nodeIndex < 0 || nodeIndex >= mapData.nodes.Count)
+            return;
+
+        stateController.SetCurrentMapStageFromColumn(mapData.nodes[nodeIndex].column);
     }
 
     // 스크롤을 현재(또는 시작) 노드 위치로 이동시킨다
@@ -399,6 +430,9 @@ public class MapManager : MonoBehaviour
 
         stateController.lastVisitedNodeIndex = node.nodeIndex;
 
+        int mapColumn = mapData.nodes[node.nodeIndex].column;
+        stateController.SetCurrentMapStageFromColumn(mapColumn);
+
         // 보스 노드인지 확인
         bool isBossNode = (mapData != null && node.nodeIndex == mapData.bossIndex);
 
@@ -409,14 +443,7 @@ public class MapManager : MonoBehaviour
         RoundData roundData = mapData.nodes[node.nodeIndex].roundData;
         if (roundData != null)
         {
-            // 노드의 컬럼 인덱스를 RoundData에 동적으로 설정 (난이도 스케일링)
-            int col = mapData.nodes[node.nodeIndex].column;
-            if (roundData is CombatRoundData combat)
-                combat.columnIndex = col;
-            else if (roundData is EliteRoundData elite)
-                elite.columnIndex = col;
-            else if (roundData is BossRoundData boss)
-                boss.columnIndex = col;
+            ApplyDifficultyColumnToRoundData(roundData, mapData.nodes[node.nodeIndex].column);
 
             // 인스펙터 참조가 비어 있으면(클래스 rename 후유증 등) 씬에서 자동 탐색
             if (roundManager == null)
@@ -465,6 +492,7 @@ public class MapManager : MonoBehaviour
         var bossEntry = mapData.nodes[bossIndex];
 
         stateController.lastVisitedNodeIndex = bossIndex;
+        stateController.SetCurrentMapStageFromColumn(bossEntry.column);
         stateController.ShowCanvasForNodeType(NodeType.Boss, true);
 
         RoundData roundData = bossEntry.roundData;
@@ -475,10 +503,7 @@ public class MapManager : MonoBehaviour
         }
 
         // 난이도 스케일링 컬럼 인덱스 주입 (OnNodeSelected와 동일).
-        int col = bossEntry.column;
-        if (roundData is BossRoundData boss) boss.columnIndex = col;
-        else if (roundData is EliteRoundData elite) elite.columnIndex = col;
-        else if (roundData is CombatRoundData combat) combat.columnIndex = col;
+        ApplyDifficultyColumnToRoundData(roundData, bossEntry.column);
 
         if (roundManager == null)
         {
@@ -487,6 +512,32 @@ public class MapManager : MonoBehaviour
         }
 
         roundManager.StartRound(roundData);
-        Debug.Log($"[MapManager] 보스방 바로 진입 (nodeIndex={bossIndex}, col={col}).");
+        Debug.Log($"[MapManager] 보스방 바로 진입 (nodeIndex={bossIndex}, difficultyCol={ResolveDifficultyColumn(bossEntry.column)}).");
+    }
+
+    // 맵 컬럼을 현재 바퀴 누적 난이도 컬럼으로 변환해 RoundData에 주입한다.
+    void ApplyDifficultyColumnToRoundData(RoundData roundData, int mapColumn)
+    {
+        int difficultyColumn = ResolveDifficultyColumn(mapColumn);
+
+        if (roundData is CombatRoundData combat)
+            combat.columnIndex = difficultyColumn;
+        else if (roundData is EliteRoundData elite)
+            elite.columnIndex = difficultyColumn;
+        else if (roundData is BossRoundData boss)
+            boss.columnIndex = difficultyColumn;
+    }
+
+    int ResolveDifficultyColumn(int mapColumn)
+    {
+        if (roundManager == null)
+            roundManager = FindFirstObjectByType<RoundManager>(FindObjectsInactive.Include);
+
+        if (roundManager != null)
+            return roundManager.ResolveDifficultyColumn(mapColumn);
+
+        var state = GameStateController.Instance;
+        int completedLaps = state != null ? state.bossDefeatCount : 0;
+        return mapColumn + completedLaps * 11;
     }
 }
