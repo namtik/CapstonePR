@@ -101,6 +101,7 @@ namespace Battle.Deck
             public bool requiresHandCopySelection;    // 패 복사 선택 필요 여부
             public bool requiresDrawPileMoveSelection;// 뽑을 더미 이동 선택 필요 여부
             public bool requiresDiscardMoveSelection; // 버린 더미 이동 선택 필요 여부
+            public string discardMoveTargetZone;      // 버린 더미 선택 후 이동 목적지(HAND/DRAW_PILE_TOP 등)
             public bool requiresFragmentPoolSelection;// 파편 풀 선택 필요 여부
             public bool skipNextGaugeCost;            // 다음 카드 게이지 무료 여부
             public bool recastLastCard;               // 직전 카드 효과 재발동 여부
@@ -1211,7 +1212,10 @@ namespace Battle.Deck
             if (sel == "SELECT_ONE_FROM_DRAW_PILE")
                 result.requiresDrawPileMoveSelection = true;
             else if (sel == "SELECT_ONE_FROM_DISCARD")
+            {
                 result.requiresDiscardMoveSelection = true;
+                result.discardMoveTargetZone = eff.toZone ?? "";
+            }
             else if (sel == "SELF")
             {
                 bool returnToHand = ExtraSubstring(eff.extra, "ReturnToHandInsteadOfDiscard")

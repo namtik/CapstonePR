@@ -137,6 +137,20 @@ namespace Battle.Deck
             return true;
         }
 
+        // 지정 카드를 버린 더미에서 패로 이동
+        public bool MoveFromDiscardToHand(CardInstance card)
+        {
+            if (card == null) return false;
+            if (_hand.Count >= HandLimit) return false;
+            int idx = _discardPile.IndexOf(card);
+            if (idx < 0) return false;
+            _discardPile.RemoveAt(idx);
+            _hand.Add(card);
+            OnCardDrawn?.Invoke(card);
+            OnPileChanged?.Invoke();
+            return true;
+        }
+
         // 지정 카드를 버린 더미에서 뽑을 더미 맨 위로 이동
         public bool MoveFromDiscardToDrawPileTop(CardInstance card)
         {

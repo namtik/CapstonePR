@@ -954,12 +954,26 @@ namespace Battle
                     (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); }));
             }
 
-            // 버린 더미에서 카드 선택 → 뽑을 더미 맨 위 (물11/210)
+            // 버린 더미에서 카드 선택 → toZone에 따라 패 또는 뽑을 더미 맨 위 (역류203/물213)
             if (result.requiresDiscardMoveSelection && handHud != null)
             {
-                StartCoroutine(DeferredPicker("버린 더미에서 카드를 선택하세요",
-                    new List<CardInstance>(_deck.DiscardPile),
-                    (picked) => { if (picked != null) _deck.MoveFromDiscardToDrawPileTop(picked); }));
+                if (_deck.DiscardCount > 0)
+                {
+                    string zone = (result.discardMoveTargetZone ?? "").Trim().ToUpperInvariant();
+                    StartCoroutine(DeferredPicker("버린 더미에서 카드를 선택하세요",
+                        new List<CardInstance>(_deck.DiscardPile),
+                        (picked) =>
+                        {
+                            if (picked == null) return;
+                            bool toHand = zone == "HAND";
+                            bool ok = toHand
+                                ? _deck.MoveFromDiscardToHand(picked)
+                                : _deck.MoveFromDiscardToDrawPileTop(picked);
+                            if (!ok && toHand)
+                                Log("[효과] 패가 가득 차 버린 더미 카드를 패로 가져올 수 없습니다.");
+                        }));
+                }
+                else Log("[효과] 버린 더미에 카드 없음 — 건너뜀");
             }
 
             // 파편 풀에서 선택 (땅10/409, 땅15/414)
