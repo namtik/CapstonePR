@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "\uC11C\uB9AC\uD654"
   description: "\uB9E4 \uC804\uD22C \uC2DC\uC791 \uC2DC, \uBB34\uC791\uC704 \uC801
     1\uBA85\uC5D0\uAC8C \uBE59\uACB0\uC744 7 \uBD80\uC5EC\uD55C\uB2E4."
-  icon: {fileID: 21300000, guid: 5a0b9bc41464e6c4e921b9c68b2a608d, type: 3}
+  icon: {fileID: 21300000, guid: 2eb6b8906085c524783dbf7a518437ce, type: 3}
   category: 0
   frostAmount: 7

@@ -16,5 +16,5 @@ MonoBehaviour:
   displayName: "\uC720\uBB3C \uD638\uB9AC\uBCD1"
   description: "\uC720\uBB3C \uB77C\uC6B4\uB4DC \uC9C4\uC785 \uC2DC, \uC81C\uC2DC\uB41C
     \uBAA8\uB4E0 \uC720\uBB3C\uC744 \uD68D\uB4DD\uD55C\uB2E4."
-  icon: {fileID: 21300000, guid: dab66d242cc55714ea23e06d5e890c03, type: 3}
+  icon: {fileID: 21300000, guid: f71a73130ae13324da4da276714c412c, type: 3}
   category: 1

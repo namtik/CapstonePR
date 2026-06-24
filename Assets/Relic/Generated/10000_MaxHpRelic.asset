@@ -15,6 +15,6 @@ MonoBehaviour:
   id: 10000
   displayName: "\uBD88\uB85C\uB2E8"
   description: "\uD68D\uB4DD \uC2DC, \uCD5C\uB300 \uCCB4\uB825\uC774 10 \uC99D\uAC00\uD55C\uB2E4."
-  icon: {fileID: 21300000, guid: 02c3dc0ecbb7fb441b0d106f87f0fb5e, type: 3}
+  icon: {fileID: 21300000, guid: e7825b63583353f4a83ad89a18fd36d0, type: 3}
   category: 1
   amount: 10

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "\uC6C3\uB294 \uD0C8"
   description: "\uCE74\uB4DC\uB97C 3\uC7A5 \uC0AC\uC6A9 \uC2DC, \uCE74\uB4DC\uB97C
     1\uC7A5 \uBF51\uB294\uB2E4."
-  icon: {fileID: 21300000, guid: cfa987965e7d7a448b3aae5be8e28a1c, type: 3}
+  icon: {fileID: 21300000, guid: ebe7f3d21907e8148abecc565469eca1, type: 3}
   category: 0
   everyN: 3
   drawCount: 1

@@ -15,6 +15,6 @@ MonoBehaviour:
   id: 10016
   displayName: "\uC2E0\uC120\uB3C4\uBCF5"
   description: "\uB9E4 \uC804\uD22C \uC2DC\uC791 \uC2DC, \uC5F0\uC1C4 20\uC744 \uC5BB\uB294\uB2E4."
-  icon: {fileID: 21300000, guid: 4837f7ca73d526b45b3c61d1740b68af, type: 3}
+  icon: {fileID: 21300000, guid: 05ab6b66d58f96e4988f634bc1dda546, type: 3}
   category: 0
   chainAmount: 20

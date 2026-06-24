@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "\uBCF5\uC8FC\uBA38\uB2C8"
   description: "\uBCF4\uC0C1\uC73C\uB85C \uBC1B\uB294 \uACE8\uB4DC\uB7C9\uC774 30
     \uB9CC\uD07C \uC99D\uAC00\uD55C\uB2E4."
-  icon: {fileID: 21300000, guid: 01fc74aed5cd63848bd0b5232ffcf454, type: 3}
+  icon: {fileID: 21300000, guid: 7bf46550471d98a46ade5cc3977610d1, type: 3}
   category: 1
   goldBonus: 30

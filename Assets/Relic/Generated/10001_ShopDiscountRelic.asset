@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "\uD560\uC778\uD328"
   description: "\uBCF4\uC720 \uC2DC, \uC0C1\uC810\uC5D0\uC11C \uC0C1\uD488\uC758
     \uAC00\uACA9\uC774 50% \uD560\uC778\uB41C\uB2E4."
-  icon: {fileID: 21300000, guid: 4837f7ca73d526b45b3c61d1740b68af, type: 3}
+  icon: {fileID: 21300000, guid: a8b5b9ab9de311445b2da4a6eac323ae, type: 3}
   category: 1
   priceMultiplier: 0.5

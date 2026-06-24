@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "\uD638\uC2E0\uBD80"
   description: "\uB9E4 \uC804\uD22C \uC2DC\uC791 \uC2DC \uBC29\uC5B4\uB3C4 5\uB97C
     \uC5BB\uB294\uB2E4."
-  icon: {fileID: 21300000, guid: a1b629094b05b38419d022bf9bfb604c, type: 3}
+  icon: {fileID: 21300000, guid: dc04cde205991964b8d80083abe3b88c, type: 3}
   category: 0
   guardAmount: 5

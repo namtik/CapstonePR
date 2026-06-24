@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "\uD53C \uBB3B\uC740 \uAC00\uC2DC"
   description: "\uCCB4\uB825\uC744 \uC783\uC744 \uC2DC, \uBB34\uC791\uC704 \uC801\uC5D0\uAC8C
     \uD53C\uD574\uB97C 5 \uB9CC\uD07C \uC900\uB2E4."
-  icon: {fileID: 21300000, guid: 01fc74aed5cd63848bd0b5232ffcf454, type: 3}
+  icon: {fileID: 21300000, guid: 4b5d84266697e3843af87e3af2d45e06, type: 3}
   category: 0
   damage: 5

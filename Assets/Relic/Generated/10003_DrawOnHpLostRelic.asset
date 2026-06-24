@@ -16,6 +16,6 @@ MonoBehaviour:
   displayName: "\uD608\uBB35\uC8FC"
   description: "\uCCB4\uB825\uC744 \uC783\uC744 \uC2DC, \uCE74\uB4DC\uB97C 1\uC7A5
     \uBF51\uB294\uB2E4."
-  icon: {fileID: 21300000, guid: dab66d242cc55714ea23e06d5e890c03, type: 3}
+  icon: {fileID: 21300000, guid: a475a550f0770fa4a893b9e0ceacde58, type: 3}
   category: 0
   drawCount: 1

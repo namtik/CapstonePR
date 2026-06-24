@@ -17,6 +17,6 @@ MonoBehaviour:
   description: "\uB9E4 \uC804\uD22C \uC2DC\uC791 \uC2DC, \uBF51\uC744 \uCE74\uB4DC
     \uB354\uBBF8\uC5D0 \uBB34\uC791\uC704 \uD30C\uD3B8 \uCE74\uB4DC 5\uC7A5\uC744
     \uC11E\uC5B4 \uB123\uB294\uB2E4."
-  icon: {fileID: 21300000, guid: 02c3dc0ecbb7fb441b0d106f87f0fb5e, type: 3}
+  icon: {fileID: 21300000, guid: 73335b136bb22f94e8efbc87867ee783, type: 3}
   category: 0
   fragmentCount: 5

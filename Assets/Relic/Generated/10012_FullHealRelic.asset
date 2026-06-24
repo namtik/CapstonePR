@@ -15,5 +15,5 @@ MonoBehaviour:
   id: 10012
   displayName: "\uC8FC\uC791\uC758 \uAE43\uD138"
   description: "\uD68D\uB4DD \uC2DC, \uBAA8\uB4E0 \uCCB4\uB825\uC744 \uD68C\uBCF5\uD55C\uB2E4."
-  icon: {fileID: 21300000, guid: dab66d242cc55714ea23e06d5e890c03, type: 3}
+  icon: {fileID: 21300000, guid: 14360f1a87abcb848b72460ecf2ee955, type: 3}
   category: 1
