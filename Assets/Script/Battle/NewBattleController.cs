@@ -392,11 +392,13 @@ namespace Battle
             if (handHud != null)
                 handHud.SetAwakenGaugeVisible(true);
 
-            ApplyBattleStartRelics();
-
             _deck.Draw(START_DRAW);
             UpdateAwakenText();
             Log($"전투 시작 — {START_DRAW}장 드로우");
+
+            // 전투 시작 유물 발동 — 오프닝 핸드 드로우 직후 처리한다.
+            // (깨진 불상 10007의 파편이 첫 패에 섞여 들어가지 않도록 드로우 이후로 미룸)
+            ApplyBattleStartRelics();
 
             // 유물(황룡옥적 10010): 시작 드로우 후 즉시 각성 진입
             if (_relicForceAwakenPending)
@@ -435,6 +437,11 @@ namespace Battle
             if (handHud != null)
             {
                 handHud.CancelCardUsePresentations();
+                // 선택창(선택/픽커/더미보기)이 열린 채 적을 처치해 전투가 끝나면
+                // 모드가 남아 다음 전투까지 영향을 주므로 여기서 강제 종료한다.
+                handHud.ExitSelectionMode();
+                handHud.ExitPickerMode();
+                handHud.CloseViewer();
                 handHud.UseCardCallback = null;
                 handHud.SelectionClosedCallback = null;
                 handHud.SetAwakenGaugeVisible(false);

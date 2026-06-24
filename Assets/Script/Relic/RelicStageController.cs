@@ -113,6 +113,10 @@ public class RelicStageController : MonoBehaviour
     [SerializeField] private bool avoidOwnedDuplicates = true; // 보유 중복 회피 여부
     [SerializeField] private List<SpriteOnlyRelicEntry> spriteOnlyRelics = new List<SpriteOnlyRelicEntry>(); // 스프라이트 전용 유물 목록
 
+    [Header("유물 호리병(10018) 설정")]
+    [Tooltip("유물 호리병 보유 시 한 라운드에 획득하는 유물 수 상한(이미 고른 1장 포함). 3중 1택 보상 UI 도입 전, 전체 DB 일괄 획득을 막기 위한 임시 상한.")]
+    [SerializeField] private int grantAllRelicMaxCount = 3; // 유물 호리병 라운드 획득 상한
+
     [Header("획득 유물 상호작용")]
     [SerializeField] private float itemHoverScaleMultiplier = 1.08f; // 호버 시 확대 배율
     [SerializeField] private float itemHoverScaleLerpSpeed = 10f; // 호버 스케일 보간 속도
@@ -520,26 +524,47 @@ public class RelicStageController : MonoBehaviour
                 : (picked.relic.icon != null ? picked.relic.icon : grantedRewardSprite);
         }
 
-        // 유물(유물 호리병 10018): 보유 시 이 라운드의 후보 유물을 전부 추가 획득
+        // 유물(유물 호리병 10018): 보유 시 '제시된' 유물(최대 grantAllRelicMaxCount장)을 추가 획득.
+        // 3중 1택 보상 UI가 없는 현재는 후보 풀(candidateRelics 미설정 시 DB 전체)을 무작위로 상한까지만 지급해
+        // 게임에 존재하는 모든 유물을 한 번에 획득하던 버그를 막는다.
         if (manager.HasGrantAllRelicsInStage())
         {
-            var all = BuildCandidates(manager);
-            for (int i = 0; i < all.Count; i++)
+            var all = BuildCandidates(manager); // 방금 지급한 picked는 이미 보유 처리되어 제외됨
+            // 이미 받은 picked 1장을 '제시 수'에 포함시켜, 남은 예산만큼만 추가 지급
+            int alreadyGranted = (!picked.isSpriteOnly && picked.relic != null) ? 1 : 0;
+            int extraBudget = Mathf.Max(0, grantAllRelicMaxCount - alreadyGranted);
+            ShuffleCandidates(all);
+            int grantedExtra = 0;
+            for (int i = 0; i < all.Count && grantedExtra < extraBudget; i++)
             {
                 var c = all[i];
                 if (c.isSpriteOnly)
                 {
-                    if (c.sprite != null) manager.TryAddSpriteOnlyRelic(c.sprite, out _);
+                    if (c.sprite != null && manager.TryAddSpriteOnlyRelic(c.sprite, out _)) grantedExtra++;
                 }
                 else if (c.relic != null && !manager.HasRelicId(c.relic.id))
                 {
                     manager.AddRelic(c.relic);
+                    grantedExtra++;
                 }
             }
-            Debug.Log("[유물] 유물 호리병 — 라운드 후보 유물 전부 획득");
+            Debug.Log($"[유물] 유물 호리병 — 제시 후보 중 {grantedExtra}장 추가 획득 (상한 {grantAllRelicMaxCount})");
         }
 
         hasPendingReward = false;
+    }
+
+    // 후보 목록을 제자리에서 무작위로 섞음(Fisher-Yates)
+    static void ShuffleCandidates(List<RewardCandidate> list)
+    {
+        if (list == null) return;
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            var tmp = list[i];
+            list[i] = list[j];
+            list[j] = tmp;
+        }
     }
 
     // 미보유 실제 유물(RelicSO)로 보상 후보 목록 구성 (상자·상점 공통)

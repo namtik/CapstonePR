@@ -210,7 +210,7 @@ namespace Battle.UI
 
             if (nameText != null) nameText.text = cardData.displayName;
             if (descText != null) descText.text = cardData.description;
-            if (gaugeText != null) gaugeText.text = cardData.gauge.ToString();
+            if (gaugeText != null) gaugeText.text = EffectiveGaugeCost(cardData.gauge).ToString();
 
             if (cardTypeText != null) cardTypeText.text = CardTypeName(cardData.type);
             if (tintCardTypeBackground && cardTypeBackground != null)
@@ -250,6 +250,15 @@ namespace Battle.UI
             }
         }
 
+        // 유물(독주 10013 등) 코스트 가감을 반영한 표시용 게이지 코스트.
+        // 실제 사용 비용(NewBattleController) 계산과 동일하게 0 하한으로 클램프한다.
+        static int EffectiveGaugeCost(int baseGauge)
+        {
+            var rm = Battle.Relic.RelicManager.Instance;
+            int delta = rm != null ? rm.GetGaugeCostDelta() : 0;
+            return delta != 0 ? Mathf.Max(0, baseGauge + delta) : baseGauge;
+        }
+
         // 현재 카드 데이터로 텍스트/속성/아이콘/배경을 갱신
         public void Refresh()
         {
@@ -270,7 +279,7 @@ namespace Battle.UI
 
             if (nameText != null) nameText.text = Card.data.displayName;
             if (descText != null) descText.text = Card.data.description;
-            if (gaugeText != null) gaugeText.text = Card.data.gauge.ToString();
+            if (gaugeText != null) gaugeText.text = EffectiveGaugeCost(Card.data.gauge).ToString();
 
             // 카드 타입 표시
             if (cardTypeText != null) cardTypeText.text = CardTypeName(Card.Type);
