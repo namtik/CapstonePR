@@ -40,8 +40,8 @@ public class BattleTestController : MonoBehaviour
     [SerializeField] private NewBattleController newBattleController;
 
     [Header("유물 (테스트)")]
-    [Tooltip("전투 시작 시 자동 지급할 유물. 이무기의 여의주=AwakenGaugeRecoverPerCombo, 비급서=ComboBonusSecondsBoost")]
-    [SerializeField] private List<RelicEffectType> testRelics = new List<RelicEffectType>();
+    [Tooltip("전투 시작 시 자동 지급할 유물 에셋(RelicSO).")]
+    [SerializeField] private List<RelicSO> testRelics = new List<RelicSO>();
 
     [Header("시작 덱 (Inspector 편집 가능 / 비우면 PDF 프로토타입 덱 사용)")]
     [Tooltip("카드 ID + 보유 수량 리스트. 비어있으면 CardDatabase.DefaultPrototypeDeckEntries()를 사용한다.")]
@@ -156,8 +156,8 @@ public class BattleTestController : MonoBehaviour
         // 테스트 유물 지급
         if (testRelics != null)
         {
-            foreach (var effectType in testRelics)
-                RelicManager.Instance?.GiveRelicByEffect(effectType);
+            foreach (var relic in testRelics)
+                RelicManager.Instance?.AddRelic(relic);
         }
 
         // RelicHUD 생성

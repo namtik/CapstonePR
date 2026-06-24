@@ -15,6 +15,8 @@ namespace Battle.Deck
         public CardDeckSystem deck;        // 덱 시스템
         public CardEffectResolver resolver; // 효과 리졸버 참조
 
+        public bool doubleBasicCardEffects; // 유물(태초의 서 10004): 기본 카드 효과 수치 2배
+
         public bool bonusDamagePerCardActive;     // 카드 사용 시 추가 피해 활성
         public int  bonusDamagePerCard;            // 카드 사용 시 추가 피해량
         public bool attackHitCountBonusActive;    // 공격 타격 횟수 보너스 활성
@@ -123,6 +125,30 @@ namespace Battle.Deck
             ctx.resolver = this;
         }
 
+        // 효과 목록 조회 — 유물(태초의 서 10004) 보유 + 기본 카드면 수치(amount)를 2배로 복제해 반환
+        IReadOnlyList<CardEffectData> GetResolveEffects(CardInstance card)
+        {
+            var effects = CardDatabase.GetEffects(card.Id);
+            if (effects == null || effects.Count == 0) return effects;
+            if (!Ctx.doubleBasicCardEffects || !CardDatabase.IsBasicCard(card.Id)) return effects;
+
+            var doubled = new List<CardEffectData>(effects.Count);
+            foreach (var e in effects)
+            {
+                doubled.Add(new CardEffectData
+                {
+                    cardId = e.cardId, index = e.index, when = e.when, ifCond = e.ifCond,
+                    doAction = e.doAction, target = e.target,
+                    amount = e.amount * 2,          // 기본 카드 효과 수치 2배
+                    formula = e.formula, hits = e.hits, hitFormula = e.hitFormula,
+                    status = e.status, cardFilter = e.cardFilter, fromZone = e.fromZone,
+                    toZone = e.toZone, select = e.select, repeat = e.repeat,
+                    extra = e.extra, runtimeKey = e.runtimeKey,
+                });
+            }
+            return doubled;
+        }
+
         // 카드 효과 해석/실행 메인 진입점
         public ResolveResult Resolve(CardInstance card)
         {
@@ -137,7 +163,7 @@ namespace Battle.Deck
             }
 
             bool isPower = card.Type == CardType.Power || card.data.HasTag("POWER");
-            var effects = CardDatabase.GetEffects(card.Id);
+            var effects = GetResolveEffects(card);
             if (effects != null && effects.Count > 0)
             {
                 foreach (var eff in effects)
@@ -200,7 +226,7 @@ namespace Battle.Deck
             if (applyPowerEffects && Ctx.recastExhaustCardActive && card.data.HasTag("EXHAUST"))
             {
                 var recast = new ResolveResult();
-                var recastEffects = CardDatabase.GetEffects(card.Id);
+                var recastEffects = GetResolveEffects(card);
                 if (recastEffects != null)
                 {
                     foreach (var e2 in recastEffects)

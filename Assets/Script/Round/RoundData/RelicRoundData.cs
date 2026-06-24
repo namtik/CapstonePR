@@ -5,8 +5,8 @@ using Battle.Relic;
 [CreateAssetMenu(menuName = "Round/RelicRound")]
 public class RelicRoundData : RoundData
 {
-    [Header("후보 유물 효과 (비어있으면 랜덤 전체에서 선택)")]
-    public List<RelicEffectType> candidateRelics = new List<RelicEffectType>(); // 지급 후보 유물 효과 목록
+    [Header("후보 유물 (비어있으면 DB 전체에서 랜덤 선택)")]
+    public List<RelicSO> candidateRelics = new List<RelicSO>(); // 지급 후보 유물 목록
 
     // 유물 라운드 핸들러를 생성한다.
     public override IRoundHandler CreateHandler()

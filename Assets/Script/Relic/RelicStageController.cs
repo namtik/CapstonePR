@@ -14,7 +14,7 @@ public class RelicStageController : MonoBehaviour
     public struct ShopRelicCandidate
     {
         public bool isSpriteOnly; // 스프라이트 전용 여부
-        public RelicDef relic; // 렐릭 정의
+        public RelicSO relic; // 렐릭 정의
         public Sprite sprite; // 스프라이트
         public string displayName; // 표시 이름
         public string description; // 설명
@@ -112,6 +112,10 @@ public class RelicStageController : MonoBehaviour
     [SerializeField] private bool autoCollectSpritesInEditor = true; // 에디터에서 스프라이트 자동 수집 여부
     [SerializeField] private bool avoidOwnedDuplicates = true; // 보유 중복 회피 여부
     [SerializeField] private List<SpriteOnlyRelicEntry> spriteOnlyRelics = new List<SpriteOnlyRelicEntry>(); // 스프라이트 전용 유물 목록
+
+    [Header("유물 호리병(10018) 설정")]
+    [Tooltip("유물 호리병 보유 시 한 라운드에 획득하는 유물 수 상한(이미 고른 1장 포함). 3중 1택 보상 UI 도입 전, 전체 DB 일괄 획득을 막기 위한 임시 상한.")]
+    [SerializeField] private int grantAllRelicMaxCount = 3; // 유물 호리병 라운드 획득 상한
 
     [Header("획득 유물 상호작용")]
     [SerializeField] private float itemHoverScaleMultiplier = 1.08f; // 호버 시 확대 배율
@@ -520,15 +524,55 @@ public class RelicStageController : MonoBehaviour
                 : (picked.relic.icon != null ? picked.relic.icon : grantedRewardSprite);
         }
 
+        // 유물(유물 호리병 10018): 보유 시 '제시된' 유물(최대 grantAllRelicMaxCount장)을 추가 획득.
+        // 3중 1택 보상 UI가 없는 현재는 후보 풀(candidateRelics 미설정 시 DB 전체)을 무작위로 상한까지만 지급해
+        // 게임에 존재하는 모든 유물을 한 번에 획득하던 버그를 막는다.
+        if (manager.HasGrantAllRelicsInStage())
+        {
+            var all = BuildCandidates(manager); // 방금 지급한 picked는 이미 보유 처리되어 제외됨
+            // 이미 받은 picked 1장을 '제시 수'에 포함시켜, 남은 예산만큼만 추가 지급
+            int alreadyGranted = (!picked.isSpriteOnly && picked.relic != null) ? 1 : 0;
+            int extraBudget = Mathf.Max(0, grantAllRelicMaxCount - alreadyGranted);
+            ShuffleCandidates(all);
+            int grantedExtra = 0;
+            for (int i = 0; i < all.Count && grantedExtra < extraBudget; i++)
+            {
+                var c = all[i];
+                if (c.isSpriteOnly)
+                {
+                    if (c.sprite != null && manager.TryAddSpriteOnlyRelic(c.sprite, out _)) grantedExtra++;
+                }
+                else if (c.relic != null && !manager.HasRelicId(c.relic.id))
+                {
+                    manager.AddRelic(c.relic);
+                    grantedExtra++;
+                }
+            }
+            Debug.Log($"[유물] 유물 호리병 — 제시 후보 중 {grantedExtra}장 추가 획득 (상한 {grantAllRelicMaxCount})");
+        }
+
         hasPendingReward = false;
     }
 
-    // 미보유 정의/스프라이트 유물로 보상 후보 목록 구성
+    // 후보 목록을 제자리에서 무작위로 섞음(Fisher-Yates)
+    static void ShuffleCandidates(List<RewardCandidate> list)
+    {
+        if (list == null) return;
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            var tmp = list[i];
+            list[i] = list[j];
+            list[j] = tmp;
+        }
+    }
+
+    // 미보유 실제 유물(RelicSO)로 보상 후보 목록 구성 (상자·상점 공통)
     List<RewardCandidate> BuildCandidates(RelicManager manager)
     {
         var result = new List<RewardCandidate>();
 
-        var preferredEffects = currentData != null ? currentData.candidateRelics : null;
+        var preferred = currentData != null ? currentData.candidateRelics : null;
 
         var defs = manager.RelicDefinitions;
         for (int i = 0; i < defs.Count; i++)
@@ -537,19 +581,9 @@ public class RelicStageController : MonoBehaviour
             if (def == null || string.IsNullOrWhiteSpace(def.id)) continue;
             if (def.icon == null) continue;
 
-            if (preferredEffects != null && preferredEffects.Count > 0)
-            {
-                bool matched = false;
-                for (int p = 0; p < preferredEffects.Count; p++)
-                {
-                    if (def.effect == preferredEffects[p])
-                    {
-                        matched = true;
-                        break;
-                    }
-                }
-                if (!matched) continue;
-            }
+            // 후보 유물이 지정돼 있으면 그 목록에 든 유물만 등장
+            if (preferred != null && preferred.Count > 0 && !preferred.Contains(def))
+                continue;
 
             if (manager.HasRelicId(def.id))
                 continue;
@@ -564,25 +598,8 @@ public class RelicStageController : MonoBehaviour
             });
         }
 
-        for (int i = 0; i < spriteOnlyRelics.Count; i++)
-        {
-            var entry = spriteOnlyRelics[i];
-            var sprite = entry.sprite;
-            if (sprite == null) continue;
-
-            string id = BuildSpriteRelicId(sprite);
-            if (manager.HasRelicId(id))
-                continue;
-
-            result.Add(new RewardCandidate
-            {
-                isSpriteOnly = true,
-                relic = null,
-                sprite = sprite,
-                displayName = !string.IsNullOrWhiteSpace(entry.displayName) ? entry.displayName : sprite.name,
-                description = !string.IsNullOrWhiteSpace(entry.description) ? entry.description : DefaultSpriteOnlyRelicDescription,
-            });
-        }
+        // 주의: 효과 없는 sprite-only placeholder는 더 이상 후보로 넣지 않는다.
+        // (진짜 유물과 아이콘이 겹쳐 상자↔상점 중복 등장 문제를 유발했음 — 전부 RelicSO로 대체됨)
 
         return result;
     }
@@ -1054,7 +1071,7 @@ public class RelicStageController : MonoBehaviour
     struct RewardCandidate
     {
         public bool isSpriteOnly; // 스프라이트 전용 여부
-        public RelicDef relic; // 렐릭 정의
+        public RelicSO relic; // 렐릭 정의
         public Sprite sprite; // 스프라이트
         public string displayName; // 표시 이름
         public string description; // 설명

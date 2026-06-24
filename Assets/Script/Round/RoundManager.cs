@@ -376,47 +376,6 @@ public class RoundManager : MonoBehaviour
         Debug.Log("[RoundManager] 유물 스테이지 시작");
     }
 
-    // 유물 스테이지 보상을 처리한다(후보가 있으면 후보, 없으면 전체에서 랜덤 지급).
-    public void GrantRelicFromStage(IReadOnlyList<RelicEffectType> candidates)
-    {
-        if (RelicManager.Instance == null)
-        {
-            Debug.LogWarning("[RoundManager] RelicManager가 없어 유물 지급을 건너뜁니다.");
-            return;
-        }
-
-        List<RelicEffectType> pool = new List<RelicEffectType>();
-
-        if (candidates != null)
-        {
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                var effect = candidates[i];
-                if (effect == RelicEffectType.None) continue;
-                if (!pool.Contains(effect)) pool.Add(effect);
-            }
-        }
-
-        if (pool.Count == 0)
-        {
-            foreach (RelicEffectType effect in System.Enum.GetValues(typeof(RelicEffectType)))
-            {
-                if (effect == RelicEffectType.None) continue;
-                pool.Add(effect);
-            }
-        }
-
-        if (pool.Count == 0)
-        {
-            Debug.LogWarning("[RoundManager] 지급 가능한 유물 효과가 없습니다.");
-            return;
-        }
-
-        var picked = pool[Random.Range(0, pool.Count)];
-        RelicManager.Instance.GiveRelicByEffect(picked);
-        Debug.Log($"[RoundManager] RelicStage 보상 지급: {picked}");
-    }
-
     // 플레이어 HP를 비율만큼 회복하고 맵으로 복귀한다.
     public void HealPlayer(float healPercent)
     {
@@ -543,8 +502,13 @@ public class RoundManager : MonoBehaviour
         int gold = MoneyManager.Instance.RollCombatRewardGold(isBoss, isElite, isNormalCombat);
         if (gold <= 0) return;
 
+        // 유물(복주머니 10005): 전투 보상 골드 가산
+        int relicGoldBonus = Battle.Relic.RelicManager.Instance != null
+            ? Battle.Relic.RelicManager.Instance.GetGoldRewardBonus() : 0;
+        gold += relicGoldBonus;
+
         MoneyManager.Instance.AddMoney(gold);
-        Debug.Log($"[보상] 전투 골드 +{gold}");
+        Debug.Log($"[보상] 전투 골드 +{gold}" + (relicGoldBonus > 0 ? $" (유물 +{relicGoldBonus})" : ""));
     }
 
     // 보상 처리 후 노드를 클리어 표시하고 맵으로 복귀한다(최종 보스 클리어 시 게임 클리어 화면).

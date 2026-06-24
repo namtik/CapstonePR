@@ -19,6 +19,7 @@ namespace Battle
         private bool _seeded;               // 시작 덱 시드 완료 여부
         private int _permanentAttackPower;  // 런 동안 지속되는 영구 공격력 보너스
         private int _basicCardStatMultiplier = 1; // BASIC 태그 카드 DAMAGE/GAIN_BLOCK 배율
+        private bool _doubleBasicCardEffects; // 유물(태초의 서 10004): 기본 카드 효과 2배 (런 지속)
 
         private const int PROFILE_WINDOW = 15; // 최근 사용 프로파일 윈도우 크기
         private readonly Queue<Battle.AI.CardCategory> _recentUses = new Queue<Battle.AI.CardCategory>(); // 최근 사용 카테고리 큐
@@ -36,6 +37,14 @@ namespace Battle
         {
             _basicCardStatMultiplier *= 2;
             Debug.Log($"[RunDeck] BASIC 카드 공격/방어 배율 x{_basicCardStatMultiplier}");
+
+        public bool DoubleBasicCardEffects => _doubleBasicCardEffects; // 기본 카드 효과 2배 여부
+        // 기본 카드 효과 2배 활성화 (태초의 서 10004)
+        public void EnableDoubleBasicCardEffects()
+        {
+            if (_doubleBasicCardEffects) return;
+            _doubleBasicCardEffects = true;
+            Debug.Log("[RunDeck] 기본 카드 효과 2배 활성화");
         }
         // 영구 공격력 보너스 누적 증가
         public void AddPermanentAttackPower(int n)
@@ -231,6 +240,36 @@ namespace Battle
             return false;
         }
 
+        // 보유 덱의 모든 카드를 랜덤한(불/물/바람/땅) 카드로 변환 (망각의 붓 10017)
+        public void RandomizeAllCards()
+        {
+            EnsureSeeded();
+
+            var pool = new List<int>();
+            foreach (var c in CardDatabase.All)
+            {
+                if (c == null) continue;
+                if (c.element == CardElement.Fire || c.element == CardElement.Water ||
+                    c.element == CardElement.Wind || c.element == CardElement.Earth)
+                    pool.Add(c.id);
+            }
+            if (pool.Count == 0) return;
+
+            int total = TotalCardCount;
+            var counts = new Dictionary<int, int>();
+            for (int i = 0; i < total; i++)
+            {
+                int id = pool[Random.Range(0, pool.Count)];
+                counts.TryGetValue(id, out int cur);
+                counts[id] = cur + 1;
+            }
+
+            _runDeck.Clear();
+            foreach (var kv in counts) _runDeck.Add(new CardDatabase.DeckEntry(kv.Key, kv.Value));
+            _seeded = true;
+            Debug.Log($"[RunDeck] 카드 전부 랜덤 변환 — {TotalCardCount}장 ({_runDeck.Count}종)");
+        }
+
         // 런 재시작 — 덱과 누적 상태를 기본값으로 복원
         public void ResetRun()
         {
@@ -238,6 +277,7 @@ namespace Battle
             _seeded = false;
             _permanentAttackPower = 0;
             _basicCardStatMultiplier = 1;
+            _doubleBasicCardEffects = false;
             _recentUses.Clear();
             _recentCosts.Clear();
             _awakenActivations = 0;
