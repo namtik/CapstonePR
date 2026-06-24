@@ -300,6 +300,41 @@ public class EventStageController : MonoBehaviour
         SetCanvasState(-1);
     }
 
+    void OnEnable()
+    {
+        if (MoneyManager.Instance != null)
+            MoneyManager.Instance.OnMoneyChanged += OnMoneyChanged;
+        RefreshEvent1Choice1Interactable();
+    }
+
+    void OnDisable()
+    {
+        if (MoneyManager.Instance != null)
+            MoneyManager.Instance.OnMoneyChanged -= OnMoneyChanged;
+    }
+
+    void OnMoneyChanged(int _) => RefreshEvent1Choice1Interactable();
+
+    // 이벤트1 선택1(50골드) 지불 가능 여부
+    bool CanAffordEvent1Choice1()
+    {
+        return MoneyManager.Instance != null
+            && MoneyManager.Instance.CurrentMoney >= event1Button1Cost;
+    }
+
+    // 이벤트1 선택1 버튼 — 골드 부족 시 비활성화
+    void RefreshEvent1Choice1Interactable()
+    {
+        if (event1Choice1Button == null) return;
+        if (currentEventIndex != 0 || phase != EventPhase.Story)
+        {
+            event1Choice1Button.interactable = true;
+            return;
+        }
+
+        event1Choice1Button.interactable = CanAffordEvent1Choice1();
+    }
+
     // 결과 단계에서 클릭을 받아 타이핑 스킵 또는 맵 복귀를 처리한다
     void Update()
     {
@@ -326,7 +361,7 @@ public class EventStageController : MonoBehaviour
 
         currentEventIndex = useDebugEventPick
             ? (int)debugEventPick
-            : Random.Range(0, EventCount);
+            : PickEventIndexForRun();
         SetCanvasState(currentEventIndex);
         HideAllGoldRewardRows();
         pendingGoldReward = 0;
@@ -340,6 +375,16 @@ public class EventStageController : MonoBehaviour
             ResetEvent5Flow();
 
         PlayStoryTypewriter();
+        RefreshEvent1Choice1Interactable();
+    }
+
+    // 런 진행 상태를 반영해 다음 이벤트 인덱스를 고른다
+    int PickEventIndexForRun()
+    {
+        if (GameStateController.Instance != null)
+            return GameStateController.Instance.PickNextEventIndex(EventCount);
+
+        return Random.Range(0, EventCount);
     }
 
     // 버튼의 기존 콜백을 제거 후 새로 등록한다(중복 방지)
@@ -393,6 +438,8 @@ public class EventStageController : MonoBehaviour
             if (button != null)
                 button.gameObject.SetActive(true);
         }
+
+        RefreshEvent1Choice1Interactable();
     }
 
     // 스토리 제목/본문을 캐시 텍스트로 채우고 타자기 연출을 재생한다
@@ -424,6 +471,7 @@ public class EventStageController : MonoBehaviour
             if (bodyTarget != null)
                 bodyTarget.maxVisibleCharacters = int.MaxValue;
 
+            RefreshEvent1Choice1Interactable();
             return;
         }
 
@@ -453,6 +501,7 @@ public class EventStageController : MonoBehaviour
         if (titleChars <= 0 && bodyChars <= 0)
         {
             typingRoutine = null;
+            RefreshEvent1Choice1Interactable();
             yield break;
         }
 
@@ -492,12 +541,14 @@ public class EventStageController : MonoBehaviour
             bodyTarget.maxVisibleCharacters = int.MaxValue;
 
         typingRoutine = null;
+        RefreshEvent1Choice1Interactable();
     }
 
     // 선택지1 클릭 처리: 해당 이벤트의 선택1 효과 실행 후 결과 표시
     public void OnChoice1Clicked()
     {
         if (phase != EventPhase.Story) return;
+        if (currentEventIndex == 0 && !CanAffordEvent1Choice1()) return;
 
         EventResult result = currentEventIndex switch
         {

@@ -95,5 +95,15 @@ MonoBehaviour:
   pickerColumnSpacing: 480
   pickerRowSpacing: 620
   pickerViewportSize: {x: 1800, y: 900}
-  pickerContentPadding: {x: 0, y: 240}
+  pickerContentPadding: {x: 80, y: 240}
   pickerScrollSensitivity: 60
+  viewerCloseButton: {fileID: 0}
+  viewerCloseButtonLabel: "\uB2EB\uAE30"
+  viewerCloseButtonSize: {x: 200, y: 56}
+  viewerCloseButtonAnchoredPos: {x: 0, y: 52}
+  viewerCloseButtonSprite: {fileID: 0}
+  viewerCloseButtonImageColor: {r: 0.12, g: 0.12, b: 0.16, a: 0.96}
+  viewerCloseButtonFont: {fileID: 0}
+  viewerCloseButtonFontSize: 24
+  viewerCloseButtonFontStyle: 1
+  viewerCloseButtonFontColor: {r: 1, g: 1, b: 1, a: 1}

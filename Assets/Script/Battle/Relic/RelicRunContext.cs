@@ -12,9 +12,14 @@ namespace Battle.Relic
             if (amount == 0) return;
             var player = Player.Resolve(true);
             if (player == null) return;
+            int oldMax = player.maxHp;
             player.maxHp += amount;
-            player.currentHp += amount;
-            player.UpdateUIForExternalSync();
+            // currentHp가 아직 0(미초기화)이거나 만피였으면 최대치까지 채운다 — 0+amount만 더하면 10/110 버그
+            if (player.currentHp <= 0 || player.currentHp >= oldMax)
+                player.currentHp = player.maxHp;
+            else
+                player.currentHp += amount;
+            Player.SyncAllInstancesFrom(player);
             Debug.Log($"[유물] 최대 체력 +{amount} (현재 {player.currentHp}/{player.maxHp})");
         }
 

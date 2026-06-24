@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 
 // 게임 상태를 관리하고 캔버스 활성화/비활성화로 화면을 전환하는 컨트롤러
 public class GameStateController : MonoBehaviour
@@ -29,6 +30,10 @@ public class GameStateController : MonoBehaviour
     [Header("Game State")]
     public int lastVisitedNodeIndex = -1; // 마지막으로 방문한 노드 인덱스
     public System.Collections.Generic.List<int> clearedNodes = new System.Collections.Generic.List<int>(); // 클리어한 노드 인덱스 목록
+
+    [Header("Event Run State")]
+    public int eventStageVisitCount = 0; // 이번 런에서 방문한 이벤트 스테이지 횟수
+    readonly System.Collections.Generic.List<int> seenEventIndices = new System.Collections.Generic.List<int>(); // 이번 런에서 이미 본 이벤트 인덱스
 
     [Header("Run Lap")]
     [Tooltip("게임 클리어에 필요한 보스 처치 횟수(= 맵 바퀴 수).")]
@@ -62,6 +67,34 @@ public class GameStateController : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
+        BindMenubarDeckButtons();
+    }
+
+    // menubar DeckButton → 런 덱 그리드 보기(CardHandHUD)
+    void BindMenubarDeckButtons()
+    {
+        Button[] buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button btn = buttons[i];
+            if (btn == null || btn.gameObject.name != "DeckButton")
+                continue;
+
+            btn.onClick.AddListener(OnMenubarDeckButtonClicked);
+        }
+    }
+
+    void OnMenubarDeckButtonClicked()
+    {
+        var hud = FindFirstObjectByType<Battle.UI.CardHandHUD>(FindObjectsInactive.Include);
+        if (hud == null)
+        {
+            Debug.LogWarning("[GameState] CardHandHUD 없음 — 덱 보기 불가.");
+            return;
+        }
+
+        hud.ToggleRunDeckViewer();
     }
 
     // 시작 시 상태 초기화 후 메인 화면 또는 맵을 표시
@@ -77,8 +110,48 @@ public class GameStateController : MonoBehaviour
         }
         else
         {
+            ResetEventRunState();
+            ApplyNewRunPlayerState();
             ShowMap();
         }
+    }
+
+    // 이번 런의 이벤트 방문 기록을 초기화한다
+    public void ResetEventRunState()
+    {
+        eventStageVisitCount = 0;
+        seenEventIndices.Clear();
+    }
+
+    // 다음 이벤트 인덱스를 고른다 — 처음 N회(N=준비된 이벤트 수)는 미방문 이벤트만, 이후에는 재등장 허용
+    public int PickNextEventIndex(int eventCount)
+    {
+        if (eventCount <= 0) return 0;
+
+        int picked;
+        if (eventStageVisitCount < eventCount)
+        {
+            var unseen = new System.Collections.Generic.List<int>(eventCount);
+            for (int i = 0; i < eventCount; i++)
+            {
+                if (!seenEventIndices.Contains(i))
+                    unseen.Add(i);
+            }
+
+            picked = unseen.Count > 0
+                ? unseen[Random.Range(0, unseen.Count)]
+                : Random.Range(0, eventCount);
+        }
+        else
+        {
+            picked = Random.Range(0, eventCount);
+        }
+
+        if (!seenEventIndices.Contains(picked))
+            seenEventIndices.Add(picked);
+
+        eventStageVisitCount++;
+        return picked;
     }
 
     // 메인 화면 [게임 플레이] 버튼: 메인 화면을 닫고 맵으로 진입
@@ -89,6 +162,8 @@ public class GameStateController : MonoBehaviour
 
         bossDefeatCount = 0;
         ResetMapStageForLapStart();
+        ResetEventRunState();
+        ApplyNewRunPlayerState();
 
         if (mapManager != null)
             mapManager.RegenerateMap();
@@ -116,6 +191,19 @@ public class GameStateController : MonoBehaviour
     void InitializeGameState()
     {
         EnsureGraphicRaycaster();
+    }
+
+    // 새 런 시작 시 HP를 기본값으로 되돌리고 시작 유물을 다시 적용한 뒤 만피로 맞춘다
+    void ApplyNewRunPlayerState()
+    {
+        Player.ResetBaseHpOnAllInstances();
+        Battle.Relic.RelicManager.Instance?.ClearOwnedRelics();
+
+        var bootstrap = FindFirstObjectByType<Battle.NewBattleSystemBootstrap>(FindObjectsInactive.Include);
+        if (bootstrap != null)
+            bootstrap.GrantStartingRelics();
+
+        Player.RestoreFullHpForRun();
     }
 
     // 맵 캔버스에 GraphicRaycaster를 보장하고 패널 레이캐스트를 끈다
@@ -234,6 +322,9 @@ public class GameStateController : MonoBehaviour
         {
             Debug.LogWarning($"노드 타입 {nodeType}에 해당하는 스테이지가 없습니다!");
         }
+
+        if (roundManager != null)
+            roundManager.EnsurePlayerUiSync();
     }
 
     // 모든 스테이지를 비활성화한다
@@ -366,6 +457,9 @@ public class GameStateController : MonoBehaviour
         // 보유 콤보도 초기화 (런 시작 3택1과 동일하게 새로 고름)
         Battle.NewBattleController.Instance?.ResetOwnedCombosForNewRun();
 
+        ResetEventRunState();
+        ApplyNewRunPlayerState();
+
         if (mapManager != null)
             mapManager.RegenerateMap();
 
@@ -396,6 +490,8 @@ public class GameStateController : MonoBehaviour
 
         // 골드도 초기화 (다음 런은 0골드로 시작)
         MoneyManager.Instance?.ResetMoney();
+
+        ResetEventRunState();
 
         HideAllStages();
 

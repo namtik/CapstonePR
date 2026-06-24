@@ -9,7 +9,8 @@ public class Player : MonoBehaviour, IBattleUnit
     public static Player Instance { get; private set; } // 전역 싱글톤 인스턴스
 
     [Header("능력치")]
-    public int maxHp = 100; // 최대 체력
+    public const int DefaultMaxHp = 100; // 프리팹 기본 최대 체력
+    public int maxHp = DefaultMaxHp; // 최대 체력
     public int currentHp; // 현재 체력
     public float attackDamage = 10f; // 공격력
 
@@ -98,6 +99,21 @@ public class Player : MonoBehaviour, IBattleUnit
 
         EnsureLegacyStatusEffects();
         UpdateUI();
+    }
+
+    // menubar가 활성화될 때(ShopCanvas2·RelicStage 등) canonical HP로 맞추고 UI를 갱신한다
+    void OnEnable()
+    {
+        Player canonical = Resolve(true);
+        if (canonical == null || IsRuntimeFallback(this)) return;
+
+        if (this != canonical)
+        {
+            maxHp = canonical.maxHp;
+            currentHp = canonical.currentHp;
+        }
+
+        canonical.UpdateUIForExternalSync();
     }
 
     // 구 시스템(슬롯/발사 등)용 상태이상 키가 없으면 0으로 보장한다
@@ -327,7 +343,7 @@ public class Player : MonoBehaviour, IBattleUnit
         if (finalDamage > 0)
         {
             currentHp -= finalDamage;
-            UpdateUI();
+            SyncAllInstancesFrom(this);
             OnHpDecreased?.Invoke(finalDamage);
 
             if (currentHp <= 0)
@@ -416,7 +432,7 @@ public class Player : MonoBehaviour, IBattleUnit
     public void Heal(int amount)
     {
         currentHp = Mathf.Min(currentHp + amount, maxHp);
-        UpdateUI();
+        SyncAllInstancesFrom(this);
     }
 
     // 외부에서 호출해 체력 UI를 강제 동기화한다
@@ -425,28 +441,87 @@ public class Player : MonoBehaviour, IBattleUnit
         UpdateUI();
     }
 
+    // 씬에 있는 menubar Player들의 체력을 기본값(100)으로 되돌린다 (유물·런 리셋용)
+    public static void ResetBaseHpOnAllInstances()
+    {
+        Player[] players = FindObjectsByType<Player>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (players == null) return;
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i] == null || IsRuntimeFallback(players[i])) continue;
+            players[i].maxHp = DefaultMaxHp;
+            players[i].currentHp = DefaultMaxHp;
+        }
+    }
+
+    // 현재 maxHp까지 체력을 채우고 UI를 동기화한다
+    public static void RestoreFullHpForRun()
+    {
+        Player player = Resolve(true);
+        if (player == null) return;
+        player.currentHp = player.maxHp;
+        SyncAllInstancesFrom(player);
+    }
+
+    // canonical Player의 HP를 모든 menubar Player 복제본에 복사하고 UI를 갱신한다
+    public static void SyncAllInstancesFromCanonical()
+    {
+        SyncAllInstancesFrom(Resolve(true));
+    }
+
+    public static void SyncAllInstancesFrom(Player source)
+    {
+        if (source == null || IsRuntimeFallback(source)) return;
+
+        Player[] players = FindObjectsByType<Player>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (players != null)
+        {
+            for (int i = 0; i < players.Length; i++)
+            {
+                Player p = players[i];
+                if (p == null || IsRuntimeFallback(p)) continue;
+                p.maxHp = source.maxHp;
+                p.currentHp = source.currentHp;
+            }
+        }
+
+        source.UpdateUIForExternalSync();
+    }
+
+    // UI에 표시할 HP(canonical Player 기준)를 반환한다
+    (int current, int max) GetDisplayHp()
+    {
+        Player canonical = Resolve(true);
+        if (canonical != null && !IsRuntimeFallback(canonical))
+            return (canonical.currentHp, canonical.maxHp);
+        return (currentHp, maxHp);
+    }
+
     // 체력 텍스트와 체력 바를 현재 값으로 갱신한다
     void UpdateUI()
     {
         ResolveUiReferences();
         EnsureTopHpBarPlacement();
 
+        (int uiCurrentHp, int uiMaxHp) = GetDisplayHp();
+
         foreach (TMP_Text text in GetAllSceneHpTexts())
-            text.text = $"{currentHp} / {maxHp}";
+            text.text = $"{uiCurrentHp} / {uiMaxHp}";
 
         if (hpText != null)
-            hpText.text = $"{currentHp} / {maxHp}";
+            hpText.text = $"{uiCurrentHp} / {uiMaxHp}";
 
         foreach (Slider slider in GetAllScenePlayerHpBars())
         {
-            slider.maxValue = maxHp;
-            slider.value = currentHp;
+            slider.maxValue = uiMaxHp;
+            slider.value = uiCurrentHp;
         }
 
         if (hpBar != null)
         {
-            hpBar.maxValue = maxHp;
-            hpBar.value = currentHp;
+            hpBar.maxValue = uiMaxHp;
+            hpBar.value = uiCurrentHp;
         }
     }
 

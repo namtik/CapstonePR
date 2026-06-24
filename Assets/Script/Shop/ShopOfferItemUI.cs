@@ -327,8 +327,7 @@ public class ShopOfferItemUI : MonoBehaviour
         var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
         enter.callback.AddListener(_ =>
         {
-            var font = titleText != null ? titleText.font : null;
-            ShopRelicTooltip.Instance?.Show(offerTitle, offerDescription, font);
+            ShopRelicTooltip.Instance?.Show(offerTitle, offerDescription);
         });
         trigger.triggers.Add(enter);
 

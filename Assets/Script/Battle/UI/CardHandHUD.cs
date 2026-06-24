@@ -6,6 +6,7 @@ using UnityEngine.Serialization;
 using TMPro;
 using Battle.Card;
 using Battle.Deck;
+using Battle;
 
 namespace Battle.UI
 {
@@ -188,6 +189,19 @@ namespace Battle.UI
         [FormerlySerializedAs("feverDimColor")]
         [SerializeField] private Color awakenDimColor = new Color(0.02f, 0.0f, 0.08f, 0.82f); // 각성 모드 딤 색
 
+        [Header("더미/덱 보기 — 닫기")]
+        [Tooltip("비워 두면 런타임에 화면 하단 중앙에 생성.")]
+        [SerializeField] private Button viewerCloseButton;
+        [SerializeField] private string viewerCloseButtonLabel = "\uB2EB\uAE30"; // 닫기
+        [SerializeField] private Vector2 viewerCloseButtonSize = new Vector2(200f, 56f);
+        [SerializeField] private Vector2 viewerCloseButtonAnchoredPos = new Vector2(0f, 52f);
+        [SerializeField] private Sprite viewerCloseButtonSprite;
+        [SerializeField] private Color viewerCloseButtonImageColor = new Color(0.12f, 0.12f, 0.16f, 0.96f);
+        [SerializeField] private TMP_FontAsset viewerCloseButtonFont;
+        [SerializeField] private float viewerCloseButtonFontSize = 24f;
+        [SerializeField] private FontStyles viewerCloseButtonFontStyle = FontStyles.Bold;
+        [SerializeField] private Color viewerCloseButtonFontColor = Color.white;
+
         // 손패 루트/드래그 레이어/슬롯 셋업 및 초기 상태 구성
         void Awake()
         {
@@ -199,8 +213,10 @@ namespace Battle.UI
         }
 
         private bool _viewerMode; // 더미 보기 모드 여부
-        private int _viewerPile = -1; // 보는 더미(0=뽑을, 1=버린)
+        private int _viewerPile = -1; // 보는 더미(0=뽑을, 1=버린, -2=런 덱)
         public bool IsViewerMode => _viewerMode; // 더미 보기 모드 여부
+
+        const int RunDeckViewerPile = -2; // menubar 덱 보기 식별자
 
         // 뽑을/버린 더미 카운트 텍스트에 클릭 핸들러 연결
         void SetupPileClickHandlers()
@@ -267,6 +283,24 @@ namespace Battle.UI
             if (cards.Count > 0) BuildPickerCards(cards);
             else ClearPickerViews();
             BringAwakenGaugeToFront();
+            SetViewerCloseButtonVisible(true);
+        }
+
+        // menubar 덱 버튼 — 현재 런 덱 전체를 그리드로 토글 표시
+        public void ToggleRunDeckViewer()
+        {
+            if (IsSelectionMode || IsPickerMode) return;
+            if (_viewerMode && _viewerPile == RunDeckViewerPile) { CloseViewer(); return; }
+
+            var runDeck = RunDeckState.EnsureExists();
+            var cards = runDeck.InstantiateForBattle();
+            cards.Sort((a, b) =>
+            {
+                int idCompare = a.data.id.CompareTo(b.data.id);
+                return idCompare != 0 ? idCompare : a.Id.CompareTo(b.Id);
+            });
+            string title = $"내 덱 ({cards.Count})";
+            EnterPileViewer(title, cards, RunDeckViewerPile);
         }
 
         // 더미 보기 화면을 닫는다
@@ -279,6 +313,7 @@ namespace Battle.UI
             if (_pickerRoot != null) _pickerRoot.gameObject.SetActive(false);
             if (dimOverlay != null) dimOverlay.gameObject.SetActive(false);
             if (selectionPromptText != null) selectionPromptText.gameObject.SetActive(false);
+            SetViewerCloseButtonVisible(false);
             if (handRoot != null) handRoot.SetAsLastSibling();
             BringAwakenGaugeToFront();
         }
@@ -1268,6 +1303,9 @@ namespace Battle.UI
         private RectTransform _pickerContent;    // 픽커 카드들이 들어가는 가변 높이 컨테이너
         private readonly List<NewCardView> _pickerViews = new List<NewCardView>(); // 픽커 카드 뷰 목록
         private System.Action<CardInstance> _pickerCallback; // 픽커 선택 콜백
+        private Button _viewerCloseButtonRuntime; // 더미/덱 보기 닫기 버튼(런타임 또는 Inspector)
+        private Image _viewerCloseButtonImage;
+        private TextMeshProUGUI _viewerCloseButtonLabelText;
         public bool IsPickerMode => _pickerCallback != null; // 픽커 모드 여부
 
         [Header("카드 픽커 — 그리드/스크롤")]
@@ -1277,10 +1315,10 @@ namespace Battle.UI
         [SerializeField] private float pickerColumnSpacing = 480f; // 픽커 가로 간격
         [Tooltip("픽커 카드 세로 간격(중심→중심, 픽셀). 카드 높이 400 기준 480~640 권장.")]
         [SerializeField] private float pickerRowSpacing = 620f; // 픽커 세로 간격
-        [Tooltip("픽커 viewport(보이는 영역) 크기. 가로는 columns × columnSpacing 이상 + 좌우 패딩 권장.")]
+        [Tooltip("픽커 viewport 최소 크기. BuildPickerCards가 카드 폭·열 수에 맞춰 가로를 자동 확장한다.")]
         [SerializeField] private Vector2 pickerViewportSize = new Vector2(1800f, 900f); // 픽커 뷰포트 크기
-        [Tooltip("컨텐츠 위쪽/아래쪽 패딩 — 첫/마지막 행이 viewport 가장자리에 붙지 않도록.")]
-        [SerializeField] private Vector2 pickerContentPadding = new Vector2(0f, 240f); // 픽커 컨텐츠 패딩
+        [Tooltip("x=좌우, y=상하 패딩 — 양쪽 열·첫/마지막 행이 viewport 가장자리에 붙지 않도록.")]
+        [SerializeField] private Vector2 pickerContentPadding = new Vector2(80f, 240f); // 픽커 컨텐츠 패딩
         [Tooltip("마우스 휠 스크롤 감도.")]
         [SerializeField] private float pickerScrollSensitivity = 60f; // 스크롤 감도
 
@@ -1399,6 +1437,30 @@ namespace Battle.UI
             _pickerViews.Clear();
         }
 
+        // 픽커 카드 1장의 실제 표시 폭(프리팹 size × scale)
+        float GetPickerCardWidth()
+        {
+            if (cardPrefab == null) return 375f;
+
+            RectTransform rt = cardPrefab.GetComponent<RectTransform>();
+            if (rt == null) return 375f;
+
+            return rt.sizeDelta.x * Mathf.Abs(rt.localScale.x);
+        }
+
+        // 열 수·카드 폭·간격에 맞춰 viewport 가로를 자동 확장(양쪽 열 잘림 방지)
+        void ApplyPickerViewportSize(int columnsInRow)
+        {
+            if (_pickerRoot == null) return;
+
+            int cols = Mathf.Max(1, columnsInRow);
+            float cardWidth = GetPickerCardWidth();
+            float horizontalPad = pickerContentPadding.x > 0f ? pickerContentPadding.x : 80f;
+            float requiredWidth = pickerColumnSpacing * (cols - 1) + cardWidth + horizontalPad;
+            float width = Mathf.Max(pickerViewportSize.x, requiredWidth);
+            _pickerRoot.sizeDelta = new Vector2(width, pickerViewportSize.y);
+        }
+
         // 카드 목록을 그리드로 배치해 픽커 카드 뷰를 생성
         void BuildPickerCards(IList<CardInstance> cards)
         {
@@ -1409,6 +1471,8 @@ namespace Battle.UI
 
             int total = cards.Count;
             int rows = Mathf.CeilToInt(total / (float)maxPerRow);
+
+            ApplyPickerViewportSize(maxPerRow);
 
             // 컨텐츠 높이 = 행 수 × rowSpacing + 패딩
             float contentHeight = rows * rowSpacing + pickerContentPadding.y;
@@ -1483,6 +1547,131 @@ namespace Battle.UI
 
             dimOverlay = rect;
             dimOverlay.gameObject.SetActive(false);
+        }
+
+        // 더미/덱 보기 화면 하단 닫기 버튼 준비
+        void EnsureViewerCloseButton()
+        {
+            if (viewerCloseButton != null)
+            {
+                _viewerCloseButtonRuntime = viewerCloseButton;
+                _viewerCloseButtonImage = null;
+                _viewerCloseButtonLabelText = null;
+            }
+            else if (_viewerCloseButtonRuntime == null)
+            {
+                Canvas canvas = ResolveTargetCanvas();
+                Transform parent = canvas != null ? canvas.transform : transform;
+
+                var go = new GameObject("PileViewerCloseButton", typeof(RectTransform), typeof(Image), typeof(Button));
+                go.transform.SetParent(parent, false);
+
+                var textGo = new GameObject("Label", typeof(RectTransform));
+                textGo.transform.SetParent(go.transform, false);
+                var textRt = (RectTransform)textGo.transform;
+                textRt.anchorMin = Vector2.zero;
+                textRt.anchorMax = Vector2.one;
+                textRt.offsetMin = Vector2.zero;
+                textRt.offsetMax = Vector2.zero;
+                textGo.AddComponent<TextMeshProUGUI>();
+
+                _viewerCloseButtonRuntime = go.GetComponent<Button>();
+                go.SetActive(false);
+            }
+
+            if (_viewerCloseButtonRuntime == null) return;
+
+            CacheViewerCloseButtonParts();
+            ApplyViewerCloseButtonStyle();
+
+            _viewerCloseButtonRuntime.onClick.RemoveListener(CloseViewer);
+            _viewerCloseButtonRuntime.onClick.AddListener(CloseViewer);
+        }
+
+        void CacheViewerCloseButtonParts()
+        {
+            if (_viewerCloseButtonRuntime == null) return;
+
+            if (_viewerCloseButtonImage == null)
+                _viewerCloseButtonImage = _viewerCloseButtonRuntime.GetComponent<Image>();
+
+            if (_viewerCloseButtonLabelText == null)
+                _viewerCloseButtonLabelText = _viewerCloseButtonRuntime.GetComponentInChildren<TextMeshProUGUI>(true);
+        }
+
+        void ApplyViewerCloseButtonStyle()
+        {
+            if (_viewerCloseButtonRuntime == null) return;
+
+            CacheViewerCloseButtonParts();
+
+            RectTransform rect = _viewerCloseButtonRuntime.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(0.5f, 0f);
+                rect.anchorMax = new Vector2(0.5f, 0f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = viewerCloseButtonAnchoredPos;
+                rect.sizeDelta = viewerCloseButtonSize;
+            }
+
+            if (_viewerCloseButtonImage != null)
+            {
+                _viewerCloseButtonImage.sprite = viewerCloseButtonSprite;
+                _viewerCloseButtonImage.type = viewerCloseButtonSprite != null
+                    ? Image.Type.Sliced
+                    : Image.Type.Simple;
+                _viewerCloseButtonImage.color = viewerCloseButtonImageColor;
+            }
+
+            if (_viewerCloseButtonLabelText != null)
+            {
+                _viewerCloseButtonLabelText.text = string.IsNullOrWhiteSpace(viewerCloseButtonLabel)
+                    ? "\uB2EB\uAE30"
+                    : viewerCloseButtonLabel;
+                _viewerCloseButtonLabelText.fontSize = viewerCloseButtonFontSize;
+                _viewerCloseButtonLabelText.fontStyle = viewerCloseButtonFontStyle;
+                _viewerCloseButtonLabelText.color = viewerCloseButtonFontColor;
+                _viewerCloseButtonLabelText.alignment = TextAlignmentOptions.Center;
+                _viewerCloseButtonLabelText.raycastTarget = false;
+
+                TMP_FontAsset font = viewerCloseButtonFont;
+                if (font == null && drawCountText != null)
+                    font = drawCountText.font;
+                if (font == null && discardCountText != null)
+                    font = discardCountText.font;
+                if (font != null)
+                    _viewerCloseButtonLabelText.font = font;
+            }
+        }
+
+        void SetViewerCloseButtonVisible(bool visible)
+        {
+            EnsureViewerCloseButton();
+            if (_viewerCloseButtonRuntime == null) return;
+
+            if (visible)
+                ApplyViewerCloseButtonStyle();
+
+            _viewerCloseButtonRuntime.gameObject.SetActive(visible);
+            if (visible)
+                _viewerCloseButtonRuntime.transform.SetAsLastSibling();
+        }
+
+        void OnValidate()
+        {
+            if (viewerCloseButton != null)
+            {
+                _viewerCloseButtonRuntime = viewerCloseButton;
+                _viewerCloseButtonImage = null;
+                _viewerCloseButtonLabelText = null;
+                CacheViewerCloseButtonParts();
+                ApplyViewerCloseButtonStyle();
+                return;
+            }
+
+            if (Application.isPlaying && _viewerCloseButtonRuntime != null)
+                ApplyViewerCloseButtonStyle();
         }
 
         // 카드 클릭 시 더미보기/픽커/선택 모드를 순서대로 처리

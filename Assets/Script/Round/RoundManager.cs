@@ -68,8 +68,6 @@ public class RoundManager : MonoBehaviour
         Player existingPlayer = Player.Resolve(true);
         if (existingPlayer != null)
         {
-            existingPlayer.UpdateUIForExternalSync();
-
             if (playerStatusPanel != null) playerStatusPanel.SetTarget(existingPlayer);
             return;
         }
@@ -87,6 +85,7 @@ public class RoundManager : MonoBehaviour
     public void EnsurePlayerUiSync()
     {
         EnsureRuntimePlayerExists();
+        Player.SyncAllInstancesFromCanonical();
     }
 
     // 새 전투 시스템(NewBattleController)이 활성 상태인지 반환한다.

@@ -67,6 +67,8 @@ namespace Battle.UI
         [SerializeField] private float hoverScaleMultiplier = 1.05f; // 호버 시 배율
         [Tooltip("Hover 시 카드가 위로 떠오를 거리 (UI 좌표 단위).")]
         [SerializeField] private Vector2 hoverPositionOffset = new Vector2(0f, 100f); // 호버 시 상승 오프셋
+        [Tooltip("덱 보기/픽커 그리드 — 제자리에서만 살짝 확대(떠오름 없음).")]
+        [SerializeField] private float gridHoverScaleMultiplier = 1.06f; // 그리드 호버 배율
 
         [Header("드로우 등장 연출 — 아래에서 위로")]
         [Tooltip("패에 새로 들어온 카드가 아래에서 떠오르는 연출 ON/OFF.")]
@@ -635,8 +637,9 @@ namespace Battle.UI
                 // hover 상태면 hover 표현을 다시 반영
                 if (_isHovering)
                 {
-                    ApplyScale(hoverScaleMultiplier);
-                    ApplyHoverOffset(true);
+                    ResolveHoverPresentation(out float scaleMultiplier, out Vector2 positionOffset);
+                    ApplyScale(scaleMultiplier);
+                    ApplyHoverOffset(positionOffset != Vector2.zero);
                     if (transform.parent != null)
                     {
                         _hoverSlotOriginalSibling = transform.parent.GetSiblingIndex();
@@ -646,17 +649,37 @@ namespace Battle.UI
             }
         }
 
-        // 호버 진입 시 확대·상승하고 최상단으로 올림
+        // 덱 보기/픽커 그리드 — 팝업(상승) 없이 제자리 호버만
+        bool IsGridHoverCard()
+        {
+            return Hud != null && SlotIndex < 0 && (Hud.IsViewerMode || Hud.IsPickerMode);
+        }
+
+        void ResolveHoverPresentation(out float scaleMultiplier, out Vector2 positionOffset)
+        {
+            if (IsGridHoverCard())
+            {
+                scaleMultiplier = gridHoverScaleMultiplier;
+                positionOffset = Vector2.zero;
+                return;
+            }
+
+            scaleMultiplier = hoverScaleMultiplier;
+            positionOffset = hoverPositionOffset;
+        }
+
+        // 호버 진입 — 그리드는 제자리 확대, 손패는 확대+상승
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (Hud == null) return;
-            _isHovering = true;
             if (Card == null || _isDragging) return;
-            CancelDrawIntro(); // 등장 연출을 끝내고 hover 표현으로 전환
-            ApplyScale(hoverScaleMultiplier);
-            ApplyHoverOffset(true);
 
-            // 다른 카드보다 앞에 렌더되도록 최상단으로
+            _isHovering = true;
+            CancelDrawIntro();
+            ResolveHoverPresentation(out float scaleMultiplier, out Vector2 positionOffset);
+            ApplyScale(scaleMultiplier);
+            ApplyHoverOffset(positionOffset != Vector2.zero);
+
             if (transform.parent != null)
             {
                 _hoverSlotOriginalSibling = transform.parent.GetSiblingIndex();
@@ -685,6 +708,12 @@ namespace Battle.UI
         void ApplyHoverOffset(bool hovering)
         {
             if (_rect == null) return;
+            if (IsGridHoverCard())
+            {
+                _rect.anchoredPosition = _homeAnchoredPos;
+                return;
+            }
+
             _rect.anchoredPosition = hovering ? _homeAnchoredPos + hoverPositionOffset : _homeAnchoredPos;
         }
 

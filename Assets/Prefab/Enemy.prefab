@@ -395,8 +395,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyStat
   maxHp: 100
   currentHp: 100
-  AttackDamage: 0
-  GaugeSpeed: 0
+  attackDamage: 0
+  gaugeSpeed: 0
   guard: 0
   isNewlyFrozen: 0
 --- !u!222 &530138338892471730
@@ -447,7 +447,7 @@ MonoBehaviour:
   wEffect: {fileID: 6298287703458635002}
   eEffect: {fileID: 8692929278469968464}
   rEffect: {fileID: 6238317005164205120}
-  LEffect: {fileID: 4471725691487156464}
+  lEffect: {fileID: 4471725691487156464}
   hitReactionEnabled: 1
   shakeTarget: {fileID: 0}
   flashTarget: {fileID: 0}

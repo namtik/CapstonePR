@@ -79,8 +79,25 @@ public class ShopStageController : MonoBehaviour
     [Header("렐릭 표시 (Shop)")]
     [Tooltip("상점 렐릭 아이콘 스케일")]
     [SerializeField, Range(1f, 2.5f)] private float shopRelicIconScale = 1.45f; // 상점 렐릭 아이콘 스케일
-    [Tooltip("상점 렐릭 가격 텍스트 폰트 크기")]
+    [Tooltip("켜면 shopRelicPriceFontSize로 덮어씀. 끄면 Relic1~3_Price 씬/프리팹 폰트 크기 유지.")]
+    [SerializeField] private bool overrideRelicPriceFontSize = false; // 렐릭 가격 폰트 크기 코드 덮어쓰기 여부
+    [Tooltip("overrideRelicPriceFontSize가 켜져 있을 때만 적용")]
     [SerializeField, Range(12f, 72f)] private float shopRelicPriceFontSize = 36f; // 상점 렐릭 가격 폰트 크기
+
+    [Header("렐릭 호버 툴팁 — 이름")]
+    [Tooltip("한글 유물 이름용 TMP 폰트(SDF). 비워 두면 기본 폰트라 글자가 깨질 수 있다.")]
+    [SerializeField] private TMP_FontAsset shopRelicTooltipNameFont;
+    [SerializeField, Range(12f, 48f)] private float shopRelicTooltipNameFontSize = 20f;
+    [SerializeField] private FontStyles shopRelicTooltipNameFontStyle = FontStyles.Bold;
+    [SerializeField] private Color shopRelicTooltipNameFontColor = Color.white;
+
+    [Header("렐릭 호버 툴팁 — 설명")]
+    [Tooltip("비워 두면 이름 폰트를 설명에도 사용.")]
+    [SerializeField] private TMP_FontAsset shopRelicTooltipDescFont;
+    [SerializeField, Range(10f, 40f)] private float shopRelicTooltipDescFontSize = 16f;
+    [SerializeField] private FontStyles shopRelicTooltipDescFontStyle = FontStyles.Normal;
+    [SerializeField] private Color shopRelicTooltipDescFontColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+    [SerializeField, Range(200f, 520f)] private float shopRelicTooltipWidth = 340f;
 
     [Header("콤보 책 표시 (Shop)")]
     [SerializeField] private BookRewardItemUI comboBookItemPrefab; // 콤보 책 아이템 프리팹
@@ -156,6 +173,7 @@ public class ShopStageController : MonoBehaviour
     public void BeginShop(RoundManager manager)
     {
         roundManager = manager;
+        ApplyShopRelicTooltipStyle();
         EnterShopStage();
     }
 
@@ -218,8 +236,27 @@ public class ShopStageController : MonoBehaviour
         if (shopCanvas1 != null) shopCanvas1.SetActive(false);
         if (shopCanvas2 != null) shopCanvas2.SetActive(true);
 
+        Player.SyncAllInstancesFromCanonical();
+        ApplyShopRelicTooltipStyle();
         RegenerateOffers();
         RefreshOfferViews();
+    }
+
+    // 렐릭 호버 툴팁 폰트/크기/색을 ShopRelicTooltip에 적용
+    void ApplyShopRelicTooltipStyle()
+    {
+        ShopRelicTooltip.Configure(new ShopRelicTooltipStyle
+        {
+            font = shopRelicTooltipNameFont,
+            descFont = shopRelicTooltipDescFont,
+            nameFontSize = shopRelicTooltipNameFontSize,
+            descFontSize = shopRelicTooltipDescFontSize,
+            nameFontStyle = shopRelicTooltipNameFontStyle,
+            descFontStyle = shopRelicTooltipDescFontStyle,
+            nameColor = shopRelicTooltipNameFontColor,
+            descColor = shopRelicTooltipDescFontColor,
+            width = shopRelicTooltipWidth,
+        });
     }
 
     // 비활성화 시 말풍선 타이핑 정지
@@ -470,10 +507,10 @@ public class ShopStageController : MonoBehaviour
 
         if (useNamedSlots)
         {
-            var namedSlots = CollectNamedSlots(relicOffersRoot, relicSlotPrefix, relicOfferCount, false);
+            var namedSlots = CollectRelicNamedSlots(relicOffersRoot, relicSlotPrefix, relicOfferCount);
             if (namedSlots.Count >= relicOfferCount)
             {
-                BindRelicOffersToDirectSlots(namedSlots);
+                BindRelicOffersToNamedSlots(namedSlots);
                 return;
             }
 
@@ -729,6 +766,33 @@ public class ShopStageController : MonoBehaviour
         return slots;
     }
 
+    // 접두사+번호 렐릭 슬롯들의 컨테이너/UI/가격텍스트 바인딩 수집
+    List<CardSlotBinding> CollectRelicNamedSlots(Transform root, string prefix, int offerCount)
+    {
+        var slots = new List<CardSlotBinding>();
+        if (root == null || string.IsNullOrWhiteSpace(prefix) || offerCount <= 0)
+            return slots;
+
+        for (int i = 1; i <= offerCount; i++)
+        {
+            string slotName = $"{prefix}{i}";
+            Transform container = FindChildRecursiveByName(root, slotName);
+            if (container == null) continue;
+
+            ShopOfferItemUI ui = GetOrAttachOfferItemUI(container.gameObject, false);
+            if (ui == null) continue;
+
+            slots.Add(new CardSlotBinding
+            {
+                container = container,
+                ui = ui,
+                priceText = FindNamedText(container, $"{slotName}_Price") ?? FindNamedText(root, $"{slotName}_Price"),
+            });
+        }
+
+        return slots;
+    }
+
     // 접두사+번호 카드 슬롯들의 컨테이너/UI/가격텍스트 바인딩 수집
     List<CardSlotBinding> CollectCardNamedSlots(Transform root, string prefix, int offerCount)
     {
@@ -874,6 +938,31 @@ public class ShopStageController : MonoBehaviour
         }
     }
 
+    // 렐릭 상품들을 이름 기반 슬롯에 채워 표시
+    void BindRelicOffersToNamedSlots(List<CardSlotBinding> slots)
+    {
+        if (slots == null) return;
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            CardSlotBinding slot = slots[i];
+            if (slot.container == null || slot.ui == null) continue;
+
+            bool visible = i < relicOffers.Count;
+            slot.container.gameObject.SetActive(true);
+            slot.ui.gameObject.SetActive(visible);
+            slot.ui.SetExternalPriceText(slot.priceText);
+
+            if (!visible)
+            {
+                slot.ui.ClearPriceText();
+                continue;
+            }
+
+            BindRelicOfferToUi(slot.ui, relicOffers[i]);
+        }
+    }
+
     // 렐릭 상품들을 직접 슬롯에 채워 표시
     void BindRelicOffersToDirectSlots(List<ShopOfferItemUI> slots)
     {
@@ -892,15 +981,25 @@ public class ShopStageController : MonoBehaviour
                 continue;
             }
 
-            RelicOffer offer = relicOffers[i];
-            string title = ResolveRelicTitle(offer);
-            string desc = ResolveRelicDescription(offer);
-            ui.Setup(title, desc, ResolveRelicIcon(offer), offer.price, () => TryBuyRelic(offer));
-            ui.SetPriceFontSize(shopRelicPriceFontSize);
-            ui.SetRelicIconScale(shopRelicIconScale);
-            ui.SetRelicIconOnlyMode(true);
-            ui.SetPurchasedState(offer != null && offer.purchased);
+            BindRelicOfferToUi(ui, relicOffers[i]);
         }
+    }
+
+    // 단일 렐릭 상품 UI 바인딩
+    void BindRelicOfferToUi(ShopOfferItemUI ui, RelicOffer offer)
+    {
+        if (ui == null || offer == null) return;
+
+        string title = ResolveRelicTitle(offer);
+        string desc = ResolveRelicDescription(offer);
+        ui.Setup(title, desc, ResolveRelicIcon(offer), offer.price, () => TryBuyRelic(offer));
+
+        if (overrideRelicPriceFontSize)
+            ui.SetPriceFontSize(shopRelicPriceFontSize);
+
+        ui.SetRelicIconScale(shopRelicIconScale);
+        ui.SetRelicIconOnlyMode(true);
+        ui.SetPurchasedState(offer.purchased);
     }
 
     // 렐릭 상품의 표시 이름 결정

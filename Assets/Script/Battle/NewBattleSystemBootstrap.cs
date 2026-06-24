@@ -23,12 +23,14 @@ namespace Battle
             RunDeckState.EnsureExists().EnsureSeeded();
         }
 
-        // 모든 Awake 완료 후 시작 유물 지급
-        void Start()
+        // 런 시작 시 Inspector에 지정된 시작 유물을 지급한다
+        public void GrantStartingRelics()
         {
-            if (startingRelics != null && startingRelics.Count > 0 && RelicManager.Instance != null)
-                foreach (var relic in startingRelics)
-                    RelicManager.Instance.AddRelic(relic);
+            if (startingRelics == null || startingRelics.Count == 0 || RelicManager.Instance == null)
+                return;
+
+            foreach (RelicSO relic in startingRelics)
+                RelicManager.Instance.AddRelic(relic);
         }
 
         // 씬에 남은 레거시 전투 오브젝트(4슬롯/콤보/구 손패)를 비활성화

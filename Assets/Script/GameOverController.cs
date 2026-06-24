@@ -206,7 +206,7 @@ public class GameOverController : MonoBehaviour
         if (player != null)
         {
             player.currentHp = player.maxHp;
-            player.UpdateUIForExternalSync();
+            Player.SyncAllInstancesFrom(player);
         }
 
         GameStateController state = GameStateController.Instance;
