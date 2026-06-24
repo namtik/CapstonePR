@@ -76,6 +76,13 @@ public class MapScrollController : MonoBehaviour
     {
         if (!enableDrag || scrollTarget == null) return;
 
+        // 인벤토리가 열려 있으면 맵 드래그를 막는다(뒤 스테이지 조작 방지)
+        if (Battle.UI.InventoryPanelController.IsOpen)
+        {
+            _dragging = false;
+            return;
+        }
+
         if (Input.GetMouseButtonDown(0))
         {
             _dragging = true;

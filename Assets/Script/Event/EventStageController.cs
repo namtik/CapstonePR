@@ -341,6 +341,10 @@ public class EventStageController : MonoBehaviour
         if (phase != EventPhase.ResultTyping && phase != EventPhase.ResultDone)
             return;
 
+        // 인벤토리가 열려 있으면 클릭이 이벤트(스킵/맵복귀)를 진행시키지 않도록 막는다
+        if (Battle.UI.InventoryPanelController.IsOpen)
+            return;
+
         // 단계 전환을 유발한 클릭이 곧바로 다음 동작을 트리거하지 않도록 가드
         if (Time.frameCount <= phaseEnteredFrame)
             return;
