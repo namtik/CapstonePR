@@ -324,10 +324,20 @@ public class Player : MonoBehaviour, IBattleUnit
     public void TakeDamage(float damage, string cardtype = "normal")
     {
         bool blockConsumed = false;
+        bool disposableGuard = cardtype == "enemy_attack";
         if (guard > 0)
         {
             blockConsumed = true;
-            if (guard >= damage)
+            if (disposableGuard)
+            {
+                // 몬스터 공격: 방어도는 1회 맞으면 전량 소멸(남은 방어도 이월 없음)
+                if (guard >= damage)
+                    damage = 0;
+                else
+                    damage -= guard;
+                guard = 0;
+            }
+            else if (guard >= damage)
             {
                 guard -= damage;
                 damage = 0;

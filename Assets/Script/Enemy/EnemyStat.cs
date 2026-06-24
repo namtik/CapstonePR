@@ -45,6 +45,13 @@ public class EnemyStat : MonoBehaviour
     public int CurrentAttackCount => currentAttackCount; // 현재 공격 횟수 조회
     public int PlannedAttackCount => plannedAttackCount; // 계획 공격 횟수 조회
 
+    // HP를 정수로 반올림해 표시(0)와 실제 잔량(0.1) 불일치 방지
+    void NormalizeHp()
+    {
+        maxHp = Mathf.Max(0f, Mathf.Round(maxHp));
+        currentHp = Mathf.Clamp(Mathf.Round(currentHp), 0f, maxHp);
+    }
+
     // 상태이상 키 초기화
     private void Awake()
     {
@@ -68,6 +75,7 @@ public class EnemyStat : MonoBehaviour
         hasDied = false;
         gaugeStep = 0;
         midPatternTriggered = false;
+        NormalizeHp();
         // 기획서 0.6v: 적마다 행동 게이지 최대치 10~30 (미설정/0이면 기본 20)
         gaugeMaxSteps = Mathf.Clamp(data.actionGaugeMax > 0 ? data.actionGaugeMax : GAUGE_MAX_STEPS, 10, 30);
 
@@ -84,6 +92,7 @@ public class EnemyStat : MonoBehaviour
         if (!IsAlive) return;
 
         currentHp -= damage;
+        NormalizeHp();
         OnHpChanged?.Invoke(currentHp, maxHp);
         if (damage > 0f) OnDamaged?.Invoke(damage); // 피격 연출(플래시/흔들기) 트리거
 
@@ -101,6 +110,7 @@ public class EnemyStat : MonoBehaviour
     {
         if (!IsAlive || amount <= 0f) return;
         currentHp = Mathf.Min(maxHp, currentHp + amount);
+        NormalizeHp();
         OnHpChanged?.Invoke(currentHp, maxHp);
     }
 

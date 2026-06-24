@@ -67,34 +67,6 @@ public class GameStateController : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
-        BindMenubarDeckButtons();
-    }
-
-    // menubar DeckButton → 런 덱 그리드 보기(CardHandHUD)
-    void BindMenubarDeckButtons()
-    {
-        Button[] buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            Button btn = buttons[i];
-            if (btn == null || btn.gameObject.name != "DeckButton")
-                continue;
-
-            btn.onClick.AddListener(OnMenubarDeckButtonClicked);
-        }
-    }
-
-    void OnMenubarDeckButtonClicked()
-    {
-        var hud = FindFirstObjectByType<Battle.UI.CardHandHUD>(FindObjectsInactive.Include);
-        if (hud == null)
-        {
-            Debug.LogWarning("[GameState] CardHandHUD 없음 — 덱 보기 불가.");
-            return;
-        }
-
-        hud.ToggleRunDeckViewer();
     }
 
     // 시작 시 상태 초기화 후 메인 화면 또는 맵을 표시

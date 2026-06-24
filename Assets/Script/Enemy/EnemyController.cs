@@ -304,7 +304,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         view?.PlayAttackMotion(); // 공격 모션(이미지 교체) 재생 — 피격 방식과 동일 구조
         for (int i = 0; i < count; i++)
         {
-            player.TakeDamage(damage);
+            player.TakeDamage(damage, "enemy_attack");
             // 공격 모션이 있으면 마지막(임팩트) 프레임에서만 이펙트(이벤트로 처리). 모션이 없을 때만 시작 시 폴백 재생.
             if (view == null || !view.HasAttackMotion) PlayAttackVfx();
 
