@@ -94,6 +94,22 @@ public class GameStateController : MonoBehaviour
             mapManager.RegenerateMap();
 
         ShowMap();
+
+        RequestStarterComboPick();
+    }
+
+    // 런 시작 콤보 3택1 표시를 요청한다(맵 표시 후 1프레임 지연)
+    public void RequestStarterComboPick()
+    {
+        if (roundManager != null)
+            StartCoroutine(ShowStarterComboPickDelayed());
+    }
+
+    // 맵 표시 후 1프레임 뒤 런 시작 콤보 3택1을 연다
+    System.Collections.IEnumerator ShowStarterComboPickDelayed()
+    {
+        yield return null;
+        roundManager.ShowStarterComboBookReward();
     }
 
     // 게임 상태 초기화 (레이캐스터 보장)
@@ -321,6 +337,12 @@ public class GameStateController : MonoBehaviour
     // 런을 처음부터 재시작하고 맵으로 돌아간다
     public void RestartRunToMap()
     {
+        RestartRunToMap(showStarterComboPick: true);
+    }
+
+    // showStarterComboPick=false면 게임오버 연출 종료 후 RequestStarterComboPick()을 따로 호출
+    public void RestartRunToMap(bool showStarterComboPick)
+    {
         Time.timeScale = 1f;
 
         // 사망 등으로 중단된 전투의 잔여 적/상태 정리 (살아있는 적이 다음 전투로 이월되는 것 방지)
@@ -341,10 +363,16 @@ public class GameStateController : MonoBehaviour
         // 골드도 초기화 (다음 런은 0골드로 시작)
         MoneyManager.Instance?.ResetMoney();
 
+        // 보유 콤보도 초기화 (런 시작 3택1과 동일하게 새로 고름)
+        Battle.NewBattleController.Instance?.ResetOwnedCombosForNewRun();
+
         if (mapManager != null)
             mapManager.RegenerateMap();
 
         ShowMap();
+
+        if (showStarterComboPick)
+            RequestStarterComboPick();
     }
 
     // 진행 중이던 런/전투를 정리하고 메인 메뉴 화면으로 돌아간다

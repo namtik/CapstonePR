@@ -96,11 +96,23 @@ public class Player : MonoBehaviour, IBattleUnit
         else
             currentHp = Mathf.Clamp(currentHp, 1, maxHp);
 
-        statusEffects["launcher"] = 0;
-        statusEffects["fortify"] = 0;
-        statusEffects["charge"] = 0;
-        statusEffects["chain"] = 0;
+        EnsureLegacyStatusEffects();
         UpdateUI();
+    }
+
+    // 구 시스템(슬롯/발사 등)용 상태이상 키가 없으면 0으로 보장한다
+    void EnsureLegacyStatusEffects()
+    {
+        EnsureStatusKey("launcher");
+        EnsureStatusKey("fortify");
+        EnsureStatusKey("charge");
+        EnsureStatusKey("chain");
+    }
+
+    void EnsureStatusKey(string key)
+    {
+        if (!statusEffects.ContainsKey(key))
+            statusEffects[key] = 0;
     }
 
     // UI 참조 재확인 및 미사용 쿨타임 UI 정리
@@ -356,6 +368,7 @@ public class Player : MonoBehaviour, IBattleUnit
     // 지정한 상태이상의 현재 수치를 반환한다
     public int GetStatus(string type)
     {
+        EnsureLegacyStatusEffects();
         return statusEffects.ContainsKey(type) ? statusEffects[type] : 0;
     }
 

@@ -116,7 +116,10 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         // 실제 피해
         if (damage > 0)
         {
-            if (player.statusEffects["launcher"] > 0)
+            if (player == null)
+                player = Player.Resolve(true);
+
+            if (player != null && player.GetStatus("launcher") > 0)
             {
                 stat.TakeDamage(player.attackDamage / 10f);
                 view.PlayHitEffect("L");

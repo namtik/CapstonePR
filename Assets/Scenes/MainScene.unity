@@ -7377,6 +7377,7 @@ MonoBehaviour:
     anchoredPosition: {x: 0, y: -440}
   cardRewardCardScale: 1.5
   cardRewardCardSpacing: 480
+  showStarterComboPickOnMapEntry: 1
 --- !u!1 &636014489
 GameObject:
   m_ObjectHideFlags: 0
@@ -20599,7 +20600,7 @@ MonoBehaviour:
   awakenTimerGauge: {fileID: 2033277085}
   ownedComboSkills: []
   useComboDatabase: 1
-  ownedComboIds: e8030000fd03000010040000f3030000
+  ownedComboIds: e8030000
   debugAddComboRefId: 1000
   awakenDamageEffectName: Fire_ATK
   awakenDamageEffectSpread: {x: 220, y: 80}
@@ -20853,7 +20854,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1405125787
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29839,7 +29840,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -416, y: 76}
+  m_AnchoredPosition: {x: -447, y: 76}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2026566292

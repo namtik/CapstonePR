@@ -188,6 +188,10 @@ public class GameOverController : MonoBehaviour
         if (gameOverCanvas != null)
             gameOverCanvas.SetActive(false);
 
+        GameStateController state = GameStateController.Instance;
+        if (state != null)
+            state.RequestStarterComboPick();
+
         animRoutine = null;
         isDead = false;
     }
@@ -207,7 +211,7 @@ public class GameOverController : MonoBehaviour
 
         GameStateController state = GameStateController.Instance;
         if (state != null)
-            state.RestartRunToMap();
+            state.RestartRunToMap(showStarterComboPick: false);
         else
             Debug.LogError("[GameOver] GameStateController.Instance가 null이라 런 재시작을 수행할 수 없습니다.");
     }

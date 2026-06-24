@@ -50,6 +50,10 @@ public class RoundManager : MonoBehaviour
     [Tooltip("카드 사이 가로 간격(px). 기본 360.")]
     [SerializeField] private float cardRewardCardSpacing = 360f; // 카드 보상 카드 간격(px)
 
+    [Header("런 시작 콤보 선택")]
+    [Tooltip("게임 시작 후 맵 진입 직후 정예/보스와 동일한 콤보 3택1을 표시한다.")]
+    [SerializeField] private bool showStarterComboPickOnMapEntry = true;
+
     private RoundData currentRoundData; // 현재 진행 중인 라운드 데이터
     private int currentEnemyIndex = 0; // 현재 처리 중인 적 인덱스
     private EnemyStat currentEnemy; // 현재 적 스탯
@@ -461,11 +465,27 @@ public class RoundManager : MonoBehaviour
     // 카드 보상 후 콤보 책 보상 UI를 표시하고 선택한 콤보를 지급한다.
     void ShowComboBookRewardAfterCard()
     {
+        ShowComboBookReward(ReturnToMap);
+    }
+
+    // 런 시작 직후 맵에서 콤보 3택1을 표시한다.
+    public void ShowStarterComboBookReward()
+    {
+        if (!showStarterComboPickOnMapEntry)
+            return;
+
+        ShowComboBookReward(null);
+        Debug.Log("[RoundManager] 런 시작 콤보 3택1 표시");
+    }
+
+    // 콤보 책 보상 UI를 표시하고 선택한 콤보를 지급한다(onComplete가 null이면 맵 복귀 없음).
+    public void ShowComboBookReward(System.Action onComplete)
+    {
         var panel = FindFirstObjectByType<Battle.UI.ComboBookRewardPanelUI>(FindObjectsInactive.Include);
         if (panel == null)
         {
-            Debug.LogWarning("[RoundManager] ComboBookRewardPanelUI를 찾지 못해 콤보 보상을 생략하고 맵으로 복귀합니다.");
-            ReturnToMap();
+            Debug.LogWarning("[RoundManager] ComboBookRewardPanelUI를 찾지 못해 콤보 보상을 생략합니다.");
+            onComplete?.Invoke();
             return;
         }
 
@@ -485,10 +505,10 @@ public class RoundManager : MonoBehaviour
                 }
             }
 
-            ReturnToMap();
+            onComplete?.Invoke();
         });
 
-        Debug.Log("[RoundManager] 카드 보상 후 책 UI 콤보 보상 표시");
+        Debug.Log("[RoundManager] 책 UI 콤보 보상 표시");
     }
 
     // 전투 등급별 골드를 일괄 지급한다(비전투 라운드는 지급하지 않음).

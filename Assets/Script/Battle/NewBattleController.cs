@@ -499,6 +499,22 @@ namespace Battle
             Debug.Log($"[NewBattle] 콤보 추가: 효과 {refComboId} → 커맨드 {commandId}");
         }
 
+        // 런 재시작 시 보유 콤보를 비운다(맵 진입 3택1용)
+        public void ResetOwnedCombosForNewRun()
+        {
+            if (ownedComboIds == null)
+                ownedComboIds = new List<int>();
+            else
+                ownedComboIds.Clear();
+
+            ownedComboSkills?.Clear();
+            _comboCooldown = new int[0];
+            if (handHud != null)
+                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+
+            Debug.Log("[NewBattle] 런 재시작 — 보유 콤보 초기화");
+        }
+
         // [테스트] debugAddComboRefId 콤보 1개 추가
         [ContextMenu("[테스트] 콤보 1개 추가 (debugAddComboRefId)")]
         void DebugAddOneCombo() => AddOwnedCombo(debugAddComboRefId);

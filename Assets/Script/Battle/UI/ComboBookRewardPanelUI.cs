@@ -47,12 +47,66 @@ namespace Battle.UI
             BindSlots();
             EnsureSkipButton();
             ApplyTitlePosition();
+            EnsurePresentationParent();
 
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             if (pauseTimeWhenOpen) Time.timeScale = 0f;
 
             Debug.Log($"[ComboBookRewardPanelUI] 콤보 선택지 {_choices.Count}개 표시");
+        }
+
+        // 맵/전투 중 현재 보이는 캔버스 위로 패널을 올려 표시한다(CombatStage 비활성 시에도 동작).
+        void EnsurePresentationParent()
+        {
+            Canvas canvas = ResolvePresentationCanvas();
+            if (canvas == null)
+                return;
+
+            var rt = transform as RectTransform;
+            if (rt == null)
+                return;
+
+            if (transform.parent != canvas.transform)
+                transform.SetParent(canvas.transform, false);
+
+            StretchFull(rt);
+        }
+
+        static Canvas ResolvePresentationCanvas()
+        {
+            GameStateController state = GameStateController.Instance;
+            if (state != null)
+            {
+                if (state.mapCanvas != null && state.mapCanvas.gameObject.activeInHierarchy)
+                    return state.mapCanvas;
+
+                if (state.combatStage != null && state.combatStage.activeInHierarchy)
+                {
+                    Canvas combatCanvas = state.combatStage.GetComponentInChildren<Canvas>(true);
+                    if (combatCanvas != null)
+                        return combatCanvas;
+                }
+            }
+
+            GameObject combatStageObject = GameObject.Find("CombatStage");
+            if (combatStageObject != null && combatStageObject.activeInHierarchy)
+            {
+                Canvas combatCanvas = combatStageObject.GetComponentInChildren<Canvas>(true);
+                if (combatCanvas != null)
+                    return combatCanvas;
+            }
+
+            return Object.FindFirstObjectByType<Canvas>(FindObjectsInactive.Include);
+        }
+
+        static void StretchFull(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
         }
 
         // 스킵 버튼을 스타일대로 재생성
