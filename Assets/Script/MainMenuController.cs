@@ -10,8 +10,12 @@ public class MainMenuController : MonoBehaviour
 
     [Header("버튼")]
     [SerializeField] private Button playButton;     // 게임 플레이 버튼
+    [SerializeField] private Button tutorialButton; // 조작법 버튼
     [SerializeField] private Button settingsButton; // 설정 버튼
     [SerializeField] private Button quitButton;     // 게임 종료 버튼
+
+    [Header("조작법")]
+    [SerializeField] private TutorialPanelController tutorialPanel; // 조작법 팝업
 
     [Header("메인 메뉴 전용 설정 캔버스")]
     [Tooltip("메인 메뉴의 설정 버튼으로 열 캔버스. 지정하면 인게임 공용 SettingCanvas 대신 이 캔버스를 연다.")]
@@ -44,6 +48,11 @@ public class MainMenuController : MonoBehaviour
         {
             playButton.onClick.RemoveListener(OnPlay);
             playButton.onClick.AddListener(OnPlay);
+        }
+        if (tutorialButton != null)
+        {
+            tutorialButton.onClick.RemoveListener(OnTutorial);
+            tutorialButton.onClick.AddListener(OnTutorial);
         }
         if (settingsButton != null)
         {
@@ -112,6 +121,18 @@ public class MainMenuController : MonoBehaviour
             Debug.LogError("[MainMenuController] GameStateController를 찾지 못해 게임을 시작할 수 없습니다.");
             Hide();
         }
+    }
+
+    // [조작법]: 튜토리얼 팝업을 연다
+    void OnTutorial()
+    {
+        if (tutorialPanel != null)
+        {
+            tutorialPanel.Open();
+            return;
+        }
+
+        Debug.LogWarning("[MainMenuController] TutorialPanelController가 연결되지 않아 조작법을 열 수 없습니다.");
     }
 
     // [설정]: 전용 설정 캔버스 또는 공용 설정 패널을 연다
