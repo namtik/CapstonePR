@@ -37,6 +37,7 @@ namespace Battle
         {
             _basicCardStatMultiplier *= 2;
             Debug.Log($"[RunDeck] BASIC 카드 공격/방어 배율 x{_basicCardStatMultiplier}");
+        }
 
         public bool DoubleBasicCardEffects => _doubleBasicCardEffects; // 기본 카드 효과 2배 여부
         // 기본 카드 효과 2배 활성화 (태초의 서 10004)

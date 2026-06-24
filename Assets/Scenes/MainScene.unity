@@ -11880,6 +11880,7 @@ MonoBehaviour:
     displayName: "\uC11C\uB9AC\uD654"
     description: "\uC804\uD22C \uB77C\uC6B4\uB4DC \uC9C4\uC785 \uC2DC \uC801\uC5D0\uAC8C
       \uBE59\uACB0 7\uC744 \uBD80\uC5EC\uD55C"
+  grantAllRelicMaxCount: 3
   itemHoverScaleMultiplier: 1.08
   itemHoverScaleLerpSpeed: 10
   fallbackRewardSprite: {fileID: 0}
@@ -26291,7 +26292,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ce22b1ad1fc5b6247977621cc4b41c57, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EventStageController
-  useDebugEventPick: 1
+  useDebugEventPick: 0
   debugEventPick: 4
   event1Canvas: {fileID: 787622923}
   event2Canvas: {fileID: 984449481}
