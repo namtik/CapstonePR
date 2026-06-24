@@ -22708,7 +22708,7 @@ MonoBehaviour:
   awakenTimerGauge: {fileID: 2033277085}
   ownedComboSkills: []
   useComboDatabase: 1
-  ownedComboIds: e8030000f9030000000400000a0400000d040000
+  ownedComboIds: 
   debugAddComboRefId: 1000
   awakenDamageEffectName: Fire_ATK
   awakenDamageEffectSpread: {x: 220, y: 80}

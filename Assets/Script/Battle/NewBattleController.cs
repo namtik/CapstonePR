@@ -40,7 +40,7 @@ namespace Battle
         [Tooltip("ON이면 Resources/ComboDB의 데이터 드리븐 콤보를 사용 (Inspector의 ownedComboSkills를 덮어씀). " +
                  "OFF면 위 Inspector 수동 리스트 사용.")]
         [SerializeField] private bool useComboDatabase = true;        // 콤보 DB 사용 여부
-        [Tooltip("보유할 콤보 ID(효과별 커맨드 1개). 비우면 효과별 대표 커맨드로 전체 보유. 아래 커스텀 인스펙터에서 효과→커맨드로 편집.")]
+        [Tooltip("보유할 콤보 ID(효과별 커맨드 1개). 비우면 보유 콤보 없음(미선택 시작). 아래 커스텀 인스펙터에서 효과→커맨드로 편집.")]
         [SerializeField] private List<int> ownedComboIds = new List<int>(); // 보유 콤보 ID(행=효과+커맨드) 목록
         [Tooltip("[테스트] 콤보 보상 UI 전까지 수동 획득용 — 이 RefComboID(1000~1019)를 컨텍스트 메뉴 '콤보 1개 추가'로 보유에 더함.")]
         [SerializeField] private int debugAddComboRefId = 1000;       // 디버그 수동 콤보 추가용 RefComboID
@@ -345,7 +345,7 @@ namespace Battle
             {
                 ownedComboSkills = BuildOwnedComboDefs();
                 Log($"콤보 DB 로드 — 보유 콤보 {ownedComboSkills.Count}개" +
-                    (ownedComboIds != null && ownedComboIds.Count > 0 ? $" (지정 {ownedComboIds.Count}개)" : " (전체)"));
+                    (ownedComboIds != null && ownedComboIds.Count > 0 ? $" (지정 {ownedComboIds.Count}개)" : " (없음)"));
             }
 
             if (handHud == null) handHud = ResolveOrCreateHandHud();
@@ -477,11 +477,12 @@ namespace Battle
                           ? $"(ids: {string.Join(",", ownedComboIds)})" : "(전체)"));
         }
 
-        // 보유 콤보 정의 구성 — 지정 ID(효과+커맨드)가 있으면 그걸로, 없으면 효과별 대표 전체
+        // 보유 콤보 정의 구성 — 지정 ID(효과+커맨드)가 있으면 그걸로, 없으면 보유 콤보 없음
+        // (콤보 보상 3택1에서 아무것도 선택하지 않으면 콤보 없이 시작)
         List<ComboSkillDef> BuildOwnedComboDefs()
             => (ownedComboIds != null && ownedComboIds.Count > 0)
                 ? ComboSkillDatabase.BuildCombosByIds(ownedComboIds)
-                : ComboSkillDatabase.BuildOwnedCombos(null);
+                : new List<ComboSkillDef>();
 
         // 콤보 1개(효과 refComboId의 대표 커맨드) 추가 후 즉시 적용
         public void AddOwnedCombo(int refComboId)
