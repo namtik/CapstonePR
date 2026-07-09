@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Battle.UI
@@ -20,6 +21,15 @@ namespace Battle.UI
         [Tooltip("buttonImage가 9-슬라이스(테두리 있는) 스프라이트일 때 켜면 늘려도 모서리가 보존된다.")]
         public bool sliced = true; // 9-슬라이스 사용 여부
         public Vector2 size = new Vector2(320f, 80f); // 버튼 크기
+
+        [Header("호버")]
+        [Tooltip("지정하면 마우스를 올렸을 때 이 스프라이트로 바뀝니다. 비우면 buttonImage + hoverButtonColor만 적용.")]
+        public Sprite hoverButtonImage; // 호버 배경 스프라이트
+        public Color hoverButtonColor = new Color(0.28f, 0.28f, 0.34f, 0.98f); // 호버 배경 색
+        public Color hoverTextColor = new Color(1f, 0.95f, 0.75f, 1f); // 호버 글자 색
+        [Tooltip("ON이면 호버 시 버튼이 살짝 커집니다.")]
+        public bool hoverScaleEnabled = true; // 호버 확대 사용 여부
+        [Range(1f, 1.3f)] public float hoverScale = 1.06f; // 호버 확대 배율
 
         [Header("위치 (부모 중앙 기준 anchored position)")]
         public Vector2 anchoredPosition = new Vector2(0f, -340f); // 버튼 위치
@@ -48,6 +58,7 @@ namespace Battle.UI
 
             var btn = go.AddComponent<Button>();
             btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.None;
             if (onClick != null)
                 btn.onClick.AddListener(() => onClick());
 
@@ -68,6 +79,9 @@ namespace Battle.UI
             text.text = label;
             text.raycastTarget = false;
 
+            var hoverFx = go.AddComponent<RewardSkipButtonHoverFx>();
+            hoverFx.Initialize(img, text, this);
+
             return btn;
         }
 
@@ -78,5 +92,54 @@ namespace Battle.UI
                 _builtinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return _builtinFont;
         }
+    }
+
+    // RewardSkipButtonStyle 호버 연출(스프라이트/색/확대)
+    [DisallowMultipleComponent]
+    sealed class RewardSkipButtonHoverFx : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    {
+        Image _image;
+        Text _label;
+        RewardSkipButtonStyle _style;
+        Vector3 _baseScale = Vector3.one;
+
+        public void Initialize(Image image, Text label, RewardSkipButtonStyle style)
+        {
+            _image = image;
+            _label = label;
+            _style = style;
+            _baseScale = transform.localScale;
+            ApplyNormal();
+        }
+
+        public void OnPointerEnter(PointerEventData eventData) => ApplyHover(true);
+        public void OnPointerExit(PointerEventData eventData) => ApplyHover(false);
+
+        void ApplyHover(bool hover)
+        {
+            if (_style == null)
+                return;
+
+            if (_image != null)
+            {
+                if (hover && _style.hoverButtonImage != null)
+                    _image.sprite = _style.hoverButtonImage;
+                else
+                    _image.sprite = _style.buttonImage;
+
+                _image.color = hover ? _style.hoverButtonColor : _style.buttonColor;
+            }
+
+            if (_label != null)
+                _label.color = hover ? _style.hoverTextColor : _style.textColor;
+
+            if (_style.hoverScaleEnabled)
+            {
+                float mul = hover ? Mathf.Max(1f, _style.hoverScale) : 1f;
+                transform.localScale = _baseScale * mul;
+            }
+        }
+
+        void ApplyNormal() => ApplyHover(false);
     }
 }

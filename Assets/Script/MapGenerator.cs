@@ -5,6 +5,20 @@ using System.Linq;
 // 맵 노드를 절차적으로 생성하는 컴포넌트 (일반 컬럼 + 보스 컬럼)
 public class MapGenerator : MonoBehaviour
 {
+    // 상점/이벤트/유물/휴식 노드 배치 규칙 (인스펙터 형식 통일)
+    [System.Serializable]
+    public struct SpecialNodePlacementSettings
+    {
+        [Tooltip("이 타입 노드 최소 개수 (맵당)")]
+        public int minNodes;
+        [Tooltip("이 타입 노드 최대 개수 (맵당)")]
+        public int maxNodes;
+        [Tooltip("등장 가능한 최소 컬럼 인덱스")]
+        public int columnMin;
+        [Tooltip("등장 가능한 최대 컬럼 인덱스")]
+        public int columnMax;
+    }
+
     [Header("맵 생성 설정")]
     [Tooltip("일반 컬럼의 개수")]
     public int totalColumns = 10; // 일반 컬럼 수
@@ -34,36 +48,41 @@ public class MapGenerator : MonoBehaviour
     [Tooltip("연결 가능한 최대 Y축 거리")]
     public float maxConnectionDistance = 300f; // 연결 허용 최대 Y거리
 
-    [Header("특수 노드 배치 (랜덤 범위)")]
-    [Tooltip("상점 노드 최소 컬럼 인덱스")]
-    public int shopColumnMin = 5; // 상점 최소 컬럼
-    [Tooltip("상점 노드 최대 컬럼 인덱스")]
-    public int shopColumnMax = 4; // 상점 최대 컬럼
+    [Header("상점 설정")]
+    public SpecialNodePlacementSettings shopSettings = new SpecialNodePlacementSettings
+    {
+        minNodes = 1,
+        maxNodes = 1,
+        columnMin = 5,
+        columnMax = 5,
+    };
 
-    [Tooltip("휴식 노드 최소 컬럼 인덱스")]
-    public int restColumnMin = 9; // 휴식 최소 컬럼
-    [Tooltip("휴식 노드 최대 컬럼 인덱스")]
-    public int restColumnMax = 8; // 휴식 최대 컬럼
+    [Header("이벤트 설정")]
+    public SpecialNodePlacementSettings eventSettings = new SpecialNodePlacementSettings
+    {
+        minNodes = 1,
+        maxNodes = 2,
+        columnMin = 2,
+        columnMax = 7,
+    };
 
-    [Header("이벤트 노드 설정")]
-    [Tooltip("이벤트 노드 최소 개수")]
-    public int minEventNodes = 1; // 이벤트 노드 최소 개수
-    [Tooltip("이벤트 노드 최대 개수")]
-    public int maxEventNodes = 2; // 이벤트 노드 최대 개수
-    [Tooltip("이벤트 노드가 등장 가능한 최소 컬럼 (상점/휴식 제외)")]
-    public int eventColumnMin = 2; // 이벤트 등장 최소 컬럼
-    [Tooltip("이벤트 노드가 등장 가능한 최대 컬럼 (보스 직전)")]
-    public int eventColumnMax = 7; // 이벤트 등장 최대 컬럼
+    [Header("유물 설정")]
+    public SpecialNodePlacementSettings relicSettings = new SpecialNodePlacementSettings
+    {
+        minNodes = 1,
+        maxNodes = 1,
+        columnMin = 2,
+        columnMax = 8,
+    };
 
-    [Header("유물 노드 설정")]
-    [Tooltip("유물 노드 최소 개수")]
-    public int minRelicNodes = 1; // 유물 노드 최소 개수
-    [Tooltip("유물 노드 최대 개수")]
-    public int maxRelicNodes = 1; // 유물 노드 최대 개수
-    [Tooltip("유물 노드가 등장 가능한 최소 컬럼 (상점/휴식/이벤트 제외)")]
-    public int relicColumnMin = 2; // 유물 등장 최소 컬럼
-    [Tooltip("유물 노드가 등장 가능한 최대 컬럼")]
-    public int relicColumnMax = 8; // 유물 등장 최대 컬럼
+    [Header("휴식 설정")]
+    public SpecialNodePlacementSettings restSettings = new SpecialNodePlacementSettings
+    {
+        minNodes = 1,
+        maxNodes = 1,
+        columnMin = 9,
+        columnMax = 9,
+    };
 
     [SerializeField] private RoundDataConfig roundDataConfig; // 노드 타입별 라운드 데이터 설정
 
@@ -71,8 +90,8 @@ public class MapGenerator : MonoBehaviour
 
     private List<List<int>> columnNodes = new List<List<int>>(); // 컬럼별 노드 인덱스 목록 (연결 계산용)
 
-    private int actualShopColumn; // 이번에 배정된 상점 컬럼
-    private int actualRestColumn; // 이번에 배정된 휴식 컬럼
+    private List<int> actualShopColumns = new List<int>(); // 이번에 배정된 상점 컬럼들
+    private List<int> actualRestColumns = new List<int>(); // 이번에 배정된 휴식 컬럼들
     private List<int> actualEventColumns = new List<int>(); // 이번에 배정된 이벤트 컬럼들
     private List<int> actualRelicColumns = new List<int>(); // 이번에 배정된 유물 컬럼들
 
@@ -84,52 +103,17 @@ public class MapGenerator : MonoBehaviour
         generatedMapData.nodes = new List<MapData.NodeEntry>();
         columnNodes.Clear();
 
-        // 특수 노드 컬럼을 랜덤 선택
-        actualShopColumn = Random.Range(shopColumnMin, shopColumnMax + 1);
-        actualRestColumn = Random.Range(restColumnMin, restColumnMax + 1);
+        // 특수 노드 컬럼을 랜덤 선택 (앞에서 고른 타입은 뒤 타입 후보에서 제외)
+        var reservedColumns = new HashSet<int>();
+        actualShopColumns = PickSpecialNodeColumns(shopSettings, reservedColumns);
+        reservedColumns.UnionWith(actualShopColumns);
+        actualEventColumns = PickSpecialNodeColumns(eventSettings, reservedColumns);
+        reservedColumns.UnionWith(actualEventColumns);
+        actualRelicColumns = PickSpecialNodeColumns(relicSettings, reservedColumns);
+        reservedColumns.UnionWith(actualRelicColumns);
+        actualRestColumns = PickSpecialNodeColumns(restSettings, reservedColumns);
 
-        // 이벤트 컬럼 개수 결정 (1~2개)
-        actualEventColumns.Clear();
-        int eventCount = Random.Range(minEventNodes, maxEventNodes + 1);
-
-        // 상점/휴식 컬럼을 제외한 이벤트 가능 컬럼 수집
-        List<int> availableColumns = new List<int>();
-        for (int i = eventColumnMin; i <= eventColumnMax; i++)
-        {
-            if (i != actualShopColumn && i != actualRestColumn)
-            {
-                availableColumns.Add(i);
-            }
-        }
-
-        // 이벤트 컬럼을 랜덤 추출
-        for (int i = 0; i < eventCount && availableColumns.Count > 0; i++)
-        {
-            int randomIndex = Random.Range(0, availableColumns.Count);
-            actualEventColumns.Add(availableColumns[randomIndex]);
-            availableColumns.RemoveAt(randomIndex);
-        }
-
-        // 유물 컬럼 개수 결정
-        actualRelicColumns.Clear();
-        int relicCount = Random.Range(minRelicNodes, maxRelicNodes + 1);
-        List<int> relicAvailableColumns = new List<int>();
-        for (int i = relicColumnMin; i <= relicColumnMax; i++)
-        {
-            if (i != actualShopColumn && i != actualRestColumn && !actualEventColumns.Contains(i))
-            {
-                relicAvailableColumns.Add(i);
-            }
-        }
-
-        for (int i = 0; i < relicCount && relicAvailableColumns.Count > 0; i++)
-        {
-            int randomIndex = Random.Range(0, relicAvailableColumns.Count);
-            actualRelicColumns.Add(relicAvailableColumns[randomIndex]);
-            relicAvailableColumns.RemoveAt(randomIndex);
-        }
-
-        Debug.Log($"맵 생성: 상점={actualShopColumn}열, 휴식={actualRestColumn}열, 이벤트={string.Join(",", actualEventColumns)}열, 유물={string.Join(",", actualRelicColumns)}열");
+        Debug.Log($"맵 생성: 상점={string.Join(",", actualShopColumns)}열, 이벤트={string.Join(",", actualEventColumns)}열, 유물={string.Join(",", actualRelicColumns)}열, 휴식={string.Join(",", actualRestColumns)}열");
 
         int nodeIndex = 0;
 
@@ -225,6 +209,37 @@ public class MapGenerator : MonoBehaviour
         return positions;
     }
 
+    // 설정에 따라 특수 노드가 배치될 컬럼을 무작위로 고른다
+    List<int> PickSpecialNodeColumns(SpecialNodePlacementSettings settings, HashSet<int> reservedColumns)
+    {
+        var picked = new List<int>();
+        int minNodes = Mathf.Max(0, settings.minNodes);
+        int maxNodes = Mathf.Max(minNodes, settings.maxNodes);
+        int count = Random.Range(minNodes, maxNodes + 1);
+        if (count <= 0)
+            return picked;
+
+        int colMin = Mathf.Min(settings.columnMin, settings.columnMax);
+        int colMax = Mathf.Max(settings.columnMin, settings.columnMax);
+
+        var available = new List<int>();
+        for (int i = colMin; i <= colMax; i++)
+        {
+            if (reservedColumns != null && reservedColumns.Contains(i))
+                continue;
+            available.Add(i);
+        }
+
+        for (int i = 0; i < count && available.Count > 0; i++)
+        {
+            int randomIndex = Random.Range(0, available.Count);
+            picked.Add(available[randomIndex]);
+            available.RemoveAt(randomIndex);
+        }
+
+        return picked;
+    }
+
     // 컬럼/위치 조건에 따라 노드 타입(시작/특수/정예/일반)을 결정한다
     NodeType DetermineNodeType(int columnIndex, int nodeIndexInColumn, int totalNodesInColumn)
     {
@@ -233,11 +248,11 @@ public class MapGenerator : MonoBehaviour
             return NodeType.Combat;
 
         // 상점 컬럼 중앙 노드
-        if (columnIndex == actualShopColumn && nodeIndexInColumn == totalNodesInColumn / 2)
+        if (actualShopColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Shop;
 
         // 휴식 컬럼 중앙 노드
-        if (columnIndex == actualRestColumn && nodeIndexInColumn == totalNodesInColumn / 2)
+        if (actualRestColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
             return NodeType.Rest;
 
         // 이벤트 컬럼 중앙 노드

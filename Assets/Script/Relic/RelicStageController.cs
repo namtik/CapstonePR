@@ -1,4 +1,5 @@
 using Battle.Relic;
+using Battle.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -125,6 +126,13 @@ public class RelicStageController : MonoBehaviour
     [Header("획득 연출: 월드 -> 좌측 상단 UI 슬롯")]
     [SerializeField] private RewardAbsorbSettings rewardAbsorbSettings; // 보상 흡수 연출 설정
 
+    [Header("받지 않기 버튼")]
+    [SerializeField] private RewardSkipButtonStyle declineButtonStyle = new RewardSkipButtonStyle
+    {
+        label = "받지 않기",
+        anchoredPosition = new Vector2(0f, -420f),
+    };
+
     [Header("툴팁 이름 폰트 설정")]
     [SerializeField] private TMP_FontAsset tooltipNameFontAsset; // 이름 폰트 에셋
     [SerializeField] private float tooltipNameFontSize = 34f; // 이름 폰트 크기
@@ -162,6 +170,7 @@ public class RelicStageController : MonoBehaviour
     private bool isAbsorbSequenceRunning; // 흡수 시퀀스 진행 중 여부
     private bool hasPendingReward; // 대기 중 보상 존재 여부
     private RewardCandidate pendingReward; // 지급 대기 보상
+    private Button _declineButton; // 받지 않기 버튼
 
     // 바인딩 및 상자/아이템 초기 상태 캡처
     void Awake()
@@ -322,6 +331,7 @@ public class RelicStageController : MonoBehaviour
 
         wasHoveringByMouse = false;
         HideTooltipPopup();
+        SetDeclineButtonVisible(false);
     }
 
     // 상자 흔들림 -> 열림 -> 보상 선택 -> 아이템 등장 -> 부유까지의 연출 시퀀스
@@ -426,6 +436,7 @@ public class RelicStageController : MonoBehaviour
         isHovering = true;
         isChestOpened = true;
         isSequenceRunning = false;
+        SetDeclineButtonVisible(true);
     }
 
     // 부유 애니메이션 및 호버 스케일/마우스 호버 동기화
@@ -653,13 +664,71 @@ public class RelicStageController : MonoBehaviour
         if (!isChestOpened || isAbsorbSequenceRunning)
             return;
 
+        SetDeclineButtonVisible(false);
         StartCoroutine(PlayRewardAbsorbAndReturn());
+    }
+
+    // 받지 않기 — 유물 지급 없이 맵으로 복귀
+    void OnDeclineRewardClicked()
+    {
+        if (!isChestOpened || isAbsorbSequenceRunning || isSequenceRunning)
+            return;
+
+        isHovering = false;
+        isRewardPointerHover = false;
+        wasHoveringByMouse = false;
+        HideTooltipPopup();
+        hasPendingReward = false;
+        pendingReward = default;
+
+        if (itemSettings.itemObject != null)
+            itemSettings.itemObject.SetActive(false);
+        if (itemSettings.itemImage != null)
+            itemSettings.itemImage.raycastTarget = false;
+
+        SetDeclineButtonVisible(false);
+        ReturnToMapAfterReward();
+    }
+
+    void EnsureDeclineButton()
+    {
+        if (_declineButton != null)
+            return;
+
+        Canvas canvas = ResolveCanvas();
+        if (canvas == null)
+            return;
+
+        if (declineButtonStyle == null)
+            declineButtonStyle = new RewardSkipButtonStyle { label = "받지 않기" };
+
+        _declineButton = declineButtonStyle.Build(canvas.transform, OnDeclineRewardClicked);
+        _declineButton.gameObject.SetActive(false);
+    }
+
+    void SetDeclineButtonVisible(bool visible)
+    {
+        if (!visible)
+        {
+            if (_declineButton != null)
+                _declineButton.gameObject.SetActive(false);
+            return;
+        }
+
+        EnsureDeclineButton();
+        if (_declineButton == null)
+            return;
+
+        _declineButton.gameObject.SetActive(true);
+        _declineButton.interactable = !isAbsorbSequenceRunning && !isSequenceRunning;
+        _declineButton.transform.SetAsLastSibling();
     }
 
     // 보상 흡수 연출 후 지급하고 맵으로 복귀
     IEnumerator PlayRewardAbsorbAndReturn()
     {
         isAbsorbSequenceRunning = true;
+        SetDeclineButtonVisible(false);
         isHovering = false;
         isRewardPointerHover = false;
         wasHoveringByMouse = false;
