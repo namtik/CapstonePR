@@ -582,6 +582,7 @@ namespace Battle.UI
             if (_isHovering)
             {
                 ApplyHoverOffset(false);
+                Hud.ClearHoverSpread();
                 if (transform.parent != null && _hoverSlotOriginalSibling >= 0)
                 {
                     transform.parent.SetSiblingIndex(_hoverSlotOriginalSibling);
@@ -645,6 +646,7 @@ namespace Battle.UI
                         _hoverSlotOriginalSibling = transform.parent.GetSiblingIndex();
                         transform.parent.SetAsLastSibling();
                     }
+                    if (!IsGridHoverCard()) Hud.ApplyHoverSpread(SlotIndex);
                 }
             }
         }
@@ -685,6 +687,9 @@ namespace Battle.UI
                 _hoverSlotOriginalSibling = transform.parent.GetSiblingIndex();
                 transform.parent.SetAsLastSibling();
             }
+
+            // 손패 카드면 양옆 카드를 좌우로 벌림(그리드/픽커 제외)
+            if (!IsGridHoverCard()) Hud.ApplyHoverSpread(SlotIndex);
         }
 
         // 호버 종료 시 크기/위치/형제 순서를 복원
@@ -692,6 +697,8 @@ namespace Battle.UI
         {
             if (Hud == null) return;
             _isHovering = false;
+            // 벌어졌던 양옆 카드를 원위치로(드래그 여부와 무관하게 복귀)
+            Hud.ClearHoverSpread();
             if (_isDragging) return;
             ApplyScale(1f);
             ApplyHoverOffset(false);

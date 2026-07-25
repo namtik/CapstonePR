@@ -3448,7 +3448,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1424448438}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.99993443
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -17775,7 +17775,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 888799007}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.9999466
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -22557,6 +22557,14 @@ PrefabInstance:
       propertyPath: dragLayer
       value: 
       objectReference: {fileID: 1532705724}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: fanRadius
+      value: 3000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: fanArcAngle
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: drawCountText
       value: 

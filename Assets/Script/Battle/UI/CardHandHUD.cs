@@ -46,6 +46,16 @@ namespace Battle.UI
         [Tooltip("호 위 가장자리에서 카드들이 떨어질 깊이. 작을수록 카드들이 살짝 아래로 호를 그림.")]
         [SerializeField] private float fanVerticalDip = 50f; // 호 하강 깊이
 
+        [Header("Hover 이웃 밀어내기 — 카드에 마우스 올리면 양옆 벌어짐")]
+        [Tooltip("ON이면 손패 카드에 마우스를 올릴 때 양옆 카드가 좌우로 살짝 벌어진다.")]
+        [SerializeField] private bool hoverSpreadEnabled = true; // 이웃 밀어내기 사용 여부
+        [Tooltip("Hover한 카드 바로 옆 카드가 밀려나는 거리(px). 멀리 있는 카드일수록 감소.")]
+        [SerializeField] private float hoverSpreadDistance = 90f; // 인접 카드 밀림 거리
+        [Tooltip("Hover 카드로부터 이 칸 수까지만 밀림 영향(거리에 따라 선형 감소).")]
+        [SerializeField] private int hoverSpreadRange = 2; // 밀림 영향 범위(좌우 칸 수)
+        [Tooltip("밀림/복귀 애니메이션 속도. 클수록 빠르게 자리 잡음. 0이면 즉시.")]
+        [SerializeField] private float hoverSpreadLerpSpeed = 14f; // 밀림 보간 속도
+
         [Header("드로우 등장 연출")]
         [Tooltip("여러 장을 동시에 뽑을 때 카드마다 떠오르기 시작을 늦추는 간격(초). 0이면 동시에 올라옴.")]
         [SerializeField] private float drawIntroStagger = 0.05f; // 드로우 등장 지연 간격
@@ -155,6 +165,10 @@ namespace Battle.UI
 
         private readonly List<NewCardView> _cardViews = new List<NewCardView>(); // 슬롯별 카드 뷰 풀
         private readonly List<RectTransform> _slotAnchors = new List<RectTransform>(); // 슬롯 앵커 목록
+        private readonly List<Vector2> _slotBasePos = new List<Vector2>(); // 스프레드 미적용 기준 위치
+        private float[] _slotSpreadCurrent; // 슬롯별 현재 적용된 좌우 밀림(px)
+        private float[] _slotSpreadTarget; // 슬롯별 목표 좌우 밀림(px)
+        private int _hoverSpreadSlot = -1; // 현재 hover로 밀어내는 기준 슬롯(-1=없음)
         private readonly HashSet<CardInstance> _prevHandSet = new HashSet<CardInstance>(); // 직전 패 구성(신규 판별용)
         private CardDeckSystem _deck; // 바인딩된 덱 시스템
         public System.Func<CardInstance, bool> UseCardCallback; // 카드 사용 콜백
@@ -1788,16 +1802,17 @@ namespace Battle.UI
                     float angleRad = angleDeg * Mathf.Deg2Rad;
                     float x = Mathf.Sin(angleRad) * fanRadius;
                     float y = (Mathf.Cos(angleRad) - 1f) * fanRadius - fanVerticalDip;
-                    rect.anchoredPosition = new Vector2(x, y);
+                    SetSlotBasePos(i, new Vector2(x, y));
                     rect.localRotation = Quaternion.Euler(0f, 0f, -angleDeg);
                 }
                 else
                 {
                     // 비활성 슬롯은 화면 밖으로 보냄
-                    rect.anchoredPosition = new Vector2(0f, -10000f);
+                    SetSlotBasePos(i, new Vector2(0f, -10000f));
                     rect.localRotation = Quaternion.identity;
                 }
             }
+            ApplyAllSlotSpread();
         }
 
         // 일렬 슬롯 위치를 활성 카드 수에 맞춰 재계산
@@ -1812,10 +1827,109 @@ namespace Battle.UI
                 var rect = _slotAnchors[i];
                 if (rect == null) continue;
                 if (i < activeCount)
-                    rect.anchoredPosition = new Vector2(startX + i * slotSpacing.x, slotSpacing.y);
+                    SetSlotBasePos(i, new Vector2(startX + i * slotSpacing.x, slotSpacing.y));
                 else
-                    rect.anchoredPosition = new Vector2(0f, -10000f);
+                    SetSlotBasePos(i, new Vector2(0f, -10000f));
             }
+            ApplyAllSlotSpread();
+        }
+
+        // 슬롯 i의 스프레드 미적용 기준 위치를 저장(리스트 자동 확장)
+        void SetSlotBasePos(int i, Vector2 pos)
+        {
+            while (_slotBasePos.Count <= i) _slotBasePos.Add(Vector2.zero);
+            _slotBasePos[i] = pos;
+        }
+
+        // 손패 카드 hover 시작 — 양옆 카드가 좌우로 벌어질 목표를 설정
+        public void ApplyHoverSpread(int hoveredSlot)
+        {
+            if (!hoverSpreadEnabled) return;
+            _hoverSpreadSlot = hoveredSlot;
+            EnsureSpreadArrays();
+            for (int i = 0; i < _slotSpreadTarget.Length; i++)
+            {
+                int dist = i - hoveredSlot;
+                if (dist == 0) { _slotSpreadTarget[i] = 0f; continue; }
+                int absDist = Mathf.Abs(dist);
+                // 범위 밖은 밀지 않고, 안쪽은 거리에 반비례해 감소
+                float falloff = absDist > hoverSpreadRange
+                    ? 0f
+                    : 1f - (float)(absDist - 1) / Mathf.Max(1, hoverSpreadRange);
+                _slotSpreadTarget[i] = Mathf.Sign(dist) * hoverSpreadDistance * Mathf.Clamp01(falloff);
+            }
+        }
+
+        // 손패 카드 hover 종료 — 모든 밀림을 0으로 되돌림
+        public void ClearHoverSpread()
+        {
+            _hoverSpreadSlot = -1;
+            if (_slotSpreadTarget == null) return;
+            for (int i = 0; i < _slotSpreadTarget.Length; i++)
+                _slotSpreadTarget[i] = 0f;
+        }
+
+        // 스프레드 배열이 슬롯 수에 맞게 준비됐는지 보장
+        void EnsureSpreadArrays()
+        {
+            int n = _slotAnchors.Count;
+            if (_slotSpreadCurrent == null || _slotSpreadCurrent.Length != n)
+            {
+                var oldCur = _slotSpreadCurrent;
+                _slotSpreadCurrent = new float[n];
+                _slotSpreadTarget = new float[n];
+                if (oldCur != null)
+                    for (int i = 0; i < n && i < oldCur.Length; i++) _slotSpreadCurrent[i] = oldCur[i];
+            }
+        }
+
+        // 현재 스프레드 값을 모든 슬롯 위치에 즉시 반영(기준 위치 + x 오프셋)
+        void ApplyAllSlotSpread()
+        {
+            if (!hoverSpreadEnabled) { ApplyRawSlotBase(); return; }
+            EnsureSpreadArrays();
+            for (int i = 0; i < _slotAnchors.Count; i++)
+            {
+                var rect = _slotAnchors[i];
+                if (rect == null || i >= _slotBasePos.Count) continue;
+                float off = _slotSpreadCurrent != null && i < _slotSpreadCurrent.Length ? _slotSpreadCurrent[i] : 0f;
+                rect.anchoredPosition = _slotBasePos[i] + new Vector2(off, 0f);
+            }
+        }
+
+        // 스프레드 비활성 시 기준 위치만 반영
+        void ApplyRawSlotBase()
+        {
+            for (int i = 0; i < _slotAnchors.Count; i++)
+            {
+                var rect = _slotAnchors[i];
+                if (rect == null || i >= _slotBasePos.Count) continue;
+                rect.anchoredPosition = _slotBasePos[i];
+            }
+        }
+
+        // 밀림 값을 목표로 부드럽게 보간하고 슬롯 위치에 반영
+        void Update()
+        {
+            if (!hoverSpreadEnabled || _slotSpreadCurrent == null) return;
+
+            bool changed = false;
+            float k = hoverSpreadLerpSpeed <= 0f
+                ? 1f
+                : 1f - Mathf.Exp(-hoverSpreadLerpSpeed * Time.unscaledDeltaTime);
+            for (int i = 0; i < _slotSpreadCurrent.Length; i++)
+            {
+                float target = i < _slotSpreadTarget.Length ? _slotSpreadTarget[i] : 0f;
+                float cur = _slotSpreadCurrent[i];
+                if (Mathf.Abs(cur - target) < 0.05f)
+                {
+                    if (cur != target) { _slotSpreadCurrent[i] = target; changed = true; }
+                    continue;
+                }
+                _slotSpreadCurrent[i] = Mathf.Lerp(cur, target, k);
+                changed = true;
+            }
+            if (changed) ApplyAllSlotSpread();
         }
 
         // 일렬 배치로 슬롯 앵커들을 생성

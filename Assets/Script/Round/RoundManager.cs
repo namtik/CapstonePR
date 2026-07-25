@@ -57,6 +57,8 @@ public class RoundManager : MonoBehaviour
     private RoundData currentRoundData; // 현재 진행 중인 라운드 데이터
     private int currentEnemyIndex = 0; // 현재 처리 중인 적 인덱스
     private EnemyStat currentEnemy; // 현재 적 스탯
+    private readonly List<EnemyData> _injectedEnemies = new List<EnemyData>(); // 특이사항(복제) 등으로 끼어든 적 큐
+    private bool _currentIsInjected = false; // 현재 적이 주입(복제)된 적인지 여부
     public event System.Action OnRoundClear; // 라운드 클리어 이벤트
     private IRoundHandler currentRoundHandler; // 현재 라운드 핸들러
     private int clearedCombatCount = 0; // 클리어한 전투 수
@@ -608,8 +610,9 @@ public class RoundManager : MonoBehaviour
     }
 
     // 적 프리팹을 생성해 스탯/뷰/배경/사망 이벤트를 설정한다.
-    void SpawnEnemy(EnemyData data, int columnIndex, NodeType nodeType)
+    void SpawnEnemy(EnemyData data, int columnIndex, NodeType nodeType, bool injected = false)
     {
+        _currentIsInjected = injected; // 주입(복제)된 적은 사망 시 인덱스를 증가시키지 않음
         if (enemyPrefab == null)
         {
             Debug.LogError("RoundManager: enemyPrefab이 없습니다.");
@@ -656,6 +659,10 @@ public class RoundManager : MonoBehaviour
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
 
+        // 특이사항(복제): 주입된 사본은 다시 복제하지 않도록 막아 무한 복제 방지
+        if (injected && controller != null)
+            controller.AllowDuplication = false;
+
         if (currentEnemy != null)
         {
             currentEnemy.OnDied -= HandleEnemyDied;
@@ -685,7 +692,9 @@ public class RoundManager : MonoBehaviour
             MoneyManager.Instance.OnEnemyKilled();
         }
 
-        currentEnemyIndex++;
+        // 주입(복제)된 적이 죽었을 때는 실제 적 인덱스를 진행시키지 않는다.
+        if (!_currentIsInjected)
+            currentEnemyIndex++;
 
         StartCoroutine(SpawnNextAfterDelay());
     }
@@ -695,12 +704,38 @@ public class RoundManager : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
 
+        // 특이사항(복제)로 끼어든 적을 실제 적보다 먼저 처리
+        if (_injectedEnemies.Count > 0 && TryGetCurrentColumnAndType(out int col, out NodeType nt))
+        {
+            var dup = _injectedEnemies[0];
+            _injectedEnemies.RemoveAt(0);
+            SpawnEnemy(dup, col, nt, injected: true);
+            yield break;
+        }
+
         if (currentRoundData is CombatRoundData combatData)
             SpawnNextEnemy(combatData.enemies, combatData.columnIndex, combatData.roundType);
         else if (currentRoundData is EliteRoundData eliteData)
             SpawnNextEnemy(eliteData.enemies, eliteData.columnIndex, eliteData.roundType);
         else if (currentRoundData is BossRoundData)
             EndRound();
+    }
+
+    // 현재 라운드의 열 인덱스/노드 타입 조회(복제 스폰용)
+    bool TryGetCurrentColumnAndType(out int columnIndex, out NodeType nodeType)
+    {
+        if (currentRoundData is CombatRoundData c) { columnIndex = c.columnIndex; nodeType = c.roundType; return true; }
+        if (currentRoundData is EliteRoundData e) { columnIndex = e.columnIndex; nodeType = e.roundType; return true; }
+        if (currentRoundData is BossRoundData b)  { columnIndex = b.columnIndex; nodeType = NodeType.Boss; return true; }
+        columnIndex = 0; nodeType = NodeType.Combat; return false;
+    }
+
+    // 특이사항(액괴 복제): 지정 적 데이터의 복제본을 다음 스폰 큐에 추가한다.
+    public void RequeueEnemyCopy(EnemyData data)
+    {
+        if (data == null) return;
+        _injectedEnemies.Add(data);
+        Debug.Log($"[특이사항] {data.enemyName} 복제 예약 (대기 {_injectedEnemies.Count})");
     }
 }
 

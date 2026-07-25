@@ -2,6 +2,7 @@
 using System.Collections;
 using UnityEngine;
 using Coffee.UIExtensions;
+using Battle.Card;
 
 public class EnemyController : MonoBehaviour, IBattleUnit
 {
@@ -14,9 +15,18 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [Range(0.2f, 2f)]
     [SerializeField] private float hitVfxPlaybackSpeed = 0.7f; // 공격 파티클 재생 속도 배율
 
-    [Header("새 전투 시스템 공격 시퀀스 (PDF: 16-18-40 순환)")]
-    [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 }; // 새 시스템 공격 피해 시퀀스
+    [Header("새 전투 시스템 공격 시퀀스 (폴백)")]
+    [Tooltip("EnemyData.attackSequence(엑셀 1차/2차/3차 공격)가 비어 있을 때만 사용하는 폴백 시퀀스.")]
+    [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 }; // 새 시스템 공격 피해 시퀀스(폴백)
     private int _newSystemAttackIndex = 0; // 현재 공격 시퀀스 인덱스
+
+    // 실제 사용할 공격 시퀀스: EnemyData.attackSequence 우선, 비어 있으면 인스펙터 폴백
+    int[] EffectiveAttackSequence()
+    {
+        var seq = stat != null && stat.Data != null ? stat.Data.attackSequence : null;
+        if (seq != null && seq.Length > 0) return seq;
+        return newSystemAttackSequence;
+    }
     private bool _nextAttackBuffed = false; // 다음 공격 +50% 강화 여부
 
     private EnemyStat stat; // 적 스탯 컴포넌트
@@ -26,6 +36,27 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private bool isDead = false; // 사망 처리 여부
     private MonsterMidPattern midPattern; // 방해행동 패턴 컴포넌트
     private bool _attackPreviewInitialized; // 공격 예고 초기화 여부
+
+    // ── 특이사항(EnemySpecialAbility) 상태 ──
+    private const int CYCLE_CURSE_USES = 99; // 백족승 저주가 다음 전환 전까지 유지되도록 큰 값
+    private static readonly CardElement[] CurseCycleElements =
+        { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth }; // 백족승 저주 순환 속성
+    private EnemySpecialAbility _ability = EnemySpecialAbility.None; // 이 몬스터의 특이사항
+    private bool _abilityResolved = false;   // 특이사항 조회 완료 여부
+    private bool _specialBattleStarted = false; // 전투시작 특이사항 1회 트리거 여부
+    private bool _halfHpTriggered = false;   // 체력 절반 특이사항 1회 트리거 여부
+    private int _escalateBonus = 0;          // 풍식귀: 누적 공격 증가량
+    private int _cycleCurseIndex = 0;        // 백족승: 현재 저주 속성 인덱스
+    public bool AllowDuplication = true;     // 액괴 복제 허용(복제된 사본은 false로 무한 복제 방지)
+
+    // 특이사항 조회(EnemyStat.Initialize 이후 데이터 준비되면 1회 확정)
+    void ResolveAbility()
+    {
+        if (_abilityResolved) return;
+        if (stat == null || stat.Data == null) return;
+        _ability = stat.Data.specialAbility;
+        _abilityResolved = true;
+    }
 
     // 스탯/뷰 컴포넌트를 캐싱한다
     private void Awake()
@@ -44,6 +75,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnMidPattern  += HandleMidPattern;
         stat.OnGaugeFull   += HandleGaugeFull;
         stat.OnGaugeStepChanged += view.UpdateActionGauge;
+        stat.OnDamaged += HandleSpecialDamaged;   // 특이사항(화웅): 피격 반사
+        stat.OnHpChanged += HandleSpecialHpChanged; // 특이사항(액괴/무사): 체력 절반
         midPattern = GetComponent<MonsterMidPattern>();
 
         // 공격 모션이 마지막(임팩트) 프레임에 도달할 때 공격 이펙트를 한 번 더 재생
@@ -81,6 +114,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnMidPattern  -= HandleMidPattern;
         stat.OnGaugeFull   -= HandleGaugeFull;
         stat.OnGaugeStepChanged -= view.UpdateActionGauge;
+        stat.OnDamaged -= HandleSpecialDamaged;
+        stat.OnHpChanged -= HandleSpecialHpChanged;
         if (view != null) view.OnAttackMotionLastFrame -= PlayAttackVfx;
     }
 
@@ -95,16 +130,88 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             UpdateAttackPreviewForNewSystem();
             _attackPreviewInitialized = true;
         }
+
+        // 전투 시작 특이사항(구미호 매혹/백족승 저주)을 전투 준비(덱 포함) 완료 후 1회 트리거
+        if (!_specialBattleStarted
+            && Battle.NewBattleController.Instance != null
+            && Battle.NewBattleController.Instance.InBattle)
+        {
+            _specialBattleStarted = true;
+            TriggerBattleStartAbility();
+        }
+    }
+
+    // 전투 시작 특이사항 트리거
+    void TriggerBattleStartAbility()
+    {
+        ResolveAbility();
+        var nbc = Battle.NewBattleController.Instance;
+        if (nbc == null) return;
+        if (_ability == EnemySpecialAbility.CharmCardsOnBattleStart)
+            nbc.InsertCharmCards(7); // 구미호: 매혹 7장
+        else if (_ability == EnemySpecialAbility.CycleElementCurse)
+        {
+            _cycleCurseIndex = UnityEngine.Random.Range(0, CurseCycleElements.Length);
+            nbc.ApplyElementCurse(CurseCycleElements[_cycleCurseIndex], CYCLE_CURSE_USES); // 백족승: 초기 저주
+        }
+    }
+
+    // 특이사항(화웅): 피격 시 플레이어에게 1 피해 반사
+    void HandleSpecialDamaged(float dmg)
+    {
+        ResolveAbility();
+        if (_ability != EnemySpecialAbility.ReflectDamageOnHit) return;
+        if (player == null) player = Player.Resolve(true);
+        player?.TakeDamage(1f, "enemy_reflect");
+    }
+
+    // 특이사항(액괴/무사): 체력 절반 도달 시 1회 트리거
+    void HandleSpecialHpChanged(float current, float max)
+    {
+        ResolveAbility();
+        if (_halfHpTriggered || max <= 0f) return;
+        if (!(current > 0f && current <= max * 0.5f)) return;
+
+        if (_ability == EnemySpecialAbility.DuplicateAtHalfHp)
+        {
+            _halfHpTriggered = true;
+            if (AllowDuplication && roundManager != null && stat.Data != null)
+            {
+                roundManager.RequeueEnemyCopy(stat.Data);
+                view?.ShowMidPatternNotice("복제!");
+            }
+        }
+        else if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp)
+        {
+            _halfHpTriggered = true; // 이후 공격 2배(HandleGaugeFull에서 적용)
+            view?.ShowMidPatternNotice("피해 2배!");
+        }
+    }
+
+    // 사망 시 특이사항(오염된 원소 4종) 트리거
+    void TriggerOnDeathAbility()
+    {
+        ResolveAbility();
+        var nbc = Battle.NewBattleController.Instance;
+        if (nbc == null) return;
+        switch (_ability)
+        {
+            case EnemySpecialAbility.OnDeathCurseElement: nbc.CurseRandomElement(5); break; // 오염된 불
+            case EnemySpecialAbility.OnDeathDiscardCards: nbc.ForcePlayerDiscard(2); break;  // 오염된 물
+            case EnemySpecialAbility.OnDeathResetAwaken:  nbc.ResetAwakenGauge(); break;     // 오염된 바람
+            case EnemySpecialAbility.OnDeathInsertExhaust: nbc.InsertExhaustCards(2); break; // 오염된 땅
+        }
     }
 
     // 새 시스템 모드에서 다음 공격 시퀀스 값을 뷰에 미리 표시한다
     void UpdateAttackPreviewForNewSystem()
     {
         if (Battle.NewBattleController.Instance == null) return;
-        if (newSystemAttackSequence == null || newSystemAttackSequence.Length == 0) return;
+        int[] seq = EffectiveAttackSequence();
+        if (seq == null || seq.Length == 0) return;
         if (view == null) return;
 
-        int nextDamage = newSystemAttackSequence[_newSystemAttackIndex % newSystemAttackSequence.Length];
+        int nextDamage = seq[_newSystemAttackIndex % seq.Length];
         view.SetAttackPreviewDamage(nextDamage);
     }
 
@@ -238,10 +345,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         int damagePerHit;
         int hitCount;
 
-        if (Battle.NewBattleController.Instance != null && newSystemAttackSequence != null && newSystemAttackSequence.Length > 0)
+        int[] atkSeq = EffectiveAttackSequence();
+        if (Battle.NewBattleController.Instance != null && atkSeq != null && atkSeq.Length > 0)
         {
-            // PDF: 일반 16 → 일반 18 → 강 40 순차 반복
-            damagePerHit = newSystemAttackSequence[_newSystemAttackIndex % newSystemAttackSequence.Length];
+            // 엑셀 1차/2차/3차 공격을 순차 반복(비어 있으면 인스펙터 폴백 시퀀스)
+            damagePerHit = atkSeq[_newSystemAttackIndex % atkSeq.Length];
             hitCount = 1;
             _newSystemAttackIndex++;
             Debug.Log($"[적 공격] 시퀀스 인덱스={_newSystemAttackIndex - 1}, 피해={damagePerHit}");
@@ -253,6 +361,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             hitCount = Mathf.Max(0, stat.CurrentAttackCount);
         }
 
+        // 특이사항(풍식귀): 공격 시 피해가 1씩 누적 증가
+        ResolveAbility();
+        if (_ability == EnemySpecialAbility.EscalatingAttack)
+        {
+            damagePerHit += _escalateBonus;
+            _escalateBonus++;
+        }
+
         // 기획서 0.6v [방해행동-강화]: 다음 공격 1회 한정 +50% (소수 올림)
         if (_nextAttackBuffed)
         {
@@ -262,10 +378,21 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             Debug.Log($"[적 강화] 다음 공격 +50% → {damagePerHit}");
         }
 
+        // 특이사항(무사): 체력 절반 도달 후 피해 2배
+        if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp && _halfHpTriggered)
+            damagePerHit *= 2;
+
         if (player != null)
         {
             // 연타 연출을 위해 코루틴으로 분리하여 호출
             StartCoroutine(ExecuteMultiHit(hitCount, damagePerHit));
+        }
+
+        // 특이사항(백족승): 공격 시 다른 속성으로 저주 전환
+        if (_ability == EnemySpecialAbility.CycleElementCurse && Battle.NewBattleController.Instance != null)
+        {
+            _cycleCurseIndex = (_cycleCurseIndex + 1) % CurseCycleElements.Length;
+            Battle.NewBattleController.Instance.ApplyElementCurse(CurseCycleElements[_cycleCurseIndex], CYCLE_CURSE_USES);
         }
 
         stat.RollNewAttackPlan();
@@ -328,6 +455,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     {
         if (isDead) return;
         isDead = true;
+        TriggerOnDeathAbility(); // 특이사항(오염된 원소 4종): 처치 시 페널티
         midPattern?.OnBattleEnd();
         // OnDied 이벤트로 인해 RoundManager.HandleEnemyDied가 호출됨
         // 여기서 직접 호출하지 않음 (중복 호출 방지)

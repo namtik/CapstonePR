@@ -18,10 +18,17 @@ MonoBehaviour:
   attackSprites:
   - {fileID: 21300000, guid: e60dfc40e1ce6de4ab8aa509741c6cc3, type: 3}
   - {fileID: 21300000, guid: 9c611d716ead3014a932bd603b45217d, type: 3}
+  id: 0
+  element: 0
+  enemyClass: 3
+  specialAbility: 0
+  Note: 
   maxHp: 100
   attackDamage: 100
   gaugeSpeed: 20
   baseAttackCount: 3
   actionGaugeMax: 20
+  attackSequence: 
+  disruptionActions: 
   backgroundSprites:
   - {fileID: 21300000, guid: b334bf84c8f049848b52d2676c8c7206, type: 3}

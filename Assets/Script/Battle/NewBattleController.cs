@@ -856,6 +856,13 @@ namespace Battle
 
             ApplyCurseOnCardUse(card);
 
+            // 특이사항(매혹, 구미호): 사용 시 적 행동 게이지가 가득 참 → 즉시 공격
+            if (card.data != null && card.data.id == CardDatabase.CHARM)
+            {
+                Log("[특이사항] 매혹 사용 — 적 행동 게이지 가득 참!");
+                _enemyStat?.FillGaugeToFull();
+            }
+
             int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
 
             var result = _resolver.Resolve(card);
@@ -1408,12 +1415,29 @@ namespace Battle
             _comboCtx.onGainChain = n => { _ctx.chainCount += n; };
         }
 
-        // AI 미사용/폴백 — 가용 행동 중 무작위 1개 선택
+        // 현재 적의 허용 방해행동 마스크(길이 6). EnemyData.disruptionActions 기준, 비면 null(전체 허용).
+        bool[] CurrentEnemyDisruptionMask()
+        {
+            var data = _enemyStat != null ? _enemyStat.Data : null;
+            if (data == null || data.disruptionActions == null || data.disruptionActions.Length == 0)
+                return null;
+            return data.BuildDisruptionMask();
+        }
+
+        // AI 미사용/폴백 — 가용 행동 중 무작위 1개 선택(몬스터 허용 방해행동으로 제한)
         int RandomFallbackPick(bool recoverReady)
         {
-            var pool = new List<int> { 0, 1, 2, 3 };
-            if (recoverReady) pool.Add(4);
-            if (_deck.HandCount >= 2) pool.Add(5);
+            bool[] allowed = CurrentEnemyDisruptionMask();
+            bool Ok(int a) => allowed == null || (a < allowed.Length && allowed[a]);
+
+            var pool = new List<int>();
+            if (Ok(0)) pool.Add(0);
+            if (Ok(1)) pool.Add(1);
+            if (Ok(2)) pool.Add(2);
+            if (Ok(3)) pool.Add(3);
+            if (recoverReady && Ok(4)) pool.Add(4);
+            if (_deck.HandCount >= 2 && Ok(5)) pool.Add(5);
+            if (pool.Count == 0) pool.Add(1); // 전부 막히면 탈진 폴백
             return pool[Random.Range(0, pool.Count)];
         }
 
@@ -1430,7 +1454,7 @@ namespace Battle
                     // self-state(상태의존 마스크용): 이미 건 저주/강화, 현재 각성 게이지
                     bool curseActive = _cursedElement.HasValue;
                     bool enhanceActive = _enemy != null && _enemy.IsNextAttackBuffed;
-                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon, onlineLearning, curseActive, enhanceActive, _elementInputCount);
+                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon, onlineLearning, curseActive, enhanceActive, _elementInputCount, CurrentEnemyDisruptionMask());
                     pick = decision.action;
                     if (logVerbose)
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
@@ -1903,6 +1927,73 @@ namespace Battle
         public void DrawCards(int count)
         {
             if (count > 0) _deck.Draw(count);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 적 특이사항(EnemySpecialAbility) 플레이어측 효과 API
+        // ─────────────────────────────────────────────────────────────
+
+        // 특이사항: 지정 속성에 저주 부여(uses회 카드 사용 동안 지속)
+        public void ApplyElementCurse(CardElement element, int uses)
+        {
+            _cursedElement = element;
+            _curseRemainingUses = Mathf.Max(1, uses);
+            handHud?.Refresh();
+            Log($"[특이사항] {ElementName(element)} 속성 저주 — {_curseRemainingUses}회 지속");
+        }
+
+        // 특이사항: 무작위 속성에 저주 부여
+        public void CurseRandomElement(int uses)
+        {
+            CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
+            ApplyElementCurse(elements[Random.Range(0, elements.Length)], uses);
+        }
+
+        // 특이사항: 플레이어가 패에서 count장을 직접 선택해 버림
+        public void ForcePlayerDiscard(int count)
+        {
+            int n = Mathf.Min(count, _deck != null ? _deck.HandCount : 0);
+            if (n > 0) StartCoroutine(EnemyForcedDiscardRoutine(n));
+            Log($"[특이사항] 카드 버리기 {n}장");
+        }
+
+        // 특이사항: 각성 게이지(누적 속성 입력) 초기화
+        public void ResetAwakenGauge()
+        {
+            _elementInputCount = 0;
+            UpdateAwakenText();
+            Log("[특이사항] 각성 게이지 초기화");
+        }
+
+        // 전투 진행 중 여부(적 특이사항 전투시작 트리거가 덱 준비 후 발동하도록)
+        public bool InBattle => _inBattle;
+
+        // 특이사항: 뽑을 더미에 탈진(무속성 더미) 카드 count장 삽입
+        public void InsertExhaustCards(int count)
+        {
+            if (_deck == null) return;
+            int added = 0;
+            for (int i = 0; i < count; i++)
+            {
+                var dummy = CardDatabase.CreateNeutralFillerInstance();
+                if (dummy != null) { _deck.AddToDrawShuffled(dummy); added++; }
+            }
+            handHud?.Refresh();
+            if (added > 0) Log($"[특이사항] 탈진 카드 {added}장 삽입");
+        }
+
+        // 특이사항: 뽑을 더미에 매혹 카드 count장 삽입(사용 시 적 게이지 가득 참)
+        public void InsertCharmCards(int count)
+        {
+            if (_deck == null) return;
+            int added = 0;
+            for (int i = 0; i < count; i++)
+            {
+                var charm = CardDatabase.CreateCharmInstance();
+                if (charm != null) { _deck.AddToDrawShuffled(charm); added++; }
+            }
+            handHud?.Refresh();
+            if (added > 0) Log($"[특이사항] 매혹 카드 {added}장 삽입");
         }
 
         // 각성 남은시간/최대시간을 함께 증가

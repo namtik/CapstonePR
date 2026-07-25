@@ -24,6 +24,7 @@ public class EnemyStat : MonoBehaviour
     public int GaugeStep => gaugeStep; // 현재 게이지 단계 조회
 
     private EnemyData enemyData; // 적 데이터 원본
+    public EnemyData Data => enemyData; // 적 데이터 원본 조회(공격 시퀀스/방해행동 등 조회용)
     private EnemyController controller; // 적 컨트롤러 참조
     private int columnIndex; // 배치 열 인덱스
     private NodeType nodeType; // 노드 타입(일반/정예/보스)
@@ -127,6 +128,16 @@ public class EnemyStat : MonoBehaviour
     {
         currentAttackCount = Mathf.Max(0, currentAttackCount - amount);
         OnAttackCountChanged?.Invoke(currentAttackCount);
+    }
+
+    // 특이사항(매혹): 행동 게이지를 즉시 가득 채워 적이 바로 공격하게 한다
+    public void FillGaugeToFull()
+    {
+        if (!IsAlive) return;
+        gaugeStep = 0;
+        midPatternTriggered = false;
+        OnGaugeStepChanged?.Invoke(0f);
+        OnGaugeFull?.Invoke();
     }
 
     // 플레이어 행동 시 호출 — 게이지를 한 단계 올리고 방해행동/공격을 처리한다
