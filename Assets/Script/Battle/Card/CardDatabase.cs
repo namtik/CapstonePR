@@ -165,6 +165,21 @@ namespace Battle.Card
                 : null;
         }
 
+        public const int CHARM = 501; // 매혹 카드 ID(구미호 특이사항). 사용 시 적 행동 게이지가 가득 참.
+
+        // 매혹 카드 인스턴스 생성(런타임 정의 — JSON에 없으면 코드로 구성)
+        public static CardInstance CreateCharmInstance()
+        {
+            EnsureInit();
+            if (!_byId.TryGetValue(CHARM, out var data))
+            {
+                data = new CardData(CHARM, "매혹", CardElement.Neutral, CardType.Skill, 0,
+                    "사용 시 적 행동 게이지가 가득 찬다.", comboSlot: false);
+                _byId[CHARM] = data;
+            }
+            return new CardInstance(data, transient: true);
+        }
+
         // 카드/효과 JSON 전체 로드
         static void LoadAll()
         {

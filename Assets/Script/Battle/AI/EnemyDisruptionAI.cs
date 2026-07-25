@@ -158,12 +158,14 @@ namespace Battle.AI
             return q;
         }
 
-        // 가용성 마스크 산출 — 상태의존(self-state) 반영
+        // 가용성 마스크 산출 — 상태의존(self-state) + 몬스터별 허용 방해행동(allowed) 반영
         static bool[] AvailabilityMask(int handCount, bool recoverReady,
-                                       bool curseActive, bool enhanceActive, int awakenGauge)
+                                       bool curseActive, bool enhanceActive, int awakenGauge,
+                                       bool[] allowed)
         {
             var m = new bool[EnemyAiModel.ACTIONS];
-            for (int a = 0; a < m.Length; a++) m[a] = true;
+            for (int a = 0; a < m.Length; a++)
+                m[a] = (allowed == null || a >= allowed.Length) ? true : allowed[a];
             if (curseActive) m[0] = false;
             if (awakenGauge <= 0) m[2] = false;
             if (enhanceActive) m[3] = false;
@@ -172,16 +174,29 @@ namespace Battle.AI
             return m;
         }
 
-        // 현재 상태로 방해행동을 결정(epsilon 탐험 포함)
+        // 현재 상태로 방해행동을 결정(epsilon 탐험 포함).
+        // allowed: 몬스터별 허용 방해행동 마스크(길이 6). null이면 6종 전체 허용.
         public static AiDecision Decide(CardDeckSystem deck, EnemyStat enemyStat, Player player,
                                         bool recoverReady, float epsilon, bool onlineLearning,
-                                        bool curseActive, bool enhanceActive, int awakenGauge)
+                                        bool curseActive, bool enhanceActive, int awakenGauge,
+                                        bool[] allowed = null)
         {
             float[] x = BuildFeatures();
             float[] c = BuildContext(deck, enemyStat, player, out int handCount);
             float[] mu = FuzzyMembership(x);
             float[] q = onlineLearning ? OnlineQLearner.QTotal(mu, c) : QTotal(mu, c);
-            bool[] mask = AvailabilityMask(handCount, recoverReady, curseActive, enhanceActive, awakenGauge);
+            bool[] mask = AvailabilityMask(handCount, recoverReady, curseActive, enhanceActive, awakenGauge, allowed);
+
+            // 상태의존 마스크로 모든 행동이 막히면, 몬스터 허용 목록 내에서만 폴백(허용도 없으면 탈진)
+            int Fallback()
+            {
+                if (allowed != null)
+                {
+                    for (int a = 0; a < EnemyAiModel.ACTIONS; a++)
+                        if (a < allowed.Length && allowed[a]) return a;
+                }
+                return 1;
+            }
 
             int action;
             bool explored = false;
@@ -189,7 +204,7 @@ namespace Battle.AI
             {
                 var avail = new List<int>();
                 for (int a = 0; a < EnemyAiModel.ACTIONS; a++) if (mask[a]) avail.Add(a);
-                action = avail.Count > 0 ? avail[Random.Range(0, avail.Count)] : 1;
+                action = avail.Count > 0 ? avail[Random.Range(0, avail.Count)] : Fallback();
                 explored = true;
             }
             else
@@ -204,7 +219,7 @@ namespace Battle.AI
                 if (action < 0)
                 {
                     for (int a = 0; a < EnemyAiModel.ACTIONS; a++) if (mask[a]) { action = a; break; }
-                    if (action < 0) action = 1;
+                    if (action < 0) action = Fallback();
                 }
             }
 
