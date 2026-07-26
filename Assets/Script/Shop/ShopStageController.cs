@@ -360,6 +360,8 @@ public class ShopStageController : MonoBehaviour
             CardData card = all[i];
             if (card == null) continue;
             if (!IsElementCard(card)) continue;
+            // 전투 중 임시 생성되는 카드(파편 등)·기본 덱 카드는 상점 판매 제외 (보상 풀과 동일 기준)
+            if (card.HasTag("FRAGMENT") || card.HasTag("TEMPORARY_ON_CREATE") || card.HasTag("BASIC")) continue;
             if (ownedIds.Contains(card.id)) continue;
             pool.Add(card);
         }

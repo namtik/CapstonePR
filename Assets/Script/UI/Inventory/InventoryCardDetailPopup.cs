@@ -36,7 +36,7 @@ namespace Battle.UI
             if (data == null) return;
             if (cardView != null) cardView.ApplyShopPreview(data);
             if (nameText != null) nameText.text = data.displayName;
-            if (descText != null) descText.text = data.description;
+            if (descText != null) descText.text = CardDatabase.GetDisplayDescription(data);
             if (popupRoot != null)
             {
                 popupRoot.SetActive(true);

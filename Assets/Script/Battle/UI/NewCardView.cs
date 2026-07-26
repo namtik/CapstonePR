@@ -211,7 +211,7 @@ namespace Battle.UI
             if (cardData == null) return;
 
             if (nameText != null) nameText.text = cardData.displayName;
-            if (descText != null) descText.text = cardData.description;
+            if (descText != null) descText.text = CardDatabase.GetDisplayDescription(cardData);
             if (gaugeText != null) gaugeText.text = EffectiveGaugeCost(cardData.gauge).ToString();
 
             if (cardTypeText != null) cardTypeText.text = CardTypeName(cardData.type);
@@ -280,7 +280,7 @@ namespace Battle.UI
             }
 
             if (nameText != null) nameText.text = Card.data.displayName;
-            if (descText != null) descText.text = Card.data.description;
+            if (descText != null) descText.text = CardDatabase.GetDisplayDescription(Card.data);
             if (gaugeText != null) gaugeText.text = EffectiveGaugeCost(Card.data.gauge).ToString();
 
             // 카드 타입 표시

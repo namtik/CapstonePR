@@ -51,6 +51,8 @@ namespace Battle.UI
 
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
+            // 전체화면 패널이 menubar 인벤토리 버튼을 덮지 않도록, 인벤토리 버튼 menubar를 패널 위로 올린다
+            InventoryOpenButton.BringMenubarsToFront();
             if (pauseTimeWhenOpen) Time.timeScale = 0f;
 
             Debug.Log($"[ComboBookRewardPanelUI] 콤보 선택지 {_choices.Count}개 표시");

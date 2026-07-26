@@ -20,6 +20,35 @@ namespace Battle.Card
         // 지정 ID가 기본 카드인지 여부
         public static bool IsBasicCard(int id) => BasicCardIds.Contains(id);
 
+        // 표시용 설명 — 태초의 서(10004) 보유 시 기본 카드의 효과 수치를 2배로 반영한 설명을 반환.
+        // 그 외에는 원본 설명 그대로. (효과 amount에 해당하는 숫자만 2배로 치환)
+        public static string GetDisplayDescription(CardData card)
+        {
+            if (card == null) return string.Empty;
+            string desc = card.description ?? string.Empty;
+            if (desc.Length == 0) return desc;
+
+            var run = Battle.RunDeckState.Instance;
+            if (run == null || !run.DoubleBasicCardEffects) return desc;
+            if (!IsBasicCard(card.id)) return desc;
+
+            var effects = GetEffects(card.id);
+            if (effects == null || effects.Count == 0) return desc;
+
+            // 이 카드 효과의 실제 수치들만 대상으로 삼아 무관한 숫자가 2배되는 것을 막는다
+            var amounts = new HashSet<int>();
+            for (int i = 0; i < effects.Count; i++)
+                if (effects[i] != null && effects[i].amount > 0) amounts.Add(effects[i].amount);
+            if (amounts.Count == 0) return desc;
+
+            // 원본 수치 집합 기준으로 한 번에 치환 → 이미 2배된 값이 다시 2배되는 연쇄 방지
+            return System.Text.RegularExpressions.Regex.Replace(desc, @"\d+", m =>
+            {
+                return int.TryParse(m.Value, out int n) && amounts.Contains(n)
+                    ? (n * 2).ToString() : m.Value;
+            });
+        }
+
         const string CARDS_RESOURCE_PATH    = "CardDB/Cards";       // 카드 JSON 리소스 경로
         const string EFFECTS_RESOURCE_PATH  = "CardDB/CardEffects"; // 효과 JSON 리소스 경로
 
