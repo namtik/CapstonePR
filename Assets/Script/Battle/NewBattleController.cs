@@ -377,6 +377,9 @@ namespace Battle
             if (awakenTimerGauge != null) awakenTimerGauge.Hide();
             _usedFireCardCount = 0;
             _recoverCooldown = 0;
+            // 저주는 전투 범위 상태 — 이전 전투가 저주가 남은 채 끝나도 다음 전투로 넘어가지 않도록 초기화
+            _cursedElement = null;
+            _curseRemainingUses = 0;
             _track = null;
             _tdQueue.Clear();
             _cardsPlayedThisBattle = 0;

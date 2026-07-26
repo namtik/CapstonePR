@@ -19,7 +19,7 @@ MonoBehaviour:
   id: 100012
   element: 3
   enemyClass: 2
-  specialAbility: 0
+  specialAbility: 7
   Note: "\uACF5\uACA9 \uC2DC \uD53C\uD574\uAC00 1\uC529 \uC99D\uAC00\uD55C\uB2E4."
   maxHp: 100
   actionGaugeMax: 8
