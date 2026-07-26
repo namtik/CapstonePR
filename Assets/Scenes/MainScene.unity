@@ -3447,8 +3447,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1424448439}
   m_HandleRect: {fileID: 1424448438}
   m_Direction: 2
-  m_Value: 0
-  m_Size: 0.99999666
+  m_Value: 1
+  m_Size: 0.99993587
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -17783,7 +17783,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 888799007}
   m_Direction: 2
   m_Value: 1
-  m_Size: 1
+  m_Size: 0.99994755
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -22199,12 +22199,14 @@ MonoBehaviour:
   effectClips:
   - effectName: Fire_ATK
     clip: {fileID: 8300000, guid: ffae41f8f11c27e4e8cd77744a7eaa01, type: 3}
-  - effectName: Land_ATK
+  - effectName: Earth_ATK
     clip: {fileID: 8300000, guid: de4d8a2e9f374554a86bda6b505653f7, type: 3}
   - effectName: Water_ATK
     clip: {fileID: 8300000, guid: 39307fd4be1d8e24192ee3ef1e988f6f, type: 3}
   - effectName: Frost_EFF
     clip: {fileID: 8300000, guid: c766b95afb78b3440993fcd0c20c9417, type: 3}
+  - effectName: Wind_ATK
+    clip: {fileID: 8300000, guid: a14d9716ae6e1ce4da5470dab999639f, type: 3}
   cardUseVolume: 0.4
   drawVolume: 0.4
   comboCompleteVolume: 1
@@ -29867,7 +29869,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 375}
+  m_AnchoredPosition: {x: 0, y: 374.95715}
   m_SizeDelta: {x: 1496, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1868692685
@@ -31780,7 +31782,7 @@ MonoBehaviour:
     count: 1
   - cardId: 114
     count: 2
-  useAsStartingDeck: 1
+  useAsStartingDeck: 0
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:
@@ -32835,7 +32837,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 464.99997}
+  m_AnchoredPosition: {x: -0.00018310547, y: 464.95654}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2018776364
