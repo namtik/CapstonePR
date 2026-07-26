@@ -205,7 +205,7 @@ public class EnemyView : MonoBehaviour
         if (stat != null)
             UpdateHpBar(stat.currentHp, stat.maxHp);
 
-        UpdateActionGauge(stat != null ? (float)stat.GaugeStep / EnemyStat.GAUGE_MAX_STEPS : 0f);
+        UpdateActionGauge(stat != null ? (float)stat.GaugeStep / stat.GaugeMaxSteps : 0f);
     }
 
     // 데미지 텍스트 원점/색을 캐싱하고 게이지를 초기화한다
@@ -258,8 +258,9 @@ public class EnemyView : MonoBehaviour
 
         if (actionGaugeValueText != null)
         {
-            int step = stat != null ? Mathf.Clamp(stat.GaugeStep, 0, EnemyStat.GAUGE_MAX_STEPS) : Mathf.RoundToInt(ratio * EnemyStat.GAUGE_MAX_STEPS);
-            actionGaugeValueText.text = $"{step}/{EnemyStat.GAUGE_MAX_STEPS}";
+            int max = stat != null ? stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS;
+            int step = stat != null ? Mathf.Clamp(stat.GaugeStep, 0, max) : Mathf.RoundToInt(ratio * max);
+            actionGaugeValueText.text = $"{step}/{max}";
         }
     }
 

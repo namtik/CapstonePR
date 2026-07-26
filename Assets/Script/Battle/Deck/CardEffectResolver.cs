@@ -330,7 +330,7 @@ namespace Battle.Deck
             {
                 var frags = new List<CardInstance>();
                 foreach (var c in Ctx.deck.DrawPile)
-                    if (c != null && c.Element == CardElement.Fragment) frags.Add(c);
+                    if (IsFragmentCard(c)) frags.Add(c);
                 foreach (var c in frags)
                 {
                     RunImmediateEffects(c);
@@ -364,9 +364,17 @@ namespace Battle.Deck
                 case "WATER_CARD":    return c.Element == CardElement.Water;
                 case "WIND_CARD":     return c.Element == CardElement.Wind;
                 case "EARTH_CARD":    return c.Element == CardElement.Earth;
-                case "FRAGMENT_CARD": return c.Element == CardElement.Fragment;
+                case "FRAGMENT_CARD": return IsFragmentCard(c);
                 default: return true;
             }
+        }
+
+        // 파편 카드 판정 — 파편은 element가 EARTH이고 FRAGMENT 태그로 식별된다(구 Fragment 속성도 폴백 허용)
+        static bool IsFragmentCard(CardInstance c)
+        {
+            if (c == null) return false;
+            if (c.Element == CardElement.Fragment) return true;
+            return c.data != null && c.data.HasTag("FRAGMENT");
         }
 
         // Extra 문자열에서 지정 키의 값 추출
@@ -819,7 +827,7 @@ namespace Battle.Deck
                 if (Ctx.deck == null) return 0;
                 int cnt = 0;
                 foreach (var c in Ctx.deck.DrawPile)
-                    if (c != null && c.Element == CardElement.Fragment) cnt++;
+                    if (IsFragmentCard(c)) cnt++;
                 return cnt;
             }
 

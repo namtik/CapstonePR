@@ -659,6 +659,10 @@ public class RoundManager : MonoBehaviour
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
 
+        // 게이지 최대치는 Initialize에서 확정되므로, 뷰 텍스트를 이 적의 실제 최대치로 즉시 갱신(0/max 표시)
+        if (view != null)
+            view.UpdateActionGauge(0f);
+
         // 특이사항(복제): 주입된 사본은 다시 복제하지 않도록 막아 무한 복제 방지
         if (injected && controller != null)
             controller.AllowDuplication = false;

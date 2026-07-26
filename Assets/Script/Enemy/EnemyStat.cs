@@ -20,6 +20,7 @@ public class EnemyStat : MonoBehaviour
     private int gaugeStep = 0; // 현재 게이지 단계
     private bool midPatternTriggered = false; // 이번 사이클 방해행동 발동 여부
     public int GaugeStep => gaugeStep; // 현재 게이지 단계 조회
+    public int GaugeMaxSteps => gaugeMaxSteps; // 이 적의 행동 게이지 최대치(10~30) 조회
 
     private EnemyData enemyData; // 적 데이터 원본
     public EnemyData Data => enemyData; // 적 데이터 원본 조회(공격 시퀀스/방해행동 등 조회용)

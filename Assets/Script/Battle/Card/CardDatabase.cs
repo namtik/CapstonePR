@@ -165,7 +165,7 @@ namespace Battle.Card
                 : null;
         }
 
-        public const int CHARM = 501; // 매혹 카드 ID(구미호 특이사항). 사용 시 적 행동 게이지가 가득 참.
+        public const int CHARM = 505; // 매혹 카드 ID(구미호 특이사항). 사용 시 적 행동 게이지가 가득 참. (501=금속 파편과 충돌 방지로 505 사용)
 
         // 매혹 카드 인스턴스 생성(런타임 정의 — JSON에 없으면 코드로 구성)
         public static CardInstance CreateCharmInstance()
