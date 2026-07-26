@@ -597,7 +597,9 @@ namespace Battle
         {
             if (card == null) return;
             if (card.Type == CardType.Attack) _ctx.usedAttackCardCount++;
-            if (card.Element == CardElement.Fragment) _ctx.usedFragmentCardCount++;
+            // 파편 카드는 element가 EARTH이고 FRAGMENT 태그로 식별된다(element==Fragment는 항상 false여서 누락됨)
+            if (card.data != null && (card.Element == CardElement.Fragment || card.data.HasTag("FRAGMENT")))
+                _ctx.usedFragmentCardCount++;
             if (card.Element == CardElement.Fire) _usedFireCardCount++;
 
             string name = card.data.displayName ?? "";

@@ -89,10 +89,16 @@ public class EnemyStat : MonoBehaviour
     {
         if (!IsAlive) return;
 
+        float beforeHp = currentHp;
         currentHp -= damage;
         NormalizeHp();
         OnHpChanged?.Invoke(currentHp, maxHp);
-        if (damage > 0f) OnDamaged?.Invoke(damage); // 피격 연출(플래시/흔들기) 트리거
+        if (damage > 0f)
+        {
+            string who = enemyData != null ? enemyData.enemyName : name;
+            Debug.Log($"[적 피격] {who} -{damage:0.#} 피해 (HP {beforeHp:0} → {currentHp:0}/{maxHp:0})");
+            OnDamaged?.Invoke(damage); // 피격 연출(플래시/흔들기) 트리거
+        }
 
         // 사망 시 OnDied 이벤트가 한 번만 발생하도록 처리
         if (!IsAlive && !hasDied)

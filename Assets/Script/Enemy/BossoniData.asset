@@ -24,10 +24,7 @@ MonoBehaviour:
   specialAbility: 10
   Note: "\uCCB4\uB825\uC774 \uC808\uBC18\uC774 \uB418\uBA74 \uD53C\uD574\uAC00 2\uBC30\uAC00
     \uB41C\uB2E4."
-  maxHp: 350
-  attackDamage: 100
-  gaugeSpeed: 10
-  baseAttackCount: 3
+  maxHp: 300
   actionGaugeMax: 16
   attackSequence: 050000000b00000013000000
   disruptionActions: 010000000500000003000000

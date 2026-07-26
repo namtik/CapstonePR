@@ -212,6 +212,16 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (view == null) return;
 
         int nextDamage = seq[_newSystemAttackIndex % seq.Length];
+
+        // 실제 공격 계산(HandleGaugeFull)과 동일하게 예고에도 데미지 수정 효과를 반영한다
+        ResolveAbility();
+        if (_ability == EnemySpecialAbility.EscalatingAttack)
+            nextDamage += _escalateBonus;                       // 풍식귀: 이번 공격에 더해질 누적 증가
+        if (_nextAttackBuffed)
+            nextDamage = Mathf.CeilToInt(nextDamage * 1.5f);    // 방해행동-강화: 다음 공격 +50%
+        if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp && _halfHpTriggered)
+            nextDamage *= 2;                                    // 무사: 체력 절반 도달 후 2배
+
         view.SetAttackPreviewDamage(nextDamage);
     }
 
@@ -328,7 +338,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     }
 
     // 기획서 0.6v [방해행동-강화]: 다음 적 공격 1회를 +50% 강화한다
-    public void BuffNextAttack() => _nextAttackBuffed = true;
+    public void BuffNextAttack()
+    {
+        _nextAttackBuffed = true;
+        UpdateAttackPreviewForNewSystem(); // 강화 발동 즉시 공격 예고에 +50% 반영
+    }
     public bool IsNextAttackBuffed => _nextAttackBuffed; // 다음 공격 강화 적용 여부
 
     // 게이지 가득 시 화상/강화를 처리하고 적 공격을 실행한다

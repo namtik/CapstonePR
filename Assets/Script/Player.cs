@@ -323,6 +323,9 @@ public class Player : MonoBehaviour, IBattleUnit
     // 피해를 받고 방어도 소모·HP 감소·사망 처리 및 트리거를 발생시킨다
     public void TakeDamage(float damage, string cardtype = "normal")
     {
+        float incomingDamage = damage;
+        float guardBefore = guard;
+        float hpBefore = currentHp;
         bool blockConsumed = false;
         bool disposableGuard = cardtype == "enemy_attack";
         if (guard > 0)
@@ -361,6 +364,9 @@ public class Player : MonoBehaviour, IBattleUnit
                 Die();
             }
         }
+
+        if (cardtype == "enemy_attack")
+            Debug.Log($"[적 공격→플레이어] 실피해 {finalDamage} (원피해 {incomingDamage:0.#}, 방어도 흡수 {(guardBefore - guard):0.#}) HP {hpBefore:0} → {currentHp:0}/{maxHp:0}");
 
         if (cardtype != "self_loss")
         {
