@@ -152,6 +152,7 @@ namespace Battle
         private CardElement? _cursedElement;        // 현재 저주된 속성
         private int _curseRemainingUses;            // 저주 남은 지속 횟수
         private int _recoverCooldown;               // 방해행동(회복) 쿨다운
+        private int _lastDisruptionAction = -1;     // 직전에 발동한 방해행동(연속 발동 방지용, -1=없음)
 
         [Tooltip("지연형 방해가 발현되지 않은 채 흐른 최대 시간(초). 초과하면 미발현 보상으로 마감.")]
         [SerializeField] private float disruptionTrackTimeout = 25f; // 지연형 추적 타임아웃(초)
@@ -377,6 +378,7 @@ namespace Battle
             if (awakenTimerGauge != null) awakenTimerGauge.Hide();
             _usedFireCardCount = 0;
             _recoverCooldown = 0;
+            _lastDisruptionAction = -1; // 방해행동 연속 방지 기록 초기화
             // 저주는 전투 범위 상태 — 이전 전투가 저주가 남은 채 끝나도 다음 전투로 넘어가지 않도록 초기화
             _cursedElement = null;
             _curseRemainingUses = 0;
@@ -1429,10 +1431,27 @@ namespace Battle
             return data.BuildDisruptionMask();
         }
 
-        // AI 미사용/폴백 — 가용 행동 중 무작위 1개 선택(몬스터 허용 방해행동으로 제한)
-        int RandomFallbackPick(bool recoverReady)
+        // 직전 방해행동을 제외한 허용 마스크(길이 6). 연속 발동을 막되, 제외 후 남는 행동이 없으면 제외하지 않는다.
+        bool[] DisruptionAllowedExcludingLast()
         {
-            bool[] allowed = CurrentEnemyDisruptionMask();
+            bool[] baseMask = CurrentEnemyDisruptionMask(); // null = 6종 전체 허용
+            bool[] mask = new bool[6];
+            int allowedCount = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                mask[i] = baseMask == null || (i < baseMask.Length && baseMask[i]);
+                if (mask[i]) allowedCount++;
+            }
+            // 직전 행동 제외 — 단, 남는 행동이 하나라도 있을 때만(전부 막히는 것 방지)
+            if (_lastDisruptionAction >= 0 && _lastDisruptionAction < 6 &&
+                mask[_lastDisruptionAction] && allowedCount > 1)
+                mask[_lastDisruptionAction] = false;
+            return mask;
+        }
+
+        // AI 미사용/폴백 — 가용 행동 중 무작위 1개 선택(몬스터 허용 방해행동으로 제한)
+        int RandomFallbackPick(bool recoverReady, bool[] allowed)
+        {
             bool Ok(int a) => allowed == null || (a < allowed.Length && allowed[a]);
 
             var pool = new List<int>();
@@ -1450,6 +1469,8 @@ namespace Battle
         public string TriggerDisruption()
         {
             bool recoverReady = _recoverCooldown <= 0;
+            // 직전 방해행동을 제외해 연속 발동을 막는다(AI·랜덤 폴백 공통 마스크)
+            bool[] allowedMask = DisruptionAllowedExcludingLast();
             int pick;
             Battle.AI.AiDecision? rewardDecision = null;
             if (useAiDisruption && Battle.AI.EnemyAiModel.Loaded)
@@ -1459,7 +1480,7 @@ namespace Battle
                     // self-state(상태의존 마스크용): 이미 건 저주/강화, 현재 각성 게이지
                     bool curseActive = _cursedElement.HasValue;
                     bool enhanceActive = _enemy != null && _enemy.IsNextAttackBuffed;
-                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon, onlineLearning, curseActive, enhanceActive, _elementInputCount, CurrentEnemyDisruptionMask());
+                    var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon, onlineLearning, curseActive, enhanceActive, _elementInputCount, allowedMask);
                     pick = decision.action;
                     if (logVerbose)
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
@@ -1471,13 +1492,16 @@ namespace Battle
                 catch (System.Exception e)
                 {
                     Debug.LogWarning($"[적AI] 추론 실패 → 랜덤 폴백: {e.Message}");
-                    pick = RandomFallbackPick(recoverReady);
+                    pick = RandomFallbackPick(recoverReady, allowedMask);
                 }
             }
             else
             {
-                pick = RandomFallbackPick(recoverReady);
+                pick = RandomFallbackPick(recoverReady, allowedMask);
             }
+
+            // 다음 방해행동이 이번 것과 연속되지 않도록 직전 행동으로 기록
+            _lastDisruptionAction = pick;
 
             // 회복 쿨다운 진행 — 회복이 아닌 행동이 발동되면 1 감소
             if (pick != 4 && _recoverCooldown > 0) _recoverCooldown--;

@@ -3447,7 +3447,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1424448439}
   m_HandleRect: {fileID: 1424448438}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -29463,9 +29463,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9bf42127dc19824b958c8e65efbf19e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.NewBattleSystemBootstrap
-  startingRelics:
-  - {fileID: 11400000, guid: d7cda75059b219a429075b852b0c4b4d, type: 2}
-  - {fileID: 11400000, guid: 0b04b290f1612d144ac462e4e6a0adda, type: 2}
+  startingRelics: []
 --- !u!114 &1853841586
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29869,7 +29867,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 374.99988}
+  m_AnchoredPosition: {x: 0, y: 375}
   m_SizeDelta: {x: 1496, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1868692685
@@ -32837,7 +32835,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 464.99988}
+  m_AnchoredPosition: {x: -0.00018310547, y: 464.99997}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2018776364

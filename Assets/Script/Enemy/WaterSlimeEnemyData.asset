@@ -21,7 +21,7 @@ MonoBehaviour:
   enemyClass: 2
   specialAbility: 0
   Note: 
-  maxHp: 150
+  maxHp: 130
   actionGaugeMax: 16
   attackSequence: 0b00000009000000
   disruptionActions: 050000000200000004000000
