@@ -10,11 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ae79f9cda3162f14383b8714499f892a, type: 3}
-  m_Name: Elite_WaterFish
+  m_Name: Elite_WindPuppet
   m_EditorClassIdentifier: Assembly-CSharp::EliteRoundData
-  roundName: Elite_WaterFish
+  roundName: Elite_WindPuppet
   roundType: 3
   enemies:
-  - {fileID: 11400000, guid: 36dcf54b928ecf045b2ba6840200d317, type: 2}
-  - {fileID: 11400000, guid: 36dcf54b928ecf045b2ba6840200d317, type: 2}
+  - {fileID: 11400000, guid: f79fc9a0342d4a74e82ddf3182cb7b66, type: 2}
   columnIndex: 0

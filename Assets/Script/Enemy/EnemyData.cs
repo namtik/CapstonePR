@@ -59,9 +59,6 @@ public class EnemyData : ScriptableObject
     public string Note; // 특이사항 원문
 
     public float maxHp = 1000f; // 최대 체력
-    public float attackDamage= 10f; // 공격력(레거시/폴백 — 새 시스템은 attackSequence 사용)
-    public float gaugeSpeed=10f; // 행동 게이지 증가 속도
-    public int baseAttackCount = 3; // 기본 공격 횟수(레거시/폴백)
     [Tooltip("행동 게이지 최대치(10~30). 다 차면 공격, 절반에서 방해행동. 0/미설정 시 기본 20.")]
     public int actionGaugeMax = 20; // 행동 게이지 최대치(10~30)
 

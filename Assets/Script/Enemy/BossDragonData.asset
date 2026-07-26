@@ -15,9 +15,6 @@ MonoBehaviour:
   enemyName: "\uC774\uBB34\uAE30"
   enemySprite: {fileID: 21300000, guid: 26a27997e72efc54586dd9ba7ee8f11f, type: 3}
   maxHp: 100
-  attackDamage: 100
-  gaugeSpeed: 20
-  baseAttackCount: 3
   actionGaugeMax: 20
   backgroundSprites:
   - {fileID: 21300000, guid: 2304a1efdea1f5745a9e6ed948e4c945, type: 3}

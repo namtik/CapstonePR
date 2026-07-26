@@ -14,18 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoundDataConfig
   combatPool:
   - {fileID: 11400000, guid: 66284b114153f884188c77ec77d22fdb, type: 2}
-  - {fileID: 11400000, guid: 941dd26751dd14a41843cba744ae661c, type: 2}
   - {fileID: 11400000, guid: 51831e44c85728240a834d7f3f6f5983, type: 2}
-  - {fileID: 11400000, guid: a089b626a169acf43a637c5f490f243e, type: 2}
-  - {fileID: 11400000, guid: b0119eb5f62f61d4a8c2b5f8d413de01, type: 2}
+  - {fileID: 11400000, guid: 1a34b7ae13d556e418beb9a370c0f4cf, type: 2}
+  - {fileID: 11400000, guid: a9eb249fa3ab96c4d96b27a3b7169219, type: 2}
   - {fileID: 11400000, guid: 22b0904d9e12ea34fb10b6c753f46cc6, type: 2}
-  - {fileID: 11400000, guid: d485abbe1d086ec4c9c2bc290ed8dd27, type: 2}
+  - {fileID: 11400000, guid: b0119eb5f62f61d4a8c2b5f8d413de01, type: 2}
   - {fileID: 11400000, guid: 592a515739ff08a45bb1242723dbd1c4, type: 2}
   - {fileID: 11400000, guid: c0e0a5b9cfc4b1c44bcfef4058aa51bc, type: 2}
-  - {fileID: 11400000, guid: 1a34b7ae13d556e418beb9a370c0f4cf, type: 2}
-  - {fileID: 11400000, guid: fd47dd9cf23741e41a7aec0f8d83f9f8, type: 2}
-  - {fileID: 11400000, guid: a9eb249fa3ab96c4d96b27a3b7169219, type: 2}
-  - {fileID: 11400000, guid: a9eb249fa3ab96c4d96b27a3b7169219, type: 2}
   elitePool:
   - {fileID: 11400000, guid: 22b3b734fe2c59943a89e069642fdf76, type: 2}
   - {fileID: 11400000, guid: 83b60dc9627255a41abf1d3cca6e8a48, type: 2}
@@ -33,6 +28,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 15a7114819707814bb31300390c859fe, type: 2}
   bossPool:
   - {fileID: 11400000, guid: 956c7a274f75f5347b4d5bbebeefda3a, type: 2}
+  - {fileID: 11400000, guid: 79597cf87323b4b40a8ad63d70c29b21, type: 2}
+  - {fileID: 11400000, guid: a741cbd014074b541b745237e2a7ab6d, type: 2}
   shopData: {fileID: 11400000, guid: 598638186f153c247b3b87acdc2c0d08, type: 2}
   restData: {fileID: 11400000, guid: bb711fb7afa7c78408c6c1c4134617d0, type: 2}
   eventData: {fileID: 11400000, guid: 43c570b1d355d2d4484e8d946212dc4f, type: 2}

@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2ecabe9552fdb9144bff4b9221db6e7b, type: 3}
-  m_Name: Normal_LandPig
+  m_Name: XNormal_WindBird
   m_EditorClassIdentifier: Assembly-CSharp::CombatRoundData
-  roundName: Normal_LandPig
+  roundName: Normal_WindBird
   roundType: 0
   enemies:
-  - {fileID: 11400000, guid: 3fb0aaf2f17f1ae498cf7d6c232e6493, type: 2}
+  - {fileID: 11400000, guid: a87df773f62b24548bf9d8b5ebbf5e59, type: 2}
   columnIndex: 0

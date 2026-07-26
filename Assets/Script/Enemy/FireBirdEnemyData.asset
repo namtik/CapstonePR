@@ -12,13 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
   m_Name: FireBirdEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: "\uD654\uB839"
+  enemyName: "\uC7BF\uAE43\uC870"
   enemySprite: {fileID: 21300000, guid: c4111b29002e4cf44af6ddfde757b6df, type: 3}
+  hitSprite: {fileID: 0}
+  attackSprites: []
+  id: 100004
+  element: 1
+  enemyClass: 1
+  specialAbility: 0
+  Note: 
   maxHp: 100
-  attackDamage: 100
-  gaugeSpeed: 10
-  baseAttackCount: 3
-  actionGaugeMax: 20
+  actionGaugeMax: 14
+  attackSequence: 0800000009000000
+  disruptionActions: 000000000100000003000000
   backgroundSprites:
   - {fileID: 21300000, guid: 2ed17f46569e7834eb0fe28e8cee9c99, type: 3}
   - {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}

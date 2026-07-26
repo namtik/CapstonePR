@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2ecabe9552fdb9144bff4b9221db6e7b, type: 3}
-  m_Name: Normal_WaterFrog
+  m_Name: Normal_WindGiant
   m_EditorClassIdentifier: Assembly-CSharp::CombatRoundData
-  roundName: Normal_WaterFrog
+  roundName: Normal_WindGiant
   roundType: 0
   enemies:
-  - {fileID: 11400000, guid: dfa1d932022636f41a4662df08bd76e0, type: 2}
+  - {fileID: 11400000, guid: 26af76c23ba0baa4eae77c17a08c328a, type: 2}
   columnIndex: 0

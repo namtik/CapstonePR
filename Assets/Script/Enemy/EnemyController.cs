@@ -281,10 +281,13 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             OnStatusChanged?.Invoke(type, v);
         }
     }
-    // 적 공격력을 반환한다
+    // 적 공격력을 반환한다(다음 공격 시퀀스 값 기준, 없으면 폴백 상수)
     public float GetAttackDamage()
     {
-        return stat.attackDamage;
+        int[] seq = EffectiveAttackSequence();
+        if (seq != null && seq.Length > 0)
+            return seq[_newSystemAttackIndex % seq.Length];
+        return fallbackGaugeFullDamage;
     }
 
     // 방어도를 더한다
@@ -356,9 +359,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
         else
         {
-            damagePerHit = Mathf.RoundToInt(stat.attackDamage);
-            if (damagePerHit <= 0) damagePerHit = fallbackGaugeFullDamage;
-            hitCount = Mathf.Max(0, stat.CurrentAttackCount);
+            // 폴백(신 시스템 미가동/시퀀스 없음): 상수 피해 1회
+            damagePerHit = fallbackGaugeFullDamage;
+            hitCount = 1;
         }
 
         // 특이사항(풍식귀): 공격 시 피해가 1씩 누적 증가

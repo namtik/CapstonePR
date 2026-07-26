@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2ecabe9552fdb9144bff4b9221db6e7b, type: 3}
-  m_Name: Normal_FireBug
+  m_Name: Normal_WaterFish
   m_EditorClassIdentifier: Assembly-CSharp::CombatRoundData
-  roundName: Normal_FireBug
+  roundName: Normal_WaterFish
   roundType: 0
   enemies:
-  - {fileID: 11400000, guid: 15d65207d9c878247a257ba35d8f25df, type: 2}
+  - {fileID: 11400000, guid: 36dcf54b928ecf045b2ba6840200d317, type: 2}
   columnIndex: 0

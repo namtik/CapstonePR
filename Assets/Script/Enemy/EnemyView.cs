@@ -190,7 +190,6 @@ public class EnemyView : MonoBehaviour
     {
         stat = GetComponent<EnemyStat>();
         stat.OnHpChanged += UpdateHpBar;
-        stat.OnAttackCountChanged += UpdateAttackPreview;
         stat.OnDamaged += HandleDamaged;
 
         if (patternNoticeObject != null)
@@ -233,7 +232,6 @@ public class EnemyView : MonoBehaviour
     void OnDestroy()
     {
         stat.OnHpChanged -= UpdateHpBar;
-        stat.OnAttackCountChanged -= UpdateAttackPreview;
         stat.OnDamaged -= HandleDamaged;
         delDamageText();
     }
@@ -296,19 +294,6 @@ public class EnemyView : MonoBehaviour
 
         if (patternNoticeObject != null)
             patternNoticeObject.SetActive(false);
-    }
-
-    // 공격 횟수 기반으로 공격 예고 텍스트를 갱신한다
-    void UpdateAttackPreview(int count)
-    {
-        if (attackPreviewText == null) return;
-
-        int damagePerHit = Mathf.RoundToInt(stat.attackDamage);
-        if (damagePerHit < 0)
-            damagePerHit = 0;
-
-        int hitCount = Mathf.Max(0, count);
-        attackPreviewText.text = $"{damagePerHit}x{hitCount}";
     }
 
     // 새 전투 시스템: 다음 공격 데미지를 예고 텍스트에 표시한다

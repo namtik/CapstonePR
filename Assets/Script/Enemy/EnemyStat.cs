@@ -6,8 +6,6 @@ public class EnemyStat : MonoBehaviour
 {
     public float maxHp; // 최대 체력
     public float currentHp; // 현재 체력
-    public float attackDamage; // 공격력
-    public float gaugeSpeed; // 행동 게이지 증가 속도
     public bool IsAlive => currentHp > 0; // 생존 여부
 
     public float guard = 0f; // 방어도
@@ -70,8 +68,6 @@ public class EnemyStat : MonoBehaviour
         this.config = config;
 
         maxHp = data.maxHp * config.GetHpMultiplier(columnIndex, nodeType);
-        attackDamage = data.attackDamage;
-        gaugeSpeed = data.gaugeSpeed;
         currentHp = maxHp;
         hasDied = false;
         gaugeStep = 0;
@@ -84,7 +80,7 @@ public class EnemyStat : MonoBehaviour
 
         RollNewAttackPlan();
 
-        Debug.Log($"[{data.enemyName}] �÷�{columnIndex} / HP:{maxHp} / DMG:{attackDamage} / Speed:{gaugeSpeed} / ����Ƚ��:{currentAttackCount}");
+        Debug.Log($"[{data.enemyName}] �÷�{columnIndex} / HP:{maxHp} /����Ƚ��:{currentAttackCount}");
     }
 
     // 피해를 적용하고 사망을 처리한다
@@ -118,7 +114,10 @@ public class EnemyStat : MonoBehaviour
     // 새 공격 계획(공격 횟수)을 굴려 설정한다
     public void RollNewAttackPlan()
     {
-        plannedAttackCount = config.GetAttackCount(enemyData.baseAttackCount, columnIndex, nodeType);
+        // 공격 횟수 기준: attackSequence 길이(1차/2차/3차…)를 단일 소스로 사용(비어 있으면 1)
+        int baseAttackCount = (enemyData.attackSequence != null && enemyData.attackSequence.Length > 0)
+            ? enemyData.attackSequence.Length : 1;
+        plannedAttackCount = config.GetAttackCount(baseAttackCount, columnIndex, nodeType);
         currentAttackCount = plannedAttackCount;
         OnAttackCountChanged?.Invoke(currentAttackCount);
     }

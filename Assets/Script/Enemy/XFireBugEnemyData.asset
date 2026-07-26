@@ -10,15 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
-  m_Name: LandPigEnemyData
+  m_Name: XFireBugEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: "\uD1A0\uAC11\uBA67\uB3FC\uC9C0"
-  enemySprite: {fileID: 21300000, guid: e1da74fba319dec4c8e39b13eb811a21, type: 3}
+  enemyName: "\uC7BF\uB098\uBC29"
+  enemySprite: {fileID: 21300000, guid: 44c4b55ef5df0394bbf6490069005d90, type: 3}
+  hitSprite: {fileID: 0}
+  attackSprites: []
+  id: 0
+  element: 0
+  enemyClass: 1
+  specialAbility: 0
+  Note: 
   maxHp: 100
-  attackDamage: 100
-  gaugeSpeed: 10
-  baseAttackCount: 3
   actionGaugeMax: 20
+  attackSequence: 
+  disruptionActions: 
   backgroundSprites:
-  - {fileID: 21300000, guid: 5bea49d0d346dc842ab0640ce071d4d9, type: 3}
-  - {fileID: 21300000, guid: 74f4cc4f85b03234392e30ffcb472885, type: 3}
+  - {fileID: 21300000, guid: 2ed17f46569e7834eb0fe28e8cee9c99, type: 3}
+  - {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}
