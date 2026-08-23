@@ -122,10 +122,10 @@ namespace Battle.UI
         [SerializeField] private RectTransform awakenGaugeAnchor; // 게이지 부착 기준
         [Tooltip("게이지 자동 생성 시 크기.")]
         [FormerlySerializedAs("feverGaugeSize")]
-        [SerializeField] private Vector2 awakenGaugeSize = new Vector2(300f, 22f); // 게이지 크기
+        [SerializeField] private Vector2 awakenGaugeSize = new Vector2(480f, 56f); // 게이지 크기
         [Tooltip("anchor 기준 오프셋. y 음수 = 아래(HP바 아래).")]
         [FormerlySerializedAs("feverGaugeOffset")]
-        [SerializeField] private Vector2 awakenGaugeOffset = new Vector2(0f, -32f); // anchor 기준 오프셋
+        [SerializeField] private Vector2 awakenGaugeOffset = new Vector2(0f, -58f); // anchor 기준 오프셋
         [Tooltip("anchor(Player.hpBar) 미배선 시 게이지를 표시할 위치 — 화면 상단 중앙 기준(y 음수=아래로). hpBar 배선되면 무시.")]
         [SerializeField] private Vector2 awakenGaugeFallbackPos = new Vector2(0f, -40f); // anchor 없을 때 위치
         [Tooltip("게이지 위에 표시할 라벨 (예: 6/10, 10.0s). 비우면 게이지 자동 생성 시 함께 생성.")]
@@ -137,6 +137,11 @@ namespace Battle.UI
         [Tooltip("발동 중 색(카운트다운).")]
         [FormerlySerializedAs("feverActiveColor")]
         [SerializeField] private Color awakenActiveColor = new Color(0.75f, 0.35f, 1f, 1f); // 발동 중 색
+        [Header("각성 게이지 스킨")]
+        [SerializeField] private Sprite awakenIconSprite; // 1번: 왼쪽 아이콘
+        [SerializeField] private Sprite awakenFillSprite; // 2번: 찬 칸
+        [SerializeField] private Sprite awakenEmptySprite; // 3번: 빈 칸
+        [SerializeField] private Sprite awakenFrameSprite; // 4번: 프레임
 
         [Header("각성 입력 히스토리 (왼쪽 표시)")]
         [Tooltip("OFF면 각성 입력 히스토리(왼쪽 세로 격자)를 표시하지 않는다. 콤보 슬롯/스킬 목록에는 영향 없음.")]
@@ -186,6 +191,11 @@ namespace Battle.UI
         public System.Action SelectionClosedCallback; // 선택/픽커 완료 직후 콜백
 
         private Image _awakenGaugeFill; // 각성 게이지 채움 이미지
+        private readonly List<Image> _awakenSegments = new List<Image>(); // 각성 칸 이미지
+        private RectTransform _awakenSegmentRoot; // 칸들이 들어갈 영역
+        private int _awakenSegmentCount; // 현재 생성된 칸 수
+        private bool _awakenSkinReady; // 커스텀 스킨 적용 여부
+        const string AwakenSpriteResourcePath = "UI/AwakenGauge/"; // Resources 스킨 경로
 
         private System.Action<CardInstance> _selectionCallback; // 선택 모드 콜백
         private System.Func<CardInstance, bool> _selectionFilter; // 선택 가능 카드 필터
@@ -395,26 +405,42 @@ namespace Battle.UI
             float fill;
             Color color;
             string label;
+            int max = Mathf.Max(1, chargeMax);
+            int filled;
             if (active)
             {
                 float denom = timeMax > 0f ? timeMax : 1f;
                 fill = Mathf.Clamp01(timeRemaining / denom);
                 color = awakenActiveColor;
                 label = $"{Mathf.Max(0f, timeRemaining):F1}s";
+                filled = Mathf.RoundToInt(fill * max);
             }
             else
             {
-                int max = Mathf.Max(1, chargeMax);
                 int cur = Mathf.Clamp(chargeCur, 0, max);
                 fill = (float)cur / max;
                 color = awakenChargeColor;
                 label = $"{cur}/{max}";
+                filled = cur;
             }
 
-            awakenGauge.value = fill;
-            if (_awakenGaugeFill != null)
-                _awakenGaugeFill.color = new Color(color.r, color.g, color.b, 1f);
-            if (awakenGaugeLabel != null) awakenGaugeLabel.text = label;
+            if (_awakenSkinReady)
+            {
+                EnsureAwakenSegments(max);
+                ApplyAwakenSegmentFill(filled);
+            }
+            else
+            {
+                awakenGauge.value = fill;
+                if (_awakenGaugeFill != null)
+                    _awakenGaugeFill.color = new Color(color.r, color.g, color.b, 1f);
+            }
+
+            if (awakenGaugeLabel != null)
+            {
+                awakenGaugeLabel.gameObject.SetActive(!_awakenSkinReady);
+                if (!_awakenSkinReady) awakenGaugeLabel.text = label;
+            }
         }
 
         // 각성 게이지가 없으면 슬라이더/배경/채움/라벨을 코드로 생성
@@ -423,6 +449,7 @@ namespace Battle.UI
             if (awakenGauge != null)
             {
                 if (_awakenGaugeFill == null) _awakenGaugeFill = ResolveGaugeFill(awakenGauge);
+                ApplyAwakenGaugeSkin();
                 return;
             }
 
@@ -492,6 +519,7 @@ namespace Battle.UI
 
             awakenGauge = slider;
             _awakenGaugeFill = fillImg;
+            ApplyAwakenGaugeSkin();
 
             // 라벨이 없으면 생성
             if (awakenGaugeLabel == null)
@@ -566,6 +594,147 @@ namespace Battle.UI
                 if (img != null) return img;
             }
             return slider.GetComponentInChildren<Image>();
+        }
+
+        // 1·2·3·4번 스킨을 로드해 아이콘+프레임+칸 게이지로 바꾼다
+        void ApplyAwakenGaugeSkin()
+        {
+            if (awakenGauge == null || _awakenSkinReady) return;
+            ResolveAwakenSprites();
+            if (awakenIconSprite == null || awakenFillSprite == null
+                || awakenEmptySprite == null || awakenFrameSprite == null)
+                return;
+
+            Transform root = awakenGauge.transform;
+            HideLegacyAwakenSliderVisuals(root);
+
+            Image icon = GetOrCreateAwakenImage(root, "Icon", awakenIconSprite);
+            RectTransform iconRect = icon.rectTransform;
+            iconRect.anchorMin = new Vector2(0f, 0.5f);
+            iconRect.anchorMax = new Vector2(0f, 0.5f);
+            iconRect.pivot = new Vector2(0f, 0.5f);
+            iconRect.sizeDelta = new Vector2(56f, 56f);
+            iconRect.anchoredPosition = Vector2.zero;
+            icon.preserveAspect = true;
+
+            Image frame = GetOrCreateAwakenImage(root, "Frame", awakenFrameSprite);
+            RectTransform frameRect = frame.rectTransform;
+            frameRect.anchorMin = new Vector2(0f, 0.5f);
+            frameRect.anchorMax = new Vector2(1f, 0.5f);
+            frameRect.pivot = new Vector2(0f, 0.5f);
+            frameRect.offsetMin = new Vector2(36f, -20f);
+            frameRect.offsetMax = new Vector2(0f, 20f);
+            frame.preserveAspect = false;
+            frame.type = Image.Type.Simple;
+
+            Transform segmentT = frameRect.Find("Segments");
+            if (segmentT == null)
+            {
+                GameObject segGo = new GameObject("Segments", typeof(RectTransform));
+                segGo.layer = root.gameObject.layer;
+                segGo.transform.SetParent(frameRect, false);
+                segmentT = segGo.transform;
+            }
+            _awakenSegmentRoot = segmentT as RectTransform;
+            _awakenSegmentRoot.anchorMin = Vector2.zero;
+            _awakenSegmentRoot.anchorMax = Vector2.one;
+            _awakenSegmentRoot.offsetMin = new Vector2(14f, 6f);
+            _awakenSegmentRoot.offsetMax = new Vector2(-20f, -6f);
+
+            HorizontalLayoutGroup layout = _awakenSegmentRoot.GetComponent<HorizontalLayoutGroup>();
+            if (layout == null) layout = _awakenSegmentRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 3f;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
+            layout.padding = new RectOffset(0, 0, 0, 0);
+
+            iconRect.SetAsLastSibling();
+            _awakenSkinReady = true;
+        }
+
+        // Resources 폴백으로 각성 게이지 스프라이트를 채운다
+        void ResolveAwakenSprites()
+        {
+            if (awakenIconSprite == null)
+                awakenIconSprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_icon");
+            if (awakenFillSprite == null)
+                awakenFillSprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_fill");
+            if (awakenEmptySprite == null)
+                awakenEmptySprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_empty");
+            if (awakenFrameSprite == null)
+                awakenFrameSprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_frame");
+        }
+
+        // 예전 슬라이더 배경/채움을 숨긴다
+        static void HideLegacyAwakenSliderVisuals(Transform root)
+        {
+            Transform bg = root.Find("Background");
+            if (bg != null)
+            {
+                Image img = bg.GetComponent<Image>();
+                if (img != null) img.enabled = false;
+            }
+            Transform fillArea = root.Find("Fill Area");
+            if (fillArea != null) fillArea.gameObject.SetActive(false);
+        }
+
+        // 자식 Image를 찾거나 만든다
+        static Image GetOrCreateAwakenImage(Transform parent, string name, Sprite sprite)
+        {
+            Transform existing = parent.Find(name);
+            GameObject go = existing != null ? existing.gameObject : new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            if (existing == null)
+            {
+                go.layer = parent.gameObject.layer;
+                go.transform.SetParent(parent, false);
+            }
+            Image image = go.GetComponent<Image>();
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        // 칸 개수를 맞추고 2·3번 스프라이트를 연결한다
+        void EnsureAwakenSegments(int count)
+        {
+            if (_awakenSegmentRoot == null || count <= 0) return;
+            if (_awakenSegmentCount == count && _awakenSegments.Count == count) return;
+
+            for (int i = _awakenSegmentRoot.childCount - 1; i >= 0; i--)
+            {
+                GameObject child = _awakenSegmentRoot.GetChild(i).gameObject;
+                if (Application.isPlaying) Destroy(child);
+                else DestroyImmediate(child);
+            }
+            _awakenSegments.Clear();
+
+            for (int i = 0; i < count; i++)
+            {
+                GameObject go = new GameObject("Seg" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.layer = _awakenSegmentRoot.gameObject.layer;
+                go.transform.SetParent(_awakenSegmentRoot, false);
+                Image image = go.GetComponent<Image>();
+                image.sprite = awakenEmptySprite;
+                image.color = Color.white;
+                image.raycastTarget = false;
+                image.preserveAspect = true;
+                _awakenSegments.Add(image);
+            }
+            _awakenSegmentCount = count;
+        }
+
+        // 왼쪽부터 filled개만큼 2번(찬 칸), 나머지는 3번(빈 칸)
+        void ApplyAwakenSegmentFill(int filled)
+        {
+            for (int i = 0; i < _awakenSegments.Count; i++)
+            {
+                if (_awakenSegments[i] == null) continue;
+                _awakenSegments[i].sprite = i < filled ? awakenFillSprite : awakenEmptySprite;
+            }
         }
 
         // 각성 활성/비활성에 따라 콤보 UI와 딤을 토글

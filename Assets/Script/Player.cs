@@ -248,8 +248,19 @@ public class Player : MonoBehaviour, IBattleUnit
     // 상단 체력바가 들어갈 컨테이너 RectTransform을 찾는다
     RectTransform GetTopHpContainer()
     {
-        if (hpText != null && hpText.transform.parent is RectTransform parentRect)
-            return parentRect;
+        if (hpText != null)
+        {
+            Transform current = hpText.transform;
+            while (current != null)
+            {
+                if (current.name == "PlayerHP" && current is RectTransform playerHpRect)
+                    return playerHpRect;
+                current = current.parent;
+            }
+
+            if (hpText.transform.parent is RectTransform parentRect)
+                return parentRect;
+        }
 
         if (heartUI != null && heartUI.transform is RectTransform heartRect)
             return heartRect;
