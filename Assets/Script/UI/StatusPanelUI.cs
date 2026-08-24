@@ -17,9 +17,10 @@ public class StatusPanelUI : MonoBehaviour
     private IBattleUnit targetUnit;
 
     private Transform followTarget;   // 적 피격 흔들림을 따라갈 추적 대상
-    private Vector3 followWorldOffset;   // 추적 대상 대비 초기 월드 오프셋
+    private Vector3 followWorldOffset;   // 추적 대상 대비 초기 오프셋
     private bool following;   // 추적 활성화 여부
     private bool followOffsetCaptured;   // 오프셋 캡처 완료 여부
+    private Camera followCam;   // 지정 시 대상의 월드 위치를 이 카메라로 WorldToScreen 변환해 추적(3D)
 
     // 데이터베이스의 아이콘 목록을 키-스프라이트 맵으로 변환한다
     void Awake()
@@ -69,8 +70,21 @@ public class StatusPanelUI : MonoBehaviour
     public void SetFollowTarget(Transform target)
     {
         followTarget = target;
+        followCam = null; // 2D: 대상이 스크린 좌표(RectTransform)라고 가정
         following = target != null;
         followOffsetCaptured = false; // 레이아웃 정착 후(첫 LateUpdate) 오프셋 캡처
+    }
+
+    /// <summary>
+    /// 3D 몬스터용 추적. 대상의 월드 위치를 renderCam으로 WorldToScreen 변환해 따라간다.
+    /// (이 패널은 Overlay 캔버스 기준 — RectTransform.position이 스크린 픽셀이라 변환값 직접 대입 가능)
+    /// </summary>
+    public void SetFollowTarget(Transform target, Camera renderCam)
+    {
+        followTarget = target;
+        followCam = renderCam;
+        following = target != null;
+        followOffsetCaptured = false;
     }
 
     void LateUpdate()
@@ -88,13 +102,25 @@ public class StatusPanelUI : MonoBehaviour
         // 2) 적 피격 흔들림 추적 — 적의 현재 위치 + 초기 오프셋으로 패널을 함께 이동(흔들림 동기화).
         if (following && followTarget != null)
         {
+            // 3D(followCam 지정)면 월드→스크린 변환, 2D면 대상 좌표(스크린)를 그대로 사용
+            Vector3 basePos;
+            if (followCam != null)
+            {
+                basePos = followCam.WorldToScreenPoint(followTarget.position);
+                if (basePos.z < 0f) return; // 카메라 뒤면 갱신 생략(패널 튐 방지)
+            }
+            else
+            {
+                basePos = followTarget.position;
+            }
+
             if (!followOffsetCaptured)
             {
-                // 적 기본 위치(아직 흔들리기 전) 기준으로 패널과의 월드 오프셋을 1회 캡처
-                followWorldOffset = transform.position - followTarget.position;
+                // 대상 기본 위치(아직 흔들리기 전) 기준으로 패널과의 오프셋을 1회 캡처
+                followWorldOffset = transform.position - basePos;
                 followOffsetCaptured = true;
             }
-            transform.position = followTarget.position + followWorldOffset;
+            transform.position = basePos + followWorldOffset;
         }
     }
 

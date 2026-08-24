@@ -38,6 +38,12 @@ public enum EnemySpecialAbility
 public class EnemyData : ScriptableObject
 {
     public string enemyName; // 적 이름
+
+    [Header("3D 전투 프리팹")]
+    [Tooltip("3D 전투 스테이지에서 스폰할 몬스터별 전체 프리팹(모델+Animator+EnemyStat/Controller/EnemyView3D).\n" +
+             "비어 있으면 2D 경로(공유 enemyPrefab + 스프라이트)로 폴백한다.")]
+    public GameObject battlePrefab3D; // 3D 전투용 몬스터 프리팹(없으면 2D 폴백)
+
     public Sprite enemySprite; // 적 기본 스프라이트
     [Tooltip("피격 시 잠깐 바뀌는 이미지. 비우면 이미지 교체 없이 기존 피격 연출만 적용된다.")]
     public Sprite hitSprite; // 피격 시 표시 이미지

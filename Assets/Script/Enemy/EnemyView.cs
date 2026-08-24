@@ -4,7 +4,7 @@ using TMPro;
 using System.Collections;
 using UnityEngine.Serialization;
 
-public class EnemyView : MonoBehaviour
+public class EnemyView : MonoBehaviour, IEnemyView
 {
     [Header("UI")]
     [SerializeField] private bool autoBindOnValidate = true; // OnValidate 시 자동 바인딩 여부
@@ -441,7 +441,13 @@ public class EnemyView : MonoBehaviour
 
     public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time); // 피격 연출 잔여 시간(초)
 
-    public RectTransform ShakeTarget => shakeTarget != null ? shakeTarget : (transform as RectTransform); // 흔들기 대상 RectTransform
+    public Transform ShakeTarget => shakeTarget != null ? (Transform)shakeTarget : transform; // 흔들기 대상(상태패널 추적용)
+
+    // 사망 연출 — 2D는 별도 사망 애니가 없어 no-op. 파괴 대기는 DeathDuration(=피격 연출 잔여)이 담당.
+    public void PlayDeath() { }
+
+    // 2D는 사망 전용 애니가 없으므로 진행 중인 피격 연출 잔여 시간을 그대로 사용(기존 동작 보존).
+    public float DeathDuration => HitReactionRemaining;
 
     // 데미지 크기로 단계를 골라 피격 연출을 재생한다
     void HandleDamaged(float damage)

@@ -30,7 +30,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private bool _nextAttackBuffed = false; // 다음 공격 +50% 강화 여부
 
     private EnemyStat stat; // 적 스탯 컴포넌트
-    private EnemyView view; // 적 뷰 컴포넌트
+    private IEnemyView view; // 적 뷰(2D UI 또는 3D 모델)
     private Player player; // 플레이어 참조
     private RoundManager roundManager; // 라운드 매니저 참조
     private bool isDead = false; // 사망 처리 여부
@@ -62,7 +62,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private void Awake()
     {
         stat = GetComponent<EnemyStat>();
-        view = GetComponent<EnemyView>();
+        view = GetComponent<IEnemyView>();
     }
 
     // 참조를 해결하고 이벤트 구독 및 공격 파티클을 설정한다
@@ -481,10 +481,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         StartCoroutine(DestroyAfterHitReaction());
     }
 
-    // 피격 연출이 끝날 때까지 대기한 뒤 오브젝트를 파괴한다
+    // 사망 연출을 재생하고 그 길이만큼 대기한 뒤 오브젝트를 파괴한다
     IEnumerator DestroyAfterHitReaction()
     {
-        float wait = view != null ? view.HitReactionRemaining : 0f;
+        if (view != null) view.PlayDeath();               // 3D: Die 애니 / 2D: no-op
+        float wait = view != null ? view.DeathDuration : 0f; // 3D: 사망 애니 길이 / 2D: 피격 연출 잔여
         if (wait > 0f) yield return new WaitForSeconds(wait);
         Destroy(gameObject);
     }

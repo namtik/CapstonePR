@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: BossOniData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uB3C4\uAE68\uBE44"
+  battlePrefab3D: {fileID: 5942565393479847256, guid: 47e72397601e21e49889c18c27ea831e, type: 3}
   enemySprite: {fileID: 21300000, guid: 9a625cb65a6263f4fb2bdde7ec3f2c7b, type: 3}
   hitSprite: {fileID: 21300000, guid: 3fc1e03892bf5f34dab57a1d0e22f547, type: 3}
   attackSprites:

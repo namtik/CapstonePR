@@ -235,6 +235,7 @@ public class RoundManager : MonoBehaviour
     // 일반 전투를 시작한다.
     public void StartCombat(CombatRoundData data)
     {
+        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -251,6 +252,7 @@ public class RoundManager : MonoBehaviour
     // 정예 전투를 시작한다.
     public void StartCombat(EliteRoundData data)
     {
+        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -267,6 +269,7 @@ public class RoundManager : MonoBehaviour
     // 보스 전투를 시작한다.
     public void StartBoss(BossRoundData data)
     {
+        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -535,6 +538,7 @@ public class RoundManager : MonoBehaviour
     // 보상 처리 후 노드를 클리어 표시하고 맵으로 복귀한다(최종 보스 클리어 시 게임 클리어 화면).
     public void ReturnToMap()
     {
+        StageManager.Instance?.HideStage(); // 전투 이탈 — 3D 스테이지 숨김
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.EndBattle();
 
@@ -575,6 +579,7 @@ public class RoundManager : MonoBehaviour
     // 진행 중이던 전투를 정리하고 남은 적 GameObject를 제거한다(플레이어 사망/재시작 시).
     public void AbortActiveCombat()
     {
+        StageManager.Instance?.HideStage(); // 전투 중단 — 3D 스테이지 숨김
         if (IsNewBattleSystemActive())
             Battle.NewBattleController.Instance?.EndBattle();
         else
@@ -583,15 +588,25 @@ public class RoundManager : MonoBehaviour
         if (currentEnemy != null)
         {
             currentEnemy.OnDied -= HandleEnemyDied;
+            if (currentEnemy != null) Destroy(currentEnemy.gameObject); // 3D/2D 공통: 활성 적 오브젝트 제거
             currentEnemy = null;
         }
 
         StopAllCoroutines();
 
+        // 2D: enemySpawnPoint 아래 남은 적 정리
         if (enemySpawnPoint != null)
         {
             for (int i = enemySpawnPoint.childCount - 1; i >= 0; i--)
                 Destroy(enemySpawnPoint.GetChild(i).gameObject);
+        }
+
+        // 3D: 스테이지 EnemyAnchor 아래 남은 적 정리(사망 연출 중이던 잔여 포함)
+        Transform anchor = BattleStageController.Current != null ? BattleStageController.Current.EnemyAnchor : null;
+        if (anchor != null)
+        {
+            for (int i = anchor.childCount - 1; i >= 0; i--)
+                Destroy(anchor.GetChild(i).gameObject);
         }
 
         currentEnemyIndex = 0;
@@ -613,25 +628,43 @@ public class RoundManager : MonoBehaviour
     void SpawnEnemy(EnemyData data, int columnIndex, NodeType nodeType, bool injected = false)
     {
         _currentIsInjected = injected; // 주입(복제)된 적은 사망 시 인덱스를 증가시키지 않음
-        if (enemyPrefab == null)
+
+        // 3D 전투: EnemyData에 3D 프리팹이 있고 현재 로드된 3D 스테이지가 있으면 3D 경로, 아니면 2D 폴백.
+        bool use3D = data != null && data.battlePrefab3D != null && BattleStageController.Current != null;
+        Camera stageCam = use3D ? BattleStageController.Current.StageCamera : null;
+
+        if (!use3D && enemyPrefab == null)
         {
-            Debug.LogError("RoundManager: enemyPrefab이 없습니다.");
+            Debug.LogError("RoundManager: enemyPrefab이 없습니다(2D 폴백 불가).");
             return;
         }
 
-        GameObject go = Instantiate(enemyPrefab, enemySpawnPoint);
-
-        RectTransform rectTransform = go.GetComponent<RectTransform>();
-        if (rectTransform != null)
+        GameObject go;
+        if (use3D)
         {
-            rectTransform.anchoredPosition = Vector2.zero;
-            rectTransform.localScale = Vector3.one;
+            Transform anchor = BattleStageController.Current.EnemyAnchor;
+            // instantiateInWorldSpace=false → 프리팹의 로컬 트랜스폼(몬스터별 스케일/회전) 보존
+            go = Instantiate(data.battlePrefab3D, anchor, false);
+            go.transform.localPosition = Vector3.zero; // 앵커 위치에 정확히 안착(스케일/회전은 프리팹 유지)
+        }
+        else
+        {
+            go = Instantiate(enemyPrefab, enemySpawnPoint);
+            RectTransform rectTransform = go.GetComponent<RectTransform>();
+            if (rectTransform != null)
+            {
+                rectTransform.anchoredPosition = Vector2.zero;
+                rectTransform.localScale = Vector3.one;
+            }
         }
 
         EnemyStat stat = go.GetComponent<EnemyStat>();
-        EnemyView view = go.GetComponent<EnemyView>();
-
+        IEnemyView view = go.GetComponent<IEnemyView>();
         EnemyController controller = go.GetComponent<EnemyController>();
+
+        // 3D 뷰에 스테이지 카메라 주입(HUD WorldToScreen 팔로우 기준)
+        if (use3D && view is EnemyView3D view3D)
+            view3D.SetRenderCamera(stageCam);
 
         if (stat == null)
         {
@@ -641,7 +674,12 @@ public class RoundManager : MonoBehaviour
         if (enemyStatusPanel != null && controller != null)
         {
             enemyStatusPanel.SetTarget(controller);
-            if (view != null) enemyStatusPanel.SetFollowTarget(view.ShakeTarget);
+            if (view != null)
+            {
+                // 3D는 스테이지 카메라 기준 WorldToScreen 팔로우, 2D는 기존 스크린 좌표 팔로우
+                if (use3D) enemyStatusPanel.SetFollowTarget(view.ShakeTarget, stageCam);
+                else enemyStatusPanel.SetFollowTarget(view.ShakeTarget);
+            }
         }
         Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}");
 
@@ -654,7 +692,8 @@ public class RoundManager : MonoBehaviour
         if (view != null)
             view.SetAttackSprites(data.attackSprites);
 
-        if (combatStageController != null)
+        // 3D 스테이지에선 2D 배경을 건드리지 않는다(3D 포레스트가 배경 역할).
+        if (!use3D && combatStageController != null)
             combatStageController.ApplyEnemyBackground(data);
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
