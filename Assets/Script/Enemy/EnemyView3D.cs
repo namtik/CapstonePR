@@ -82,15 +82,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     // HUD 바인딩 및 초기 UI 반영
     void Start()
     {
-        _hud = EnemyOverlayHUD.Instance;
-        if (_hud != null)
-        {
-            _hud.Bind(hudAnchor != null ? hudAnchor : transform,
-                      renderCamera != null ? renderCamera : Camera.main,
-                      _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS);
-            if (_stat != null) _hud.SetHp(_stat.currentHp, _stat.maxHp);
-            _hud.SetGauge(0f);
-        }
+        BindHud();
     }
 
     void OnDestroy()
@@ -108,9 +100,22 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     public void SetRenderCamera(Camera cam)
     {
         renderCamera = cam;
-        if (_hud != null)
-            _hud.Bind(hudAnchor != null ? hudAnchor : transform, cam,
-                      _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS);
+        BindHud();
+    }
+
+    void BindHud()
+    {
+        if (_hud == null) _hud = EnemyOverlayHUD.Instance;
+        if (_hud == null)
+            _hud = FindFirstObjectByType<EnemyOverlayHUD>(FindObjectsInactive.Include);
+
+        if (_hud == null) return;
+
+        Transform anchor = hudAnchor != null ? hudAnchor : transform;
+        Camera cam = renderCamera != null ? renderCamera : Camera.main;
+        _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS);
+        if (_stat != null) _hud.SetHp(_stat.currentHp, _stat.maxHp);
+        _hud.SetGauge(0f);
     }
 
     // 렌더러별 기준 색을 캐싱(플래시 복귀용)

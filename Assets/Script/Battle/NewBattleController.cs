@@ -87,10 +87,11 @@ namespace Battle
         [SerializeField] private string frostAppliedEffectName = "Frost_EFF"; // 빙결 부여 이펙트 이름
 
         [Header("각성 화면 효과")]
-        [Tooltip("각성 동안 화면 전체에 유지될 프리팹. 각성 발동 시 루프 재생되고 종료 시 정지된다. " + "비우면 화면 효과 없음.")]
+        [Tooltip("각성 동안 3D 스테이지 카메라 앞에 유지될 프리팹(Hovl Screen wind 등). UI가 아니라 카메라에 붙여 시야만 덮는다. 비우면 화면 효과 없음.")]
         [SerializeField] private GameObject awakenScreenEffectPrefab; // 각성 화면 효과 프리팹
-        [Tooltip("각성 화면 효과 UIParticle 스케일 — 화면을 덮도록 플레이로 튜닝(클수록 큼). 0 이하면 오버레이 기본 스케일 사용.")]
-        [SerializeField] private float awakenScreenEffectScale = 100f; // 각성 화면 효과 스케일
+        [Tooltip("구 UIParticle 스케일. 카메라 부착 방식으로 바꾼 뒤로는 사용하지 않는다.")]
+        [FormerlySerializedAs("awakenScreenEffectScale")]
+        [SerializeField] private float awakenScreenEffectScale = 100f; // 미사용(호환용)
 
         [Header("디버그")]
         [SerializeField] private bool logVerbose = true;             // 상세 로그 출력 여부
@@ -456,7 +457,7 @@ namespace Battle
             _awakenMarkerPositions.Clear();
             _awakenMarkerHandles.Clear();
             if (effectOverlay != null) effectOverlay.ClearAll();
-            _awakenScreenEffectInstance = null;
+            StopAwakenScreenEffect();
             Log("전투 종료");
         }
 
@@ -1157,10 +1158,75 @@ namespace Battle
                 awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
             }
 
-            if (effectOverlay != null && awakenScreenEffectPrefab != null)
-                _awakenScreenEffectInstance = effectOverlay.PlayPrefabPersistent(awakenScreenEffectPrefab, awakenScreenEffectScale);
+            _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
 
             Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
+        }
+
+        // 각성 화면 이펙트를 3D 스테이지 카메라 앞에 붙여 시야만 덮는다(UI 위가 아님).
+        GameObject SpawnAwakenScreenEffect()
+        {
+            if (awakenScreenEffectPrefab == null) return null;
+
+            Camera cam = BattleStageController.Current != null
+                ? BattleStageController.Current.StageCamera
+                : Camera.main;
+            if (cam == null) cam = Camera.main;
+            if (cam == null) return null;
+
+            GameObject go = Instantiate(awakenScreenEffectPrefab);
+            go.name = "AwakenScreenWind";
+
+            // StageCamera는 Stage3D/Enemy3D만 그리므로, 그 마스크에 맞춰 레이어를 올린다.
+            int stage3d = LayerMask.NameToLayer("Stage3D");
+            if (stage3d >= 0 && (cam.cullingMask & (1 << stage3d)) != 0)
+                SetLayerRecursive(go.transform, stage3d);
+
+            var hs = go.GetComponent<Hovl.HS_ScreenEffect>();
+            if (hs == null) hs = go.GetComponentInChildren<Hovl.HS_ScreenEffect>(true);
+            if (hs != null)
+            {
+                hs.sourceCamera = cam;
+                hs.snapOnStart = true;
+                hs.parentToCameraOnStart = true;
+                // 기본 0.05는 StageCamera 근클립(0.3)보다 가까워 잘린다.
+                hs.fallbackDistance = Mathf.Max(cam.nearClipPlane + 0.05f, 0.4f);
+            }
+
+            var systems = go.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                if (systems[i] == null) continue;
+                var main = systems[i].main;
+                main.loop = true;
+                var renderer = systems[i].GetComponent<ParticleSystemRenderer>();
+                if (renderer != null) renderer.maxParticleSize = 2f;
+            }
+
+            return go;
+        }
+
+        // 각성 화면 이펙트를 정지하고 제거한다
+        void StopAwakenScreenEffect()
+        {
+            if (_awakenScreenEffectInstance == null) return;
+
+            var systems = _awakenScreenEffectInstance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                if (systems[i] == null) continue;
+                systems[i].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+
+            Destroy(_awakenScreenEffectInstance);
+            _awakenScreenEffectInstance = null;
+        }
+
+        static void SetLayerRecursive(Transform t, int layer)
+        {
+            t.gameObject.layer = layer;
+            for (int i = 0; i < t.childCount; i++)
+                SetLayerRecursive(t.GetChild(i), layer);
         }
 
         // 각성 종료 — 더미 복원·큐 콤보 일괄 발동·이펙트/UI 정리
@@ -1171,8 +1237,7 @@ namespace Battle
             _awakenMaxTime = 0f;
             if (awakenTimerGauge != null) awakenTimerGauge.Hide();
 
-            if (effectOverlay != null) effectOverlay.StopPersistent(_awakenScreenEffectInstance);
-            _awakenScreenEffectInstance = null;
+            StopAwakenScreenEffect();
 
             // 각성 직전 상태로 패/뽑을 더미/버린 더미 복원 (격리 카드 포함)
             _deck.RestorePiles(_awakenSnapshotHand, _awakenSnapshotDraw, _awakenSnapshotDiscard);
