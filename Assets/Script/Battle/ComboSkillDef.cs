@@ -38,6 +38,9 @@ namespace Battle
             return input[0] == slot1 && input[1] == slot2 && input[2] == slot3;
         }
 
+        // 세 슬롯이 모두 같은 속성이면 순서를 바꿔도 의미가 없다
+        public bool CanReorderSlots() => slot1 != slot2 || slot2 != slot3;
+
         // 콤보 시퀀스를 짧은 한글 문자열로 표현
         public string ComboString() => ElementsLabel(slot1, slot2, slot3);
 

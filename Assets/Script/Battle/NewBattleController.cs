@@ -45,6 +45,17 @@ namespace Battle
         [Tooltip("[테스트] 콤보 보상 UI 전까지 수동 획득용 — 이 RefComboID(1000~1019)를 컨텍스트 메뉴 '콤보 1개 추가'로 보유에 더함.")]
         [SerializeField] private int debugAddComboRefId = 1000;       // 디버그 수동 콤보 추가용 RefComboID
 
+        // 깨달음으로 바꾼 커맨드 순서 — 전투 시작 시 DB 기본값을 덮어쓴다
+        struct ComboSlotOverride
+        {
+            public int refComboId;
+            public CardElement slot1;
+            public CardElement slot2;
+            public CardElement slot3;
+        }
+
+        readonly List<ComboSlotOverride> _comboSlotOverrides = new List<ComboSlotOverride>();
+
         [Header("각성 콤보 이펙트")]
         [Tooltip("각성 종료 시 Damage 콤보가 적에게 들어갈 때 재생할 이펙트 이름. " +
                  "Resources/CardEffects/{이름}.png 시트를 찾아 적 위치에서 재생. " +
@@ -486,9 +497,77 @@ namespace Battle
         // 보유 콤보 정의 구성 — 지정 ID(효과+커맨드)가 있으면 그걸로, 없으면 보유 콤보 없음
         // (콤보 보상 3택1에서 아무것도 선택하지 않으면 콤보 없이 시작)
         List<ComboSkillDef> BuildOwnedComboDefs()
-            => (ownedComboIds != null && ownedComboIds.Count > 0)
+        {
+            List<ComboSkillDef> result = (ownedComboIds != null && ownedComboIds.Count > 0)
                 ? ComboSkillDatabase.BuildCombosByIds(ownedComboIds)
                 : new List<ComboSkillDef>();
+            ApplyComboSlotOverrides(result);
+            return result;
+        }
+
+        // 깨달음으로 저장한 슬롯 순서를 런타임 정의에 반영한다
+        void ApplyComboSlotOverrides(List<ComboSkillDef> defs)
+        {
+            if (defs == null || _comboSlotOverrides.Count == 0) return;
+
+            for (int i = 0; i < defs.Count; i++)
+            {
+                ComboSkillDef skill = defs[i];
+                if (skill == null) continue;
+
+                for (int j = 0; j < _comboSlotOverrides.Count; j++)
+                {
+                    if (_comboSlotOverrides[j].refComboId != skill.refComboId) continue;
+                    skill.slot1 = _comboSlotOverrides[j].slot1;
+                    skill.slot2 = _comboSlotOverrides[j].slot2;
+                    skill.slot3 = _comboSlotOverrides[j].slot3;
+                    break;
+                }
+            }
+        }
+
+        // 깨달음: 보유 콤보의 속성 순서를 런 동안 유지한다
+        public void SetOwnedComboSlots(int refComboId, CardElement slot1, CardElement slot2, CardElement slot3)
+        {
+            UpsertComboSlotOverride(refComboId, slot1, slot2, slot3);
+
+            if (ownedComboSkills != null)
+            {
+                for (int i = 0; i < ownedComboSkills.Count; i++)
+                {
+                    ComboSkillDef skill = ownedComboSkills[i];
+                    if (skill == null || skill.refComboId != refComboId) continue;
+                    skill.slot1 = slot1;
+                    skill.slot2 = slot2;
+                    skill.slot3 = slot3;
+                }
+            }
+
+            if (handHud != null)
+                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+
+            Debug.Log($"[NewBattle] 콤보 {refComboId} 슬롯 변경: {ComboSkillDef.ElementsLabel(slot1, slot2, slot3)}");
+        }
+
+        void UpsertComboSlotOverride(int refComboId, CardElement slot1, CardElement slot2, CardElement slot3)
+        {
+            var entry = new ComboSlotOverride
+            {
+                refComboId = refComboId,
+                slot1 = slot1,
+                slot2 = slot2,
+                slot3 = slot3,
+            };
+
+            for (int i = 0; i < _comboSlotOverrides.Count; i++)
+            {
+                if (_comboSlotOverrides[i].refComboId != refComboId) continue;
+                _comboSlotOverrides[i] = entry;
+                return;
+            }
+
+            _comboSlotOverrides.Add(entry);
+        }
 
         // 콤보 1개(효과 refComboId의 대표 커맨드) 추가 후 즉시 적용
         public void AddOwnedCombo(int refComboId)
@@ -515,6 +594,7 @@ namespace Battle
                 ownedComboIds.Clear();
 
             ownedComboSkills?.Clear();
+            _comboSlotOverrides.Clear();
             _comboCooldown = new int[0];
             if (handHud != null)
                 handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
