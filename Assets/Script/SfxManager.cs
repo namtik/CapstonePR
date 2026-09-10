@@ -85,6 +85,7 @@ public class SfxManager : MonoBehaviour
     void Play(AudioClip clip, float volume)
     {
         if (clip == null || source == null) return;
-        source.PlayOneShot(clip, Mathf.Clamp01(volume));
+        float sfxScale = SettingPanel.GetChannelVolume("SFX");
+        source.PlayOneShot(clip, Mathf.Clamp01(volume) * sfxScale);
     }
 }

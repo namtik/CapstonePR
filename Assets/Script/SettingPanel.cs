@@ -18,6 +18,10 @@ public class SettingPanel : MonoBehaviour
         public Slider slider; // 볼륨 슬라이더
         [Tooltip("(선택) 숫자 입력칸 (0~100). 슬라이더와 양방향 동기화.")]
         public TMP_InputField input; // 숫자 입력칸
+        [Tooltip("(선택) 퍼센트 표시. 비우면 행에서 Percent를 찾는다.")]
+        public TMP_Text percentLabel; // 퍼센트 라벨
+        [Tooltip("(선택) 음소거 버튼. 비우면 행에서 MuteButton을 찾는다.")]
+        public Button muteButton; // 음소거 버튼
         [Tooltip("(선택) AudioMixer에 노출(Expose)된 파라미터 이름. 지정하면 볼륨을 dB로 믹서에 적용한다.")]
         public string exposedParameter; // 믹서 노출 파라미터명
     }
@@ -76,6 +80,35 @@ public class SettingPanel : MonoBehaviour
 
     const string MasterVolumeKey = "MasterVolume"; // 마스터 볼륨 저장 키
     const string VolumeKeyPrefix = "Volume_"; // 채널 볼륨 저장 키 접두사
+    const string MuteKeyPrefix = "Mute_"; // 채널 음소거 저장 키 접두사
+    const string MasterMuteKey = "Master"; // 마스터 음소거 키
+
+    public static SettingPanel Instance { get; private set; } // 오버레이 입력 차단용
+
+    // 설정/사운드 창이 떠 있으면 맵 드래그 등 뒤쪽 입력을 막는다
+    public static bool IsOverlayOpen =>
+        Instance != null &&
+        ((Instance.settingCanvas != null && Instance.settingCanvas.activeInHierarchy) ||
+         (Instance.soundCanvas != null && Instance.soundCanvas.activeInHierarchy));
+
+    Button masterMuteButton; // 마스터 음소거 버튼(행에서 찾음)
+    TMP_Text masterPercentLabel; // 마스터 퍼센트 라벨
+
+    // 채널 볼륨(0~1)을 읽는다. 음소거면 0, 아니면 저장값을 반환한다.
+    public static float GetChannelVolume(string key)
+    {
+        if (string.IsNullOrEmpty(key) || IsMuted(key))
+            return 0f;
+        return Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKeyPrefix + key, 1f));
+    }
+
+    // 채널 음소거 여부를 읽는다
+    public static bool IsMuted(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return false;
+        return PlayerPrefs.GetInt(MuteKeyPrefix + key, 0) == 1;
+    }
 
     GameObject soundReturnCanvas; // 사운드 설정을 닫을 때 복귀할 캔버스
     Coroutine animRoutine; // 열림/닫힘 연출
@@ -94,6 +127,17 @@ public class SettingPanel : MonoBehaviour
     bool menuRestCached; // 펼친 상태 기준값 저장 여부
 
     // 캔버스 초기화, 버튼 연결, 볼륨 초기화 수행
+    void Awake()
+    {
+        Instance = this;
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
     void Start()
     {
         if (settingCanvas != null)
@@ -128,7 +172,19 @@ public class SettingPanel : MonoBehaviour
         HideConfirm();
 
         if (soundCanvas != null)
+        {
             soundCanvas.SetActive(false);
+            Transform soundDim = soundCanvas.transform.Find("Dim");
+            Button soundDimButton = soundDim != null
+                ? soundDim.GetComponent<Button>()
+                : soundCanvas.GetComponent<Button>();
+            if (soundDimButton != null)
+            {
+                soundDimButton.transition = Selectable.Transition.None;
+                soundDimButton.onClick.RemoveListener(CloseSoundSettings);
+                soundDimButton.onClick.AddListener(CloseSoundSettings);
+            }
+        }
         InitMasterVolume();
         InitVolumeChannels();
 
@@ -639,8 +695,9 @@ public class SettingPanel : MonoBehaviour
     // 저장된 마스터 볼륨을 적용하고 슬라이더/숫자입력을 동기화한다
     void InitMasterVolume()
     {
+        BindMasterRow();
         float saved = Mathf.Clamp01(PlayerPrefs.GetFloat(MasterVolumeKey, 1f));
-        AudioListener.volume = saved;
+        ApplyMasterOutput(saved);
 
         if (masterVolumeSlider != null)
         {
@@ -659,17 +716,68 @@ public class SettingPanel : MonoBehaviour
             masterVolumeInput.onEndEdit.AddListener(OnMasterVolumeInput);
         }
 
+        if (masterMuteButton != null)
+        {
+            masterMuteButton.onClick.RemoveListener(ToggleMasterMute);
+            masterMuteButton.onClick.AddListener(ToggleMasterMute);
+        }
+
         SyncVolumeUI(saved);
+        RefreshMuteVisual(masterMuteButton, IsMuted(MasterMuteKey));
+        DimVolumeSlider(masterVolumeSlider, IsMuted(MasterMuteKey));
+    }
+
+    void BindMasterRow()
+    {
+        if (masterVolumeSlider == null)
+            return;
+
+        Transform row = masterVolumeSlider.transform.parent;
+        if (masterMuteButton == null && row != null)
+        {
+            var mute = row.Find("MuteButton");
+            if (mute != null)
+                masterMuteButton = mute.GetComponent<Button>();
+        }
+
+        if (masterPercentLabel == null && row != null)
+        {
+            var percent = row.Find("Percent");
+            if (percent != null)
+            {
+                masterPercentLabel = percent.GetComponent<TMP_Text>();
+                if (masterPercentLabel == null)
+                    masterPercentLabel = percent.GetComponentInChildren<TMP_Text>(true);
+            }
+        }
     }
 
     // 마스터 볼륨(0~1)을 적용·저장하고 슬라이더/숫자 입력칸을 동기화한다
     void SetMasterVolume(float value01)
     {
         float v = Mathf.Clamp01(value01);
-        AudioListener.volume = v;
         PlayerPrefs.SetFloat(MasterVolumeKey, v);
         PlayerPrefs.Save();
+        if (IsMuted(MasterMuteKey) && v > 0.0001f)
+            SetMuted(MasterMuteKey, false);
+        ApplyMasterOutput(v);
         SyncVolumeUI(v);
+        RefreshMuteVisual(masterMuteButton, IsMuted(MasterMuteKey));
+        DimVolumeSlider(masterVolumeSlider, IsMuted(MasterMuteKey));
+    }
+
+    void ToggleMasterMute()
+    {
+        bool muted = !IsMuted(MasterMuteKey);
+        SetMuted(MasterMuteKey, muted);
+        ApplyMasterOutput(Mathf.Clamp01(PlayerPrefs.GetFloat(MasterVolumeKey, 1f)));
+        RefreshMuteVisual(masterMuteButton, muted);
+        DimVolumeSlider(masterVolumeSlider, muted);
+    }
+
+    void ApplyMasterOutput(float stored01)
+    {
+        AudioListener.volume = IsMuted(MasterMuteKey) ? 0f : Mathf.Clamp01(stored01);
     }
 
     // 슬라이더와 입력칸 표시를 현재 값으로 맞춘다(콜백 미발생)
@@ -677,8 +785,11 @@ public class SettingPanel : MonoBehaviour
     {
         if (masterVolumeSlider != null)
             masterVolumeSlider.SetValueWithoutNotify(value01);
+        string percent = Mathf.RoundToInt(value01 * 100f).ToString();
         if (masterVolumeInput != null)
-            masterVolumeInput.SetTextWithoutNotify(Mathf.RoundToInt(value01 * 100f).ToString());
+            masterVolumeInput.SetTextWithoutNotify(percent);
+        if (masterPercentLabel != null)
+            masterPercentLabel.text = percent + "%";
     }
 
     // 마스터 볼륨 슬라이더 변경 시 전역 볼륨을 적용·저장한다
@@ -705,6 +816,7 @@ public class SettingPanel : MonoBehaviour
         {
             if (ch == null || string.IsNullOrEmpty(ch.key) || ch.slider == null) continue;
 
+            BindChannelRow(ch);
             float saved = Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKeyPrefix + ch.key, 1f));
 
             ch.slider.minValue = 0f;
@@ -721,8 +833,55 @@ public class SettingPanel : MonoBehaviour
                 ch.input.onEndEdit.AddListener(t => OnChannelInput(ch, t));
             }
 
-            SetChannelVolume(ch, saved);
+            if (ch.muteButton != null)
+            {
+                VolumeChannel captured = ch;
+                ch.muteButton.onClick.RemoveAllListeners();
+                ch.muteButton.onClick.AddListener(() => ToggleChannelMute(captured));
+            }
+
+            SetChannelVolume(ch, saved, false);
+            RefreshMuteVisual(ch.muteButton, IsMuted(ch.key));
+            DimVolumeSlider(ch.slider, IsMuted(ch.key));
         }
+    }
+
+    void BindChannelRow(VolumeChannel ch)
+    {
+        if (ch == null || ch.slider == null)
+            return;
+
+        Transform row = ch.slider.transform.parent;
+        if (ch.muteButton == null && row != null)
+        {
+            var mute = row.Find("MuteButton");
+            if (mute != null)
+                ch.muteButton = mute.GetComponent<Button>();
+        }
+
+        if (ch.percentLabel == null && row != null)
+        {
+            var percent = row.Find("Percent");
+            if (percent != null)
+            {
+                ch.percentLabel = percent.GetComponent<TMP_Text>();
+                if (ch.percentLabel == null)
+                    ch.percentLabel = percent.GetComponentInChildren<TMP_Text>(true);
+            }
+        }
+    }
+
+    void ToggleChannelMute(VolumeChannel ch)
+    {
+        if (ch == null || string.IsNullOrEmpty(ch.key))
+            return;
+
+        bool muted = !IsMuted(ch.key);
+        SetMuted(ch.key, muted);
+        float stored = Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKeyPrefix + ch.key, 1f));
+        ApplyChannelOutput(ch, stored);
+        RefreshMuteVisual(ch.muteButton, muted);
+        DimVolumeSlider(ch.slider, muted);
     }
 
     // 채널 숫자 입력 확정 시 0~100을 파싱해 적용한다
@@ -735,7 +894,7 @@ public class SettingPanel : MonoBehaviour
     }
 
     // 채널 볼륨(0~1)을 적용·저장하고 믹서와 UI를 동기화한다
-    void SetChannelVolume(VolumeChannel ch, float value01)
+    void SetChannelVolume(VolumeChannel ch, float value01, bool unmuteOnChange = true)
     {
         if (ch == null || string.IsNullOrEmpty(ch.key)) return;
 
@@ -743,20 +902,79 @@ public class SettingPanel : MonoBehaviour
         PlayerPrefs.SetFloat(VolumeKeyPrefix + ch.key, v);
         PlayerPrefs.Save();
 
-        if (audioMixer != null && !string.IsNullOrEmpty(ch.exposedParameter))
-        {
-            float dB = v <= 0.0001f ? -80f : Mathf.Log10(v) * 20f;
-            audioMixer.SetFloat(ch.exposedParameter, dB);
-        }
+        if (unmuteOnChange && IsMuted(ch.key) && v > 0.0001f)
+            SetMuted(ch.key, false);
 
+        ApplyChannelOutput(ch, v);
         SyncChannelUI(ch, v);
+        RefreshMuteVisual(ch.muteButton, IsMuted(ch.key));
+        DimVolumeSlider(ch.slider, IsMuted(ch.key));
+    }
+
+    void ApplyChannelOutput(VolumeChannel ch, float stored01)
+    {
+        if (ch == null || audioMixer == null || string.IsNullOrEmpty(ch.exposedParameter))
+            return;
+
+        float v = IsMuted(ch.key) ? 0f : Mathf.Clamp01(stored01);
+        float dB = v <= 0.0001f ? -80f : Mathf.Log10(v) * 20f;
+        audioMixer.SetFloat(ch.exposedParameter, dB);
     }
 
     // 채널 슬라이더/입력칸 표시를 현재 값으로 맞춘다(콜백 미발생)
     void SyncChannelUI(VolumeChannel ch, float value01)
     {
         if (ch.slider != null) ch.slider.SetValueWithoutNotify(value01);
-        if (ch.input != null) ch.input.SetTextWithoutNotify(Mathf.RoundToInt(value01 * 100f).ToString());
+        string percent = Mathf.RoundToInt(value01 * 100f).ToString();
+        if (ch.input != null) ch.input.SetTextWithoutNotify(percent);
+        if (ch.percentLabel != null) ch.percentLabel.text = percent + "%";
+    }
+
+    static void SetMuted(string key, bool muted)
+    {
+        if (string.IsNullOrEmpty(key))
+            return;
+        PlayerPrefs.SetInt(MuteKeyPrefix + key, muted ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    static void RefreshMuteVisual(Button muteButton, bool muted)
+    {
+        if (muteButton == null)
+            return;
+
+        Transform mark = muteButton.transform.Find("MuteMark");
+        if (mark != null)
+        {
+            var img = mark.GetComponent<Image>();
+            if (img != null)
+                img.color = new Color(0.14f, 0.08f, 0.04f, 1f);
+        }
+
+        Transform check = muteButton.transform.Find("MuteCheck");
+        if (check != null)
+            check.gameObject.SetActive(muted);
+
+        Transform labelTf = muteButton.transform.Find("MuteLabel");
+        if (labelTf != null)
+        {
+            var label = labelTf.GetComponent<TMP_Text>();
+            if (label != null)
+                label.color = muted
+                    ? new Color(0.99f, 0.91f, 0.68f, 1f)
+                    : new Color(0.86f, 0.74f, 0.50f, 0.85f);
+        }
+    }
+
+    static void DimVolumeSlider(Slider slider, bool muted)
+    {
+        if (slider == null)
+            return;
+
+        var cg = slider.GetComponent<CanvasGroup>();
+        if (cg == null)
+            cg = slider.gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = muted ? 0.38f : 1f;
     }
 
     // 게임을 종료한다(에디터에서는 플레이 중지)
