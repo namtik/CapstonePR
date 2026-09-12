@@ -91,6 +91,7 @@ namespace Battle.UI
         private readonly List<GameObject> _activeFx = new List<GameObject>(); // 활성 FX 인스턴스 목록
 
         private RectTransform _selfRect; // 자신의 RectTransform 캐시
+        private static int s_runtimeSortingOverride = int.MinValue; // 일시정지 중 전역 정렬 덮어쓰기
         // 자신의 RectTransform 반환(지연 캐싱)
         public RectTransform Rect => _selfRect != null ? _selfRect : _selfRect = (RectTransform)transform;
 
@@ -100,13 +101,44 @@ namespace Battle.UI
             EnsureForegroundCanvas();
         }
 
+        // 일시정지 창보다 뒤에 두거나, 기본 전경 정렬로 되돌린다
+        public static void SetPauseOverlaySorting(bool paused, int pausedOrder, int defaultOrder)
+        {
+            s_runtimeSortingOverride = paused ? pausedOrder : int.MinValue;
+            int order = paused ? pausedOrder : defaultOrder;
+            var overlays = FindObjectsByType<CardEffectOverlay>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (int i = 0; i < overlays.Length; i++)
+            {
+                if (overlays[i] != null)
+                    overlays[i].ApplySortingOrder(order);
+            }
+        }
+
         // 자체 Canvas + Override Sorting으로 다른 UI보다 앞에 그려지도록 보장
         void EnsureForegroundCanvas()
+        {
+            ApplySortingOrder(ResolveSortingOrder());
+        }
+
+        int ResolveSortingOrder()
+        {
+            return s_runtimeSortingOverride != int.MinValue ? s_runtimeSortingOverride : foregroundSortingOrder;
+        }
+
+        void ApplySortingOrder(int order)
         {
             var canvas = GetComponent<Canvas>();
             if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
             canvas.overrideSorting = true;
-            canvas.sortingOrder = foregroundSortingOrder;
+            canvas.sortingOrder = order;
+
+            var canvases = GetComponentsInChildren<Canvas>(true);
+            for (int c = 0; c < canvases.Length; c++)
+            {
+                if (canvases[c] == null) continue;
+                canvases[c].overrideSorting = true;
+                canvases[c].sortingOrder = order;
+            }
         }
 
         // 카드의 effectName으로 효과를 1회 재생

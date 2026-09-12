@@ -82,6 +82,9 @@ public class SettingPanel : MonoBehaviour
     const string VolumeKeyPrefix = "Volume_"; // 채널 볼륨 저장 키 접두사
     const string MuteKeyPrefix = "Mute_"; // 채널 음소거 저장 키 접두사
     const string MasterMuteKey = "Master"; // 마스터 음소거 키
+    const int PauseUiSortingOrder = 5000; // 일시정지/사운드 창 정렬(카드 이펙트 1000보다 앞)
+    const int CardEffectPausedSortingOrder = 200; // 일시정지 중 이펙트 정렬
+    const int CardEffectDefaultSortingOrder = 1000; // 이펙트 기본 정렬
 
     public static SettingPanel Instance { get; private set; } // 오버레이 입력 차단용
 
@@ -251,7 +254,7 @@ public class SettingPanel : MonoBehaviour
 
         HideConfirm();
         settingCanvas.SetActive(true);
-        EnsureCanvasComponents();
+        BringPauseUiToFront();
         Time.timeScale = 0f;
         PlayAnim(true);
     }
@@ -274,7 +277,7 @@ public class SettingPanel : MonoBehaviour
             canvas = settingCanvas.AddComponent<Canvas>();
         }
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 1000;
+        canvas.sortingOrder = PauseUiSortingOrder;
 
         var scaler = settingCanvas.GetComponent<CanvasScaler>();
         if (scaler == null)
@@ -288,6 +291,30 @@ public class SettingPanel : MonoBehaviour
         {
             settingCanvas.AddComponent<GraphicRaycaster>();
         }
+    }
+
+    // 일시정지/사운드 창을 카드 이펙트보다 앞에 두고, 이펙트 정렬을 잠시 낮춘다
+    void BringPauseUiToFront()
+    {
+        if (settingCanvas != null)
+            EnsureCanvasComponents();
+        if (soundCanvas != null)
+        {
+            var sound = soundCanvas.GetComponent<Canvas>();
+            if (sound != null)
+            {
+                sound.renderMode = RenderMode.ScreenSpaceOverlay;
+                sound.sortingOrder = PauseUiSortingOrder + 1;
+            }
+        }
+
+        Battle.UI.CardEffectOverlay.SetPauseOverlaySorting(true, CardEffectPausedSortingOrder, CardEffectDefaultSortingOrder);
+    }
+
+    // 카드 이펙트를 기본 전경 정렬로 되돌린다
+    static void RestoreCardEffectOverlayOrder()
+    {
+        Battle.UI.CardEffectOverlay.SetPauseOverlaySorting(false, CardEffectPausedSortingOrder, CardEffectDefaultSortingOrder);
     }
 
     // 설정 캔버스를 닫고 게임 시간을 복구한다
@@ -527,6 +554,7 @@ public class SettingPanel : MonoBehaviour
             menuLayout.enabled = true;
         if (settingCanvas != null)
             settingCanvas.SetActive(false);
+        RestoreCardEffectOverlayOrder();
         Time.timeScale = 1f;
     }
 
@@ -601,6 +629,7 @@ public class SettingPanel : MonoBehaviour
     {
         StopAnim();
         HideConfirm();
+        RestoreCardEffectOverlayOrder();
         Time.timeScale = 1f;
 
         if (settingCanvas != null)
@@ -625,6 +654,7 @@ public class SettingPanel : MonoBehaviour
             soundCanvas.SetActive(false);
         if (settingCanvas != null)
             settingCanvas.SetActive(false);
+        RestoreCardEffectOverlayOrder();
         Time.timeScale = 1f;
 
         var stateController = GameStateController.Instance;
@@ -648,6 +678,7 @@ public class SettingPanel : MonoBehaviour
             soundCanvas.SetActive(true);
         if (settingCanvas != null)
             settingCanvas.SetActive(false);
+        BringPauseUiToFront();
     }
 
     // 외부에서 공용 사운드 설정을 열고 닫을 때 returnCanvas로 복귀하게 한다
@@ -659,6 +690,7 @@ public class SettingPanel : MonoBehaviour
             soundCanvas.SetActive(true);
         if (returnCanvas != null)
             returnCanvas.SetActive(false);
+        BringPauseUiToFront();
     }
 
     // 사운드 캔버스를 닫고 열었던 맥락의 캔버스로 복귀한다
@@ -676,6 +708,7 @@ public class SettingPanel : MonoBehaviour
             return;
         }
 
+        RestoreCardEffectOverlayOrder();
         if (ret != null)
             ret.SetActive(true);
     }
