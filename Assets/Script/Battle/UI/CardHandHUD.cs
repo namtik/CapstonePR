@@ -385,6 +385,9 @@ namespace Battle.UI
             RefitAwakenGaugeToAnchor();
         }
 
+        public RectTransform AwakenGaugeRect =>
+            awakenGauge != null ? awakenGauge.transform as RectTransform : null;
+
         // 각성 게이지 표시 여부를 제어
         public void SetAwakenGaugeVisible(bool visible)
         {

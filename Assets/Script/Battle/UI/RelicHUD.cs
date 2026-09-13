@@ -19,8 +19,10 @@ namespace Battle.UI
         private const float TT_ICON_SIZE  = 48f; // 툴팁 아이콘 크기
 
         [Header("HUD 위치")]
-        [Tooltip("유물 HUD 아이콘 컨테이너의 좌상단 앵커 기준 위치. Y를 더 작은(음수) 값으로 내리면 화면 아래로 이동")]
-        [SerializeField] private Vector2 hudAnchoredPosition = new Vector2(10f, -10f); // HUD 위치
+        [Tooltip("각성 게이지가 없을 때 쓰는 좌상단 앵커 기준 위치. 게이지가 보이면 그 아래로 자동 배치한다.")]
+        [SerializeField] private Vector2 hudAnchoredPosition = new Vector2(30f, -65f); // HUD 위치
+        [Tooltip("각성 게이지 하단과 유물 컨테이너 상단 사이 간격")]
+        [SerializeField] private float hudGapBelowAwakenGauge = 12f; // 각성 게이지 아래 간격
 
         [Header("HUD 배경 박스")]
         [Tooltip("유물 아이콘 뒤 박스 배경색(알파를 낮추면 반투명)")]
@@ -59,6 +61,7 @@ namespace Battle.UI
         [SerializeField] private float relicLabelFadeTime = 0.35f; // 발동 텍스트 페이드 시간
 
         private RectTransform   _iconContainer; // 아이콘 컨테이너
+        private CardHandHUD     _handHud; // 각성 게이지 위치 참조
         private GameObject      _tooltip; // 툴팁 루트
         private Image           _tooltipIcon; // 툴팁 아이콘
         private TextMeshProUGUI _tooltipName; // 툴팁 이름 텍스트
@@ -94,6 +97,12 @@ namespace Battle.UI
             BuildLayout();
             if (RelicManager.Instance != null)
                 Refresh(RelicManager.Instance.OwnedRelics);
+            ApplyHudPlacement();
+        }
+
+        void LateUpdate()
+        {
+            ApplyHudPlacement();
         }
 
         // 보유 유물 목록을 갱신하고 아이콘을 재구성
@@ -120,7 +129,7 @@ namespace Battle.UI
             _iconContainer.anchorMin        = new Vector2(0f, 1f);
             _iconContainer.anchorMax        = new Vector2(0f, 1f);
             _iconContainer.pivot            = new Vector2(0f, 1f);
-            _iconContainer.anchoredPosition = hudAnchoredPosition;
+            ApplyHudPlacement();
 
             var panelBg = containerGo.AddComponent<Image>();
             panelBg.color = hudBackgroundColor;
@@ -209,6 +218,64 @@ namespace Battle.UI
             _tooltip.SetActive(false);
         }
 
+        Vector2 CurrentHudAnchoredPosition()
+        {
+            return _iconContainer != null ? _iconContainer.anchoredPosition : hudAnchoredPosition;
+        }
+
+        // 각성 게이지가 보이면 그 바로 아래, 없으면 인스펙터 기본 위치에 둔다
+        void ApplyHudPlacement()
+        {
+            if (_iconContainer == null)
+                return;
+
+            RectTransform parent = _iconContainer.parent as RectTransform;
+            if (parent == null)
+            {
+                _iconContainer.anchoredPosition = hudAnchoredPosition;
+                return;
+            }
+
+            RectTransform gauge = ResolveAwakenGaugeRect();
+            if (gauge == null)
+            {
+                _iconContainer.anchoredPosition = hudAnchoredPosition;
+                return;
+            }
+
+            Canvas canvas = parent.GetComponentInParent<Canvas>();
+            Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.worldCamera
+                : null;
+
+            Vector3[] corners = new Vector3[4];
+            gauge.GetWorldCorners(corners);
+
+            Vector2 gaugeBottomLeft;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                parent,
+                RectTransformUtility.WorldToScreenPoint(cam, corners[0]),
+                cam,
+                out gaugeBottomLeft);
+
+            Vector2 parentTopLeft = new Vector2(parent.rect.xMin, parent.rect.yMax);
+            _iconContainer.anchoredPosition = new Vector2(
+                hudAnchoredPosition.x,
+                gaugeBottomLeft.y - hudGapBelowAwakenGauge - parentTopLeft.y);
+        }
+
+        RectTransform ResolveAwakenGaugeRect()
+        {
+            if (_handHud == null)
+                _handHud = FindFirstObjectByType<CardHandHUD>(FindObjectsInactive.Include);
+
+            RectTransform gauge = _handHud != null ? _handHud.AwakenGaugeRect : null;
+            if (gauge == null || !gauge.gameObject.activeInHierarchy)
+                return null;
+
+            return gauge;
+        }
+
         // 기존 아이콘을 제거하고 보유 유물로 다시 생성
         void RebuildIcons()
         {
@@ -291,8 +358,9 @@ namespace Battle.UI
             }
 
             // 동일 좌상단 앵커 기준으로 아이콘 위치를 계산
-            float iconX = hudAnchoredPosition.x + hudBackgroundPadding.x + iconIndex * (ICON_SIZE + ICON_SPACING);
-            float iconY = hudAnchoredPosition.y - hudBackgroundPadding.z; // 패딩 적용된 아이콘 상단 Y
+            Vector2 hudPos = CurrentHudAnchoredPosition();
+            float iconX = hudPos.x + hudBackgroundPadding.x + iconIndex * (ICON_SIZE + ICON_SPACING);
+            float iconY = hudPos.y - hudBackgroundPadding.z; // 패딩 적용된 아이콘 상단 Y
 
             _tooltipRect.anchoredPosition = new Vector2(iconX, iconY - ICON_SIZE - 4f);
             _tooltip.SetActive(true);
@@ -350,8 +418,9 @@ namespace Battle.UI
             if (_activationLabel == null) return;
 
             // 툴팁과 동일한 좌상단 앵커 기준으로 아이콘 중앙 아래에 배치
-            float iconX = hudAnchoredPosition.x + hudBackgroundPadding.x + iconIndex * (ICON_SIZE + ICON_SPACING);
-            float iconY = hudAnchoredPosition.y - hudBackgroundPadding.z;
+            Vector2 hudPos = CurrentHudAnchoredPosition();
+            float iconX = hudPos.x + hudBackgroundPadding.x + iconIndex * (ICON_SIZE + ICON_SPACING);
+            float iconY = hudPos.y - hudBackgroundPadding.z;
             var rect = (RectTransform)_activationLabel.transform;
             rect.SetAsLastSibling();
 
