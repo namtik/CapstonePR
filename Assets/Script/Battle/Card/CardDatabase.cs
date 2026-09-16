@@ -85,6 +85,23 @@ namespace Battle.Card
                 : (IReadOnlyList<CardEffectData>)Array.Empty<CardEffectData>();
         }
 
+        // 사용 시 적 1마리를 직접 지정해야 하는 카드인지(ALL_ENEMIES/RANDOM_ENEMY/PLAYER는 false)
+        public static bool RequiresEnemyTarget(int cardId)
+        {
+            var effects = GetEffects(cardId);
+            if (effects == null || effects.Count == 0) return false;
+            for (int i = 0; i < effects.Count; i++)
+            {
+                var e = effects[i];
+                if (e == null) continue;
+                string when = (e.when ?? "").Trim().ToUpperInvariant();
+                if (when.Length > 0 && when != "ON_USE" && when != "ON_USE_BEFORE_GAUGE") continue;
+                string tgt = (e.target ?? "").Trim().ToUpperInvariant();
+                if (tgt == "ENEMY") return true;
+            }
+            return false;
+        }
+
         // 덱 구성 한 항목(카드 ID + 수량)
         [Serializable]
         public struct DeckEntry

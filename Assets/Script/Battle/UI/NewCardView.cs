@@ -101,6 +101,7 @@ namespace Battle.UI
         private bool _capturedOriginalBgColor; // 원본 배경 색 캡처 여부
         private bool _isDragging; // 드래그 중 여부
         private bool _isHovering; // 호버 중 여부
+        private bool _targetingArmed; // 지정 카드가 임계선을 넘어 화살표 모드인지
         private int _hoverSlotOriginalSibling = -1; // 호버 전 형제 인덱스
         private Coroutine _drawIntroCo; // 등장 연출 코루틴
         private bool _playingIntro; // 등장 연출 진행 중 여부
@@ -133,6 +134,8 @@ namespace Battle.UI
 
             // OnEndDrag 누락으로 클릭이 막히는 것을 막기 위해 레이캐스트 복구
             _isDragging = false;
+            _targetingArmed = false;
+            if (Hud != null) Hud.HideEnemyTargeting();
             if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
         }
 
@@ -592,6 +595,7 @@ namespace Battle.UI
 
             CaptureHome();
             _isDragging = true;
+            _targetingArmed = false;
 
             // 드래그 레이어를 최상단으로 올리고 카드를 이동
             RectTransform dragLayer = Hud.DragLayer;
@@ -622,6 +626,21 @@ namespace Battle.UI
             if (scaleFactor <= 0f) scaleFactor = 1f;
 
             _rect.anchoredPosition += eventData.delta / scaleFactor;
+
+            // 지정 카드: 임계선 위에서 화살표로 적을 조준(카드는 계속 따라다님)
+            if (Hud.ShouldUseEnemyTargeting(Card))
+            {
+                if (eventData.position.y >= Hud.UseThresholdY)
+                {
+                    _targetingArmed = true;
+                    Hud.UpdateEnemyTargeting(this, eventData);
+                }
+                else if (_targetingArmed)
+                {
+                    _targetingArmed = false;
+                    Hud.HideEnemyTargeting();
+                }
+            }
         }
 
         // 드래그 종료 시 사용 시도, 실패하면 홈으로 복귀
@@ -630,6 +649,8 @@ namespace Battle.UI
             if (Card == null || Hud == null) return;
             _canvasGroup.blocksRaycasts = true;
             _isDragging = false;
+            _targetingArmed = false;
+            Hud.HideEnemyTargeting();
 
             bool used = Hud != null && Hud.TryUseFromDrag(this, eventData);
             if (!used)
@@ -750,6 +771,19 @@ namespace Battle.UI
             if (_rect == null) return;
             Vector3 baseScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
             _rect.localScale = baseScale * multiplier;
+        }
+
+        // 카드 상단 중앙의 스크린 좌표(화살표 시작점)
+        public Vector2 GetTopCenterScreenPosition()
+        {
+            if (_rect == null) _rect = GetComponent<RectTransform>();
+            Vector3[] corners = new Vector3[4];
+            _rect.GetWorldCorners(corners);
+            Vector3 world = (corners[1] + corners[2]) * 0.5f;
+            Canvas canvas = GetComponentInParent<Canvas>();
+            Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                ? canvas.worldCamera : null;
+            return RectTransformUtility.WorldToScreenPoint(cam, world);
         }
 
     }

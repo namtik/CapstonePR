@@ -205,6 +205,7 @@ namespace Battle
         private bool _relicFirstCardRecastPending; // 유물(복사경 10015): 첫 사용 카드 효과 1회 재발동 예약
 
         public bool IsAwakenActive => _awakenActive;        // 각성 활성 여부 노출
+        public EnemyController CurrentEnemy => _enemy;      // 현재 전투 적(단일)
         public CardDeckSystem Deck => _deck;                // 덱 시스템 노출
         public CardInstance LastResolvedCard => _lastResolvedCard; // 마지막 사용 카드 노출
         public CardElement? CursedElement => _cursedElement; // 현재 저주 속성 노출

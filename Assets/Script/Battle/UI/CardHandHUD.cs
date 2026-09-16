@@ -35,6 +35,11 @@ namespace Battle.UI
         [SerializeField] private Vector2 handAnchoredPos = new Vector2(0f, 240f); // 손패 루트 위치
         [Tooltip("드래그 종료 시 스크린 Y가 이 값 이상이면 카드 사용으로 간주.")]
         [SerializeField] private float useThresholdY = 500f; // 카드 사용 판정 Y
+        public float UseThresholdY => useThresholdY; // 지정 모드 진입 임계선
+
+        [Header("적 지정 — 드래그 화살표")]
+        [Tooltip("ON이면 target=ENEMY 카드를 드래그할 때 화살표로 적을 조준해야 사용된다.")]
+        [SerializeField] private bool enemyTargetingEnabled = true; // 적 지정 사용 여부
 
         [Header("Fan Layout — 손패 부채꼴 연출")]
         [Tooltip("ON이면 카드들이 호 형태로 회전·배치된다.")]
@@ -231,6 +236,7 @@ namespace Battle.UI
         {
             EnsureHandRoot();
             EnsureDragLayer();
+            EnsureTargetArrow();
             BuildSlotAnchors();
             SetAwakenMode(false);
             SetupPileClickHandlers();
@@ -1300,8 +1306,79 @@ namespace Battle.UI
             // 선택/픽커/더미보기 중에는 사용 금지
             if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
+
+            // 지정 카드는 적 위에서 놓아야 사용(임계선만으로는 사용되지 않음)
+            if (ShouldUseEnemyTargeting(view.Card))
+            {
+                if (!IsPointerOverCurrentEnemy(ev.position)) return false;
+                return UseCardCallback(view.Card);
+            }
+
             if (ev.position.y < useThresholdY) return false;
             return UseCardCallback(view.Card);
+        }
+
+        // 지정 화살표를 켜야 하는 카드인지(각성/선택 모드/적 없음은 제외)
+        public bool ShouldUseEnemyTargeting(CardInstance card)
+        {
+            if (!enemyTargetingEnabled || card == null) return false;
+            if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
+            if (NewBattleController.Instance != null && NewBattleController.Instance.IsAwakenActive)
+                return false;
+            if (!CardDatabase.RequiresEnemyTarget(card.Id)) return false;
+            var enemy = ResolveCurrentEnemy();
+            return enemy != null && enemy.IsAlive;
+        }
+
+        // 지정 모드 중 화살표/호버 링을 갱신한다
+        public void UpdateEnemyTargeting(NewCardView view, PointerEventData ev)
+        {
+            if (view == null || ev == null) { HideEnemyTargeting(); return; }
+            EnsureTargetArrow();
+            if (_targetArrow == null) return;
+
+            Vector2 start = view.GetTopCenterScreenPosition();
+            var enemy = ResolveCurrentEnemy();
+            bool hover = enemy != null && enemy.IsAlive && enemy.ContainsAimPoint(ev.position);
+            Vector2 end = ev.position;
+            float radius = 0f;
+            if (hover && enemy.TryGetAimScreen(out Vector2 enemyPos, out radius))
+                end = enemyPos;
+
+            if (dragLayer != null) dragLayer.SetAsLastSibling();
+            _targetArrow.transform.SetAsLastSibling();
+            view.transform.SetAsLastSibling();
+            _targetArrow.Show(start, end, hover, radius);
+        }
+
+        // 지정 화살표를 숨긴다
+        public void HideEnemyTargeting()
+        {
+            if (_targetArrow != null) _targetArrow.Hide();
+        }
+
+        EnemyController ResolveCurrentEnemy()
+        {
+            var nbc = NewBattleController.Instance;
+            if (nbc != null && nbc.CurrentEnemy != null && nbc.CurrentEnemy.IsAlive)
+                return nbc.CurrentEnemy;
+            var found = FindFirstObjectByType<EnemyController>();
+            return found != null && found.IsAlive ? found : null;
+        }
+
+        bool IsPointerOverCurrentEnemy(Vector2 screenPos)
+        {
+            var enemy = ResolveCurrentEnemy();
+            return enemy != null && enemy.IsAlive && enemy.ContainsAimPoint(screenPos);
+        }
+
+        TargetArrowView _targetArrow; // 지정 화살표 뷰
+
+        void EnsureTargetArrow()
+        {
+            if (_targetArrow != null) return;
+            EnsureDragLayer();
+            _targetArrow = TargetArrowView.EnsureOn(dragLayer);
         }
 
         // 클릭(더블클릭)으로 카드 사용을 시도
