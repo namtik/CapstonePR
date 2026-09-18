@@ -1,6 +1,17 @@
 using System;
 using UnityEngine;
 
+// 적 몬스터 동작(애니메이션) 종류. 동작당 클립이 여러 개면 뷰가 재생 시 랜덤으로 하나를 고른다.
+public enum EnemyMotion
+{
+    Idle,    // 대기
+    Attack,  // 공격
+    Buff,    // 버프(강화·회복 등 자기 강화)
+    Debuff,  // 디버프(저주·탈진·흡수 등 플레이어/게이지 대상)
+    Hit,     // 피격
+    Die,     // 사망
+}
+
 // 적 시각 표현(2D UI / 3D 모델)이 구현하는 공통 뷰 인터페이스.
 // EnemyController/RoundManager는 이 인터페이스에만 의존하므로, 표현 방식(UI Image ↔ 3D Animator)을
 // 바꿔도 전투 로직은 영향을 받지 않는다.
@@ -23,6 +34,8 @@ public interface IEnemyView
     void PlayHitEffect(string cardType);
     // 적 공격 모션을 재생한다.
     void PlayAttackMotion();
+    // 지정 동작 애니메이션을 재생한다(버프/디버프 등). 해당 동작에 클립이 여러 개면 랜덤 선택.
+    void PlayMotion(EnemyMotion motion);
     // 공격 모션 재생 가능 여부.
     bool HasAttackMotion { get; }
     // 진행 중인 피격 연출의 잔여 시간(초).

@@ -18,6 +18,22 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     [Tooltip("Die 상태/클립이 준비되어 있으면 체크. 없으면 사망 시 트리거 없이 축소 연출만 재생.")]
     [SerializeField] private bool hasDieState = false;      // Die 상태 존재 여부
 
+    [Header("동작별 클립(여러 개면 재생 시 랜덤)")]
+    [Tooltip("동작마다 해당하는 Animator 상태 이름을 나열. 2개 이상이면 재생 때 랜덤으로 하나 선택.\n" +
+             "비워두면 그 동작은 위의 트리거(Hit/Attack/Die)로 폴백. 버프/디버프는 여기에만 채운다.")]
+    [SerializeField] private MotionStates[] motionStates;   // 동작→상태 이름 목록
+    [Tooltip("CrossFade 블렌드 시간(초). 0이면 즉시 전환.")]
+    [SerializeField] private float motionCrossFade = 0.1f;  // 동작 전환 블렌드 시간
+
+    // 동작 종류별로 재생 가능한 Animator 상태 이름들. 인스펙터 배열을 Awake에서 딕셔너리로 캐싱.
+    [Serializable]
+    public struct MotionStates
+    {
+        public EnemyMotion motion;      // 동작 종류
+        public string[] stateNames;     // 이 동작에 해당하는 Animator 상태 이름들(1개 이상 시 랜덤)
+    }
+    private readonly Dictionary<EnemyMotion, string[]> _motionMap = new Dictionary<EnemyMotion, string[]>();
+
     [Header("피격 반응 — 흔들기")]
     [Tooltip("피격 시 흔들 대상(모델 루트). 비우면 이 오브젝트. 상태이상 패널 추적 대상이기도 함.")]
     [SerializeField] private Transform shakeTarget;         // 흔들기 대상(모델)
@@ -74,9 +90,35 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
 
         _mpb = new MaterialPropertyBlock();
         CacheBaseColors();
+        BuildMotionMap();
 
         _stat.OnHpChanged += HandleHpChanged;
         _stat.OnDamaged += HandleDamaged;
+    }
+
+    // 인스펙터의 동작별 상태 배열을 조회용 딕셔너리로 캐싱(빈 항목은 제외)
+    void BuildMotionMap()
+    {
+        _motionMap.Clear();
+        if (motionStates == null) return;
+        foreach (var m in motionStates)
+        {
+            if (m.stateNames != null && m.stateNames.Length > 0)
+                _motionMap[m.motion] = m.stateNames;
+        }
+    }
+
+    // 동작 애니메이션 재생. 등록된 상태가 있으면 랜덤 CrossFade, 없으면 폴백 트리거(있을 때만).
+    void PlayMotionInternal(EnemyMotion motion, string fallbackTrigger)
+    {
+        if (animator == null) return;
+        if (_motionMap.TryGetValue(motion, out var states) && states.Length > 0)
+        {
+            string state = states.Length == 1 ? states[0] : states[UnityEngine.Random.Range(0, states.Length)];
+            animator.CrossFade(state, motionCrossFade);
+            return;
+        }
+        if (!string.IsNullOrEmpty(fallbackTrigger)) animator.SetTrigger(fallbackTrigger);
     }
 
     // HUD 바인딩 및 초기 UI 반영
@@ -144,7 +186,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     void HandleDamaged(float damage)
     {
         if (_dead || damage <= 0f) return;
-        if (animator != null && !string.IsNullOrEmpty(hitTrigger)) animator.SetTrigger(hitTrigger);
+        PlayMotionInternal(EnemyMotion.Hit, hitTrigger);
         _hitReactionEndTime = Time.time + Mathf.Max(flashDuration, shakeDuration);
         StartFlash();
         StartShake();
@@ -172,7 +214,14 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     // 공격 모션 트리거(임팩트는 Animation Event → OnAttackImpact)
     public void PlayAttackMotion()
     {
-        if (animator != null && !string.IsNullOrEmpty(attackTrigger)) animator.SetTrigger(attackTrigger);
+        PlayMotionInternal(EnemyMotion.Attack, attackTrigger);
+    }
+
+    // 지정 동작 재생(버프/디버프 등). 등록된 클립이 여러 개면 랜덤 선택.
+    public void PlayMotion(EnemyMotion motion)
+    {
+        if (_dead) return;
+        PlayMotionInternal(motion, null); // 버프/디버프는 트리거 폴백 없음(리스트로만 구동)
     }
 
     // Animation Event(공격 클립 임팩트 프레임)에서 호출 — 공격 파티클 재생 + 동기화 이벤트 발생
@@ -193,8 +242,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     {
         if (_dead) return;
         _dead = true;
-        if (hasDieState && animator != null && !string.IsNullOrEmpty(dieTrigger))
-            animator.SetTrigger(dieTrigger);
+        if (hasDieState) PlayMotionInternal(EnemyMotion.Die, dieTrigger);
         StartCoroutine(DeathShrink());
     }
 
