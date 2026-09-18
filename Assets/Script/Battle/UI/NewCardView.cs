@@ -62,9 +62,9 @@ namespace Battle.UI
 
         [Header("크기 — 드래그/Hover 시 일시 확대")]
         [Tooltip("드래그 중 카드 크기 배율 (홈 스케일 기준).")]
-        [SerializeField] private float dragScaleMultiplier = 1.15f; // 드래그 시 배율
+        [SerializeField] private float dragScaleMultiplier = 1.22f; // 드래그 시 배율
         [Tooltip("Hover(마우스 위) 시 카드 크기 배율 (홈 스케일 기준).")]
-        [SerializeField] private float hoverScaleMultiplier = 1.05f; // 호버 시 배율
+        [SerializeField] private float hoverScaleMultiplier = 1.18f; // 호버 시 배율
         [Tooltip("Hover 시 카드가 위로 떠오를 거리 (UI 좌표 단위).")]
         [SerializeField] private Vector2 hoverPositionOffset = new Vector2(0f, 100f); // 호버 시 상승 오프셋
         [Tooltip("덱 보기/픽커 그리드 — 제자리에서만 살짝 확대(떠오름 없음).")]

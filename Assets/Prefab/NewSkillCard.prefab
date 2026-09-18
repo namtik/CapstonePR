@@ -513,8 +513,8 @@ MonoBehaviour:
   cardIcons: []
   resourcesFallback: 1
   useElementSpriteAsIcon: 1
-  dragScaleMultiplier: 1.5
-  hoverScaleMultiplier: 1.4
+  dragScaleMultiplier: 1.22
+  hoverScaleMultiplier: 1.18
   hoverPositionOffset: {x: 0, y: 100}
   drawIntroEnabled: 1
   drawIntroDuration: 0.28
