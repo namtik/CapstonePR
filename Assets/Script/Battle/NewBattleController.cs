@@ -1649,6 +1649,9 @@ namespace Battle
             // 다음 방해행동이 이번 것과 연속되지 않도록 직전 행동으로 기록
             _lastDisruptionAction = pick;
 
+            // 방해행동 종류에 맞는 몬스터 동작 애니메이션(3 강화·4 회복=버프 / 0 저주·1 탈진·2 흡수=디버프)
+            _enemy?.PlayDisruptionMotion(pick == 3 || pick == 4);
+
             // 회복 쿨다운 진행 — 회복이 아닌 행동이 발동되면 1 감소
             if (pick != 4 && _recoverCooldown > 0) _recoverCooldown--;
 

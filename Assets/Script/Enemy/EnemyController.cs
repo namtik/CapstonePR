@@ -345,6 +345,12 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     }
     public bool IsNextAttackBuffed => _nextAttackBuffed; // 다음 공격 강화 적용 여부
 
+    // 방해행동 발동 시 몬스터 동작 애니메이션을 재생한다(강화·회복=버프 / 저주·탈진·흡수=디버프)
+    public void PlayDisruptionMotion(bool isBuff)
+    {
+        view?.PlayMotion(isBuff ? EnemyMotion.Buff : EnemyMotion.Debuff);
+    }
+
     // 게이지 가득 시 화상/강화를 처리하고 적 공격을 실행한다
     void HandleGaugeFull()
     {
