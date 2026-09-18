@@ -1,11 +1,15 @@
+using Battle;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class RestStageController : MonoBehaviour
 {
     [Header("Buttons")]
-    [SerializeField] private Button button1;   // 휴식 선택 버튼1(회복)
-    [SerializeField] private Button button2;   // 휴식 선택 버튼2(기획 중)
+    [SerializeField] private Button button1;   // 명상(회복)
+    [SerializeField] private Button button2;   // 깨달음(콤보 순서 변경)
+
+    [Header("깨달음")]
+    [SerializeField] private RestEnlightenmentPanel enlightenmentPanel; // 보유 콤보 목록/재배열 패널
 
     [Header("Hover")]
     [SerializeField] private bool enableButtonHoverScale = true;   // 버튼 호버 스케일 사용 여부
@@ -15,6 +19,7 @@ public class RestStageController : MonoBehaviour
 
     private RestRoundData currentData;   // 현재 휴식 라운드 데이터
     private RoundManager currentRoundManager;   // 라운드 관리자 참조
+    private bool choiceLocked;   // 명상/깨달음 확정 후 추가 입력 차단
 
     // 버튼 바인딩과 호버 효과, 콜백을 설정한다
     private void Awake()
@@ -22,12 +27,15 @@ public class RestStageController : MonoBehaviour
         EnsureButtonsBound();
         EnsureHoverEffects();
         RegisterButtonCallbacks();
+        BindEnlightenmentPanel();
+        ShowChoiceView();
     }
 
     // 파괴 시 버튼 콜백을 해제한다
     private void OnDestroy()
     {
         UnregisterButtonCallbacks();
+        UnbindEnlightenmentPanel();
     }
 
     // 휴식 라운드를 시작하며 데이터와 버튼을 초기화한다
@@ -35,30 +43,143 @@ public class RestStageController : MonoBehaviour
     {
         currentData = data;
         currentRoundManager = roundmanager;
+        choiceLocked = false;
 
         EnsureButtonsBound();
         EnsureHoverEffects();
         RegisterButtonCallbacks();
+        BindEnlightenmentPanel();
+        ShowChoiceView();
+        RefreshEnlightenmentInteractable();
     }
 
-    // 버튼1 클릭: 최대 체력 비율만큼 플레이어를 회복한다
+    // 명상: 최대 체력 비율만큼 회복하고 맵으로 돌아간다
     private void OnButton1Clicked()
     {
+        if (choiceLocked)
+            return;
+
         if (currentRoundManager == null)
         {
             Debug.LogWarning("[RestStage] RoundManager 참조가 없어 버튼1 처리를 건너뜁니다.");
             return;
         }
 
+        choiceLocked = true;
+        SetChoiceButtonsInteractable(false);
+
         float healPercent = currentData != null ? currentData.healPercent : 0.2f;
         currentRoundManager.HealPlayer(healPercent);
-        Debug.Log($"[RestStage] 버튼1 선택: 최대 체력 {healPercent * 100f}% 회복");
+        Debug.Log($"[RestStage] 명상 선택: 최대 체력 {healPercent * 100f}% 회복");
     }
 
-    // 버튼2 클릭: 아직 기획 중인 동작(로그만 출력)
+    // 깨달음: 보유 콤보 목록을 연다. 확정 전에는 뒤로 가 명상을 다시 고를 수 있다
     private void OnButton2Clicked()
     {
-        Debug.Log("[RestStage] 버튼2는 아직 기획 중입니다.");
+        if (choiceLocked)
+            return;
+
+        if (!HasOwnedCombos())
+            return;
+
+        SetChoiceButtonsVisible(false);
+        if (enlightenmentPanel != null)
+            enlightenmentPanel.Open();
+    }
+
+    void OnEnlightenmentBack()
+    {
+        if (choiceLocked)
+            return;
+
+        ShowChoiceView();
+        RefreshEnlightenmentInteractable();
+    }
+
+    void OnEnlightenmentConfirmed()
+    {
+        if (currentRoundManager == null)
+        {
+            Debug.LogWarning("[RestStage] RoundManager 참조가 없어 깨달음 종료를 건너뜁니다.");
+            ShowChoiceView();
+            return;
+        }
+
+        choiceLocked = true;
+        SetChoiceButtonsInteractable(false);
+        currentRoundManager.ReturnToMap();
+        Debug.Log("[RestStage] 깨달음 확정 — 맵으로 복귀");
+    }
+
+    void ShowChoiceView()
+    {
+        if (enlightenmentPanel != null)
+            enlightenmentPanel.Hide();
+
+        SetChoiceButtonsVisible(true);
+        SetChoiceButtonsInteractable(!choiceLocked);
+    }
+
+    void RefreshEnlightenmentInteractable()
+    {
+        if (button2 == null)
+            return;
+
+        button2.interactable = !choiceLocked && HasOwnedCombos();
+    }
+
+    static bool HasOwnedCombos()
+    {
+        var nb = NewBattleController.Instance;
+        if (nb == null || nb.OwnedComboSkills == null)
+            return false;
+
+        for (int i = 0; i < nb.OwnedComboSkills.Count; i++)
+        {
+            if (nb.OwnedComboSkills[i] != null)
+                return true;
+        }
+
+        return false;
+    }
+
+    void SetChoiceButtonsVisible(bool visible)
+    {
+        if (button1 != null)
+            button1.gameObject.SetActive(visible);
+        if (button2 != null)
+            button2.gameObject.SetActive(visible);
+    }
+
+    void SetChoiceButtonsInteractable(bool interactable)
+    {
+        if (button1 != null)
+            button1.interactable = interactable;
+        if (button2 != null)
+            button2.interactable = interactable && HasOwnedCombos();
+    }
+
+    void BindEnlightenmentPanel()
+    {
+        if (enlightenmentPanel == null)
+            enlightenmentPanel = GetComponentInChildren<RestEnlightenmentPanel>(true);
+
+        if (enlightenmentPanel == null)
+            return;
+
+        enlightenmentPanel.OnBackToChoice -= OnEnlightenmentBack;
+        enlightenmentPanel.OnConfirmed -= OnEnlightenmentConfirmed;
+        enlightenmentPanel.OnBackToChoice += OnEnlightenmentBack;
+        enlightenmentPanel.OnConfirmed += OnEnlightenmentConfirmed;
+    }
+
+    void UnbindEnlightenmentPanel()
+    {
+        if (enlightenmentPanel == null)
+            return;
+
+        enlightenmentPanel.OnBackToChoice -= OnEnlightenmentBack;
+        enlightenmentPanel.OnConfirmed -= OnEnlightenmentConfirmed;
     }
 
     // 인스펙터에 비어 있는 버튼 참조를 자식에서 찾아 채운다
@@ -72,7 +193,7 @@ public class RestStageController : MonoBehaviour
             return;
 
         if (button1 == null)
-            button1 = FindButtonByName(buttons, "Button");
+            button1 = FindButtonByName(buttons, "HealButton") ?? FindButtonByName(buttons, "Button");
         if (button2 == null)
             button2 = FindButtonByName(buttons, "Button (1)");
 

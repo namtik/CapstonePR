@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,6 +18,10 @@ public class SettingPanel : MonoBehaviour
         public Slider slider; // 볼륨 슬라이더
         [Tooltip("(선택) 숫자 입력칸 (0~100). 슬라이더와 양방향 동기화.")]
         public TMP_InputField input; // 숫자 입력칸
+        [Tooltip("(선택) 퍼센트 표시. 비우면 행에서 Percent를 찾는다.")]
+        public TMP_Text percentLabel; // 퍼센트 라벨
+        [Tooltip("(선택) 음소거 버튼. 비우면 행에서 MuteButton을 찾는다.")]
+        public Button muteButton; // 음소거 버튼
         [Tooltip("(선택) AudioMixer에 노출(Expose)된 파라미터 이름. 지정하면 볼륨을 dB로 믹서에 적용한다.")]
         public string exposedParameter; // 믹서 노출 파라미터명
     }
@@ -45,6 +50,23 @@ public class SettingPanel : MonoBehaviour
     [Tooltip("(선택) 사운드 설정 → 설정 패널로 돌아가는 버튼.")]
     public Button soundBackButton; // 사운드 설정 뒤로 버튼
 
+    [Header("일시정지 연출")]
+    [Tooltip("전체 화면 딤. 비워두면 연출 없이 바로 연다.")]
+    public CanvasGroup dimGroup; // 배경 딤
+    [Tooltip("중앙 패널 CanvasGroup. 비워두면 스케일/페이드 연출을 생략한다.")]
+    public CanvasGroup panelGroup; // 중앙 패널
+    [Tooltip("확인 팝업 루트. 메인 메뉴/종료 전에 띄운다.")]
+    public GameObject confirmRoot; // 확인 팝업
+    public TMP_Text confirmMessage; // 확인 문구
+    public Button confirmYesButton; // 확인 예
+    public Button confirmNoButton; // 확인 아니오
+    [SerializeField, Range(0.08f, 0.6f)] float openDuration = 0.2f; // 딤 열림 시간
+    [SerializeField, Range(0.08f, 0.6f)] float closeDuration = 0.18f; // 딤 닫힘 시간
+    [SerializeField, Range(0.2f, 1f)] float dimAlpha = 0.72f; // 딤 최대 알파
+    [SerializeField, Range(0.03f, 0.16f)] float buttonStagger = 0.06f; // 버튼 간 펼침 간격
+    [SerializeField, Range(0.08f, 0.4f)] float buttonAnimDuration = 0.22f; // 버튼 하나 연출 시간
+    [SerializeField] float buttonFoldOffset = 56f; // 접힐 때 위로 올라가는 거리
+
     [Header("추가 볼륨 채널 (배경음 / 효과음 / UI — 나중에 슬라이더만 연결하면 동작)")]
     [Tooltip("배경음/효과음/UI를 카테고리별로 조절하려면 AudioMixer를 연결하고, 아래 채널의 Exposed Parameter에 믹서 노출 파라미터명을 적는다. 믹서가 없으면 값은 PlayerPrefs에만 저장되며, 각 사운드 코드에서 PlayerPrefs.GetFloat(\"Volume_<Key>\", 1f)로 읽어 쓰면 된다.")]
     public AudioMixer audioMixer; // 볼륨 적용 대상 오디오 믹서
@@ -58,10 +80,67 @@ public class SettingPanel : MonoBehaviour
 
     const string MasterVolumeKey = "MasterVolume"; // 마스터 볼륨 저장 키
     const string VolumeKeyPrefix = "Volume_"; // 채널 볼륨 저장 키 접두사
+    const string MuteKeyPrefix = "Mute_"; // 채널 음소거 저장 키 접두사
+    const string MasterMuteKey = "Master"; // 마스터 음소거 키
+    const int PauseUiSortingOrder = 5000; // 일시정지/사운드 창 정렬(카드 이펙트 1000보다 앞)
+    const int CardEffectPausedSortingOrder = 200; // 일시정지 중 이펙트 정렬
+    const int CardEffectDefaultSortingOrder = 1000; // 이펙트 기본 정렬
+
+    public static SettingPanel Instance { get; private set; } // 오버레이 입력 차단용
+
+    // 설정/사운드 창이 떠 있으면 맵 드래그 등 뒤쪽 입력을 막는다
+    public static bool IsOverlayOpen =>
+        Instance != null &&
+        ((Instance.settingCanvas != null && Instance.settingCanvas.activeInHierarchy) ||
+         (Instance.soundCanvas != null && Instance.soundCanvas.activeInHierarchy));
+
+    Button masterMuteButton; // 마스터 음소거 버튼(행에서 찾음)
+    TMP_Text masterPercentLabel; // 마스터 퍼센트 라벨
+
+    // 채널 볼륨(0~1)을 읽는다. 음소거면 0, 아니면 저장값을 반환한다.
+    public static float GetChannelVolume(string key)
+    {
+        if (string.IsNullOrEmpty(key) || IsMuted(key))
+            return 0f;
+        return Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKeyPrefix + key, 1f));
+    }
+
+    // 채널 음소거 여부를 읽는다
+    public static bool IsMuted(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return false;
+        return PlayerPrefs.GetInt(MuteKeyPrefix + key, 0) == 1;
+    }
 
     GameObject soundReturnCanvas; // 사운드 설정을 닫을 때 복귀할 캔버스
+    Coroutine animRoutine; // 열림/닫힘 연출
+    System.Action pendingConfirm; // 확인 팝업에서 예 선택 시 실행
+    bool isClosing; // 닫힘 연출 진행 중
+
+    readonly List<RectTransform> menuButtons = new List<RectTransform>();
+    readonly List<CanvasGroup> menuButtonGroups = new List<CanvasGroup>();
+    readonly List<ButtonHoverScale> menuHovers = new List<ButtonHoverScale>();
+    readonly List<Vector2> menuRestPos = new List<Vector2>();
+    readonly List<Vector3> menuRestScale = new List<Vector3>();
+    readonly List<Vector2> menuFromPos = new List<Vector2>();
+    readonly List<Vector3> menuFromScale = new List<Vector3>();
+    readonly List<float> menuFromAlpha = new List<float>();
+    VerticalLayoutGroup menuLayout; // 버튼 세로 레이아웃(연출 중 잠시 끔)
+    bool menuRestCached; // 펼친 상태 기준값 저장 여부
 
     // 캔버스 초기화, 버튼 연결, 볼륨 초기화 수행
+    void Awake()
+    {
+        Instance = this;
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
+
     void Start()
     {
         if (settingCanvas != null)
@@ -74,25 +153,85 @@ public class SettingPanel : MonoBehaviour
         if (reloadButton != null)
             reloadButton.onClick.AddListener(ReloadCurrentScene);
         if (quitButton != null)
-            quitButton.onClick.AddListener(QuitGame);
-
+            quitButton.onClick.AddListener(RequestQuit);
         if (mainMenuButton != null)
-            mainMenuButton.onClick.AddListener(GoToMainMenu);
+            mainMenuButton.onClick.AddListener(RequestMainMenu);
         if (soundButton != null)
             soundButton.onClick.AddListener(OpenSoundSettings);
         if (soundBackButton != null)
             soundBackButton.onClick.AddListener(CloseSoundSettings);
 
+        if (confirmYesButton != null)
+            confirmYesButton.onClick.AddListener(ConfirmYes);
+        if (confirmNoButton != null)
+            confirmNoButton.onClick.AddListener(HideConfirm);
+        if (dimGroup != null)
+        {
+            var dimButton = dimGroup.GetComponent<Button>();
+            if (dimButton != null)
+                dimButton.onClick.AddListener(OnDimClicked);
+        }
+
+        HideConfirm();
+
         if (soundCanvas != null)
+        {
             soundCanvas.SetActive(false);
+            Transform soundDim = soundCanvas.transform.Find("Dim");
+            Button soundDimButton = soundDim != null
+                ? soundDim.GetComponent<Button>()
+                : soundCanvas.GetComponent<Button>();
+            if (soundDimButton != null)
+            {
+                soundDimButton.transition = Selectable.Transition.None;
+                soundDimButton.onClick.RemoveListener(CloseSoundSettings);
+                soundDimButton.onClick.AddListener(CloseSoundSettings);
+            }
+        }
         InitMasterVolume();
         InitVolumeChannels();
 
-        BindAllSettingButtons();
+        HideInGameSettingButtons();
     }
 
-    // 씬 안의 모든 SettingButton을 찾아 설정 열기에 연결한다
-    void BindAllSettingButtons()
+    // ESC로 설정/사운드 창을 토글한다
+    void Update()
+    {
+        if (!Input.GetKeyDown(KeyCode.Escape))
+            return;
+
+        if (soundCanvas != null && soundCanvas.activeSelf)
+        {
+            CloseSoundSettings();
+            return;
+        }
+
+        if (IsConfirmVisible())
+        {
+            HideConfirm();
+            return;
+        }
+
+        if (settingCanvas != null && settingCanvas.activeSelf)
+        {
+            CloseSettings();
+            return;
+        }
+
+        if (IsMainMenuVisible())
+            return;
+
+        OpenSettings();
+    }
+
+    // 메인 메뉴가 떠 있는 동안에는 인게임 설정 창을 열지 않는다
+    static bool IsMainMenuVisible()
+    {
+        return FindFirstObjectByType<MainMenuController>() != null;
+    }
+
+    // 인게임 우상단 설정 아이콘을 숨긴다(메인 메뉴 설정 버튼은 유지)
+    void HideInGameSettingButtons()
     {
         var allButtons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var btn in allButtons)
@@ -103,20 +242,30 @@ public class SettingPanel : MonoBehaviour
             if (btn.GetComponentInParent<MainMenuController>(true) != null)
                 continue;
 
-            btn.onClick.RemoveAllListeners();
-            btn.onClick.AddListener(OpenSettings);
+            btn.gameObject.SetActive(false);
         }
     }
 
     // 설정 캔버스를 열고 게임을 일시정지한다
     public void OpenSettings()
     {
-        if (settingCanvas != null)
-        {
-            settingCanvas.SetActive(true);
-            EnsureCanvasComponents();
-            Time.timeScale = 0f;
-        }
+        if (settingCanvas == null || isClosing)
+            return;
+
+        HideConfirm();
+        settingCanvas.SetActive(true);
+        BringPauseUiToFront();
+        Time.timeScale = 0f;
+        PlayAnim(true);
+    }
+
+    // 딤을 클릭하면 확인 팝업이 없을 때 창을 닫는다
+    public void OnDimClicked()
+    {
+        if (IsConfirmVisible() || isClosing)
+            return;
+
+        CloseSettings();
     }
 
     // 설정 캔버스에 필요한 Canvas/Scaler/Raycaster를 보장한다
@@ -128,7 +277,7 @@ public class SettingPanel : MonoBehaviour
             canvas = settingCanvas.AddComponent<Canvas>();
         }
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 1000;
+        canvas.sortingOrder = PauseUiSortingOrder;
 
         var scaler = settingCanvas.GetComponent<CanvasScaler>();
         if (scaler == null)
@@ -144,14 +293,323 @@ public class SettingPanel : MonoBehaviour
         }
     }
 
+    // 일시정지/사운드 창을 카드 이펙트보다 앞에 두고, 이펙트 정렬을 잠시 낮춘다
+    void BringPauseUiToFront()
+    {
+        if (settingCanvas != null)
+            EnsureCanvasComponents();
+        if (soundCanvas != null)
+        {
+            var sound = soundCanvas.GetComponent<Canvas>();
+            if (sound != null)
+            {
+                sound.renderMode = RenderMode.ScreenSpaceOverlay;
+                sound.sortingOrder = PauseUiSortingOrder + 1;
+            }
+        }
+
+        Battle.UI.CardEffectOverlay.SetPauseOverlaySorting(true, CardEffectPausedSortingOrder, CardEffectDefaultSortingOrder);
+    }
+
+    // 카드 이펙트를 기본 전경 정렬로 되돌린다
+    static void RestoreCardEffectOverlayOrder()
+    {
+        Battle.UI.CardEffectOverlay.SetPauseOverlaySorting(false, CardEffectPausedSortingOrder, CardEffectDefaultSortingOrder);
+    }
+
     // 설정 캔버스를 닫고 게임 시간을 복구한다
     public void CloseSettings()
     {
-        if (settingCanvas != null)
+        if (settingCanvas == null || !settingCanvas.activeSelf || isClosing)
+            return;
+
+        HideConfirm();
+        PlayAnim(false);
+    }
+
+    // 열림/닫힘 연출을 시작한다
+    void PlayAnim(bool open)
+    {
+        if (animRoutine != null)
+            StopCoroutine(animRoutine);
+
+        animRoutine = StartCoroutine(AnimateRoutine(open));
+    }
+
+    IEnumerator AnimateRoutine(bool open)
+    {
+        isClosing = !open;
+        PrepareMenuButtons(open);
+
+        float dimDur = Mathf.Max(0.01f, open ? openDuration : closeDuration);
+        float btnDur = Mathf.Max(0.01f, buttonAnimDuration);
+        float stagger = Mathf.Max(0f, buttonStagger);
+        int n = menuButtons.Count;
+        float btnTotal = n == 0 ? 0f : (n - 1) * stagger + btnDur;
+        float total = Mathf.Max(dimDur, btnTotal);
+
+        float startDim = open ? 0f : (dimGroup != null ? dimGroup.alpha : dimAlpha);
+        float endDim = open ? dimAlpha : 0f;
+        if (dimGroup != null)
+            dimGroup.alpha = startDim;
+        if (panelGroup != null)
         {
-            settingCanvas.SetActive(false);
-            Time.timeScale = 1f;
+            panelGroup.alpha = 1f;
+            panelGroup.transform.localScale = Vector3.one;
         }
+
+        float t = 0f;
+        while (t < total)
+        {
+            t += Time.unscaledDeltaTime;
+            if (dimGroup != null)
+            {
+                float dimK = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / dimDur));
+                dimGroup.alpha = Mathf.Lerp(startDim, endDim, dimK);
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                float startAt = open ? i * stagger : (n - 1 - i) * stagger;
+                float k = Mathf.Clamp01((t - startAt) / btnDur);
+                k = open ? EaseOutBack(k) : EaseInCubic(k);
+                ApplyMenuButton(i, k, open);
+            }
+
+            yield return null;
+        }
+
+        if (dimGroup != null)
+            dimGroup.alpha = endDim;
+        for (int i = 0; i < n; i++)
+            ApplyMenuButton(i, 1f, open);
+
+        if (open)
+            FinishOpenButtons();
+
+        animRoutine = null;
+        if (!open)
+            FinishClose();
+        else
+            isClosing = false;
+    }
+
+    // 버튼 기준 위치를 잡고, 레이아웃을 끈 뒤 펼침/접힘 시작값을 저장한다
+    void PrepareMenuButtons(bool open)
+    {
+        CollectMenuButtons();
+        if (menuButtons.Count == 0)
+            return;
+
+        if (open)
+            CacheMenuRestIfNeeded();
+
+        if (menuLayout != null)
+            menuLayout.enabled = false;
+
+        if (open)
+        {
+            for (int i = 0; i < menuButtons.Count; i++)
+                SnapMenuButtonHidden(i);
+        }
+
+        menuFromPos.Clear();
+        menuFromScale.Clear();
+        menuFromAlpha.Clear();
+        for (int i = 0; i < menuButtons.Count; i++)
+        {
+            menuFromPos.Add(menuButtons[i].anchoredPosition);
+            menuFromScale.Add(menuButtons[i].localScale);
+            menuFromAlpha.Add(menuButtonGroups[i] != null ? menuButtonGroups[i].alpha : 1f);
+            if (menuHovers[i] != null)
+                menuHovers[i].enabled = false;
+        }
+    }
+
+    // 접힌 스케일을 기준으로 다시 잡지 않도록, 펼친 상태는 최초 1회만 저장한다
+    void CacheMenuRestIfNeeded()
+    {
+        RestoreMenuButtonsRest();
+
+        if (menuRestCached)
+            return;
+
+        if (menuLayout != null)
+            menuLayout.enabled = true;
+        Canvas.ForceUpdateCanvases();
+        var group = menuButtons[0].parent as RectTransform;
+        if (group != null)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(group);
+
+        menuRestPos.Clear();
+        menuRestScale.Clear();
+        for (int i = 0; i < menuButtons.Count; i++)
+        {
+            menuRestPos.Add(menuButtons[i].anchoredPosition);
+            menuRestScale.Add(Vector3.one);
+            menuButtons[i].localScale = Vector3.one;
+        }
+
+        menuRestCached = true;
+    }
+
+    void RestoreMenuButtonsRest()
+    {
+        for (int i = 0; i < menuButtons.Count; i++)
+        {
+            if (i < menuRestPos.Count)
+                menuButtons[i].anchoredPosition = menuRestPos[i];
+            menuButtons[i].localScale = i < menuRestScale.Count ? menuRestScale[i] : Vector3.one;
+            if (menuButtonGroups[i] != null)
+                menuButtonGroups[i].alpha = 1f;
+        }
+    }
+
+    void CollectMenuButtons()
+    {
+        if (menuButtons.Count > 0)
+            return;
+
+        Button[] sources = { resumeButton, soundButton, mainMenuButton, quitButton };
+        RectTransform group = null;
+        for (int i = 0; i < sources.Length; i++)
+        {
+            if (sources[i] == null)
+                continue;
+
+            var rt = sources[i].transform as RectTransform;
+            if (rt == null)
+                continue;
+
+            menuButtons.Add(rt);
+            if (group == null)
+                group = rt.parent as RectTransform;
+
+            var cg = sources[i].GetComponent<CanvasGroup>();
+            if (cg == null)
+                cg = sources[i].gameObject.AddComponent<CanvasGroup>();
+            menuButtonGroups.Add(cg);
+            menuHovers.Add(sources[i].GetComponent<ButtonHoverScale>());
+        }
+
+        if (group != null)
+            menuLayout = group.GetComponent<VerticalLayoutGroup>();
+    }
+
+    void SnapMenuButtonHidden(int i)
+    {
+        Vector2 rest = i < menuRestPos.Count ? menuRestPos[i] : menuButtons[i].anchoredPosition;
+        Vector3 restScale = i < menuRestScale.Count ? menuRestScale[i] : menuButtons[i].localScale;
+        menuButtons[i].anchoredPosition = rest + Vector2.up * buttonFoldOffset;
+        menuButtons[i].localScale = new Vector3(restScale.x, restScale.y * 0.12f, restScale.z);
+        if (menuButtonGroups[i] != null)
+            menuButtonGroups[i].alpha = 0f;
+    }
+
+    // k=0 시작값, k=1 목표값. 열릴 때는 펼침, 닫힐 때는 위로 접힘
+    void ApplyMenuButton(int i, float k, bool open)
+    {
+        Vector2 rest = i < menuRestPos.Count ? menuRestPos[i] : menuFromPos[i];
+        Vector3 restScale = i < menuRestScale.Count ? menuRestScale[i] : menuFromScale[i];
+        Vector2 hiddenPos = rest + Vector2.up * buttonFoldOffset;
+        Vector3 hiddenScale = new Vector3(restScale.x, restScale.y * 0.12f, restScale.z);
+
+        Vector2 toPos = open ? rest : hiddenPos;
+        Vector3 toScale = open ? restScale : hiddenScale;
+        float toAlpha = open ? 1f : 0f;
+
+        menuButtons[i].anchoredPosition = Vector2.LerpUnclamped(menuFromPos[i], toPos, k);
+        menuButtons[i].localScale = Vector3.LerpUnclamped(menuFromScale[i], toScale, k);
+        if (menuButtonGroups[i] != null)
+            menuButtonGroups[i].alpha = Mathf.Lerp(menuFromAlpha[i], toAlpha, Mathf.Clamp01(k));
+    }
+
+    void FinishOpenButtons()
+    {
+        for (int i = 0; i < menuButtons.Count; i++)
+        {
+            if (i < menuRestPos.Count)
+                menuButtons[i].anchoredPosition = menuRestPos[i];
+            if (i < menuRestScale.Count)
+                menuButtons[i].localScale = menuRestScale[i];
+            if (menuButtonGroups[i] != null)
+                menuButtonGroups[i].alpha = 1f;
+            if (menuHovers[i] != null)
+            {
+                menuHovers[i].enabled = true;
+                if (i < menuRestScale.Count)
+                    menuHovers[i].SetBaseScale(menuRestScale[i]);
+            }
+        }
+
+        if (menuLayout != null)
+            menuLayout.enabled = true;
+    }
+
+    void FinishClose()
+    {
+        isClosing = false;
+        RestoreMenuButtonsRest();
+        if (menuLayout != null)
+            menuLayout.enabled = true;
+        if (settingCanvas != null)
+            settingCanvas.SetActive(false);
+        RestoreCardEffectOverlayOrder();
+        Time.timeScale = 1f;
+    }
+
+    static float EaseOutBack(float k)
+    {
+        k = Mathf.Clamp01(k);
+        const float s = 1.2f;
+        k -= 1f;
+        return k * k * ((s + 1f) * k + s) + 1f;
+    }
+
+    static float EaseInCubic(float k)
+    {
+        k = Mathf.Clamp01(k);
+        return k * k * k;
+    }
+
+    bool IsConfirmVisible()
+    {
+        return confirmRoot != null && confirmRoot.activeSelf;
+    }
+
+    void RequestMainMenu()
+    {
+        ShowConfirm("메인 메뉴로 돌아갈까요?\n현재 진행은 저장되지 않습니다.", GoToMainMenu);
+    }
+
+    void RequestQuit()
+    {
+        ShowConfirm("게임을 종료할까요?", QuitGame);
+    }
+
+    void ShowConfirm(string message, System.Action onYes)
+    {
+        pendingConfirm = onYes;
+        if (confirmMessage != null)
+            confirmMessage.text = message;
+        if (confirmRoot != null)
+            confirmRoot.SetActive(true);
+        else
+            onYes?.Invoke();
+    }
+
+    void HideConfirm()
+    {
+        pendingConfirm = null;
+        if (confirmRoot != null)
+            confirmRoot.SetActive(false);
+    }
+
+    void ConfirmYes()
+    {
+        var action = pendingConfirm;
+        HideConfirm();
+        action?.Invoke();
     }
 
     // 런을 재시작해 맵으로 돌아간다
@@ -169,6 +627,9 @@ public class SettingPanel : MonoBehaviour
     // 시간을 복구하고 런을 재시작해 맵으로 이동한다
     void TryRestartRunToMap()
     {
+        StopAnim();
+        HideConfirm();
+        RestoreCardEffectOverlayOrder();
         Time.timeScale = 1f;
 
         if (settingCanvas != null)
@@ -187,10 +648,13 @@ public class SettingPanel : MonoBehaviour
     // 설정/사운드 캔버스를 닫고 메인 메뉴로 이동한다
     public void GoToMainMenu()
     {
+        StopAnim();
+        HideConfirm();
         if (soundCanvas != null)
             soundCanvas.SetActive(false);
         if (settingCanvas != null)
             settingCanvas.SetActive(false);
+        RestoreCardEffectOverlayOrder();
         Time.timeScale = 1f;
 
         var stateController = GameStateController.Instance;
@@ -206,12 +670,15 @@ public class SettingPanel : MonoBehaviour
     // 설정 패널을 숨기고 사운드 설정 캔버스를 연다(일시정지 유지)
     public void OpenSoundSettings()
     {
+        StopAnim();
+        HideConfirm();
         soundReturnCanvas = settingCanvas;
 
         if (soundCanvas != null)
             soundCanvas.SetActive(true);
         if (settingCanvas != null)
             settingCanvas.SetActive(false);
+        BringPauseUiToFront();
     }
 
     // 외부에서 공용 사운드 설정을 열고 닫을 때 returnCanvas로 복귀하게 한다
@@ -223,6 +690,7 @@ public class SettingPanel : MonoBehaviour
             soundCanvas.SetActive(true);
         if (returnCanvas != null)
             returnCanvas.SetActive(false);
+        BringPauseUiToFront();
     }
 
     // 사운드 캔버스를 닫고 열었던 맥락의 캔버스로 복귀한다
@@ -232,17 +700,37 @@ public class SettingPanel : MonoBehaviour
             soundCanvas.SetActive(false);
 
         GameObject ret = soundReturnCanvas != null ? soundReturnCanvas : settingCanvas;
+        soundReturnCanvas = null;
+
+        if (ret == settingCanvas)
+        {
+            OpenSettings();
+            return;
+        }
+
+        RestoreCardEffectOverlayOrder();
         if (ret != null)
             ret.SetActive(true);
+    }
 
-        soundReturnCanvas = null;
+    void StopAnim()
+    {
+        if (animRoutine != null)
+        {
+            StopCoroutine(animRoutine);
+            animRoutine = null;
+        }
+        isClosing = false;
+        if (menuButtons.Count > 0)
+            FinishOpenButtons();
     }
 
     // 저장된 마스터 볼륨을 적용하고 슬라이더/숫자입력을 동기화한다
     void InitMasterVolume()
     {
+        BindMasterRow();
         float saved = Mathf.Clamp01(PlayerPrefs.GetFloat(MasterVolumeKey, 1f));
-        AudioListener.volume = saved;
+        ApplyMasterOutput(saved);
 
         if (masterVolumeSlider != null)
         {
@@ -261,17 +749,68 @@ public class SettingPanel : MonoBehaviour
             masterVolumeInput.onEndEdit.AddListener(OnMasterVolumeInput);
         }
 
+        if (masterMuteButton != null)
+        {
+            masterMuteButton.onClick.RemoveListener(ToggleMasterMute);
+            masterMuteButton.onClick.AddListener(ToggleMasterMute);
+        }
+
         SyncVolumeUI(saved);
+        RefreshMuteVisual(masterMuteButton, IsMuted(MasterMuteKey));
+        DimVolumeSlider(masterVolumeSlider, IsMuted(MasterMuteKey));
+    }
+
+    void BindMasterRow()
+    {
+        if (masterVolumeSlider == null)
+            return;
+
+        Transform row = masterVolumeSlider.transform.parent;
+        if (masterMuteButton == null && row != null)
+        {
+            var mute = row.Find("MuteButton");
+            if (mute != null)
+                masterMuteButton = mute.GetComponent<Button>();
+        }
+
+        if (masterPercentLabel == null && row != null)
+        {
+            var percent = row.Find("Percent");
+            if (percent != null)
+            {
+                masterPercentLabel = percent.GetComponent<TMP_Text>();
+                if (masterPercentLabel == null)
+                    masterPercentLabel = percent.GetComponentInChildren<TMP_Text>(true);
+            }
+        }
     }
 
     // 마스터 볼륨(0~1)을 적용·저장하고 슬라이더/숫자 입력칸을 동기화한다
     void SetMasterVolume(float value01)
     {
         float v = Mathf.Clamp01(value01);
-        AudioListener.volume = v;
         PlayerPrefs.SetFloat(MasterVolumeKey, v);
         PlayerPrefs.Save();
+        if (IsMuted(MasterMuteKey) && v > 0.0001f)
+            SetMuted(MasterMuteKey, false);
+        ApplyMasterOutput(v);
         SyncVolumeUI(v);
+        RefreshMuteVisual(masterMuteButton, IsMuted(MasterMuteKey));
+        DimVolumeSlider(masterVolumeSlider, IsMuted(MasterMuteKey));
+    }
+
+    void ToggleMasterMute()
+    {
+        bool muted = !IsMuted(MasterMuteKey);
+        SetMuted(MasterMuteKey, muted);
+        ApplyMasterOutput(Mathf.Clamp01(PlayerPrefs.GetFloat(MasterVolumeKey, 1f)));
+        RefreshMuteVisual(masterMuteButton, muted);
+        DimVolumeSlider(masterVolumeSlider, muted);
+    }
+
+    void ApplyMasterOutput(float stored01)
+    {
+        AudioListener.volume = IsMuted(MasterMuteKey) ? 0f : Mathf.Clamp01(stored01);
     }
 
     // 슬라이더와 입력칸 표시를 현재 값으로 맞춘다(콜백 미발생)
@@ -279,8 +818,11 @@ public class SettingPanel : MonoBehaviour
     {
         if (masterVolumeSlider != null)
             masterVolumeSlider.SetValueWithoutNotify(value01);
+        string percent = Mathf.RoundToInt(value01 * 100f).ToString();
         if (masterVolumeInput != null)
-            masterVolumeInput.SetTextWithoutNotify(Mathf.RoundToInt(value01 * 100f).ToString());
+            masterVolumeInput.SetTextWithoutNotify(percent);
+        if (masterPercentLabel != null)
+            masterPercentLabel.text = percent + "%";
     }
 
     // 마스터 볼륨 슬라이더 변경 시 전역 볼륨을 적용·저장한다
@@ -307,6 +849,7 @@ public class SettingPanel : MonoBehaviour
         {
             if (ch == null || string.IsNullOrEmpty(ch.key) || ch.slider == null) continue;
 
+            BindChannelRow(ch);
             float saved = Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKeyPrefix + ch.key, 1f));
 
             ch.slider.minValue = 0f;
@@ -323,8 +866,55 @@ public class SettingPanel : MonoBehaviour
                 ch.input.onEndEdit.AddListener(t => OnChannelInput(ch, t));
             }
 
-            SetChannelVolume(ch, saved);
+            if (ch.muteButton != null)
+            {
+                VolumeChannel captured = ch;
+                ch.muteButton.onClick.RemoveAllListeners();
+                ch.muteButton.onClick.AddListener(() => ToggleChannelMute(captured));
+            }
+
+            SetChannelVolume(ch, saved, false);
+            RefreshMuteVisual(ch.muteButton, IsMuted(ch.key));
+            DimVolumeSlider(ch.slider, IsMuted(ch.key));
         }
+    }
+
+    void BindChannelRow(VolumeChannel ch)
+    {
+        if (ch == null || ch.slider == null)
+            return;
+
+        Transform row = ch.slider.transform.parent;
+        if (ch.muteButton == null && row != null)
+        {
+            var mute = row.Find("MuteButton");
+            if (mute != null)
+                ch.muteButton = mute.GetComponent<Button>();
+        }
+
+        if (ch.percentLabel == null && row != null)
+        {
+            var percent = row.Find("Percent");
+            if (percent != null)
+            {
+                ch.percentLabel = percent.GetComponent<TMP_Text>();
+                if (ch.percentLabel == null)
+                    ch.percentLabel = percent.GetComponentInChildren<TMP_Text>(true);
+            }
+        }
+    }
+
+    void ToggleChannelMute(VolumeChannel ch)
+    {
+        if (ch == null || string.IsNullOrEmpty(ch.key))
+            return;
+
+        bool muted = !IsMuted(ch.key);
+        SetMuted(ch.key, muted);
+        float stored = Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKeyPrefix + ch.key, 1f));
+        ApplyChannelOutput(ch, stored);
+        RefreshMuteVisual(ch.muteButton, muted);
+        DimVolumeSlider(ch.slider, muted);
     }
 
     // 채널 숫자 입력 확정 시 0~100을 파싱해 적용한다
@@ -337,7 +927,7 @@ public class SettingPanel : MonoBehaviour
     }
 
     // 채널 볼륨(0~1)을 적용·저장하고 믹서와 UI를 동기화한다
-    void SetChannelVolume(VolumeChannel ch, float value01)
+    void SetChannelVolume(VolumeChannel ch, float value01, bool unmuteOnChange = true)
     {
         if (ch == null || string.IsNullOrEmpty(ch.key)) return;
 
@@ -345,25 +935,86 @@ public class SettingPanel : MonoBehaviour
         PlayerPrefs.SetFloat(VolumeKeyPrefix + ch.key, v);
         PlayerPrefs.Save();
 
-        if (audioMixer != null && !string.IsNullOrEmpty(ch.exposedParameter))
-        {
-            float dB = v <= 0.0001f ? -80f : Mathf.Log10(v) * 20f;
-            audioMixer.SetFloat(ch.exposedParameter, dB);
-        }
+        if (unmuteOnChange && IsMuted(ch.key) && v > 0.0001f)
+            SetMuted(ch.key, false);
 
+        ApplyChannelOutput(ch, v);
         SyncChannelUI(ch, v);
+        RefreshMuteVisual(ch.muteButton, IsMuted(ch.key));
+        DimVolumeSlider(ch.slider, IsMuted(ch.key));
+    }
+
+    void ApplyChannelOutput(VolumeChannel ch, float stored01)
+    {
+        if (ch == null || audioMixer == null || string.IsNullOrEmpty(ch.exposedParameter))
+            return;
+
+        float v = IsMuted(ch.key) ? 0f : Mathf.Clamp01(stored01);
+        float dB = v <= 0.0001f ? -80f : Mathf.Log10(v) * 20f;
+        audioMixer.SetFloat(ch.exposedParameter, dB);
     }
 
     // 채널 슬라이더/입력칸 표시를 현재 값으로 맞춘다(콜백 미발생)
     void SyncChannelUI(VolumeChannel ch, float value01)
     {
         if (ch.slider != null) ch.slider.SetValueWithoutNotify(value01);
-        if (ch.input != null) ch.input.SetTextWithoutNotify(Mathf.RoundToInt(value01 * 100f).ToString());
+        string percent = Mathf.RoundToInt(value01 * 100f).ToString();
+        if (ch.input != null) ch.input.SetTextWithoutNotify(percent);
+        if (ch.percentLabel != null) ch.percentLabel.text = percent + "%";
+    }
+
+    static void SetMuted(string key, bool muted)
+    {
+        if (string.IsNullOrEmpty(key))
+            return;
+        PlayerPrefs.SetInt(MuteKeyPrefix + key, muted ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    static void RefreshMuteVisual(Button muteButton, bool muted)
+    {
+        if (muteButton == null)
+            return;
+
+        Transform mark = muteButton.transform.Find("MuteMark");
+        if (mark != null)
+        {
+            var img = mark.GetComponent<Image>();
+            if (img != null)
+                img.color = new Color(0.14f, 0.08f, 0.04f, 1f);
+        }
+
+        Transform check = muteButton.transform.Find("MuteCheck");
+        if (check != null)
+            check.gameObject.SetActive(muted);
+
+        Transform labelTf = muteButton.transform.Find("MuteLabel");
+        if (labelTf != null)
+        {
+            var label = labelTf.GetComponent<TMP_Text>();
+            if (label != null)
+                label.color = muted
+                    ? new Color(0.99f, 0.91f, 0.68f, 1f)
+                    : new Color(0.86f, 0.74f, 0.50f, 0.85f);
+        }
+    }
+
+    static void DimVolumeSlider(Slider slider, bool muted)
+    {
+        if (slider == null)
+            return;
+
+        var cg = slider.GetComponent<CanvasGroup>();
+        if (cg == null)
+            cg = slider.gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = muted ? 0.38f : 1f;
     }
 
     // 게임을 종료한다(에디터에서는 플레이 중지)
     public void QuitGame()
     {
+        StopAnim();
+        HideConfirm();
         Debug.Log("게임 종료");
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;

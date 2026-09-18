@@ -115,7 +115,7 @@ public class RelicStageController : MonoBehaviour
     [SerializeField] private List<SpriteOnlyRelicEntry> spriteOnlyRelics = new List<SpriteOnlyRelicEntry>(); // 스프라이트 전용 유물 목록
 
     [Header("유물 호리병(10018) 설정")]
-    [Tooltip("유물 호리병 보유 시 한 라운드에 획득하는 유물 수 상한(이미 고른 1장 포함). 3중 1택 보상 UI 도입 전, 전체 DB 일괄 획득을 막기 위한 임시 상한.")]
+    [Tooltip("유물 호리병 보유(또는 이번 상자에서 호리병 획득) 시 한 라운드에 지급하는 유물 수. 상자에는 그중 1개를 보여주고, 클릭 시 제시된 유물을 모두 지급한다.")]
     [SerializeField] private int grantAllRelicMaxCount = 3; // 유물 호리병 라운드 획득 상한
 
     [Header("획득 유물 상호작용")]
@@ -169,7 +169,8 @@ public class RelicStageController : MonoBehaviour
     private bool wasHoveringByMouse; // 직전 마우스 호버 상태
     private bool isAbsorbSequenceRunning; // 흡수 시퀀스 진행 중 여부
     private bool hasPendingReward; // 대기 중 보상 존재 여부
-    private RewardCandidate pendingReward; // 지급 대기 보상
+    private RewardCandidate pendingReward; // 지급 대기 보상(상자에 표시할 대표 유물)
+    private readonly List<RewardCandidate> pendingPresentedRelics = new List<RewardCandidate>(); // 호리병 포함 시 함께 지급할 제시 유물
     private Button _declineButton; // 받지 않기 버튼
 
     // 바인딩 및 상자/아이템 초기 상태 캡처
@@ -302,6 +303,7 @@ public class RelicStageController : MonoBehaviour
         isAbsorbSequenceRunning = false;
         hasPendingReward = false;
         pendingReward = default;
+        pendingPresentedRelics.Clear();
 
         if (chestSettings.chestTransform != null)
         {
@@ -471,6 +473,7 @@ public class RelicStageController : MonoBehaviour
         {
             Debug.LogWarning("[RelicStage] RelicManager.Instance가 없어 유물 선택을 건너뜁니다.");
             hasPendingReward = false;
+            pendingPresentedRelics.Clear();
             return false;
         }
 
@@ -483,20 +486,93 @@ public class RelicStageController : MonoBehaviour
             grantedRewardName = "신규 유물 없음";
             grantedRewardDescription = "이미 획득한 유물을 제외하면 남은 유물이 없습니다.";
             hasPendingReward = false;
+            pendingPresentedRelics.Clear();
             return false;
         }
 
-        var picked = candidates[Random.Range(0, candidates.Count)];
-        pendingReward = picked;
+        RewardCandidate picked = candidates[Random.Range(0, candidates.Count)];
+        bool grantAll = manager.HasGrantAllRelicsInStage()
+            || (picked.relic != null && picked.relic.GrantsAllRelicsInStage);
+
+        pendingPresentedRelics.Clear();
+        if (grantAll)
+            FillPresentedRelics(candidates, picked);
+        else
+            pendingPresentedRelics.Add(picked);
+
+        pendingReward = pendingPresentedRelics[0];
         hasPendingReward = true;
-        grantedRewardName = string.IsNullOrWhiteSpace(picked.displayName) ? "유물" : picked.displayName;
-        grantedRewardDescription = string.IsNullOrWhiteSpace(picked.description)
-            ? DefaultSpriteOnlyRelicDescription
-            : picked.description;
-        rewardSprite = picked.sprite != null
-            ? picked.sprite
-            : (picked.relic != null ? picked.relic.icon : null);
+        ApplyPresentedRewardPreview(out rewardSprite);
         return true;
+    }
+
+    // 호리병 효과용으로 제시 유물 N장을 고른다. picked가 호리병이면 그걸 포함하고 나머지를 채운다.
+    void FillPresentedRelics(List<RewardCandidate> candidates, RewardCandidate picked)
+    {
+        int maxCount = Mathf.Max(1, grantAllRelicMaxCount);
+        bool pickedIsGourd = picked.relic != null && picked.relic.GrantsAllRelicsInStage;
+
+        if (pickedIsGourd)
+            pendingPresentedRelics.Add(picked);
+
+        var pool = new List<RewardCandidate>(candidates);
+        ShuffleCandidates(pool);
+        for (int i = 0; i < pool.Count && pendingPresentedRelics.Count < maxCount; i++)
+        {
+            RewardCandidate candidate = pool[i];
+            if (ContainsPresentedRelic(candidate))
+                continue;
+            pendingPresentedRelics.Add(candidate);
+        }
+
+        if (pendingPresentedRelics.Count == 0)
+            pendingPresentedRelics.Add(picked);
+    }
+
+    bool ContainsPresentedRelic(RewardCandidate candidate)
+    {
+        for (int i = 0; i < pendingPresentedRelics.Count; i++)
+        {
+            RewardCandidate existing = pendingPresentedRelics[i];
+            if (candidate.relic != null && existing.relic != null && existing.relic.id == candidate.relic.id)
+                return true;
+            if (candidate.isSpriteOnly && existing.isSpriteOnly && existing.sprite == candidate.sprite)
+                return true;
+        }
+        return false;
+    }
+
+    void ApplyPresentedRewardPreview(out Sprite rewardSprite)
+    {
+        RewardCandidate shown = pendingPresentedRelics[0];
+        rewardSprite = shown.sprite != null
+            ? shown.sprite
+            : (shown.relic != null ? shown.relic.icon : null);
+
+        if (pendingPresentedRelics.Count == 1)
+        {
+            grantedRewardName = string.IsNullOrWhiteSpace(shown.displayName) ? "유물" : shown.displayName;
+            grantedRewardDescription = string.IsNullOrWhiteSpace(shown.description)
+                ? DefaultSpriteOnlyRelicDescription
+                : shown.description;
+            return;
+        }
+
+        grantedRewardName = $"유물 {pendingPresentedRelics.Count}개";
+        var lines = new List<string>(pendingPresentedRelics.Count + 1)
+        {
+            "유물 호리병 — 제시된 유물을 모두 획득합니다."
+        };
+        for (int i = 0; i < pendingPresentedRelics.Count; i++)
+        {
+            RewardCandidate candidate = pendingPresentedRelics[i];
+            string name = string.IsNullOrWhiteSpace(candidate.displayName) ? "유물" : candidate.displayName;
+            string desc = string.IsNullOrWhiteSpace(candidate.description)
+                ? DefaultSpriteOnlyRelicDescription
+                : candidate.description;
+            lines.Add($"· {name}: {desc}");
+        }
+        grantedRewardDescription = string.Join("\n", lines);
     }
 
     // 대기 중 보상을 실제로 보유 목록에 지급
@@ -509,60 +585,54 @@ public class RelicStageController : MonoBehaviour
         {
             Debug.LogWarning("[RelicStage] RelicManager.Instance가 없어 유물 최종 지급을 건너뜁니다.");
             hasPendingReward = false;
+            pendingPresentedRelics.Clear();
             return;
         }
 
         var manager = RelicManager.Instance;
-        var picked = pendingReward;
-
-        if (picked.isSpriteOnly)
+        int grantedCount = 0;
+        for (int i = 0; i < pendingPresentedRelics.Count; i++)
         {
-            if (picked.sprite != null)
+            if (TryGrantCandidate(manager, pendingPresentedRelics[i], out Sprite grantedSprite))
             {
-                if (manager.TryAddSpriteOnlyRelic(picked.sprite, out var granted))
-                    grantedRewardSprite = granted != null && granted.icon != null ? granted.icon : picked.sprite;
-                else
-                    grantedRewardSprite = picked.sprite;
+                grantedCount++;
+                if (grantedSprite != null)
+                    grantedRewardSprite = grantedSprite;
             }
         }
-        else if (picked.relic != null)
-        {
-            if (!manager.HasRelicId(picked.relic.id))
-                manager.AddRelic(picked.relic);
 
-            grantedRewardSprite = picked.sprite != null
-                ? picked.sprite
-                : (picked.relic.icon != null ? picked.relic.icon : grantedRewardSprite);
-        }
-
-        // 유물(유물 호리병 10018): 보유 시 '제시된' 유물(최대 grantAllRelicMaxCount장)을 추가 획득.
-        // 3중 1택 보상 UI가 없는 현재는 후보 풀(candidateRelics 미설정 시 DB 전체)을 무작위로 상한까지만 지급해
-        // 게임에 존재하는 모든 유물을 한 번에 획득하던 버그를 막는다.
-        if (manager.HasGrantAllRelicsInStage())
-        {
-            var all = BuildCandidates(manager); // 방금 지급한 picked는 이미 보유 처리되어 제외됨
-            // 이미 받은 picked 1장을 '제시 수'에 포함시켜, 남은 예산만큼만 추가 지급
-            int alreadyGranted = (!picked.isSpriteOnly && picked.relic != null) ? 1 : 0;
-            int extraBudget = Mathf.Max(0, grantAllRelicMaxCount - alreadyGranted);
-            ShuffleCandidates(all);
-            int grantedExtra = 0;
-            for (int i = 0; i < all.Count && grantedExtra < extraBudget; i++)
-            {
-                var c = all[i];
-                if (c.isSpriteOnly)
-                {
-                    if (c.sprite != null && manager.TryAddSpriteOnlyRelic(c.sprite, out _)) grantedExtra++;
-                }
-                else if (c.relic != null && !manager.HasRelicId(c.relic.id))
-                {
-                    manager.AddRelic(c.relic);
-                    grantedExtra++;
-                }
-            }
-            Debug.Log($"[유물] 유물 호리병 — 제시 후보 중 {grantedExtra}장 추가 획득 (상한 {grantAllRelicMaxCount})");
-        }
+        Debug.Log($"[유물] 상자 보상 지급 {grantedCount}개" +
+                  (pendingPresentedRelics.Count > 1 ? " (유물 호리병)" : string.Empty));
 
         hasPendingReward = false;
+        pendingPresentedRelics.Clear();
+    }
+
+    bool TryGrantCandidate(RelicManager manager, RewardCandidate candidate, out Sprite grantedSprite)
+    {
+        grantedSprite = null;
+        if (candidate.isSpriteOnly)
+        {
+            if (candidate.sprite == null)
+                return false;
+
+            if (manager.TryAddSpriteOnlyRelic(candidate.sprite, out var granted))
+                grantedSprite = granted != null && granted.icon != null ? granted.icon : candidate.sprite;
+            else
+                grantedSprite = candidate.sprite;
+            return true;
+        }
+
+        if (candidate.relic == null)
+            return false;
+
+        if (!manager.HasRelicId(candidate.relic.id))
+            manager.AddRelic(candidate.relic);
+
+        grantedSprite = candidate.sprite != null
+            ? candidate.sprite
+            : candidate.relic.icon;
+        return true;
     }
 
     // 후보 목록을 제자리에서 무작위로 섞음(Fisher-Yates)
@@ -680,6 +750,7 @@ public class RelicStageController : MonoBehaviour
         HideTooltipPopup();
         hasPendingReward = false;
         pendingReward = default;
+        pendingPresentedRelics.Clear();
 
         if (itemSettings.itemObject != null)
             itemSettings.itemObject.SetActive(false);

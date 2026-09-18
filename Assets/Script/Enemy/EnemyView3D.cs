@@ -235,6 +235,88 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time);
     public Transform ShakeTarget => shakeTarget != null ? shakeTarget : transform;
 
+    // 카드 지정용 화면 좌표 — 렌더러 바운드 중심을 스테이지 카메라로 투영
+    public bool TryGetAimScreen(out Vector2 screenCenter, out float screenRadius)
+    {
+        screenCenter = default;
+        screenRadius = 0f;
+        Camera cam = ResolveAimCamera();
+        if (cam == null) return false;
+
+        Vector3 world = transform.position;
+        if (TryGetAimBounds(out Bounds bounds))
+            world = bounds.center;
+        else if (shakeTarget != null)
+            world = shakeTarget.position;
+
+        Vector3 sp = cam.WorldToScreenPoint(world);
+        if (sp.z < 0f) return false;
+        screenCenter = new Vector2(sp.x, sp.y);
+
+        float raw = 160f;
+        if (TryGetAimBounds(out bounds))
+        {
+            float maxd = 0f;
+            Vector3 e = bounds.extents;
+            Vector3[] pts =
+            {
+                bounds.center + new Vector3(e.x, 0f, 0f),
+                bounds.center + new Vector3(-e.x, 0f, 0f),
+                bounds.center + new Vector3(0f, e.y, 0f),
+                bounds.center + new Vector3(0f, -e.y, 0f),
+                bounds.center + new Vector3(0f, 0f, e.z),
+                bounds.center + new Vector3(0f, 0f, -e.z),
+            };
+            for (int i = 0; i < pts.Length; i++)
+            {
+                Vector3 p = cam.WorldToScreenPoint(pts[i]);
+                if (p.z < 0f) continue;
+                maxd = Mathf.Max(maxd, Vector2.Distance(screenCenter, new Vector2(p.x, p.y)));
+            }
+            if (maxd > 1f) raw = maxd * 1.12f;
+        }
+        screenRadius = Mathf.Clamp(raw, 110f, 380f);
+        return true;
+    }
+
+    // 콜라이더 레이캐스트 또는 화면 반경으로 지정 판정
+    public bool ContainsAimPoint(Vector2 screenPos)
+    {
+        Camera cam = ResolveAimCamera();
+        if (cam != null)
+        {
+            Ray ray = cam.ScreenPointToRay(screenPos);
+            if (Physics.Raycast(ray, out RaycastHit hit, 250f)
+                && (hit.transform == transform || hit.transform.IsChildOf(transform)))
+                return true;
+        }
+        if (!TryGetAimScreen(out Vector2 center, out float radius)) return false;
+        return Vector2.Distance(screenPos, center) <= radius;
+    }
+
+    Camera ResolveAimCamera()
+    {
+        if (renderCamera != null) return renderCamera;
+        if (BattleStageController.Current != null && BattleStageController.Current.StageCamera != null)
+            return BattleStageController.Current.StageCamera;
+        return Camera.main;
+    }
+
+    bool TryGetAimBounds(out Bounds bounds)
+    {
+        bounds = default;
+        bool any = false;
+        if (flashRenderers == null) return false;
+        for (int i = 0; i < flashRenderers.Length; i++)
+        {
+            var r = flashRenderers[i];
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+            if (!any) { bounds = r.bounds; any = true; }
+            else bounds.Encapsulate(r.bounds);
+        }
+        return any;
+    }
+
     // ── IEnemyView: 사망 ──
 
     // 사망 연출 시작 — Die 트리거(있으면) + 축소 페이드

@@ -76,8 +76,8 @@ public class MapScrollController : MonoBehaviour
     {
         if (!enableDrag || scrollTarget == null) return;
 
-        // 인벤토리가 열려 있으면 맵 드래그를 막는다(뒤 스테이지 조작 방지)
-        if (Battle.UI.InventoryPanelController.IsOpen)
+        // 인벤토리·설정 창이 열려 있으면 맵 드래그를 막는다
+        if (Battle.UI.InventoryPanelController.IsOpen || SettingPanel.IsOverlayOpen)
         {
             _dragging = false;
             return;
@@ -85,6 +85,13 @@ public class MapScrollController : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
+            if (UnityEngine.EventSystems.EventSystem.current != null &&
+                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            {
+                _dragging = false;
+                return;
+            }
+
             _dragging = true;
             _lastPointerPos = Input.mousePosition;
         }

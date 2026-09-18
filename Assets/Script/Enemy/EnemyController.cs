@@ -496,4 +496,21 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         Destroy(gameObject);
     }
 
+    public bool IsAlive => stat != null && stat.IsAlive && !isDead; // 생존 여부(지정 가능)
+
+    // 카드 지정 화살표용 화면 조준점
+    public bool TryGetAimScreen(out Vector2 screenCenter, out float screenRadius)
+    {
+        if (view != null) return view.TryGetAimScreen(out screenCenter, out screenRadius);
+        screenCenter = default;
+        screenRadius = 0f;
+        return false;
+    }
+
+    // 포인터가 이 적의 조준 영역 안인지
+    public bool ContainsAimPoint(Vector2 screenPos)
+    {
+        return view != null && view.ContainsAimPoint(screenPos);
+    }
+
 }

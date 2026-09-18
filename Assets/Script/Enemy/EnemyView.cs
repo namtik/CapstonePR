@@ -443,6 +443,48 @@ public class EnemyView : MonoBehaviour, IEnemyView
 
     public Transform ShakeTarget => shakeTarget != null ? (Transform)shakeTarget : transform; // 흔들기 대상(상태패널 추적용)
 
+    // 카드 지정용 화면 좌표 — 적 이미지 Rect의 중심과 반경
+    public bool TryGetAimScreen(out Vector2 screenCenter, out float screenRadius)
+    {
+        screenCenter = default;
+        screenRadius = 0f;
+        RectTransform rt = enemyImage != null ? enemyImage.rectTransform : transform as RectTransform;
+        if (rt == null) return false;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera : null;
+
+        Vector3[] corners = new Vector3[4];
+        rt.GetWorldCorners(corners);
+        Vector2 min = new Vector2(float.MaxValue, float.MaxValue);
+        Vector2 max = new Vector2(float.MinValue, float.MinValue);
+        for (int i = 0; i < 4; i++)
+        {
+            Vector2 sp = RectTransformUtility.WorldToScreenPoint(cam, corners[i]);
+            min = Vector2.Min(min, sp);
+            max = Vector2.Max(max, sp);
+        }
+        screenCenter = (min + max) * 0.5f;
+        screenRadius = Vector2.Distance(min, max) * 0.5f;
+        return true;
+    }
+
+    // 적 이미지 Rect 안이거나 조준 반경 안이면 지정으로 본다
+    public bool ContainsAimPoint(Vector2 screenPos)
+    {
+        RectTransform rt = enemyImage != null ? enemyImage.rectTransform : transform as RectTransform;
+        if (rt == null) return false;
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera : null;
+        if (RectTransformUtility.RectangleContainsScreenPoint(rt, screenPos, cam))
+            return true;
+        if (!TryGetAimScreen(out Vector2 center, out float radius)) return false;
+        return Vector2.Distance(screenPos, center) <= radius;
+    }
+
     // 사망 연출 — 2D는 별도 사망 애니가 없어 no-op. 파괴 대기는 DeathDuration(=피격 연출 잔여)이 담당.
     public void PlayDeath() { }
 

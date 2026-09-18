@@ -43,7 +43,10 @@ public static class RelicAssetGenerator
             null, "UI_Item_006"));
         list.Add(Make<GrantAllRelicsRelic>("10018", "유물 호리병",
             "유물 라운드 진입 시, 제시된 모든 유물을 획득한다.", RelicCategory.NonCombat,
-            null, "UI_Item_004"));
+            null, "10018_Relic Gourd"));
+        list.Add(Make<AwakenGaugeRecoverRelic>("10020", "이무기의 여의주",
+            "각성 종료 후, 성공한 콤보 수만큼 각성 게이지를 회복한다.", RelicCategory.Combat,
+            null, "imugire"));
 
         // ── 전투형: 전투 시작 ────────────────────────────────────
         list.Add(Make<GuardOnBattleStartRelic>("10002", "호신부",
