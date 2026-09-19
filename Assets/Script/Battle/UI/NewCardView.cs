@@ -62,9 +62,9 @@ namespace Battle.UI
 
         [Header("크기 — 드래그/Hover 시 일시 확대")]
         [Tooltip("드래그 중 카드 크기 배율 (홈 스케일 기준).")]
-        [SerializeField] private float dragScaleMultiplier = 1.22f; // 드래그 시 배율
+        [SerializeField] private float dragScaleMultiplier = 1.1f; // 드래그 시 배율
         [Tooltip("Hover(마우스 위) 시 카드 크기 배율 (홈 스케일 기준).")]
-        [SerializeField] private float hoverScaleMultiplier = 1.18f; // 호버 시 배율
+        [SerializeField] private float hoverScaleMultiplier = 1.08f; // 호버 시 배율
         [Tooltip("Hover 시 카드가 위로 떠오를 거리 (UI 좌표 단위).")]
         [SerializeField] private Vector2 hoverPositionOffset = new Vector2(0f, 100f); // 호버 시 상승 오프셋
         [Tooltip("덱 보기/픽커 그리드 — 제자리에서만 살짝 확대(떠오름 없음).")]
@@ -446,7 +446,7 @@ namespace Battle.UI
             _rect.SetParent(_homeParent, false);
             _rect.SetSiblingIndex(_homeSiblingIndex);
             _rect.anchoredPosition = _homeAnchoredPos;
-            _rect.localScale = _homeLocalScale;
+            _rect.localScale = ResolveHomeScale();
             // 슬롯의 fan 회전을 그대로 따름
             _rect.localRotation = Quaternion.identity;
         }
@@ -455,7 +455,15 @@ namespace Battle.UI
         public void ResetToHomeScale()
         {
             if (_rect == null) _rect = GetComponent<RectTransform>();
-            _rect.localScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
+            _rect.localScale = ResolveHomeScale();
+        }
+
+        // 손패는 HUD 스케일, 그 외(픽커/상점 등)는 프리팹 원본 스케일
+        Vector3 ResolveHomeScale()
+        {
+            if (Hud != null && SlotIndex >= 0)
+                return Vector3.one * Mathf.Max(0.01f, Hud.HandCardScale);
+            return _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
         }
 
         // 새로 들어온 카드를 아래에서 위로 떠오르게 하는 등장 연출 시작
@@ -478,7 +486,7 @@ namespace Battle.UI
 
             // stagger 동안 깜빡이지 않도록 시작 상태를 즉시 적용
             _playingIntro = true;
-            Vector3 baseScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
+            Vector3 baseScale = ResolveHomeScale();
             _rect.anchoredPosition = _homeAnchoredPos + below;
             _rect.localScale = baseScale * drawIntroStartScale;
             if (_canvasGroup != null) _canvasGroup.alpha = 0f;
@@ -530,7 +538,7 @@ namespace Battle.UI
             if (_rect != null)
             {
                 _rect.anchoredPosition = _homeAnchoredPos;
-                _rect.localScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
+                _rect.localScale = ResolveHomeScale();
             }
             if (_canvasGroup != null) _canvasGroup.alpha = 1f;
         }
@@ -769,7 +777,7 @@ namespace Battle.UI
         void ApplyScale(float multiplier)
         {
             if (_rect == null) return;
-            Vector3 baseScale = _homeLocalScale == Vector3.zero ? Vector3.one : _homeLocalScale;
+            Vector3 baseScale = ResolveHomeScale();
             _rect.localScale = baseScale * multiplier;
         }
 

@@ -33,6 +33,9 @@ namespace Battle.UI
         [Tooltip("슬롯 간 간격 (x). NewSkillCard 프리팹이 scale=1, 300×400일 때 650~750 권장.")]
         [SerializeField] private Vector2 slotSpacing = new Vector2(700f, 0f); // 슬롯 간 간격
         [SerializeField] private Vector2 handAnchoredPos = new Vector2(0f, 240f); // 손패 루트 위치
+        [Tooltip("손패에 놓인 카드의 기본 스케일. 프리팹 원본(상점/인벤토리)과 별개.")]
+        [SerializeField] private float handCardScale = 1f; // 손패 카드 기본 스케일
+        public float HandCardScale => handCardScale; // 손패 카드 기본 스케일
         [Tooltip("드래그 종료 시 스크린 Y가 이 값 이상이면 카드 사용으로 간주.")]
         [SerializeField] private float useThresholdY = 500f; // 카드 사용 판정 Y
         public float UseThresholdY => useThresholdY; // 지정 모드 진입 임계선
@@ -40,6 +43,10 @@ namespace Battle.UI
         [Header("적 지정 — 드래그 화살표")]
         [Tooltip("ON이면 target=ENEMY 카드를 드래그할 때 화살표로 적을 조준해야 사용된다.")]
         [SerializeField] private bool enemyTargetingEnabled = true; // 적 지정 사용 여부
+        [Tooltip("화살표 체브론/화살촉. 비우면 기본 삼각형. 흰색 PNG + 팁이 위쪽이면 색/방향이 맞는다.")]
+        [SerializeField] private Sprite targetingArrowSprite; // 화살표 이미지
+        [Tooltip("록온 코너(L자) 한 장. 비우면 기본 브래킷. 좌상단 L, 피벗은 바깥 꼭짓점.")]
+        [SerializeField] private Sprite targetingBracketSprite; // 록온 브래킷 이미지
 
         [Header("Fan Layout — 손패 부채꼴 연출")]
         [Tooltip("ON이면 카드들이 호 형태로 회전·배치된다.")]
@@ -1330,7 +1337,7 @@ namespace Battle.UI
             return enemy != null && enemy.IsAlive;
         }
 
-        // 지정 모드 중 화살표/호버 링을 갱신한다
+        // 지정 모드 중 화살표/록온 브래킷을 갱신한다
         public void UpdateEnemyTargeting(NewCardView view, PointerEventData ev)
         {
             if (view == null || ev == null) { HideEnemyTargeting(); return; }
@@ -1379,6 +1386,8 @@ namespace Battle.UI
             if (_targetArrow != null) return;
             EnsureDragLayer();
             _targetArrow = TargetArrowView.EnsureOn(dragLayer);
+            if (_targetArrow != null)
+                _targetArrow.SetCustomSprites(targetingArrowSprite, targetingBracketSprite);
         }
 
         // 클릭(더블클릭)으로 카드 사용을 시도
