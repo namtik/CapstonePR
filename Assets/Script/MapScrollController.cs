@@ -76,8 +76,8 @@ public class MapScrollController : MonoBehaviour
     {
         if (!enableDrag || scrollTarget == null) return;
 
-        // 인벤토리·설정 창이 열려 있으면 맵 드래그를 막는다
-        if (Battle.UI.InventoryPanelController.IsOpen || SettingPanel.IsOverlayOpen)
+        // 인벤토리·도감·설정 창이 열려 있으면 맵 드래그를 막는다
+        if (Battle.UI.InventoryPanelController.IsOpen || Battle.UI.CodexPanelController.IsOpen || SettingPanel.IsOverlayOpen)
         {
             _dragging = false;
             return;

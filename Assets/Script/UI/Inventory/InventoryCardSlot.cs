@@ -21,6 +21,8 @@ namespace Battle.UI
         Canvas _tempCanvas;              // 호버 시 위로 올리는 임시 캔버스
         GraphicRaycaster _tempRaycaster; // 임시 캔버스용 레이캐스터
 
+        public event System.Action<bool> HoverChanged; // 호버 진입(true)/종료(false) 알림
+
         // 호버 배율/정렬 순서/클립 영역 설정(인벤토리 탭에서 주입)
         public void Configure(float hoverScale, int hoverSortingOrder, RectTransform clipRect)
         {
@@ -60,6 +62,7 @@ namespace Battle.UI
 
             _rect.localScale = over ? _baseScale * _hoverScale : _baseScale;
             BringToFront(over);
+            HoverChanged?.Invoke(over);
         }
 
         // 호버 카드가 이웃 카드 위에 그려지도록 임시 캔버스 on/off
@@ -95,6 +98,7 @@ namespace Battle.UI
         // 비활성/파괴 시 확대 상태가 남지 않도록 정리
         void OnDisable()
         {
+            if (_hovering) HoverChanged?.Invoke(false);
             _hovering = false;
             if (_baseScaleCaptured && _rect != null) _rect.localScale = _baseScale;
             if (_tempCanvas != null) _tempCanvas.overrideSorting = false;
