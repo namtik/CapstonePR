@@ -7,7 +7,7 @@ using Battle.Relic;
 namespace Battle.UI
 {
     // 유물 도감 탭 — 전체 유물을 그리드로 표시(미발견은 실루엣/???), 분류 필터 + 수집률 + 호버 툴팁
-    public class CodexRelicTab : MonoBehaviour
+    public class CodexRelicTab : CodexTab
     {
         [Header("바인딩")]
         [Tooltip("유물 셀들이 들어갈 부모. GridLayoutGroup 사용 권장(셀 크기 = cellSize).")]
@@ -44,7 +44,7 @@ namespace Battle.UI
         }
 
         // 전체 유물을 필터/정렬해 셀 그리드를 다시 구성
-        public void Refresh()
+        public override void Refresh()
         {
             ClearSpawned();
             if (tooltip != null) tooltip.Hide();
@@ -60,7 +60,7 @@ namespace Battle.UI
                     _spawned.Add(CreateCell(relic, CodexProgress.IsRelicDiscovered(relic.id), clipRect));
             }
 
-            if (countText != null) countText.text = $"수집 {discovered} / {items.Count}";
+            ShowCollection(countText, discovered, items.Count);
             if (emptyState != null) emptyState.SetActive(items.Count == 0);
             UpdateFilterButtons();
         }
@@ -177,19 +177,6 @@ namespace Battle.UI
             for (int i = 0; i < filterButtonImages.Length; i++)
                 if (filterButtonImages[i] != null)
                     filterButtonImages[i].color = i == active ? filterActiveColor : filterInactiveColor;
-        }
-
-        // gridRoot 위쪽에서 스크롤 마스크(RectMask2D/Mask) RectTransform을 찾는다(없으면 null)
-        RectTransform FindClipRect(Transform from)
-        {
-            Transform t = from;
-            while (t != null)
-            {
-                if (t.GetComponent<RectMask2D>() != null || t.GetComponent<Mask>() != null)
-                    return t as RectTransform;
-                t = t.parent;
-            }
-            return null;
         }
 
         void ClearSpawned()

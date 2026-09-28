@@ -3,10 +3,19 @@ using UnityEngine.UI;
 
 namespace Battle.UI
 {
-    // 도감 패널 — menubar 도감 버튼으로 열고 탭(현재 유물)을 전환(보기 전용)
+    // 도감 패널 — menubar 도감 버튼으로 열고 탭(부적/사방비급/유물)을 전환(보기 전용)
     // 인벤토리와 동일하게 어떤 스테이지에도 속하지 않는 "항상 켜진" 오버레이 캔버스에 둔다.
     public class CodexPanelController : MonoBehaviour
     {
+        // 탭 하나 — 탭 버튼 + 페이지 + 탭 컴포넌트
+        [System.Serializable]
+        public struct TabEntry
+        {
+            public Button button;   // 탭 버튼
+            public GameObject page; // 탭 페이지
+            public CodexTab tab;    // 탭 컴포넌트
+        }
+
         // 전역 싱글톤 — 어느 스테이지의 버튼/스크립트든 Instance로 열 수 있다
         public static CodexPanelController Instance { get; private set; }
 
@@ -18,13 +27,11 @@ namespace Battle.UI
         [Tooltip("열고 닫을 패널 루트. 비우면 이 컴포넌트의 GameObject(권장하지 않음).")]
         [SerializeField] private GameObject panelRoot;        // 패널 루트
 
-        [Header("탭 페이지")]
-        [SerializeField] private GameObject relicTabPage;     // 유물 탭 페이지
-        [SerializeField] private CodexRelicTab relicTab;      // 유물 탭 컴포넌트
+        [Header("탭 (0번이 열 때 기본 탭)")]
+        [SerializeField] private TabEntry[] tabs = new TabEntry[0]; // 탭 목록
 
         [Header("버튼 (있으면 자동 연결)")]
         [SerializeField] private Button closeButton;          // 닫기(X) 버튼
-        [SerializeField] private Button relicTabButton;       // 유물 탭 버튼
 
         [Header("옵션")]
         [SerializeField] private bool startHidden = true;     // 시작 시 패널 숨김
@@ -42,7 +49,11 @@ namespace Battle.UI
             if (panelRoot == null) panelRoot = gameObject;
 
             if (closeButton != null) closeButton.onClick.AddListener(Close);
-            if (relicTabButton != null) relicTabButton.onClick.AddListener(ShowRelicTab);
+            for (int i = 0; i < tabs.Length; i++)
+            {
+                int index = i;
+                if (tabs[i].button != null) tabs[i].button.onClick.AddListener(() => ShowTab(index));
+            }
 
             if (startHidden) panelRoot.SetActive(false);
         }
@@ -77,7 +88,7 @@ namespace Battle.UI
             else Open();
         }
 
-        // 패널을 열고 유물 탭부터 표시(인벤토리가 열려 있으면 닫음)
+        // 패널을 열고 기본 탭부터 표시(인벤토리가 열려 있으면 닫음)
         public void Open()
         {
             if (InventoryPanelController.IsOpen) InventoryPanelController.Instance.Close();
@@ -88,7 +99,7 @@ namespace Battle.UI
                 panelRoot.transform.SetAsLastSibling();
             }
             EnsureOnTop();
-            ShowRelicTab();
+            ShowTab(0);
         }
 
         // 패널을 닫음
@@ -97,12 +108,15 @@ namespace Battle.UI
             if (panelRoot != null) panelRoot.SetActive(false);
         }
 
-        // 유물 탭으로 전환하고 갱신(활성 탭 버튼을 앞으로)
-        public void ShowRelicTab()
+        // index번 탭으로 전환하고 갱신(활성 탭 버튼을 앞으로)
+        public void ShowTab(int index)
         {
-            if (relicTabPage != null) relicTabPage.SetActive(true);
-            if (relicTabButton != null) relicTabButton.transform.SetAsLastSibling();
-            if (relicTab != null) relicTab.Refresh();
+            if (index < 0 || index >= tabs.Length) return;
+            for (int i = 0; i < tabs.Length; i++)
+                if (tabs[i].page != null) tabs[i].page.SetActive(i == index);
+
+            if (tabs[index].button != null) tabs[index].button.transform.SetAsLastSibling();
+            if (tabs[index].tab != null) tabs[index].tab.Refresh();
         }
     }
 }

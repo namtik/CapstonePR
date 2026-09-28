@@ -581,6 +581,7 @@ namespace Battle
                 return;
             }
             ownedComboIds.Add(commandId);
+            Battle.UI.CodexProgress.MarkCombo(refComboId);
             useComboDatabase = true;
             RefreshOwnedCombosRuntime();
             Debug.Log($"[NewBattle] 콤보 추가: 효과 {refComboId} → 커맨드 {commandId}");
