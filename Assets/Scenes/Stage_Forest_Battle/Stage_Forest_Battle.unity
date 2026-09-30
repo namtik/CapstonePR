@@ -566,6 +566,11 @@ MonoBehaviour:
   cameraAnchor: {fileID: 1539550037}
   stageCamera: {fileID: 1504038291}
   stageRoot: {fileID: 2023657900}
+  sideWorldSpacing: 5
+  behindWorldDistance: 1.8
+  centerScale: 0.85
+  sideScale: 0.6
+  sideDropWorld: 0.55
 --- !u!1 &880547495
 GameObject:
   m_ObjectHideFlags: 0

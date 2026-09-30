@@ -381,6 +381,7 @@ MonoBehaviour:
   hitVfxUiScale: 400
   hitVfxPlaybackSpeed: 1
   newSystemAttackSequence: 080000000900000014000000
+  AllowDuplication: 1
 --- !u!114 &5858952286309725067
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -395,8 +396,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyStat
   maxHp: 100
   currentHp: 100
-  attackDamage: 0
-  gaugeSpeed: 0
   guard: 0
   isNewlyFrozen: 0
 --- !u!222 &530138338892471730

@@ -27,6 +27,12 @@ public class RoundManager : MonoBehaviour
     [SerializeField] private Transform enemySpawnPoint; // 적 스폰 위치
     [SerializeField] private CombatStageController combatStageController; // 전투 스테이지 배경 제어
 
+    [Header("일반 전투 등장")]
+    [Tooltip("스테이지(바퀴-번호)별 마릿수와 몬스터 후보 풀. 정예/보스는 사용하지 않는다.")]
+    [SerializeField] private EnemyEncounterConfig encounterConfig;
+    [Tooltip("2D 폴백에서 여러 마리를 가로로 벌릴 간격(px).")]
+    [SerializeField] private float twoDMultiSpawnSpacing = 220f;
+
     [Header("상태이상 UI 패널")]
     [SerializeField] private StatusPanelUI playerStatusPanel; // 플레이어 상태이상 패널
     [SerializeField] private StatusPanelUI enemyStatusPanel; // 적 상태이상 패널
@@ -55,10 +61,12 @@ public class RoundManager : MonoBehaviour
     [SerializeField] private bool showStarterComboPickOnMapEntry = true;
 
     private RoundData currentRoundData; // 현재 진행 중인 라운드 데이터
-    private int currentEnemyIndex = 0; // 현재 처리 중인 적 인덱스
-    private EnemyStat currentEnemy; // 현재 적 스탯
+    private int currentEnemyIndex = 0; // 현재 처리 중인 적 인덱스(레거시 순차 스폰용)
+    private EnemyStat currentEnemy; // 마지막으로 스폰한 적 스탯
     private readonly List<EnemyData> _injectedEnemies = new List<EnemyData>(); // 특이사항(복제) 등으로 끼어든 적 큐
     private bool _currentIsInjected = false; // 현재 적이 주입(복제)된 적인지 여부
+    private int _spawnedCombatCount = 1; // 이번 전투에 스폰한 적 수(골드 계산용)
+    private bool _waitingForRoundEnd = false; // 전멸 후 라운드 종료 예약 여부
     public event System.Action OnRoundClear; // 라운드 클리어 이벤트
     private IRoundHandler currentRoundHandler; // 현재 라운드 핸들러
     private int clearedCombatCount = 0; // 클리어한 전투 수
@@ -217,6 +225,7 @@ public class RoundManager : MonoBehaviour
             Battle.NewBattleController.Instance?.EndBattle();
 
         currentRoundHandler.OnExitRound(this);
+        EnemyCombatParty.EndBattle();
         OnRoundClear?.Invoke();
     }
 
@@ -243,8 +252,7 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        currentEnemyIndex = 0;
-        SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
+        SpawnParty(ResolveCombatRoster(data), data.columnIndex, data.roundType);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
@@ -260,8 +268,7 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        currentEnemyIndex = 0;
-        SpawnNextEnemy(data.enemies, data.columnIndex, data.roundType);
+        SpawnParty(TakeFirstEnemy(data.enemies), data.columnIndex, data.roundType);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
@@ -277,7 +284,9 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        SpawnEnemy(data.bossEnemy, data.columnIndex, NodeType.Boss);
+        SpawnParty(data.bossEnemy != null
+            ? new List<EnemyData> { data.bossEnemy }
+            : new List<EnemyData>(), data.columnIndex, NodeType.Boss);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
@@ -523,7 +532,10 @@ public class RoundManager : MonoBehaviour
         bool isBoss = currentRoundData is BossRoundData;
         bool isElite = currentRoundData is EliteRoundData;
         bool isNormalCombat = currentRoundData is CombatRoundData;
-        int gold = MoneyManager.Instance.RollCombatRewardGold(isBoss, isElite, isNormalCombat);
+        int gold = 0;
+        int rolls = Mathf.Max(1, _spawnedCombatCount);
+        for (int i = 0; i < rolls; i++)
+            gold += MoneyManager.Instance.RollCombatRewardGold(isBoss, isElite, isNormalCombat);
         if (gold <= 0) return;
 
         // 유물(복주머니 10005): 전투 보상 골드 가산
@@ -585,12 +597,8 @@ public class RoundManager : MonoBehaviour
         else
             ElementSlotSystem.Instance?.EndBattle();
 
-        if (currentEnemy != null)
-        {
-            currentEnemy.OnDied -= HandleEnemyDied;
-            if (currentEnemy != null) Destroy(currentEnemy.gameObject); // 3D/2D 공통: 활성 적 오브젝트 제거
-            currentEnemy = null;
-        }
+        EnemyCombatParty.DestroyAllMembers();
+        currentEnemy = null;
 
         StopAllCoroutines();
 
@@ -601,31 +609,85 @@ public class RoundManager : MonoBehaviour
                 Destroy(enemySpawnPoint.GetChild(i).gameObject);
         }
 
-        // 3D: 스테이지 EnemyAnchor 아래 남은 적 정리(사망 연출 중이던 잔여 포함)
-        Transform anchor = BattleStageController.Current != null ? BattleStageController.Current.EnemyAnchor : null;
-        if (anchor != null)
-        {
-            for (int i = anchor.childCount - 1; i >= 0; i--)
-                Destroy(anchor.GetChild(i).gameObject);
-        }
+        // 3D: 스테이지 앵커 아래 남은 적 정리(사망 연출 중이던 잔여 포함)
+        DestroyChildrenOf(BattleStageController.Current != null ? BattleStageController.Current.EnemyAnchor : null);
 
         currentEnemyIndex = 0;
+        _spawnedCombatCount = 0;
+        _waitingForRoundEnd = false;
     }
 
-    // 다음 적을 스폰한다(목록을 모두 처치했으면 라운드 종료).
-    void SpawnNextEnemy(List<EnemyData> enemies, int columnIndex, NodeType nodeType)
+    static void DestroyChildrenOf(Transform parent)
     {
-        if (currentEnemyIndex >= enemies.Count)
+        if (parent == null) return;
+        for (int i = parent.childCount - 1; i >= 0; i--)
+            Destroy(parent.GetChild(i).gameObject);
+    }
+
+    // 일반 전투 명단: 인스펙터 구간 설정이 있으면 그걸 쓰고, 없으면 라운드 에셋 목록.
+    List<EnemyData> ResolveCombatRoster(CombatRoundData data)
+    {
+        int lap = 1;
+        int stage = 1;
+        GameStateController state = GameStateController.Instance;
+        if (state != null)
         {
-            EndRound();
+            lap = state.CurrentLap;
+            stage = state.CurrentDisplayStage;
+        }
+
+        if (encounterConfig != null)
+        {
+            List<EnemyData> composed = encounterConfig.ComposeCombatEnemies(lap, stage);
+            if (composed != null && composed.Count > 0)
+            {
+                data.enemies = composed;
+                Debug.Log($"[등장] {lap}-{stage} 일반 전투 {composed.Count}마리");
+                return composed;
+            }
+        }
+
+        return data.enemies ?? new List<EnemyData>();
+    }
+
+    static List<EnemyData> TakeFirstEnemy(List<EnemyData> enemies)
+    {
+        var result = new List<EnemyData>(1);
+        if (enemies == null) return result;
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            if (enemies[i] == null) continue;
+            result.Add(enemies[i]);
+            break;
+        }
+        return result;
+    }
+
+    // 명단의 적을 전부 동시에 스폰한다.
+    void SpawnParty(List<EnemyData> enemies, int columnIndex, NodeType nodeType)
+    {
+        _injectedEnemies.Clear();
+        _waitingForRoundEnd = false;
+        currentEnemyIndex = 0;
+
+        if (enemies == null || enemies.Count == 0)
+        {
+            Debug.LogError("RoundManager: 스폰할 적이 없습니다.");
+            EnemyCombatParty.BeginBattle(0);
+            _spawnedCombatCount = 0;
             return;
         }
 
-        SpawnEnemy(enemies[currentEnemyIndex], columnIndex, nodeType);
+        int n = enemies.Count;
+        EnemyCombatParty.BeginBattle(n);
+        _spawnedCombatCount = n;
+
+        for (int i = 0; i < n; i++)
+            SpawnEnemy(enemies[i], columnIndex, nodeType, injected: false, slotIndex: i, partySize: n);
     }
 
     // 적 프리팹을 생성해 스탯/뷰/배경/사망 이벤트를 설정한다.
-    void SpawnEnemy(EnemyData data, int columnIndex, NodeType nodeType, bool injected = false)
+    void SpawnEnemy(EnemyData data, int columnIndex, NodeType nodeType, bool injected = false, int slotIndex = 0, int partySize = 1)
     {
         _currentIsInjected = injected; // 주입(복제)된 적은 사망 시 인덱스를 증가시키지 않음
 
@@ -642,20 +704,19 @@ public class RoundManager : MonoBehaviour
         GameObject go;
         if (use3D)
         {
-            Transform anchor = BattleStageController.Current.EnemyAnchor;
+            Transform anchor = BattleStageController.Current.ResolveEnemyAnchor(slotIndex, partySize);
             // instantiateInWorldSpace=false → 프리팹의 로컬 트랜스폼(몬스터별 스케일/회전) 보존
             go = Instantiate(data.battlePrefab3D, anchor, false);
-            go.transform.localPosition = Vector3.zero; // 앵커 위치에 정확히 안착(스케일/회전은 프리팹 유지)
+            go.transform.position = BattleStageController.Current.ResolvePartyWorldPosition(slotIndex, partySize);
+            float scaleMul = BattleStageController.Current.ResolvePartyScale(slotIndex, partySize);
+            go.transform.localScale *= scaleMul;
         }
         else
         {
             go = Instantiate(enemyPrefab, enemySpawnPoint);
             RectTransform rectTransform = go.GetComponent<RectTransform>();
             if (rectTransform != null)
-            {
-                rectTransform.anchoredPosition = Vector2.zero;
-                rectTransform.localScale = Vector3.one;
-            }
+                PlaceTwoDEnemy(rectTransform, slotIndex, partySize);
         }
 
         EnemyStat stat = go.GetComponent<EnemyStat>();
@@ -671,17 +732,9 @@ public class RoundManager : MonoBehaviour
             Debug.LogError("RoundManager: enemyPrefab에 EnemyStat이 없습니다.");
             return;
         }
-        if (enemyStatusPanel != null && controller != null)
-        {
-            enemyStatusPanel.SetTarget(controller);
-            if (view != null)
-            {
-                // 3D는 스테이지 카메라 기준 WorldToScreen 팔로우, 2D는 기존 스크린 좌표 팔로우
-                if (use3D) enemyStatusPanel.SetFollowTarget(view.ShakeTarget, stageCam);
-                else enemyStatusPanel.SetFollowTarget(view.ShakeTarget);
-            }
-        }
-        Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}");
+
+        AttachEnemyUi(controller, view, use3D, stageCam, slotIndex, partySize);
+        Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}, slot={slotIndex}/{partySize}, 3D={use3D}");
 
         if (view != null && data.enemySprite != null)
             view.SetSprite(data.enemySprite);
@@ -693,7 +746,7 @@ public class RoundManager : MonoBehaviour
             view.SetAttackSprites(data.attackSprites);
 
         // 3D 스테이지에선 2D 배경을 건드리지 않는다(3D 포레스트가 배경 역할).
-        if (!use3D && combatStageController != null)
+        if (!use3D && combatStageController != null && slotIndex == 0)
             combatStageController.ApplyEnemyBackground(data);
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
@@ -702,17 +755,14 @@ public class RoundManager : MonoBehaviour
         if (view != null)
             view.UpdateActionGauge(0f);
 
-        // 특이사항(복제): 주입된 사본은 다시 복제하지 않도록 막아 무한 복제 방지
-        if (injected && controller != null)
+        // 여러 마리 전투이거나 주입된 사본이면 복제를 막는다.
+        if (controller != null && (injected || partySize > 1))
             controller.AllowDuplication = false;
-
-        if (currentEnemy != null)
-        {
-            currentEnemy.OnDied -= HandleEnemyDied;
-        }
 
         stat.OnDied += HandleEnemyDied;
         currentEnemy = stat;
+        if (controller != null) EnemyCombatParty.Register(controller);
+
         MonsterMidPattern midPattern = go.GetComponent<MonsterMidPattern>();
         if (midPattern != null)
         {
@@ -720,48 +770,100 @@ public class RoundManager : MonoBehaviour
         }
     }
 
-    // 적 사망 시 재화를 지급하고 다음 적 스폰을 예약한다.
+    void PlaceTwoDEnemy(RectTransform rectTransform, int slotIndex, int partySize)
+    {
+        int side = BattleStageController.PartySideSign(slotIndex, partySize);
+        float scaleMul = side == 0 ? 1f : 0.6f;
+
+        var stage = BattleStageController.Current;
+        if (stage != null)
+        {
+            rectTransform.anchoredPosition = stage.ResolvePartyCanvasOffset(
+                rectTransform.parent as RectTransform, slotIndex, partySize);
+            scaleMul = stage.ResolvePartyScale(slotIndex, partySize);
+        }
+        else
+        {
+            rectTransform.anchoredPosition = new Vector2(side * twoDMultiSpawnSpacing, side == 0 ? 0f : -50f);
+        }
+
+        rectTransform.localScale = Vector3.one * scaleMul;
+    }
+
+    void AttachEnemyUi(EnemyController controller, IEnemyView view, bool use3D, Camera stageCam, int slotIndex, int partySize)
+    {
+        bool followWorld = partySize > 1;
+
+        if (use3D && view is EnemyView3D view3D)
+        {
+            EnemyOverlayHUD hud = EnemyOverlayHUD.Instance;
+            if (slotIndex > 0 && EnemyOverlayHUD.Instance != null)
+            {
+                hud = EnemyOverlayHUD.Instance.CreateClone();
+                EnemyCombatParty.TrackHudClone(hud);
+            }
+            if (hud != null)
+                view3D.SetOverlayHud(hud, followWorld);
+        }
+
+        if (enemyStatusPanel == null || controller == null) return;
+
+        StatusPanelUI panel = enemyStatusPanel;
+        if (slotIndex > 0)
+        {
+            panel = Instantiate(enemyStatusPanel, enemyStatusPanel.transform.parent);
+            panel.name = enemyStatusPanel.name + "_Clone";
+            EnemyCombatParty.TrackStatusClone(panel);
+        }
+
+        panel.SetTarget(controller);
+        if (view != null)
+        {
+            if (use3D) panel.SetFollowTarget(view.ShakeTarget, stageCam);
+            else panel.SetFollowTarget(view.ShakeTarget);
+        }
+    }
+
+    // 적 사망 시 재화를 지급하고, 남은 적이 없으면 라운드 종료를 예약한다.
     public void HandleEnemyDied()
     {
         Debug.Log("[RoundManager.HandleEnemyDied] 호출됨");
-
-        if (currentEnemy != null)
-        {
-            currentEnemy.OnDied -= HandleEnemyDied;
-        }
 
         if (!IsNewBattleSystemActive() && MoneyManager.Instance != null)
         {
             MoneyManager.Instance.OnEnemyKilled();
         }
 
-        // 주입(복제)된 적이 죽었을 때는 실제 적 인덱스를 진행시키지 않는다.
+        if (EnemyCombatParty.AliveCount > 0)
+            return;
+
+        if (_waitingForRoundEnd) return;
+        _waitingForRoundEnd = true;
+
         if (!_currentIsInjected)
             currentEnemyIndex++;
 
         StartCoroutine(SpawnNextAfterDelay());
     }
 
-    // 일정 지연 후 라운드 타입에 맞게 다음 적을 스폰하거나 라운드를 종료한다.
+    // 일정 지연 후 복제 적을 스폰하거나 라운드를 종료한다.
     IEnumerator SpawnNextAfterDelay(float delay = 1.5f)
     {
         yield return new WaitForSeconds(delay);
 
-        // 특이사항(복제)로 끼어든 적을 실제 적보다 먼저 처리
-        if (_injectedEnemies.Count > 0 && TryGetCurrentColumnAndType(out int col, out NodeType nt))
+        // 여러 마리 전투에서는 복제 스폰을 하지 않는다.
+        if (!EnemyCombatParty.IsMulti && _injectedEnemies.Count > 0 && TryGetCurrentColumnAndType(out int col, out NodeType nt))
         {
             var dup = _injectedEnemies[0];
             _injectedEnemies.RemoveAt(0);
+            EnemyCombatParty.BeginBattle(1);
+            _spawnedCombatCount = 1;
+            _waitingForRoundEnd = false;
             SpawnEnemy(dup, col, nt, injected: true);
             yield break;
         }
 
-        if (currentRoundData is CombatRoundData combatData)
-            SpawnNextEnemy(combatData.enemies, combatData.columnIndex, combatData.roundType);
-        else if (currentRoundData is EliteRoundData eliteData)
-            SpawnNextEnemy(eliteData.enemies, eliteData.columnIndex, eliteData.roundType);
-        else if (currentRoundData is BossRoundData)
-            EndRound();
+        EndRound();
     }
 
     // 현재 라운드의 열 인덱스/노드 타입 조회(복제 스폰용)
@@ -777,6 +879,11 @@ public class RoundManager : MonoBehaviour
     public void RequeueEnemyCopy(EnemyData data)
     {
         if (data == null) return;
+        if (EnemyCombatParty.IsMulti)
+        {
+            Debug.Log($"[특이사항] {data.enemyName} 복제 생략 — 여러 마리 전투");
+            return;
+        }
         _injectedEnemies.Add(data);
         Debug.Log($"[특이사항] {data.enemyName} 복제 예약 (대기 {_injectedEnemies.Count})");
     }

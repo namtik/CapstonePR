@@ -482,7 +482,7 @@ public class EnemyView : MonoBehaviour, IEnemyView
         if (RectTransformUtility.RectangleContainsScreenPoint(rt, screenPos, cam))
             return true;
         if (!TryGetAimScreen(out Vector2 center, out float radius)) return false;
-        return Vector2.Distance(screenPos, center) <= radius;
+        return Vector2.Distance(screenPos, center) <= (radius * 1.2f + 40f) * 1.3f;
     }
 
     // 사망 연출 — 2D는 별도 사망 애니가 없어 no-op. 파괴 대기는 DeathDuration(=피격 연출 잔여)이 담당.

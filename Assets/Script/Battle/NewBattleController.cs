@@ -128,8 +128,12 @@ namespace Battle
         private readonly ComboResolveContext _comboCtx = new ComboResolveContext();      // 콤보 효과 실행 컨텍스트
 
         private Player _player;                  // 플레이어 참조
-        private EnemyController _enemy;          // 적 컨트롤러 참조
-        private EnemyStat _enemyStat;            // 적 스탯 참조
+        private EnemyController _enemy;          // 현재 효과 대상 적
+        private EnemyStat _enemyStat;            // 현재 효과 대상 적 스탯
+        private readonly List<EnemyController> _boundEnemies = new List<EnemyController>();
+        private readonly List<EnemyController> _aliveBuf = new List<EnemyController>();
+        private readonly Queue<EnemyController> _attackQueue = new Queue<EnemyController>();
+        private bool _attackResolving;
 
         private bool _inBattle;                  // 전투 진행 중 여부
         private bool _cardPresenting;            // 일반 카드 사용 중앙 연출 진행 중 여부(재진입 방지)
@@ -161,8 +165,12 @@ namespace Battle
 
         public const int CURSE_DURATION_USES = 2;   // 저주 지속 카드 사용 횟수
         public const int CURSE_PLAYER_DAMAGE = 6;   // 저주 카드 사용 시 플레이어 피해량
-        private CardElement? _cursedElement;        // 현재 저주된 속성
-        private int _curseRemainingUses;            // 저주 남은 지속 횟수
+        class ActiveCurse
+        {
+            public CardElement element;
+            public int remainingUses;
+        }
+        private readonly List<ActiveCurse> _curses = new List<ActiveCurse>(); // 중첩 가능한 속성 저주
         private int _recoverCooldown;               // 방해행동(회복) 쿨다운
         private int _lastDisruptionAction = -1;     // 직전에 발동한 방해행동(연속 발동 방지용, -1=없음)
 
@@ -205,10 +213,19 @@ namespace Battle
         private bool _relicFirstCardRecastPending; // 유물(복사경 10015): 첫 사용 카드 효과 1회 재발동 예약
 
         public bool IsAwakenActive => _awakenActive;        // 각성 활성 여부 노출
-        public EnemyController CurrentEnemy => _enemy;      // 현재 전투 적(단일)
+        public EnemyController CurrentEnemy =>
+            _enemy != null && _enemy.IsAlive ? _enemy : EnemyCombatParty.FirstAlive();
         public CardDeckSystem Deck => _deck;                // 덱 시스템 노출
         public CardInstance LastResolvedCard => _lastResolvedCard; // 마지막 사용 카드 노출
-        public CardElement? CursedElement => _cursedElement; // 현재 저주 속성 노출
+        public CardElement? CursedElement // 현재 저주 속성 노출(여러 개면 첫 활성)
+        {
+            get
+            {
+                for (int i = 0; i < _curses.Count; i++)
+                    if (_curses[i].remainingUses > 0) return _curses[i].element;
+                return null;
+            }
+        }
         // 불126: 적 행동 시 화상이 줄어들지 않는지를 EnemyController가 조회
         public bool BurnPersistsOnEnemyTurn => _ctx != null && _ctx.burnPersistsOnEnemyTurn;
         // 각성 발동에 필요한 실제 속성 카드 수(보정 반영, 최소 1)
@@ -241,7 +258,7 @@ namespace Battle
                 _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
                 _player.OnHpDecreased -= OnPlayerHpDecreasedHandler;
             }
-            if (_enemyStat != null) _enemyStat.OnGaugeFull -= OnEnemyAttackFiredHandler;
+            UnbindPartyEvents();
             if (Instance == this) Instance = null;
         }
 
@@ -269,12 +286,9 @@ namespace Battle
         {
             if (!_inBattle) return;
 
-            if (_enemy == null || !_enemy.gameObject.activeInHierarchy)
+            if (_enemy == null || !_enemy.gameObject.activeInHierarchy || !_enemy.IsAlive)
             {
-                _enemy = FindFirstObjectByType<EnemyController>();
-                _enemyStat = _enemy != null ? _enemy.GetComponent<EnemyStat>() : null;
-                _ctx.enemy = _enemy;
-                _ctx.enemyStat = _enemyStat;
+                BindEnemy(EnemyCombatParty.FirstAlive());
             }
 
             HandleInput();
@@ -312,12 +326,8 @@ namespace Battle
         public void StartBattle()
         {
             _player = Player.Resolve(true);
-            _enemy = FindFirstObjectByType<EnemyController>();
-            _enemyStat = _enemy != null ? _enemy.GetComponent<EnemyStat>() : null;
-
+            BindParty();
             _ctx.player = _player;
-            _ctx.enemy = _enemy;
-            _ctx.enemyStat = _enemyStat;
             _ctx.deck = _deck;
             ResetContextFlags();
             if (RunDeckState.Instance != null)
@@ -334,18 +344,6 @@ namespace Battle
                 _player.OnBlockConsumedByAttack += OnBlockConsumedHandler;
                 _player.OnHpDecreased -= OnPlayerHpDecreasedHandler;
                 _player.OnHpDecreased += OnPlayerHpDecreasedHandler;
-            }
-
-            if (_enemyStat != null)
-            {
-                _enemyStat.OnGaugeFull -= OnEnemyAttackFiredHandler;
-                _enemyStat.OnGaugeFull += OnEnemyAttackFiredHandler;
-            }
-
-            if (_enemy != null)
-            {
-                _enemy.OnStatusApplied -= OnEnemyStatusAppliedHandler;
-                _enemy.OnStatusApplied += OnEnemyStatusAppliedHandler;
             }
 
             var startingDeck = _customStartingDeck ?? CardDatabase.BuildDefaultPrototypeDeck();
@@ -383,6 +381,8 @@ namespace Battle
 
             _inBattle = true;
             _cardPresenting = false;
+            _attackResolving = false;
+            _attackQueue.Clear();
             _elementInputCount = 0;
             _awakenActive = false;
             _awakenPending = false;
@@ -393,8 +393,7 @@ namespace Battle
             _recoverCooldown = 0;
             _lastDisruptionAction = -1; // 방해행동 연속 방지 기록 초기화
             // 저주는 전투 범위 상태 — 이전 전투가 저주가 남은 채 끝나도 다음 전투로 넘어가지 않도록 초기화
-            _cursedElement = null;
-            _curseRemainingUses = 0;
+            _curses.Clear();
             _track = null;
             _tdQueue.Clear();
             _cardsPlayedThisBattle = 0;
@@ -448,7 +447,9 @@ namespace Battle
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
-            if (_enemy != null) _enemy.OnStatusApplied -= OnEnemyStatusAppliedHandler;
+            _attackResolving = false;
+            _attackQueue.Clear();
+            UnbindPartyEvents();
             ResolveTrackUnfired();
             TdFlushTerminal();
             _deck.EndBattle();
@@ -703,9 +704,8 @@ namespace Battle
         // 물15(214) — 플레이어에게 적용된 모든 저주 해제
         public void ClearAllCurses()
         {
-            bool hadCurse = _cursedElement.HasValue;
-            _cursedElement = null;
-            _curseRemainingUses = 0;
+            bool hadCurse = _curses.Count > 0;
+            _curses.Clear();
             handHud?.Refresh();
             if (hadCurse) Log("[저주] 해제됨");
         }
@@ -879,6 +879,8 @@ namespace Battle
         {
             if (!_inBattle) return false;
             if (card == null) return false;
+
+            BindEnemyFromHudOrAlive();
 
             if (_awakenActive)
             {
@@ -1161,10 +1163,15 @@ namespace Battle
                 return;
             }
 
-            if (_enemyStat == null) return;
+            EnemyCombatParty.CollectAlive(_aliveBuf);
+            if (_aliveBuf.Count == 0) return;
             for (int i = 0; i < amount; i++)
             {
-                _enemyStat.ConsumeGaugeStep();
+                for (int e = 0; e < _aliveBuf.Count; e++)
+                {
+                    EnemyStat st = _aliveBuf[e] != null ? _aliveBuf[e].GetComponent<EnemyStat>() : null;
+                    st?.ConsumeGaugeStep();
+                }
                 // 패의 모든 카드 gaugeSinceDrawn 누적 (땅6/405, 땅16/415 공식용)
                 for (int h = 0; h < _deck.Hand.Count; h++)
                     _deck.Hand[h].gaugeSinceDrawn++;
@@ -1613,8 +1620,11 @@ namespace Battle
         }
 
         // 적 방해행동 발동 — AI(또는 랜덤)로 1개 선택 후 분기 실행, 보상 추적 시작
-        public string TriggerDisruption()
+        public string TriggerDisruption() => TriggerDisruption(_enemy);
+
+        public string TriggerDisruption(EnemyController source)
         {
+            if (source != null) BindEnemy(source);
             bool recoverReady = _recoverCooldown <= 0;
             // 직전 방해행동을 제외해 연속 발동을 막는다(AI·랜덤 폴백 공통 마스크)
             bool[] allowedMask = DisruptionAllowedExcludingLast();
@@ -1625,7 +1635,7 @@ namespace Battle
                 try
                 {
                     // self-state(상태의존 마스크용): 이미 건 저주/강화, 현재 각성 게이지
-                    bool curseActive = _cursedElement.HasValue;
+                    bool curseActive = _curses.Count > 0;
                     bool enhanceActive = _enemy != null && _enemy.IsNextAttackBuffed;
                     var decision = Battle.AI.EnemyDisruptionAI.Decide(_deck, _enemyStat, _player, recoverReady, aiExplorationEpsilon, onlineLearning, curseActive, enhanceActive, _elementInputCount, allowedMask);
                     pick = decision.action;
@@ -1662,9 +1672,7 @@ namespace Battle
                 {
                     CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
                     CardElement target = elements[Random.Range(0, elements.Length)];
-                    _cursedElement = target;
-                    _curseRemainingUses = CURSE_DURATION_USES;
-                    handHud?.Refresh();
+                    ApplyElementCurse(target, CURSE_DURATION_USES);
                     if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0);
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
                     return $"방해: {ElementName(target)} 저주!";
@@ -1884,28 +1892,36 @@ namespace Battle
         // 외부(NewCardView)가 카드 속성이 저주되었는지 확인용
         public bool IsElementCursed(CardElement element)
         {
-            return _cursedElement.HasValue && _cursedElement.Value == element && _curseRemainingUses > 0;
+            for (int i = 0; i < _curses.Count; i++)
+                if (_curses[i].element == element && _curses[i].remainingUses > 0)
+                    return true;
+            return false;
         }
 
-        // 저주된 속성 카드 사용 시 플레이어 피해 적용(2회 동안 지속)
+        // 저주된 속성 카드 사용 시 플레이어 피해 적용. 저주마다 카드 사용 1회씩 소모.
         void ApplyCurseOnCardUse(CardInstance card)
         {
-            if (!_cursedElement.HasValue || _curseRemainingUses <= 0) return;
+            if (_curses.Count == 0) return;
 
-            if (card.Element == _cursedElement.Value && _player != null)
+            for (int i = _curses.Count - 1; i >= 0; i--)
             {
-                _player.TakeDamage(CURSE_PLAYER_DAMAGE);
-                Log($"[저주] {_cursedElement.Value} 카드 사용 — 플레이어 {CURSE_PLAYER_DAMAGE} 피해");
-                if (_track != null && _track.action == 0) _track.curseHits++;
-            }
+                ActiveCurse curse = _curses[i];
+                if (card.Element == curse.element && _player != null)
+                {
+                    _player.TakeDamage(CURSE_PLAYER_DAMAGE);
+                    Log($"[저주] {curse.element} 카드 사용 — 플레이어 {CURSE_PLAYER_DAMAGE} 피해");
+                    if (_track != null && _track.action == 0) _track.curseHits++;
+                }
 
-            _curseRemainingUses--;
-            if (_curseRemainingUses <= 0)
-            {
-                Log($"[저주] {_cursedElement.Value} 저주 종료");
-                _cursedElement = null;
-                if (_track != null && _track.action == 0) ResolveTrack(CurseReward(_track.curseHits));
+                curse.remainingUses--;
+                if (curse.remainingUses <= 0)
+                {
+                    Log($"[저주] {curse.element} 저주 종료");
+                    _curses.RemoveAt(i);
+                    if (_track != null && _track.action == 0) ResolveTrack(CurseReward(_track.curseHits));
+                }
             }
+            handHud?.Refresh();
         }
 
         // 속성을 한글 이름으로 변환
@@ -2115,10 +2131,19 @@ namespace Battle
         // 특이사항: 지정 속성에 저주 부여(uses회 카드 사용 동안 지속)
         public void ApplyElementCurse(CardElement element, int uses)
         {
-            _cursedElement = element;
-            _curseRemainingUses = Mathf.Max(1, uses);
+            uses = Mathf.Max(1, uses);
+            for (int i = 0; i < _curses.Count; i++)
+            {
+                if (_curses[i].element != element) continue;
+                _curses[i].remainingUses += uses;
+                handHud?.Refresh();
+                Log($"[특이사항] {ElementName(element)} 속성 저주 중첩 — {_curses[i].remainingUses}회 지속");
+                return;
+            }
+
+            _curses.Add(new ActiveCurse { element = element, remainingUses = uses });
             handHud?.Refresh();
-            Log($"[특이사항] {ElementName(element)} 속성 저주 — {_curseRemainingUses}회 지속");
+            Log($"[특이사항] {ElementName(element)} 속성 저주 — {uses}회 지속");
         }
 
         // 특이사항: 무작위 속성에 저주 부여
@@ -2202,8 +2227,10 @@ namespace Battle
         // 무작위 적에게 즉시 피해 (현재 단일 적)
         public void DealDamageToRandomEnemy(int amount)
         {
-            if (_enemy == null || amount <= 0) return;
-            _enemy.TakeDamage(amount);
+            if (amount <= 0) return;
+            EnemyController target = EnemyCombatParty.PickRandomAlive() ?? _enemy;
+            if (target == null) return;
+            target.TakeDamage(amount);
             Log($"[유물] 적에게 {amount} 피해");
         }
 
@@ -2226,6 +2253,102 @@ namespace Battle
                 RelicHUD.Instance.PulseRelicIcon(relic, label, onShown);
             else
                 onShown?.Invoke();
+        }
+
+        void BindEnemyFromHudOrAlive()
+        {
+            EnemyController aimed = handHud != null ? handHud.PendingEnemyTarget : null;
+            if (aimed != null && aimed.IsAlive)
+            {
+                BindEnemy(aimed);
+                return;
+            }
+            if (_enemy == null || !_enemy.IsAlive)
+                BindEnemy(EnemyCombatParty.FirstAlive());
+        }
+
+        void BindEnemy(EnemyController enemy)
+        {
+            _enemy = enemy;
+            _enemyStat = enemy != null ? enemy.GetComponent<EnemyStat>() : null;
+            _ctx.enemy = _enemy;
+            _ctx.enemyStat = _enemyStat;
+            EnemyCombatParty.CurrentTarget = enemy;
+        }
+
+        void BindParty()
+        {
+            UnbindPartyEvents();
+            EnemyCombatParty.CollectAlive(_aliveBuf);
+            if (_aliveBuf.Count == 0)
+            {
+                EnemyController[] found = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
+                for (int i = 0; i < found.Length; i++)
+                {
+                    if (found[i] != null && found[i].IsAlive)
+                    {
+                        EnemyCombatParty.Register(found[i]);
+                        _aliveBuf.Add(found[i]);
+                    }
+                }
+            }
+
+            for (int i = 0; i < _aliveBuf.Count; i++)
+            {
+                EnemyController e = _aliveBuf[i];
+                EnemyStat stat = e.GetComponent<EnemyStat>();
+                if (stat != null)
+                {
+                    stat.OnGaugeFull -= OnEnemyAttackFiredHandler;
+                    stat.OnGaugeFull += OnEnemyAttackFiredHandler;
+                }
+                e.OnStatusApplied -= OnEnemyStatusAppliedHandler;
+                e.OnStatusApplied += OnEnemyStatusAppliedHandler;
+                _boundEnemies.Add(e);
+            }
+
+            BindEnemy(_aliveBuf.Count > 0 ? _aliveBuf[0] : null);
+        }
+
+        void UnbindPartyEvents()
+        {
+            for (int i = 0; i < _boundEnemies.Count; i++)
+            {
+                EnemyController e = _boundEnemies[i];
+                if (e == null) continue;
+                EnemyStat stat = e.GetComponent<EnemyStat>();
+                if (stat != null) stat.OnGaugeFull -= OnEnemyAttackFiredHandler;
+                e.OnStatusApplied -= OnEnemyStatusAppliedHandler;
+            }
+            _boundEnemies.Clear();
+        }
+
+        // 게이지가 동시에 찬 적들의 공격을 한 마리씩 처리한다.
+        public void EnqueueEnemyAttack(EnemyController source)
+        {
+            if (source == null) return;
+            _attackQueue.Enqueue(source);
+            TryProcessAttackQueue();
+        }
+
+        void TryProcessAttackQueue()
+        {
+            if (_attackResolving) return;
+            while (_attackQueue.Count > 0)
+            {
+                EnemyController e = _attackQueue.Dequeue();
+                if (e == null || !e.IsAlive) continue;
+                _attackResolving = true;
+                BindEnemy(e);
+                e.BeginQueuedAttack(OnQueuedAttackFinished);
+                return;
+            }
+        }
+
+        void OnQueuedAttackFinished()
+        {
+            _attackResolving = false;
+            TryProcessAttackQueue();
         }
     }
 }

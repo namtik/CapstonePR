@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Battle.Card;
 
@@ -87,16 +88,21 @@ namespace Battle
             switch (verb)
             {
                 case "DAMAGE":
-                    if (ctx.enemy != null)
-                        for (int h = 0; h < hits; h++) ctx.enemy.TakeDamage(amount);
+                    ForEachComboTarget(eff, ctx, e =>
+                    {
+                        for (int h = 0; h < hits; h++) e.TakeDamage(amount);
+                    });
                     break;
 
                 case "APPLY_STATUS":
                 {
                     string st = (eff.status ?? "").Trim().ToUpperInvariant();
                     if (st == "ATTACK_POWER") { WarnSkip("APPLY_STATUS:ATTACK_POWER", eff); break; }
-                    if (ctx.enemy != null && !string.IsNullOrEmpty(st))
-                        ctx.enemy.AddStatus(st.ToLowerInvariant(), amount);
+                    if (!string.IsNullOrEmpty(st))
+                    {
+                        string key = st.ToLowerInvariant();
+                        ForEachComboTarget(eff, ctx, e => e.AddStatus(key, amount));
+                    }
                     break;
                 }
 
@@ -200,6 +206,42 @@ namespace Battle
                 ctx.enemyStat.statusEffects.TryGetValue(key, out int v))
                 return v;
             return 0;
+        }
+
+        static readonly List<EnemyController> ComboTargets = new List<EnemyController>();
+
+        static void ForEachComboTarget(ComboEffectData eff, ComboResolveContext ctx, Action<EnemyController> body)
+        {
+            if (body == null) return;
+            string t = (eff.target ?? "").Trim().ToUpperInvariant();
+            ComboTargets.Clear();
+
+            if (t == "ALL_ENEMIES")
+            {
+                EnemyCombatParty.CollectAlive(ComboTargets);
+            }
+            else if (t == "RANDOM_ENEMY" || t == "ENEMY")
+            {
+                // 콤보는 드래그 지정이 없으므로 단일 대상은 무작위.
+                EnemyController r = EnemyCombatParty.PickRandomAlive();
+                if (r == null && ctx.enemy != null && ctx.enemy.IsAlive) r = ctx.enemy;
+                if (r != null) ComboTargets.Add(r);
+            }
+            else if (ctx.enemy != null && ctx.enemy.IsAlive)
+            {
+                ComboTargets.Add(ctx.enemy);
+            }
+            else
+            {
+                EnemyController f = EnemyCombatParty.FirstAlive();
+                if (f != null) ComboTargets.Add(f);
+            }
+
+            for (int i = 0; i < ComboTargets.Count; i++)
+            {
+                EnemyController e = ComboTargets[i];
+                if (e != null && e.IsAlive) body(e);
+            }
         }
     }
 }

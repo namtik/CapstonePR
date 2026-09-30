@@ -110,6 +110,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     // 이벤트 구독을 해제한다
     void OnDestroy()
     {
+        EnemyCombatParty.Unregister(this);
         stat.OnDied -= HandleDeath;
         stat.OnMidPattern  -= HandleMidPattern;
         stat.OnGaugeFull   -= HandleGaugeFull;
@@ -117,6 +118,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnDamaged -= HandleSpecialDamaged;
         stat.OnHpChanged -= HandleSpecialHpChanged;
         if (view != null) view.OnAttackMotionLastFrame -= PlayAttackVfx;
+        CompleteQueuedAttack();
     }
 
     // 새 시스템 공격 예고를 한 번 지연 초기화한다
@@ -175,7 +177,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (_ability == EnemySpecialAbility.DuplicateAtHalfHp)
         {
             _halfHpTriggered = true;
-            if (AllowDuplication && roundManager != null && stat.Data != null)
+            if (AllowDuplication && !EnemyCombatParty.IsMulti && roundManager != null && stat.Data != null)
             {
                 roundManager.RequeueEnemyCopy(stat.Data);
                 view?.ShowMidPatternNotice("복제!");
@@ -319,7 +321,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         // 새 전투 시스템: NewBattleController가 방해 행동 처리
         if (Battle.NewBattleController.Instance != null)
         {
-            patternMessage = Battle.NewBattleController.Instance.TriggerDisruption();
+            patternMessage = Battle.NewBattleController.Instance.TriggerDisruption(this);
         }
         // FCM 시스템이 있으면 사용, 없으면 기존 랜덤 폴백
         else if (midPattern != null)
@@ -351,8 +353,34 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         view?.PlayMotion(isBuff ? EnemyMotion.Buff : EnemyMotion.Debuff);
     }
 
+    System.Action _queuedAttackDone; // 다중 전투 공격 대기열 완료 콜백
+
     // 게이지 가득 시 화상/강화를 처리하고 적 공격을 실행한다
     void HandleGaugeFull()
+    {
+        var nbc = Battle.NewBattleController.Instance;
+        if (nbc != null && nbc.InBattle)
+        {
+            nbc.EnqueueEnemyAttack(this);
+            return;
+        }
+        PerformGaugeFullAttack();
+    }
+
+    public void BeginQueuedAttack(System.Action onDone)
+    {
+        _queuedAttackDone = onDone;
+        PerformGaugeFullAttack();
+    }
+
+    void CompleteQueuedAttack()
+    {
+        var cb = _queuedAttackDone;
+        _queuedAttackDone = null;
+        cb?.Invoke();
+    }
+
+    void PerformGaugeFullAttack()
     {
         midPattern?.OnGauge10();
         if (player == null)
@@ -362,7 +390,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (Battle.NewBattleController.Instance != null)
         {
             ApplyBurnBeforeAttack();
-            if (!stat.IsAlive) return; // 화상으로 적이 사망하면 공격하지 않음
+            if (!stat.IsAlive)
+            {
+                CompleteQueuedAttack();
+                return;
+            }
         }
 
         int damagePerHit;
@@ -407,8 +439,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
         if (player != null)
         {
-            // 연타 연출을 위해 코루틴으로 분리하여 호출
             StartCoroutine(ExecuteMultiHit(hitCount, damagePerHit));
+        }
+        else
+        {
+            CompleteQueuedAttack();
         }
 
         // 특이사항(백족승): 공격 시 다른 속성으로 저주 전환
@@ -462,6 +497,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             yield return new WaitForSeconds(0.15f);
         }
         Debug.Log($"[EnemyController] {count} hit");
+        yield return new WaitForSeconds(0.45f);
+        CompleteQueuedAttack();
     }
 
     // 적 공격 파티클을 활성화 보장 후 재생한다

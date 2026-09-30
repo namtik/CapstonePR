@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb6e416c836d6ab4dbd2f80029cc38a6, type: 3}
   m_Name: DifficultyConfig
   m_EditorClassIdentifier: Assembly-CSharp::DifficultyConfig
-  totalColumns: 10
+  totalColumns: 9
   hpCurve:
     serializedVersion: 2
     m_Curve:

@@ -43,9 +43,9 @@ namespace Battle.UI
         [Header("적 지정 — 드래그 화살표")]
         [Tooltip("ON이면 target=ENEMY 카드를 드래그할 때 화살표로 적을 조준해야 사용된다.")]
         [SerializeField] private bool enemyTargetingEnabled = true; // 적 지정 사용 여부
-        [Tooltip("화살표 체브론/화살촉. 비우면 기본 삼각형. 흰색 PNG + 팁이 위쪽이면 색/방향이 맞는다.")]
+        [Tooltip("화살표 체브론/화살촉. 비우면 기본 삼각형. 팁이 위쪽이면 방향이 맞는다. 스프라이트 원본 색을 그대로 쓴다.")]
         [SerializeField] private Sprite targetingArrowSprite; // 화살표 이미지
-        [Tooltip("록온 코너(L자) 한 장. 비우면 기본 브래킷. 좌상단 L, 피벗은 바깥 꼭짓점.")]
+        [Tooltip("록온 코너(ㄴ자) 한 장. 비우면 기본 브래킷. 좌하단 ㄴ, 피벗은 바깥 꼭짓점.")]
         [SerializeField] private Sprite targetingBracketSprite; // 록온 브래킷 이미지
 
         [Header("Fan Layout — 손패 부채꼴 연출")]
@@ -1306,6 +1306,8 @@ namespace Battle.UI
             _drawCountCo = null;
         }
 
+        public EnemyController PendingEnemyTarget { get; private set; }
+
         // 드래그 위치가 사용 임계선을 넘으면 카드 사용을 시도
         public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
         {
@@ -1314,13 +1316,17 @@ namespace Battle.UI
             if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
 
+            PendingEnemyTarget = null;
             // 지정 카드는 적 위에서 놓아야 사용(임계선만으로는 사용되지 않음)
             if (ShouldUseEnemyTargeting(view.Card))
             {
-                if (!IsPointerOverCurrentEnemy(ev.position)) return false;
+                EnemyController aimed = EnemyCombatParty.HitTest(ev.position);
+                if (aimed == null) return false;
+                PendingEnemyTarget = aimed;
                 return UseCardCallback(view.Card);
             }
 
+            PendingEnemyTarget = null;
             if (ev.position.y < useThresholdY) return false;
             return UseCardCallback(view.Card);
         }
@@ -1333,8 +1339,7 @@ namespace Battle.UI
             if (NewBattleController.Instance != null && NewBattleController.Instance.IsAwakenActive)
                 return false;
             if (!CardDatabase.RequiresEnemyTarget(card.Id)) return false;
-            var enemy = ResolveCurrentEnemy();
-            return enemy != null && enemy.IsAlive;
+            return EnemyCombatParty.AliveCount > 0 || ResolveCurrentEnemy() != null;
         }
 
         // 지정 모드 중 화살표/록온 브래킷을 갱신한다
@@ -1345,8 +1350,8 @@ namespace Battle.UI
             if (_targetArrow == null) return;
 
             Vector2 start = view.GetTopCenterScreenPosition();
-            var enemy = ResolveCurrentEnemy();
-            bool hover = enemy != null && enemy.IsAlive && enemy.ContainsAimPoint(ev.position);
+            EnemyController enemy = EnemyCombatParty.HitTest(ev.position);
+            bool hover = enemy != null;
             Vector2 end = ev.position;
             float radius = 0f;
             if (hover && enemy.TryGetAimScreen(out Vector2 enemyPos, out radius))
@@ -1396,6 +1401,8 @@ namespace Battle.UI
             if (view == null || view.Card == null) return false;
             if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
+            if (ShouldUseEnemyTargeting(view.Card)) return false;
+            PendingEnemyTarget = null;
             return UseCardCallback(view.Card);
         }
 

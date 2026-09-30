@@ -6069,7 +6069,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1424448439}
   m_HandleRect: {fileID: 1424448438}
   m_Direction: 2
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -13570,6 +13570,8 @@ MonoBehaviour:
   enemyPrefab: {fileID: 1989961882650650664, guid: 47901c62096ea4e48900cf32a08aceea, type: 3}
   enemySpawnPoint: {fileID: 554876475}
   combatStageController: {fileID: 1780698870}
+  encounterConfig: {fileID: 11400000, guid: 2751e331a957a6b48aafc0452ce7011e, type: 2}
+  twoDMultiSpawnSpacing: 220
   playerStatusPanel: {fileID: 267259484}
   enemyStatusPanel: {fileID: 1611085687}
   rewardHubUIController: {fileID: 0}
@@ -27064,7 +27066,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 888799007}
   m_Direction: 2
   m_Value: 1
-  m_Size: 1
+  m_Size: 0.9999792
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -34561,6 +34563,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: targetingArrowSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: bd1dec6e959d17b4099f5df331dd5ff7, type: 3}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: viewerCloseButtonFont
       value: 
       objectReference: {fileID: 11400000, guid: 624ba3875d81cfd41b8f6058c7c3e447, type: 2}
@@ -34568,6 +34574,10 @@ PrefabInstance:
       propertyPath: cardUsePresentExitTime
       value: 0.1
       objectReference: {fileID: 0}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: targetingBracketSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: a9268f17ad0f5614eb1131446e6cd749, type: 3}
     - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: cardUsePresentEnterTime
       value: 0.1
@@ -37392,7 +37402,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1630667200}
   m_Direction: 2
   m_Value: 1
-  m_Size: 1
+  m_Size: 0.9999792
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
