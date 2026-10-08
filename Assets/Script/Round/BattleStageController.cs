@@ -27,8 +27,8 @@ public class BattleStageController : MonoBehaviour
     [SerializeField, Range(0.5f, 1f)] private float centerScale = 0.85f;
     [Tooltip("양옆 적 크기. 0.6 = 가운데(1.0)보다 40% 작음.")]
     [SerializeField, Range(0.2f, 1f)] private float sideScale = 0.6f;
-    [Tooltip("양옆 적을 아래로 내리는 거리(월드 미터).")]
-    [SerializeField] private float sideDropWorld = 0.55f;
+    [Tooltip("양옆 적을 가운데보다 얼마나 올릴지(월드 미터). 발이 지면에 묻히면 이 값을 키운다.")]
+    [SerializeField] private float sideHeightOffset = 0.85f;
 
     public Transform EnemyAnchor => enemyAnchor;
     public Transform CameraAnchor => cameraAnchor;
@@ -77,7 +77,7 @@ public class BattleStageController : MonoBehaviour
         return origin
                + right * (side * Mathf.Max(0f, sideWorldSpacing))
                + away * Mathf.Max(0f, behindWorldDistance)
-               + Vector3.down * Mathf.Max(0f, sideDropWorld);
+               + Vector3.up * sideHeightOffset;
     }
 
     // 3D 배치를 2D 캔버스 좌표로 투영한다. 가운데(EnemyPos)는 (0,0), 양옆은 화면상 벌어진 양.

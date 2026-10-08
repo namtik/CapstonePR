@@ -570,7 +570,7 @@ MonoBehaviour:
   behindWorldDistance: 1.8
   centerScale: 0.85
   sideScale: 0.6
-  sideDropWorld: 0.55
+  sideHeightOffset: 0.85
 --- !u!1 &880547495
 GameObject:
   m_ObjectHideFlags: 0
@@ -891,7 +891,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 400
-  field of view: 40
+  field of view: 60
   orthographic: 0
   orthographic size: 5
   m_Depth: 0

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
@@ -30,6 +30,9 @@ public class RoundManager : MonoBehaviour
     [Header("일반 전투 등장")]
     [Tooltip("스테이지(바퀴-번호)별 마릿수와 몬스터 후보 풀. 정예/보스는 사용하지 않는다.")]
     [SerializeField] private EnemyEncounterConfig encounterConfig;
+    [Header("디버그 — 보스 3마리 (임시)")]
+    [Tooltip("ON이면 보스방에 같은 보스를 3마리 스폰한다. 3D 여러 마리 배치 확인용.")]
+    [SerializeField] private bool debugSpawnThreeBosses = true;
     [Tooltip("2D 폴백에서 여러 마리를 가로로 벌릴 간격(px).")]
     [SerializeField] private float twoDMultiSpawnSpacing = 220f;
 
@@ -284,9 +287,18 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        SpawnParty(data.bossEnemy != null
-            ? new List<EnemyData> { data.bossEnemy }
-            : new List<EnemyData>(), data.columnIndex, NodeType.Boss);
+        // [임시] 3D 여러 마리 배치 확인용. 같은 보스를 3마리 스폰한다.
+        var bossRoster = new List<EnemyData>();
+        if (data.bossEnemy != null)
+        {
+            bossRoster.Add(data.bossEnemy);
+            if (debugSpawnThreeBosses)
+            {
+                bossRoster.Add(data.bossEnemy);
+                bossRoster.Add(data.bossEnemy);
+            }
+        }
+        SpawnParty(bossRoster, data.columnIndex, NodeType.Boss);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
