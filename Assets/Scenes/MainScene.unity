@@ -33695,6 +33695,8 @@ MonoBehaviour:
   effectDefaultClip: {fileID: 0}
   playerHitClip: {fileID: 8300000, guid: f432f4cbb5033fd4db9a70374ec6bc3c, type: 3}
   guardClip: {fileID: 8300000, guid: f0d8f60ffdd5b0142b7ebcf40f3805fd, type: 3}
+  awakenStartClip: {fileID: 8300000, guid: 0cb3247db7def0348be1a05af99f384c, type: 3}
+  awakenSlotInputClip: {fileID: 8300000, guid: 29ae4dc03c504c94cad74ed675fb82c9, type: 3}
   effectClips:
   - effectName: Fire_ATK
     clip: {fileID: 8300000, guid: ffae41f8f11c27e4e8cd77744a7eaa01, type: 3}
@@ -33712,6 +33714,8 @@ MonoBehaviour:
   effectVolume: 0.3
   playerHitVolume: 1
   guardVolume: 1
+  awakenStartVolume: 1
+  awakenSlotInputVolume: 1
 --- !u!82 &1349267145
 AudioSource:
   m_ObjectHideFlags: 0

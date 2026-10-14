@@ -916,7 +916,10 @@ namespace Battle
                     handHud.UpdateComboSlot(_comboInput);
                     // 속성이 슬롯에 들어왔을 때만 해당 칸 강조(가장 최근 = 마지막 칸)
                     if (card.data.comboSlot && _comboInput.Count > 0)
+                    {
                         handHud.PlayComboSlotInputEffect(_comboInput.Count - 1);
+                        SfxManager.Instance?.PlayAwakenSlotInput();
+                    }
                     handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
                     handHud.UpdateAwakenInputHistory(_awakenInputHistory);
                     handHud.PlayCardUsePresentation(card, null, interruptable: true);
@@ -1248,6 +1251,7 @@ namespace Battle
             }
 
             _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
+            SfxManager.Instance?.PlayAwakenStart();
 
             Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
         }
