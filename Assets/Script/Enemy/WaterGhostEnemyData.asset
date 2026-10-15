@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: WaterGhostEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uC218\uC7A5\uADC0"
+  battlePrefab3D: {fileID: 5030489480245173034, guid: 819daf9ee0926c844865568f06df3c7c, type: 3}
   enemySprite: {fileID: 21300000, guid: 11132515fa253234d9ccc421e0e8e425, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []

@@ -75,7 +75,7 @@ MonoBehaviour:
   motionStates:
   - motion: 0
     stateNames:
-    - idle
+    - Idle
   - motion: 1
     stateNames:
     - Attack1
@@ -85,12 +85,14 @@ MonoBehaviour:
     stateNames:
     - Buff1
     - Buff2
-    - Buff3
   - motion: 4
     stateNames:
-    - Hit 1
-    - 'Hit 2 '
-    - Hit 3
+    - Hit1
+    - Hit2
+    - Hit3
+  - motion: 3
+    stateNames:
+    - Debuff1
   motionCrossFade: 0.1
   shakeTarget: {fileID: 3652883011139110771}
   shakeDuration: 0.18
