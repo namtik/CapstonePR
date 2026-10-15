@@ -13,9 +13,19 @@ MonoBehaviour:
   m_Name: XLandPigEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uD1A0\uAC11\uBA67\uB3FC\uC9C0"
+  battlePrefab3D: {fileID: 4516097952595691250, guid: 9e49e84f058df46458a623a5d83a4f74, type: 3}
   enemySprite: {fileID: 21300000, guid: e1da74fba319dec4c8e39b13eb811a21, type: 3}
+  hitSprite: {fileID: 0}
+  attackSprites: []
+  id: 0
+  element: 0
+  enemyClass: 1
+  specialAbility: 0
+  Note: 
   maxHp: 100
   actionGaugeMax: 20
+  attackSequence: 
+  disruptionActions: 
   backgroundSprites:
   - {fileID: 21300000, guid: 5bea49d0d346dc842ab0640ce071d4d9, type: 3}
   - {fileID: 21300000, guid: 74f4cc4f85b03234392e30ffcb472885, type: 3}

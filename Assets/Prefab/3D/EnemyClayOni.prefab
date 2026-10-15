@@ -88,7 +88,27 @@ MonoBehaviour:
   attackTrigger: Attack
   dieTrigger: Die
   hasDieState: 0
-  motionStates: []
+  motionStates:
+  - motion: 0
+    stateNames:
+    - Idle
+  - motion: 1
+    stateNames:
+    - Attack1
+    - Attack2
+    - Attack3
+  - motion: 2
+    stateNames:
+    - Buff1
+    - Buff2
+  - motion: 3
+    stateNames:
+    - Debuff
+  - motion: 4
+    stateNames:
+    - Hit1
+    - Hit2
+    - Hit3
   motionCrossFade: 0.1
   shakeTarget: {fileID: 6855043199130832065}
   shakeDuration: 0.18

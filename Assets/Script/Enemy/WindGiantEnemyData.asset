@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: WindGiantEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uBC31\uD48D\uC6D0"
+  battlePrefab3D: {fileID: 1456065988378070268, guid: 6256db220d456b1418daf346eba96640, type: 3}
   enemySprite: {fileID: 21300000, guid: 21d4950b624f7b144b300d274ceaeec5, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []

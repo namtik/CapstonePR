@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a86e02a4fbd399408144b34ca0a22c4, type: 3}
+  m_Name: Enemy3DBuildSpecs
+  m_EditorClassIdentifier: Assembly-CSharp-Editor::Enemy3DBuildSpecs
+  template: {fileID: 5942565393479847256, guid: 47e72397601e21e49889c18c27ea831e, type: 3}
+  outputFolder: Assets/Prefab/3D
+  enemyLayer: 7
+  entries:
+  - enabled: 1
+    prefabName: EnemyClayOni
+    modelName: "\uD1A0\uC6B0\uADC0"
+    fbx: {fileID: 919132149155446097, guid: f9199ac208a39df47891e0b1ac9a870c, type: 3}
+    material: {fileID: 2100000, guid: a87d870063c8fea4298c308845dd56df, type: 2}
+    enemyData: {fileID: 11400000, guid: 67add3b5e97baac48a9b3240797ac667, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyDrownedOni
+    modelName: "\uC218\uC7A5\uADC0"
+    fbx: {fileID: 919132149155446097, guid: c496e14f1792beb4583fbd1e43d053f9, type: 3}
+    material: {fileID: 2100000, guid: 19b431c393f9c2d4bb39fafacdd030e1, type: 2}
+    enemyData: {fileID: 11400000, guid: fc92ccd07cf1aa84aba45e270d2596e1, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyPyreoni
+    modelName: "\uC5FC\uB85C\uADC0"
+    fbx: {fileID: 919132149155446097, guid: 2f8be1850e3254a4b9f9d3b8ae5d466f, type: 3}
+    material: {fileID: 2100000, guid: a678de748a1b30d4cb944a11fe4612cb, type: 2}
+    enemyData: {fileID: 11400000, guid: ec5830b3574ea514985faa9c1c45b986, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyWhiteApe
+    modelName: "\uBC31\uD48D\uC6D0"
+    fbx: {fileID: 919132149155446097, guid: b9a44de730bd215468b4c3c2dc4733a0, type: 3}
+    material: {fileID: 2100000, guid: 1ed619796ae832a4e8b290656168388e, type: 2}
+    enemyData: {fileID: 11400000, guid: 26af76c23ba0baa4eae77c17a08c328a, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyBoneFist
+    modelName: "\uBF08\uC8FC\uBA39"
+    fbx: {fileID: 919132149155446097, guid: 7f3ef4a7f1dd5ba4b83bba5882d9bf5e, type: 3}
+    material: {fileID: 2100000, guid: d26228da9b4cb7a4bacdc3ec3e75bc43, type: 2}
+    enemyData: {fileID: 11400000, guid: 3fb0aaf2f17f1ae498cf7d6c232e6493, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
