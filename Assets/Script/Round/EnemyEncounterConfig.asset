@@ -16,7 +16,7 @@ MonoBehaviour:
   laps:
   - lap: 1
     stages:
-    - enemyCount: 3
+    - enemyCount: 1
       monsterPool:
       - {fileID: 11400000, guid: 78015896d444b884f83b109f312f5f08, type: 2}
       - {fileID: 11400000, guid: feae5f5551f0781419d83839a1d11ec3, type: 2}

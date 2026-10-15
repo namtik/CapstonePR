@@ -107,7 +107,12 @@ public class GameAudio : MonoBehaviour
         if (hits.Count == 0)
             return false;
 
-        var button = hits[0].gameObject.GetComponentInParent<Button>();
+        var hitObject = hits[0].gameObject;
+        var cardView = hitObject.GetComponentInParent<Battle.UI.NewCardView>();
+        if (cardView != null && cardView.GetComponentInParent<Battle.UI.CardHandHUD>() != null)
+            return false;
+
+        var button = hitObject.GetComponentInParent<Button>();
         return button != null && button.isActiveAndEnabled && button.interactable;
     }
 
