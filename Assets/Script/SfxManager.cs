@@ -19,6 +19,16 @@ public class SfxManager : MonoBehaviour
     [SerializeField] private AudioClip comboCompleteClip; // 콤보 완성 효과음
     [Tooltip("카드/콤보 이펙트 재생 시 기본 소리(아래 effectName 매핑이 없을 때).")]
     [SerializeField] private AudioClip effectDefaultClip; // 이펙트 기본 효과음
+    [Tooltip("플레이어 체력이 실제로 깎일 때 재생. 방어도로 전부 막히거나 스스로 깎는 피해에는 나지 않는다.")]
+    [SerializeField] private AudioClip playerHitClip; // 플레이어 피격 효과음
+    [Tooltip("방어도가 피해를 막았을 때 재생. 체력까지 깎이면 피격음과 함께 난다.")]
+    [SerializeField] private AudioClip guardClip; // 방어도 방어 효과음
+    [Tooltip("각성이 시작될 때 한 번 재생.")]
+    [SerializeField] private AudioClip awakenStartClip; // 각성 시작 효과음
+    [Tooltip("각성 중 콤보 슬롯에 속성이 들어갈 때 재생.")]
+    [SerializeField] private AudioClip awakenSlotInputClip; // 콤보 슬롯 입력 효과음
+    [Tooltip("플레이어 체력이 실제로 오를 때 재생. 이미 최대 체력이면 나지 않는다.")]
+    [SerializeField] private AudioClip healClip; // 회복 효과음
 
     // 이펙트 이름과 전용 클립을 묶는 매핑 데이터
     [System.Serializable]
@@ -38,6 +48,11 @@ public class SfxManager : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float drawVolume = 1f; // 드로우 볼륨
     [Range(0f, 1f)] [SerializeField] private float comboCompleteVolume = 1f; // 콤보 완성 볼륨
     [Range(0f, 1f)] [SerializeField] private float effectVolume = 1f; // 이펙트 볼륨
+    [Range(0f, 1f)] [SerializeField] private float playerHitVolume = 1f; // 플레이어 피격 볼륨
+    [Range(0f, 1f)] [SerializeField] private float guardVolume = 1f; // 방어도 방어 볼륨
+    [Range(0f, 1f)] [SerializeField] private float awakenStartVolume = 1f; // 각성 시작 볼륨
+    [Range(0f, 1f)] [SerializeField] private float awakenSlotInputVolume = 1f; // 콤보 슬롯 입력 볼륨
+    [Range(0f, 1f)] [SerializeField] private float healVolume = 1f; // 회복 볼륨
 
     // 싱글톤 등록 및 오디오 소스 초기화
     void Awake()
@@ -65,6 +80,21 @@ public class SfxManager : MonoBehaviour
 
     // 이펙트 효과음을 재생한다(이름별 오버라이드 우선)
     public void PlayEffect(string effectName) => Play(ResolveEffectClip(effectName), effectVolume);
+
+    // 플레이어 피격 효과음을 재생한다(체력이 깎인 경우)
+    public void PlayPlayerHit() => Play(playerHitClip, playerHitVolume);
+
+    // 방어도로 피해를 막았을 때 효과음을 재생한다
+    public void PlayGuard() => Play(guardClip, guardVolume);
+
+    // 각성 시작 효과음을 재생한다
+    public void PlayAwakenStart() => Play(awakenStartClip, awakenStartVolume);
+
+    // 콤보 슬롯 입력 효과음을 재생한다
+    public void PlayAwakenSlotInput() => Play(awakenSlotInputClip, awakenSlotInputVolume);
+
+    // 플레이어 회복 효과음을 재생한다
+    public void PlayHeal() => Play(healClip, healVolume);
 
     // 이펙트 이름에 맞는 클립을 찾고 없으면 기본 클립을 반환한다
     AudioClip ResolveEffectClip(string effectName)

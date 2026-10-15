@@ -47,12 +47,13 @@ MonoBehaviour:
   cardPrefab: {fileID: -2451704214461003869, guid: 85aab6364ddd64b4ca9e868a807b40e2, type: 3}
   handRoot: {fileID: 0}
   dragLayer: {fileID: 0}
-  slotSpacing: {x: 280, y: 0}
+  slotSpacing: {x: 200, y: 0}
   handAnchoredPos: {x: 0, y: 220}
+  handCardScale: 1
   useThresholdY: 360
   fanLayout: 1
-  fanRadius: 1600
-  fanArcAngle: 30
+  fanRadius: 2200
+  fanArcAngle: 16
   fanVerticalDip: 0
   hoverSpreadEnabled: 1
   hoverSpreadDistance: 90

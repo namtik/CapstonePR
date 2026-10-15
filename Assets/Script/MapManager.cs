@@ -538,6 +538,6 @@ public class MapManager : MonoBehaviour
 
         var state = GameStateController.Instance;
         int completedLaps = state != null ? state.bossDefeatCount : 0;
-        return mapColumn + completedLaps * 11;
+        return mapColumn + completedLaps * 10;
     }
 }

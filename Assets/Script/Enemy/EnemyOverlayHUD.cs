@@ -42,11 +42,14 @@ public class EnemyOverlayHUD : MonoBehaviour
     private int _gaugeMax = 20;     // 게이지 최대치(표시용)
     private Vector3 _damageOriginLocal; // 데미지 텍스트 원점
     private Coroutine _patternCo;   // 패턴 알림 코루틴
+    private Transform _worldAnchor; // 월드 팔로우 앵커(다중 전투)
+    private Camera _renderCamera;   // 월드→스크린 변환 카메라
+    private bool _followWorld;      // 월드 좌표를 따라갈지 여부
 
     // 싱글턴 등록 및 초기 상태 정리
     void Awake()
     {
-        Instance = this;
+        if (Instance == null) Instance = this;
         if (patternNoticeObject != null) patternNoticeObject.SetActive(false);
         if (damageTextTemplate != null)
         {
@@ -62,17 +65,42 @@ public class EnemyOverlayHUD : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    // 3D 몬스터 전투 시작 — 2D와 같은 고정 좌표에 패널을 표시한다.
-    public void Bind(Transform worldAnchor, Camera renderCamera, int gaugeMax)
+    // 3D 몬스터 전투 시작. followWorld면 HUD가 몬스터 머리 위를 따라간다.
+    public void Bind(Transform worldAnchor, Camera renderCamera, int gaugeMax, bool followWorld = false)
     {
         _gaugeMax = Mathf.Max(1, gaugeMax);
+        _worldAnchor = worldAnchor;
+        _renderCamera = renderCamera;
+        _followWorld = followWorld && worldAnchor != null;
         SetVisible(true);
     }
 
     // 바인딩 해제(몬스터 사망/전투 종료) — 패널을 숨긴다.
     public void Unbind()
     {
+        _followWorld = false;
+        _worldAnchor = null;
         SetVisible(false);
+    }
+
+    // 씬에 있는 HUD를 복제해 다른 몬스터 전용 패널을 만든다.
+    public EnemyOverlayHUD CreateClone()
+    {
+        GameObject go = Instantiate(gameObject, transform.parent);
+        go.name = gameObject.name + "_Clone";
+        var hud = go.GetComponent<EnemyOverlayHUD>();
+        if (hud != null) hud.SetVisible(false);
+        return hud;
+    }
+
+    void LateUpdate()
+    {
+        if (!_followWorld || _worldAnchor == null) return;
+        Camera cam = _renderCamera != null ? _renderCamera : Camera.main;
+        if (cam == null) return;
+        Vector3 sp = cam.WorldToScreenPoint(_worldAnchor.position);
+        if (sp.z < 0f) return;
+        transform.position = new Vector3(sp.x + screenOffset.x, sp.y + screenOffset.y, 0f);
     }
 
     // HP/게이지만 켜고 끈다. damageText 원본은 클론 소스라 항상 꺼 둔다.

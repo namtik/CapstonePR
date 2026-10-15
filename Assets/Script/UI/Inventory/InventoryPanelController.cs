@@ -99,6 +99,8 @@ namespace Battle.UI
         // 패널을 열고 부적 탭부터 표시
         public void Open()
         {
+            if (CodexPanelController.IsOpen) CodexPanelController.Instance.Close();
+
             _isOpen = true;
             if (panelRoot != null)
             {

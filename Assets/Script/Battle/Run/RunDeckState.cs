@@ -144,6 +144,7 @@ namespace Battle
                 Debug.Log($"[RunDeck] 기본 시작 덱 시드 — {TotalCardCount}장");
             }
             _seeded = true;
+            MarkDeckDiscovered();
         }
 
         // 보존 덱에서 이번 전투용 새 CardInstance 목록 생성
@@ -163,6 +164,7 @@ namespace Battle
                 Debug.LogWarning($"[RunDeck] 알 수 없는 카드 ID {cardId} 추가 무시.");
                 return;
             }
+            Battle.UI.CodexProgress.MarkCard(cardId);
 
             for (int i = 0; i < _runDeck.Count; i++)
             {
@@ -268,7 +270,15 @@ namespace Battle
             _runDeck.Clear();
             foreach (var kv in counts) _runDeck.Add(new CardDatabase.DeckEntry(kv.Key, kv.Value));
             _seeded = true;
+            MarkDeckDiscovered();
             Debug.Log($"[RunDeck] 카드 전부 랜덤 변환 — {TotalCardCount}장 ({_runDeck.Count}종)");
+        }
+
+        // 현재 덱의 모든 카드를 도감에 발견 처리
+        void MarkDeckDiscovered()
+        {
+            for (int i = 0; i < _runDeck.Count; i++)
+                if (_runDeck[i].count > 0) Battle.UI.CodexProgress.MarkCard(_runDeck[i].cardId);
         }
 
         // 런 재시작 — 덱과 누적 상태를 기본값으로 복원

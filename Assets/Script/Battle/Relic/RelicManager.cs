@@ -44,6 +44,7 @@ namespace Battle.Relic
             if (relic == null) return;
             if (_owned.Exists(r => r != null && r.id == relic.id)) return;
             _owned.Add(relic);
+            CodexProgress.MarkRelic(relic.id);
             RelicHUD.Instance?.Refresh(_owned);
             Debug.Log($"[유물] 획득: {relic.DisplayLabel}");
             relic.OnAcquired(_runCtx);

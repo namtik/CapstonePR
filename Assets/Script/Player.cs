@@ -369,6 +369,8 @@ public class Player : MonoBehaviour, IBattleUnit
             currentHp -= finalDamage;
             SyncAllInstancesFrom(this);
             OnHpDecreased?.Invoke(finalDamage);
+            if (cardtype != "self_loss")
+                SfxManager.Instance?.PlayPlayerHit();
 
             if (currentHp <= 0)
             {
@@ -382,7 +384,11 @@ public class Player : MonoBehaviour, IBattleUnit
         if (cardtype != "self_loss")
         {
             OnPlayerHit?.Invoke();
-            if (blockConsumed) OnBlockConsumedByAttack?.Invoke();
+            if (blockConsumed)
+            {
+                SfxManager.Instance?.PlayGuard();
+                OnBlockConsumedByAttack?.Invoke();
+            }
         }
     }
 
@@ -455,11 +461,14 @@ public class Player : MonoBehaviour, IBattleUnit
             Debug.LogWarning("[Player] GameOverController를 찾지 못해 사망 연출을 재생하지 못했습니다.");
     }
 
-    // 체력을 회복하며 최대 체력을 넘지 않는다
+    // 체력을 회복하며 최대 체력을 넘지 않는다. 실제로 오른 경우에만 회복음을 재생한다
     public void Heal(int amount)
     {
+        float before = currentHp;
         currentHp = Mathf.Min(currentHp + amount, maxHp);
         SyncAllInstancesFrom(this);
+        if (currentHp > before)
+            SfxManager.Instance?.PlayHeal();
     }
 
     // 외부에서 호출해 체력 UI를 강제 동기화한다

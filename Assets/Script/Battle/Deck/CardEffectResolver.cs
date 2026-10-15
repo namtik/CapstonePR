@@ -115,6 +115,7 @@ namespace Battle.Deck
         }
 
         public CardEffectContext Ctx { get; private set; } // 현재 효과 컨텍스트
+        readonly List<EnemyController> _targetBuf = new List<EnemyController>();
 
         bool _triggeringOtherCards; // 다른 카드 효과 발동 재귀 가드
         bool _inLifecycleTrigger;   // 생애주기 트리거 재귀 가드
@@ -767,7 +768,9 @@ namespace Battle.Deck
 
             if (up.StartsWith("ENEMY_COUNT"))
             {
-                int v = (Ctx.enemy != null && Ctx.enemyStat != null && Ctx.enemyStat.IsAlive) ? 1 : 0;
+                int v = EnemyCombatParty.AliveCount;
+                if (v == 0 && Ctx.enemy != null && Ctx.enemyStat != null && Ctx.enemyStat.IsAlive)
+                    v = 1;
                 int starIdx = up.IndexOf('*');
                 if (starIdx > 0)
                 {
@@ -884,7 +887,7 @@ namespace Battle.Deck
                                 int safety = 200;
                                 do
                                 {
-                                    result.totalDamage += DealDamage(amount, isAttackCard: true, baseHits: actualHits);
+                                    result.totalDamage += ApplyTargetedDamage(eff, amount, isAttackCard: true, actualHits);
                                     if (Ctx.chainCount > 0) Ctx.chainCount -= consumePer;
                                     safety--;
                                 } while (Ctx.chainCount > 0 && safety > 0);
@@ -892,12 +895,12 @@ namespace Battle.Deck
                             }
                             else
                             {
-                                result.totalDamage += DealDamage(amount, isAttackCard: true, baseHits: actualHits);
+                                result.totalDamage += ApplyTargetedDamage(eff, amount, isAttackCard: true, actualHits);
                             }
                         }
                         else
                         {
-                            result.totalDamage += DealDamage(amount, isAttackCard: true, baseHits: actualHits);
+                            result.totalDamage += ApplyTargetedDamage(eff, amount, isAttackCard: true, actualHits);
                         }
                     }
                     break;
@@ -985,7 +988,10 @@ namespace Battle.Deck
                     {
                         string st = (eff.status ?? "").Trim().ToLowerInvariant();
                         if (amount > 0 && !string.IsNullOrEmpty(st))
-                            AddEnemyStatus(st, amount, isCardEffect: true);
+                        {
+                            bool hitAll = Ctx.burnSkillHitsAllActive && st == "burn";
+                            ForEachEnemyTarget(eff.target, hitAll, () => AddEnemyStatus(st, amount, isCardEffect: true));
+                        }
                     }
                     break;
 
@@ -1296,7 +1302,6 @@ namespace Battle.Deck
             }
 
             int total = 0;
-            Ctx.lastHitEnemyCount = 1;
             for (int i = 0; i < hits; i++)
             {
                 Ctx.enemy.TakeDamage(dmg);
@@ -1373,6 +1378,69 @@ namespace Battle.Deck
         {
             if (Ctx.player == null) return;
             Ctx.player.AddGuard(amount);
+        }
+
+        int ApplyTargetedDamage(CardEffectData eff, int amount, bool isAttackCard, int actualHits)
+        {
+            EnemyController savedEnemy = Ctx.enemy;
+            EnemyStat savedStat = Ctx.enemyStat;
+            CollectEnemyTargets(eff != null ? eff.target : null, false);
+            int total = 0;
+            int hit = 0;
+            for (int i = 0; i < _targetBuf.Count; i++)
+            {
+                EnemyController t = _targetBuf[i];
+                if (t == null || !t.IsAlive) continue;
+                Ctx.enemy = t;
+                Ctx.enemyStat = t.GetComponent<EnemyStat>();
+                total += DealDamage(amount, isAttackCard, actualHits);
+                hit++;
+            }
+            Ctx.enemy = savedEnemy;
+            Ctx.enemyStat = savedStat;
+            if (hit > 0) Ctx.lastHitEnemyCount = hit;
+            return total;
+        }
+
+        void ForEachEnemyTarget(string target, bool forceAll, System.Action body)
+        {
+            if (body == null) return;
+            EnemyController savedEnemy = Ctx.enemy;
+            EnemyStat savedStat = Ctx.enemyStat;
+            CollectEnemyTargets(target, forceAll);
+            for (int i = 0; i < _targetBuf.Count; i++)
+            {
+                EnemyController t = _targetBuf[i];
+                if (t == null || !t.IsAlive) continue;
+                Ctx.enemy = t;
+                Ctx.enemyStat = t.GetComponent<EnemyStat>();
+                body();
+            }
+            Ctx.enemy = savedEnemy;
+            Ctx.enemyStat = savedStat;
+        }
+
+        void CollectEnemyTargets(string target, bool forceAll)
+        {
+            _targetBuf.Clear();
+            string t = (target ?? "").Trim().ToUpperInvariant();
+            if (forceAll || t == "ALL_ENEMIES")
+            {
+                EnemyCombatParty.CollectAlive(_targetBuf);
+                return;
+            }
+            if (t == "RANDOM_ENEMY")
+            {
+                EnemyController r = EnemyCombatParty.PickRandomAlive();
+                if (r != null) _targetBuf.Add(r);
+                return;
+            }
+            if (Ctx.enemy != null && Ctx.enemy.IsAlive) _targetBuf.Add(Ctx.enemy);
+            else
+            {
+                EnemyController f = EnemyCombatParty.FirstAlive();
+                if (f != null) _targetBuf.Add(f);
+            }
         }
 
         // 리스트를 Fisher-Yates 방식으로 셔플

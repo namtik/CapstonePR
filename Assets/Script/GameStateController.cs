@@ -394,8 +394,8 @@ public class GameStateController : MonoBehaviour
         if (roundManager != null && roundManager.DifficultyConfig != null)
             return roundManager.DifficultyConfig.GetEffectiveColumn(0, bossDefeatCount);
 
-        // DifficultyConfig 미연결 시 기본값(컬럼 10 + 보스 1 = 11)
-        return bossDefeatCount * 11;
+        // DifficultyConfig 미연결 시 기본값(컬럼 9 + 보스 1 = 10)
+        return bossDefeatCount * 10;
     }
 
     // 런을 처음부터 재시작하고 맵으로 돌아간다

@@ -121,10 +121,10 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         if (!string.IsNullOrEmpty(fallbackTrigger)) animator.SetTrigger(fallbackTrigger);
     }
 
-    // HUD 바인딩 및 초기 UI 반영
+    // HUD 바인딩 및 초기 UI 반영(RoundManager가 이미 연결했으면 유지)
     void Start()
     {
-        BindHud();
+        if (_hud == null) BindHud();
     }
 
     void OnDestroy()
@@ -145,7 +145,15 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         BindHud();
     }
 
-    void BindHud()
+    // RoundManager가 몬스터별 HUD를 직접 연결한다.
+    public void SetOverlayHud(EnemyOverlayHUD hud, bool followWorld)
+    {
+        if (_hud != null && _hud != hud) _hud.Unbind();
+        _hud = hud;
+        BindHud(followWorld);
+    }
+
+    void BindHud(bool followWorld = false)
     {
         if (_hud == null) _hud = EnemyOverlayHUD.Instance;
         if (_hud == null)
@@ -155,7 +163,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
 
         Transform anchor = hudAnchor != null ? hudAnchor : transform;
         Camera cam = renderCamera != null ? renderCamera : Camera.main;
-        _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS);
+        _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS, followWorld);
         if (_stat != null) _hud.SetHp(_stat.currentHp, _stat.maxHp);
         _hud.SetGauge(0f);
     }
@@ -291,7 +299,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
                 return true;
         }
         if (!TryGetAimScreen(out Vector2 center, out float radius)) return false;
-        return Vector2.Distance(screenPos, center) <= radius;
+        return Vector2.Distance(screenPos, center) <= (radius * 1.2f + 40f) * 1.3f;
     }
 
     Camera ResolveAimCamera()
