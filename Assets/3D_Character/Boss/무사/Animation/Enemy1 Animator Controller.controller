@@ -126,7 +126,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Buff2
+  m_Name: Debuff1
   m_Speed: 2
   m_CycleOffset: 0
   m_Transitions:
@@ -200,7 +200,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Hit 2
+  m_Name: Hit2
   m_Speed: 2
   m_CycleOffset: 0
   m_Transitions:
@@ -249,16 +249,16 @@ AnimatorStateMachine:
     m_Position: {x: 320, y: -40, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -5171803784588378252}
-    m_Position: {x: 320, y: 10, z: 0}
-  - serializedVersion: 1
-    m_State: {fileID: 6824014766844282157}
     m_Position: {x: 320, y: 60, z: 0}
   - serializedVersion: 1
+    m_State: {fileID: 6824014766844282157}
+    m_Position: {x: 320, y: 10, z: 0}
+  - serializedVersion: 1
     m_State: {fileID: -3805151293206149100}
-    m_Position: {x: 320, y: 170, z: 0}
+    m_Position: {x: 320, y: 160, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 8283974391173486345}
-    m_Position: {x: 320, y: 220, z: 0}
+    m_Position: {x: 320, y: 210, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions:
   - {fileID: -628348326521957880}
@@ -274,7 +274,7 @@ AnimatorStateMachine:
   m_StateMachineTransitions: {}
   m_StateMachineBehaviours: []
   m_AnyStatePosition: {x: 40, y: -10, z: 0}
-  m_EntryPosition: {x: 680, y: -130, z: 0}
+  m_EntryPosition: {x: 650, y: -140, z: 0}
   m_ExitPosition: {x: 670, y: 320, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -5188780884444362042}
@@ -445,7 +445,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Hit 1
+  m_Name: Hit1
   m_Speed: 2
   m_CycleOffset: 0
   m_Transitions:
@@ -676,7 +676,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Buff3
+  m_Name: Buff2
   m_Speed: 2
   m_CycleOffset: 0
   m_Transitions:
@@ -755,7 +755,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Hit 3
+  m_Name: Hit3
   m_Speed: 2
   m_CycleOffset: 0
   m_Transitions:
