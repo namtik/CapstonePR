@@ -104,6 +104,16 @@ namespace Battle
         [FormerlySerializedAs("awakenScreenEffectScale")]
         [SerializeField] private float awakenScreenEffectScale = 100f; // 미사용(호환용)
 
+        [Header("턴 순서 (스타레일식 행동 순서 바)")]
+        [Tooltip("좌측 행동 순서 바. 비우면 전투 시작 시 전투 캔버스에 자동 생성.")]
+        [SerializeField] private TurnOrderTimeline turnOrderTimeline; // 행동 순서 바
+        [Tooltip("ON이면 적 행동(공격 대기열 처리·방해행동 연출) 중에는 카드 사용/D 드로우를 막는다. 각성 중에는 잠그지 않음.")]
+        [SerializeField] private bool lockInputDuringEnemyTurn = true; // 적 턴 입력 잠금 여부
+        [Tooltip("적 턴 진입 후 실제 공격 시작까지 대기(초) — 행동 순서 바에서 행동자가 맨 위로 올라오는 걸 보여줄 시간.")]
+        [SerializeField] private float enemyTurnStartDelay = 0.35f;    // 적 공격 전 대기
+        [Tooltip("방해행동 발동 시 입력을 잠그는 시간(초).")]
+        [SerializeField] private float disruptionLockSeconds = 0.6f;  // 방해행동 연출 잠금 시간
+
         [Header("디버그")]
         [SerializeField] private bool logVerbose = true;             // 상세 로그 출력 여부
 
@@ -134,6 +144,18 @@ namespace Battle
         private readonly List<EnemyController> _aliveBuf = new List<EnemyController>();
         private readonly Queue<EnemyController> _attackQueue = new Queue<EnemyController>();
         private bool _attackResolving;
+        private EnemyController _actingEnemy;      // 지금 행동 중인 적(행동 순서 바 '현재' 칸)
+        private bool _actingIsDisruption;          // 현재 행동이 방해행동인지(아니면 공격)
+        private float _enemyActionLockUntil;       // 방해행동 연출 잠금 종료 시각
+        private Coroutine _attackStartRoutine;     // 적 공격 시작 대기 코루틴
+
+        // 적 턴 여부 — 공격 대기열 처리 중이거나 방해행동 연출 중
+        public bool IsEnemyTurn =>
+            _inBattle && (_attackResolving || _attackQueue.Count > 0 || Time.time < _enemyActionLockUntil);
+        public EnemyController ActingEnemy => IsEnemyTurn ? _actingEnemy : null; // 현재 행동 중인 적
+        public bool ActingIsDisruption => _actingIsDisruption;                   // 현재 행동 종류
+        public IEnumerable<EnemyController> PendingAttackers => _attackQueue;    // 공격 대기 중인 적(순서대로)
+        bool InputLockedByEnemyTurn => lockInputDuringEnemyTurn && !_awakenActive && IsEnemyTurn;
 
         private bool _inBattle;                  // 전투 진행 중 여부
         private bool _cardPresenting;            // 일반 카드 사용 중앙 연출 진행 중 여부(재진입 방지)
@@ -379,10 +401,11 @@ namespace Battle
 
             EnsureEventSystem();
 
+            if (turnOrderTimeline == null) turnOrderTimeline = ResolveOrCreateTurnOrderTimeline();
+
             _inBattle = true;
             _cardPresenting = false;
-            _attackResolving = false;
-            _attackQueue.Clear();
+            ResetEnemyTurnState();
             _elementInputCount = 0;
             _awakenActive = false;
             _awakenPending = false;
@@ -447,8 +470,7 @@ namespace Battle
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
-            _attackResolving = false;
-            _attackQueue.Clear();
+            ResetEnemyTurnState();
             UnbindPartyEvents();
             ResolveTrackUnfired();
             TdFlushTerminal();
@@ -837,6 +859,7 @@ namespace Battle
             if (Input.GetKeyDown(KeyCode.D))
             {
                 if (_cardPresenting) return;
+                if (InputLockedByEnemyTurn) { Log("적 턴 — D 드로우 잠금"); return; }
                 if (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode || handHud.IsViewerMode)) return;
                 TryDDraw();
             }
@@ -879,6 +902,12 @@ namespace Battle
         {
             if (!_inBattle) return false;
             if (card == null) return false;
+            if (InputLockedByEnemyTurn)
+            {
+                Log("적 턴 — 카드 사용 잠금");
+                turnOrderTimeline?.FlashLocked();
+                return false;
+            }
 
             BindEnemyFromHudOrAlive();
 
@@ -1629,6 +1658,13 @@ namespace Battle
         public string TriggerDisruption(EnemyController source)
         {
             if (source != null) BindEnemy(source);
+            // 방해행동도 적의 '행동' — 연출 동안 행동 순서 바 맨 위에 올리고 입력을 잠근다(공격 처리 중이면 공격자 유지)
+            if (!_attackResolving)
+            {
+                _actingEnemy = source != null ? source : _enemy;
+                _actingIsDisruption = true;
+            }
+            _enemyActionLockUntil = Mathf.Max(_enemyActionLockUntil, Time.time + disruptionLockSeconds);
             bool recoverReady = _recoverCooldown <= 0;
             // 직전 방해행동을 제외해 연속 발동을 막는다(AI·랜덤 폴백 공통 마스크)
             bool[] allowedMask = DisruptionAllowedExcludingLast();
@@ -2343,16 +2379,69 @@ namespace Battle
                 EnemyController e = _attackQueue.Dequeue();
                 if (e == null || !e.IsAlive) continue;
                 _attackResolving = true;
+                _actingEnemy = e;
+                _actingIsDisruption = false;
                 BindEnemy(e);
-                e.BeginQueuedAttack(OnQueuedAttackFinished);
+                // 행동 순서 바에서 행동자가 '현재' 칸으로 올라오는 걸 보여준 뒤 공격 시작
+                if (enemyTurnStartDelay > 0f && isActiveAndEnabled)
+                    _attackStartRoutine = StartCoroutine(BeginAttackAfterDelay(e));
+                else
+                    e.BeginQueuedAttack(OnQueuedAttackFinished);
                 return;
             }
+        }
+
+        IEnumerator BeginAttackAfterDelay(EnemyController e)
+        {
+            yield return new WaitForSeconds(enemyTurnStartDelay);
+            _attackStartRoutine = null;
+            if (!_inBattle) yield break;
+            if (e == null || !e.IsAlive)
+            {
+                OnQueuedAttackFinished();
+                yield break;
+            }
+            BindEnemy(e);
+            e.BeginQueuedAttack(OnQueuedAttackFinished);
         }
 
         void OnQueuedAttackFinished()
         {
             _attackResolving = false;
             TryProcessAttackQueue();
+        }
+
+        // 적 턴 상태(공격 대기열·행동자·잠금) 초기화
+        void ResetEnemyTurnState()
+        {
+            if (_attackStartRoutine != null)
+            {
+                StopCoroutine(_attackStartRoutine);
+                _attackStartRoutine = null;
+            }
+            _attackResolving = false;
+            _attackQueue.Clear();
+            _actingEnemy = null;
+            _actingIsDisruption = false;
+            _enemyActionLockUntil = 0f;
+        }
+
+        // 행동 순서 바를 찾거나 전투 캔버스 하위에 생성
+        TurnOrderTimeline ResolveOrCreateTurnOrderTimeline()
+        {
+            var existing = FindFirstObjectByType<TurnOrderTimeline>(FindObjectsInactive.Include);
+            if (existing != null) return existing;
+
+            Canvas combatCanvas = ResolveCombatCanvas();
+            if (combatCanvas == null) return null;
+            var go = new GameObject("TurnOrderTimeline", typeof(RectTransform));
+            go.transform.SetParent(combatCanvas.transform, false);
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            return go.AddComponent<TurnOrderTimeline>();
         }
     }
 }
