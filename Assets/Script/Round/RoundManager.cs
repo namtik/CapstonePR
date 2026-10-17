@@ -247,7 +247,12 @@ public class RoundManager : MonoBehaviour
     // 일반 전투를 시작한다.
     public void StartCombat(CombatRoundData data)
     {
-        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
+        List<EnemyData> roster = ResolveCombatRoster(data);
+        ShowStageThen(roster, () => BeginCombat(data, roster));
+    }
+
+    void BeginCombat(CombatRoundData data, List<EnemyData> roster)
+    {
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -255,7 +260,7 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        SpawnParty(ResolveCombatRoster(data), data.columnIndex, data.roundType);
+        SpawnParty(roster, data.columnIndex, data.roundType);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
@@ -263,7 +268,12 @@ public class RoundManager : MonoBehaviour
     // 정예 전투를 시작한다.
     public void StartCombat(EliteRoundData data)
     {
-        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
+        List<EnemyData> roster = TakeFirstEnemy(data.enemies);
+        ShowStageThen(roster, () => BeginElite(data, roster));
+    }
+
+    void BeginElite(EliteRoundData data, List<EnemyData> roster)
+    {
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -271,7 +281,7 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        SpawnParty(TakeFirstEnemy(data.enemies), data.columnIndex, data.roundType);
+        SpawnParty(roster, data.columnIndex, data.roundType);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
@@ -279,7 +289,12 @@ public class RoundManager : MonoBehaviour
     // 보스 전투를 시작한다.
     public void StartBoss(BossRoundData data)
     {
-        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
+        var bossOnly = new List<EnemyData> { data.bossEnemy };
+        ShowStageThen(bossOnly, () => BeginBoss(data));
+    }
+
+    void BeginBoss(BossRoundData data)
+    {
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -301,6 +316,18 @@ public class RoundManager : MonoBehaviour
         SpawnParty(bossRoster, data.columnIndex, NodeType.Boss);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
+    }
+
+    // 적 속성에 맞는 3D 스테이지를 표시하고, 준비되면(이미 로드돼 있으면 즉시) 전투를 시작한다.
+    // StageManager가 없으면 바로 시작(2D).
+    void ShowStageThen(List<EnemyData> roster, System.Action begin)
+    {
+        if (StageManager.Instance == null)
+        {
+            begin();
+            return;
+        }
+        StageManager.Instance.ShowStage(StageManager.ResolveElement(roster), begin);
     }
 
     // 상점 스테이지를 연다.
@@ -622,7 +649,9 @@ public class RoundManager : MonoBehaviour
         }
 
         // 3D: 스테이지 앵커 아래 남은 적 정리(사망 연출 중이던 잔여 포함)
-        DestroyChildrenOf(BattleStageController.Current != null ? BattleStageController.Current.EnemyAnchor : null);
+        if (BattleStageController.Current != null)
+            foreach (Transform anchor in BattleStageController.Current.AllEnemyAnchors())
+                DestroyChildrenOf(anchor);
 
         currentEnemyIndex = 0;
         _spawnedCombatCount = 0;
