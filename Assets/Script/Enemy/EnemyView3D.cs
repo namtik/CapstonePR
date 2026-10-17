@@ -66,6 +66,8 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     [Header("사망 연출")]
     [Tooltip("사망 후 파괴까지의 시간(초). Die 클립 길이에 맞춰라. 클립 없으면 이 시간 동안 축소.")]
     [SerializeField] private float deathDuration = 1f; // 사망 연출 시간
+    [Tooltip("머티리얼에 _Dissolve가 있으면(Sasindo/Yokai Spirit) 축소 대신 불티 소멸로 사라진다.")]
+    [SerializeField] private bool useDissolveDeath = true; // 소멸 셰이더 사망 연출 사용 여부
 
     public event Action OnAttackMotionLastFrame; // 공격 임팩트 프레임 도달(VFX 동기화)
 
@@ -333,7 +335,45 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         if (_dead) return;
         _dead = true;
         if (hasDieState) PlayMotionInternal(EnemyMotion.Die, dieTrigger);
-        StartCoroutine(DeathShrink());
+        StartCoroutine(useDissolveDeath && HasDissolveMaterial() ? DeathDissolve() : DeathShrink());
+    }
+
+    static readonly int DissolveId = Shader.PropertyToID("_Dissolve");
+
+    // 소멸 프로퍼티를 가진 머티리얼이 하나라도 있는지
+    bool HasDissolveMaterial()
+    {
+        if (flashRenderers == null) return false;
+        foreach (var r in flashRenderers)
+            if (r != null && r.sharedMaterial != null && r.sharedMaterial.HasProperty(DissolveId)) return true;
+        return false;
+    }
+
+    // 사망 시 _Dissolve를 0→1로 올려 몸이 불티 가장자리를 남기며 흩어지게 한다
+    IEnumerator DeathDissolve()
+    {
+        // Die 애니가 있으면 쓰러지는 동작을 먼저 보여주고 후반부에 소멸
+        float dissolveStart = hasDieState ? deathDuration * 0.35f : 0f;
+        float elapsed = 0f;
+        while (elapsed < deathDuration)
+        {
+            elapsed += Time.deltaTime;
+            float k = Mathf.InverseLerp(dissolveStart, deathDuration, elapsed);
+            SetDissolve(k);
+            yield return null;
+        }
+        SetDissolve(1f);
+    }
+
+    void SetDissolve(float value)
+    {
+        foreach (var r in flashRenderers)
+        {
+            if (r == null || r.sharedMaterial == null || !r.sharedMaterial.HasProperty(DissolveId)) continue;
+            r.GetPropertyBlock(_mpb);
+            _mpb.SetFloat(DissolveId, value);
+            r.SetPropertyBlock(_mpb);
+        }
     }
 
     public float DeathDuration => deathDuration;
