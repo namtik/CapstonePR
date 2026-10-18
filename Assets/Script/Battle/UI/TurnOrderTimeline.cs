@@ -18,6 +18,8 @@ namespace Battle.UI
         [SerializeField] private float currentSize = 96f;   // '현재' 칸 크기
         [SerializeField] private float entrySize = 64f;     // 예정 칸 크기
         [SerializeField] private float spacing = 10f;       // 칸 간격
+        [Tooltip("아이콘 오른쪽 이름 라벨 폭 — 배경 패널 폭도 여기에 맞춰진다.")]
+        [SerializeField] private float labelWidth = 90f;    // 이름 라벨 폭
         [SerializeField] private int maxUpcoming = 6;       // 표시할 예정 행동 수
         [Tooltip("방해행동(게이지 절반)도 순서 바에 별도 항목으로 표시")]
         [SerializeField] private bool showDisruptions = true;
@@ -268,7 +270,7 @@ namespace Battle.UI
             }
 
             float panelH = -y + 8f;
-            _panel.rectTransform.sizeDelta = new Vector2(colW + 150f, panelH);
+            _panel.rectTransform.sizeDelta = new Vector2(colW + labelWidth + 30f, panelH);
         }
 
         // 칸 내용(초상화·색·남은 단계·이름) 채우기
@@ -297,13 +299,11 @@ namespace Battle.UI
             if (portrait == null) v.initial.text = name.Substring(0, 1);
             v.initial.fontSize = isCurrent ? 40f : 28f;
 
-            string kindText = s.kind == EntryKind.Attack ? "공격" : s.kind == EntryKind.Disrupt ? "방해" : "";
+            // 행동 종류·남은 단계는 아이콘(테두리 색·배지)이 보여주므로 라벨은 이름만 표시
             if (isCurrent)
             {
                 v.badge.gameObject.SetActive(false);
-                v.label.text = s.kind == EntryKind.Player
-                    ? "<b>내 턴</b>\n<size=75%>카드를 사용하세요</size>"
-                    : $"<b>{name}</b>\n<size=75%>{kindText} 중</size>";
+                v.label.text = s.kind == EntryKind.Player ? "<b>내 턴</b>" : $"<b>{name}</b>";
                 v.label.fontSize = 22f;
             }
             else
@@ -311,9 +311,7 @@ namespace Battle.UI
                 v.badge.gameObject.SetActive(true);
                 v.badgeBg.color = c;
                 v.badgeText.text = s.steps < 0 ? "!" : s.steps.ToString();
-                v.label.text = s.steps < 0
-                    ? $"{name}\n<size=80%><color=#{ColorUtility.ToHtmlStringRGB(c)}>{kindText} 대기</color></size>"
-                    : $"{name}\n<size=80%><color=#{ColorUtility.ToHtmlStringRGB(c)}>{kindText}</color> · {s.steps}행동 후</size>";
+                v.label.text = name;
                 v.label.fontSize = 17f;
             }
         }
@@ -349,7 +347,7 @@ namespace Battle.UI
             _divider = div.rectTransform;
             _divider.anchorMin = _divider.anchorMax = new Vector2(0f, 1f);
             _divider.pivot = new Vector2(0f, 0.5f);
-            _divider.sizeDelta = new Vector2(currentSize + 120f, 2f);
+            _divider.sizeDelta = new Vector2(currentSize + labelWidth, 2f);
 
             var entriesGo = new GameObject("Entries", typeof(RectTransform));
             _entries = (RectTransform)entriesGo.transform;
@@ -425,7 +423,7 @@ namespace Battle.UI
             lr.anchorMax = new Vector2(1f, 1f);
             lr.pivot = new Vector2(0f, 0.5f);
             lr.anchoredPosition = new Vector2(10f, 0f);
-            lr.sizeDelta = new Vector2(140f, 0f);
+            lr.sizeDelta = new Vector2(labelWidth, 0f);
             v.label.textWrappingMode = TextWrappingModes.NoWrap;
             v.label.overflowMode = TextOverflowModes.Overflow;
             return v;
