@@ -5,21 +5,22 @@ using TMPro;
 
 namespace Battle.UI
 {
-    // 붕괴:스타레일식 행동 순서 바 — 화면 좌측 세로열.
-    // 맨 위 '현재' 칸 = 지금 행동하는 쪽(내 턴 / 행동 중인 적), 그 아래 = 앞으로 행동할 적들의 순서.
+    // 붕괴:스타레일식 행동 순서 바 — 화면 상단 중앙 가로열.
+    // 맨 왼쪽 '현재' 칸 = 지금 행동하는 쪽(내 턴 / 행동 중인 적), 그 오른쪽 = 앞으로 행동할 적들의 순서.
     // 적 행동 시점은 행동 게이지(플레이어 행동마다 1단계)로 시뮬레이션해 예측한다(빙결 스택 반영).
     // 항목은 '어느 적의 몇 번째 사이클 행동인지'로 식별되어, 순서가 바뀌면 위치가 부드럽게 미끄러진다.
     public class TurnOrderTimeline : MonoBehaviour
     {
         enum EntryKind { Player = 0, Attack = 1, Disrupt = 2 }
 
-        [Header("배치 (좌상단 기준)")]
-        [SerializeField] private Vector2 anchoredOffset = new Vector2(24f, -150f); // 바 시작 위치
-        [SerializeField] private float currentSize = 96f;   // '현재' 칸 크기
-        [SerializeField] private float entrySize = 64f;     // 예정 칸 크기
-        [SerializeField] private float spacing = 10f;       // 칸 간격
-        [Tooltip("아이콘 오른쪽 이름 라벨 폭 — 배경 패널 폭도 여기에 맞춰진다.")]
+        [Header("배치 (상단 중앙 기준)")]
+        [SerializeField] private Vector2 anchoredOffset = new Vector2(0f, -12f); // 바 위치(화면 상단 중앙에서의 오프셋)
+        [SerializeField] private float currentSize = 88f;   // '현재' 칸 크기
+        [SerializeField] private float entrySize = 60f;     // 예정 칸 크기
+        [SerializeField] private float spacing = 12f;       // 칸 간격
+        [Tooltip("아이콘 아래 이름 라벨 폭(넘치면 그대로 표시)")]
         [SerializeField] private float labelWidth = 90f;    // 이름 라벨 폭
+        [SerializeField] private float labelHeight = 22f;   // 이름 라벨 높이
         [SerializeField] private int maxUpcoming = 6;       // 표시할 예정 행동 수
         [Tooltip("방해행동(게이지 절반)도 순서 바에 별도 항목으로 표시")]
         [SerializeField] private bool showDisruptions = true;
@@ -75,6 +76,7 @@ namespace Battle.UI
         readonly List<EnemyController> _alive = new List<EnemyController>();
         readonly List<long> _removeBuf = new List<long>();
         bool _built;
+        bool _panelInit;
         bool _wasEnemyTurn;
         float _headerPulse;
         float _lockFlash;
@@ -208,45 +210,52 @@ namespace Battle.UI
         {
             foreach (var v in _views.Values) v.used = false;
 
-            float headerH = 34f;
-            float y = -headerH;
-            float colW = currentSize;
+            const float headerH = 34f;
+            float rowTop = -headerH;
             float dt = Time.deltaTime;
             float t = 1f - Mathf.Exp(-slideSpeed * dt);
+
+            // 전체 폭을 먼저 구해 화면 중앙 기준으로 좌우 대칭 배치
+            float totalW = currentSize;
+            for (int i = 1; i < _slots.Count; i++) totalW += entrySize + spacing;
+            if (_slots.Count > 1) totalW += spacing; // 현재 칸 뒤 구분선 여백
+            float x = -totalW * 0.5f;
 
             for (int i = 0; i < _slots.Count; i++)
             {
                 Slot s = _slots[i];
                 bool isCurrent = i == 0;
                 float size = isCurrent ? currentSize : entrySize;
+                float y = rowTop - (currentSize - size) * 0.5f; // 행 세로 중앙 정렬
 
                 if (!_views.TryGetValue(s.key, out EntryView v))
                 {
                     v = CreateEntry(s.key);
                     _views[s.key] = v;
-                    // 새 칸은 목표 위치 아래쪽에서 페이드 인
-                    v.rect.anchoredPosition = new Vector2((colW - size) * 0.5f, y - size - 20f);
+                    // 새 칸은 목표 위치 오른쪽에서 페이드 인
+                    v.rect.anchoredPosition = new Vector2(x + size + 20f, y);
                     v.rect.sizeDelta = new Vector2(size, size);
                     v.group.alpha = 0f;
                 }
                 v.used = true;
                 Fill(v, s, isCurrent);
 
-                Vector2 target = new Vector2((colW - size) * 0.5f, y);
+                Vector2 target = new Vector2(x, y);
                 v.rect.anchoredPosition = Vector2.Lerp(v.rect.anchoredPosition, target, t);
                 v.rect.sizeDelta = Vector2.Lerp(v.rect.sizeDelta, new Vector2(size, size), t);
                 v.group.alpha = Mathf.MoveTowards(v.group.alpha, 1f, dt * 5f);
-                v.rect.SetSiblingIndex(Mathf.Max(0, _entries.childCount - 1 - i)); // 위 칸이 아래 칸 위에 그려지도록
+                v.rect.SetSiblingIndex(Mathf.Max(0, _entries.childCount - 1 - i)); // 왼쪽 칸이 오른쪽 칸 위에 그려지도록
 
-                y -= size + spacing;
+                x += size + spacing;
                 if (isCurrent)
                 {
-                    _divider.anchoredPosition = new Vector2(0f, y + spacing * 0.5f);
-                    y -= spacing;
+                    _divider.anchoredPosition = new Vector2(x + spacing * 0.5f - 1f, rowTop);
+                    x += spacing;
                 }
             }
+            _divider.gameObject.SetActive(_slots.Count > 1);
 
-            // 순서에서 빠진 칸 — 왼쪽으로 빠지며 사라짐
+            // 순서에서 빠진 칸 — 위로 빠지며 사라짐
             _removeBuf.Clear();
             foreach (var kv in _views)
                 if (!kv.Value.used) _removeBuf.Add(kv.Key);
@@ -261,7 +270,7 @@ namespace Battle.UI
             {
                 EntryView v = _dying[i];
                 v.group.alpha = Mathf.MoveTowards(v.group.alpha, 0f, dt * 4f);
-                v.rect.anchoredPosition += new Vector2(-220f * dt, 0f);
+                v.rect.anchoredPosition += new Vector2(0f, 160f * dt);
                 if (v.group.alpha <= 0f)
                 {
                     Destroy(v.rect.gameObject);
@@ -269,8 +278,11 @@ namespace Battle.UI
                 }
             }
 
-            float panelH = -y + 8f;
-            _panel.rectTransform.sizeDelta = new Vector2(colW + labelWidth + 30f, panelH);
+            // 배경 패널 — 폭이 바뀔 때 튀지 않도록 보간
+            Vector2 panelSize = new Vector2(totalW + 40f, headerH + currentSize + labelHeight + 16f);
+            _panel.rectTransform.sizeDelta = _panelInit ? Vector2.Lerp(_panel.rectTransform.sizeDelta, panelSize, t) : panelSize;
+            _panelInit = true;
+            _lockHint.rectTransform.anchoredPosition = new Vector2(0f, -panelSize.y - 4f);
         }
 
         // 칸 내용(초상화·색·남은 단계·이름) 채우기
@@ -304,7 +316,7 @@ namespace Battle.UI
             {
                 v.badge.gameObject.SetActive(false);
                 v.label.text = s.kind == EntryKind.Player ? "<b>내 턴</b>" : $"<b>{name}</b>";
-                v.label.fontSize = 22f;
+                v.label.fontSize = 19f;
             }
             else
             {
@@ -312,7 +324,7 @@ namespace Battle.UI
                 v.badgeBg.color = c;
                 v.badgeText.text = s.steps < 0 ? "!" : s.steps.ToString();
                 v.label.text = name;
-                v.label.fontSize = 17f;
+                v.label.fontSize = 15f;
             }
         }
 
@@ -330,47 +342,48 @@ namespace Battle.UI
             var rootGo = new GameObject("TurnOrderBar", typeof(RectTransform));
             _root = (RectTransform)rootGo.transform;
             _root.SetParent(transform, false);
-            _root.anchorMin = _root.anchorMax = new Vector2(0f, 1f);
-            _root.pivot = new Vector2(0f, 1f);
+            _root.anchorMin = _root.anchorMax = new Vector2(0.5f, 1f);
+            _root.pivot = new Vector2(0.5f, 1f);
             _root.anchoredPosition = anchoredOffset;
             _root.sizeDelta = new Vector2(currentSize, 10f);
 
-            // 반투명 배경 패널(좌측에서 우측으로 옅어지는 느낌은 색으로만)
+            // 반투명 배경 패널(상단 중앙 기준, 폭은 칸 수에 맞춰 ApplyLayout에서 조절)
             _panel = NewImage("Panel", _root, RoundedSprite(), panelColor);
             _panel.raycastTarget = false;
             var pr = _panel.rectTransform;
-            pr.anchorMin = pr.anchorMax = new Vector2(0f, 1f);
-            pr.pivot = new Vector2(0f, 1f);
-            pr.anchoredPosition = new Vector2(-10f, 8f);
+            pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 1f);
+            pr.pivot = new Vector2(0.5f, 1f);
+            pr.anchoredPosition = new Vector2(0f, 8f);
 
+            // '현재' 칸과 예정 칸 사이 세로 구분선
             var div = NewImage("Divider", _root, null, new Color(1f, 1f, 1f, 0.35f));
             _divider = div.rectTransform;
-            _divider.anchorMin = _divider.anchorMax = new Vector2(0f, 1f);
-            _divider.pivot = new Vector2(0f, 0.5f);
-            _divider.sizeDelta = new Vector2(currentSize + labelWidth, 2f);
+            _divider.anchorMin = _divider.anchorMax = new Vector2(0.5f, 1f);
+            _divider.pivot = new Vector2(0.5f, 1f);
+            _divider.sizeDelta = new Vector2(2f, currentSize + labelHeight);
 
             var entriesGo = new GameObject("Entries", typeof(RectTransform));
             _entries = (RectTransform)entriesGo.transform;
             _entries.SetParent(_root, false);
-            _entries.anchorMin = _entries.anchorMax = new Vector2(0f, 1f);
-            _entries.pivot = new Vector2(0f, 1f);
+            _entries.anchorMin = _entries.anchorMax = new Vector2(0.5f, 1f);
+            _entries.pivot = new Vector2(0.5f, 1f);
             _entries.anchoredPosition = Vector2.zero;
             _entries.sizeDelta = Vector2.zero;
 
-            _header = NewText("Header", _root, 26f, TextAlignmentOptions.Left);
+            _header = NewText("Header", _root, 26f, TextAlignmentOptions.Center);
             var hr = _header.rectTransform;
-            hr.anchorMin = hr.anchorMax = new Vector2(0f, 1f);
-            hr.pivot = new Vector2(0f, 1f);
+            hr.anchorMin = hr.anchorMax = new Vector2(0.5f, 1f);
+            hr.pivot = new Vector2(0.5f, 1f);
             hr.anchoredPosition = Vector2.zero;
-            hr.sizeDelta = new Vector2(160f, 30f);
+            hr.sizeDelta = new Vector2(200f, 30f);
             _header.fontStyle = FontStyles.Bold;
 
-            _lockHint = NewText("LockHint", _root, 16f, TextAlignmentOptions.Left);
+            // 패널 바로 아래에 잠깐 표시(위치는 ApplyLayout에서 패널 높이에 맞춤)
+            _lockHint = NewText("LockHint", _root, 16f, TextAlignmentOptions.Center);
             var lr = _lockHint.rectTransform;
-            lr.anchorMin = lr.anchorMax = new Vector2(0f, 1f);
-            lr.pivot = new Vector2(0f, 1f);
-            lr.anchoredPosition = new Vector2(84f, -6f);
-            lr.sizeDelta = new Vector2(180f, 24f);
+            lr.anchorMin = lr.anchorMax = new Vector2(0.5f, 1f);
+            lr.pivot = new Vector2(0.5f, 1f);
+            lr.sizeDelta = new Vector2(260f, 24f);
             _lockHint.text = "적 행동 중에는 사용 불가";
             _lockHint.gameObject.SetActive(false);
         }
@@ -381,7 +394,7 @@ namespace Battle.UI
             var go = new GameObject("Entry", typeof(RectTransform), typeof(CanvasGroup));
             v.rect = (RectTransform)go.transform;
             v.rect.SetParent(_entries, false);
-            v.rect.anchorMin = v.rect.anchorMax = new Vector2(0f, 1f);
+            v.rect.anchorMin = v.rect.anchorMax = new Vector2(0.5f, 1f);
             v.rect.pivot = new Vector2(0f, 1f);
             v.group = go.GetComponent<CanvasGroup>();
             v.group.blocksRaycasts = false;
@@ -416,14 +429,13 @@ namespace Battle.UI
             Stretch(v.badgeText.rectTransform, 0f);
             v.badgeText.fontStyle = FontStyles.Bold;
 
-            // 오른쪽 이름/설명
-            v.label = NewText("Label", v.rect, 17f, TextAlignmentOptions.MidlineLeft);
+            // 아이콘 아래 이름
+            v.label = NewText("Label", v.rect, 17f, TextAlignmentOptions.Top);
             var lr = v.label.rectTransform;
-            lr.anchorMin = new Vector2(1f, 0f);
-            lr.anchorMax = new Vector2(1f, 1f);
-            lr.pivot = new Vector2(0f, 0.5f);
-            lr.anchoredPosition = new Vector2(10f, 0f);
-            lr.sizeDelta = new Vector2(labelWidth, 0f);
+            lr.anchorMin = lr.anchorMax = new Vector2(0.5f, 0f);
+            lr.pivot = new Vector2(0.5f, 1f);
+            lr.anchoredPosition = new Vector2(0f, -2f);
+            lr.sizeDelta = new Vector2(labelWidth, labelHeight);
             v.label.textWrappingMode = TextWrappingModes.NoWrap;
             v.label.overflowMode = TextOverflowModes.Overflow;
             return v;

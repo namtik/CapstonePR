@@ -566,7 +566,7 @@ namespace Battle.UI
         }
 
         // 카드 타입의 표시 이름을 반환
-        static string CardTypeName(CardType type) => type switch
+        public static string CardTypeName(CardType type) => type switch
         {
             CardType.Attack => "공격",
             CardType.Skill  => "스킬",

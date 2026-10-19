@@ -1586,8 +1586,11 @@ namespace Battle.UI
         private Image _viewerCloseButtonImage;
         private TextMeshProUGUI _viewerCloseButtonLabelText;
         public bool IsPickerMode => _pickerCallback != null; // 픽커 모드 여부
+        private CardSelectPanel _selectPanel; // 마스터 듀얼식 선택창(최초 사용 시 생성)
 
         [Header("카드 픽커 — 그리드/스크롤")]
+        [Tooltip("ON이면 더미/파편 카드 선택을 마스터 듀얼식 선택창(좌측 상세 + 우측 목록 + 결정 버튼)으로 표시. OFF면 기존 그리드(클릭 즉시 선택).")]
+        [SerializeField] private bool useSelectPanel = true;
         [Tooltip("픽커 한 행에 표시할 최대 카드 수.")]
         [SerializeField] private int pickerColumns = 4; // 한 행 최대 카드 수
         [Tooltip("픽커 카드 가로 간격(중심→중심, 픽셀). 카드 폭 300 기준 360~520 권장.")]
@@ -1617,6 +1620,13 @@ namespace Battle.UI
                 return;
             }
 
+            if (useSelectPanel)
+            {
+                EnterCardPickerMode(promptMessage, cards, 1, 1,
+                    list => callback?.Invoke(list != null && list.Count > 0 ? list[0] : null));
+                return;
+            }
+
             _pickerCallback = callback;
 
             EnsureDimOverlay();
@@ -1641,9 +1651,49 @@ namespace Battle.UI
             BringAwakenGaugeToFront();
         }
 
+        // 마스터 듀얼식 선택창으로 min~max장을 선택받는다(취소 허용 시 취소=null 콜백)
+        public void EnterCardPickerMode(string promptMessage, IList<CardInstance> cards, int minCount, int maxCount,
+            System.Action<List<CardInstance>> callback, System.Func<CardInstance, bool> filter = null,
+            bool allowCancel = false, string sourceLabel = null)
+        {
+            if (cards == null || cards.Count == 0)
+            {
+                callback?.Invoke(allowCancel ? null : new List<CardInstance>());
+                return;
+            }
+
+            if (_selectPanel == null)
+            {
+                Canvas canvas = ResolveTargetCanvas();
+                TMP_FontAsset font = selectionPromptText != null ? selectionPromptText.font : null;
+                _selectPanel = CardSelectPanel.Create(canvas != null ? canvas.transform : transform, cardPrefab, font);
+            }
+
+            // 열려 있는 동안 IsPickerMode=true 유지 → 손패 사용/드래그/더미보기 차단
+            _pickerCallback = _ => { };
+            if (handRoot != null) handRoot.SetAsFirstSibling();
+            _selectPanel.Open(new CardSelectPanel.Request
+            {
+                title = promptMessage,
+                sourceLabel = sourceLabel,
+                cards = cards,
+                minCount = minCount,
+                maxCount = maxCount,
+                allowCancel = allowCancel,
+                filter = filter,
+                onComplete = list =>
+                {
+                    ExitPickerMode();
+                    callback?.Invoke(list);
+                    SelectionClosedCallback?.Invoke(); // 선택 후 보류 각성 발동 트리거
+                },
+            });
+        }
+
         // 픽커 모드를 종료하고 카드/딤/안내를 정리
         public void ExitPickerMode()
         {
+            if (_selectPanel != null && _selectPanel.IsOpen) _selectPanel.Close();
             _pickerCallback = null;
             ClearPickerViews();
             if (_pickerRoot != null) _pickerRoot.gameObject.SetActive(false);

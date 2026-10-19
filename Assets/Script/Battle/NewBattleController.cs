@@ -789,10 +789,13 @@ namespace Battle
 
         // 다음 프레임에 카드 픽커 모드 진입
         IEnumerator DeferredPicker(string prompt, IList<CardInstance> cards,
-            System.Action<CardInstance> callback)
+            System.Action<CardInstance> callback, string sourceLabel = null)
         {
             yield return null;
-            if (handHud != null) handHud.EnterCardPickerMode(prompt, cards, callback);
+            if (handHud == null) yield break;
+            if (sourceLabel == null) handHud.EnterCardPickerMode(prompt, cards, callback);
+            else handHud.EnterCardPickerMode(prompt, cards, 1, 1,
+                list => callback?.Invoke(list != null && list.Count > 0 ? list[0] : null), sourceLabel: sourceLabel);
         }
 
         // 카드 사용 후 보류된 각성을 선택 모드 진입 대기 후 발동 시도
@@ -1080,9 +1083,10 @@ namespace Battle
             // 뽑을 더미에서 카드 선택 → 패로 (물7/206)
             if (result.requiresDrawPileMoveSelection && handHud != null)
             {
-                StartCoroutine(DeferredPicker("뽑을 더미에서 카드를 선택하세요",
+                StartCoroutine(DeferredPicker("뽑을 더미에서 패에 추가할 카드를 선택해 주세요",
                     new List<CardInstance>(_deck.DrawPile),
-                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); }));
+                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); },
+                    $"뽑을 더미  {_deck.DrawPile.Count}장"));
             }
 
             // 버린 더미에서 카드 선택 → toZone에 따라 패 또는 뽑을 더미 맨 위 (역류203/물213)
@@ -1091,7 +1095,9 @@ namespace Battle
                 if (_deck.DiscardCount > 0)
                 {
                     string zone = (result.discardMoveTargetZone ?? "").Trim().ToUpperInvariant();
-                    StartCoroutine(DeferredPicker("버린 더미에서 카드를 선택하세요",
+                    StartCoroutine(DeferredPicker(zone == "HAND"
+                            ? "버린 더미에서 패에 추가할 카드를 선택해 주세요"
+                            : "버린 더미에서 뽑을 더미 맨 위에 놓을 카드를 선택해 주세요",
                         new List<CardInstance>(_deck.DiscardPile),
                         (picked) =>
                         {
@@ -1102,7 +1108,8 @@ namespace Battle
                                 : _deck.MoveFromDiscardToDrawPileTop(picked);
                             if (!ok && toHand)
                                 Log("[효과] 패가 가득 차 버린 더미 카드를 패로 가져올 수 없습니다.");
-                        }));
+                        },
+                        $"버린 더미  {_deck.DiscardCount}장"));
                 }
                 else Log("[효과] 버린 더미에 카드 없음 — 건너뜀");
             }
@@ -1118,7 +1125,7 @@ namespace Battle
                 }
                 string zone = result.fragmentPickerTargetZone;
                 int copies = Mathf.Max(1, result.fragmentPickerCopyCount);
-                StartCoroutine(DeferredPicker("파편 카드를 선택하세요",
+                StartCoroutine(DeferredPicker("만들 파편 카드를 선택해 주세요",
                     pool,
                     (picked) =>
                     {
