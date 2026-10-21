@@ -20,7 +20,7 @@ MonoBehaviour:
   id: 100009
   element: 2
   enemyClass: 2
-  specialAbility: 0
+  specialAbility: 11
   Note: 
   maxHp: 130
   actionGaugeMax: 16

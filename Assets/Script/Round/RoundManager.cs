@@ -28,7 +28,7 @@ public class RoundManager : MonoBehaviour
     [SerializeField] private CombatStageController combatStageController; // 전투 스테이지 배경 제어
 
     [Header("일반 전투 등장")]
-    [Tooltip("스테이지(바퀴-번호)별 마릿수와 몬스터 후보 풀. 정예/보스는 사용하지 않는다.")]
+    [Tooltip("일반 전투는 스테이지 프리셋, 정예 전투는 라운드 프리셋을 쓴다. 보스는 사용하지 않는다.")]
     [SerializeField] private EnemyEncounterConfig encounterConfig;
     [Header("디버그 — 보스 3마리 (임시)")]
     [Tooltip("ON이면 보스방에 같은 보스를 3마리 스폰한다. 3D 여러 마리 배치 확인용.")]
@@ -272,7 +272,7 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        SpawnParty(TakeFirstEnemy(data.enemies), data.columnIndex, data.roundType);
+        SpawnParty(ResolveEliteRoster(data), data.columnIndex, data.roundType);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
@@ -674,6 +674,27 @@ public class RoundManager : MonoBehaviour
         }
 
         return data.enemies ?? new List<EnemyData>();
+    }
+
+    // 정예 전투 명단: 현재 라운드의 정예 프리셋이 있으면 그걸 쓰고, 없으면 라운드 에셋의 첫 적.
+    List<EnemyData> ResolveEliteRoster(EliteRoundData data)
+    {
+        int lap = 1;
+        GameStateController state = GameStateController.Instance;
+        if (state != null)
+            lap = state.CurrentLap;
+
+        if (encounterConfig != null)
+        {
+            List<EnemyData> composed = encounterConfig.ComposeEliteEnemies(lap);
+            if (composed != null && composed.Count > 0)
+            {
+                Debug.Log($"[등장] {lap}라운드 정예 전투 {composed.Count}마리");
+                return composed;
+            }
+        }
+
+        return TakeFirstEnemy(data != null ? data.enemies : null);
     }
 
     static List<EnemyData> TakeFirstEnemy(List<EnemyData> enemies)
