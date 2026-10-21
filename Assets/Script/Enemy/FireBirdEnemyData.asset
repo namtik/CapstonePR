@@ -26,6 +26,7 @@ MonoBehaviour:
   actionGaugeMax: 14
   attackSequence: 0800000009000000
   disruptionActions: 000000000100000003000000
+  "\uD761\uC218\uC218\uCE58": 4
   backgroundSprites:
   - {fileID: 21300000, guid: 2ed17f46569e7834eb0fe28e8cee9c99, type: 3}
   - {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}

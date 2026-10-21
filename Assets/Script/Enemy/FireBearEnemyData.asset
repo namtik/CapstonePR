@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: FireBearEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uD654\uC6C5"
+  battlePrefab3D: {fileID: 0}
   enemySprite: {fileID: 21300000, guid: e463821c280ef9846a6ad6d6d922b9a4, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
@@ -21,10 +22,11 @@ MonoBehaviour:
   enemyClass: 2
   specialAbility: 5
   Note: 
-  maxHp: 130
+  maxHp: 150
   actionGaugeMax: 20
   attackSequence: 0a0000000f000000
   disruptionActions: 000000000300000004000000
+  "\uD761\uC218\uC218\uCE58": 5
   backgroundSprites:
   - {fileID: 21300000, guid: 2ed17f46569e7834eb0fe28e8cee9c99, type: 3}
   - {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}

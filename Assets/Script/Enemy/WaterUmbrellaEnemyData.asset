@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
-  m_Name: WaterFishEnemyData
+  m_Name: WaterUmbrellaEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uAC00\uB77C\uCE74\uC0AC\uC624\uBC14\uCF00"
   battlePrefab3D: {fileID: 0}
-  enemySprite: {fileID: 21300000, guid: e5fbaa84398d8e743a3df6794bea10f9, type: 3}
+  enemySprite: {fileID: 21300000, guid: d50cb89e88cd56f4da0225e49a331c98, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
   id: 100007
@@ -26,6 +26,7 @@ MonoBehaviour:
   actionGaugeMax: 12
   attackSequence: 0a00000005000000
   disruptionActions: 050000000100000004000000
+  "\uD761\uC218\uC218\uCE58": 3
   backgroundSprites:
   - {fileID: 21300000, guid: 95d6fb0b5eea0c24a9db1ab379c12a0f, type: 3}
   - {fileID: 21300000, guid: 0bda1ef5007630643abb6e0b2f210eed, type: 3}

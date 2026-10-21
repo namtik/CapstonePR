@@ -1690,13 +1690,16 @@ namespace Battle
                     Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
                     return "방해: 탈진 카드 삽입!";
                 }
-                case 2: // 흡수 — 각성 게이지(누적 속성 카드 수) -2  [즉시형]
+                case 2: // 흡수 — 각성 게이지를 EnemyData.흡수수치만큼 감소  [즉시형]
                 {
+                    int absorb = _enemyStat != null && _enemyStat.Data != null
+                        ? Mathf.Max(0, _enemyStat.Data.흡수수치)
+                        : 2;
                     int before = _elementInputCount;
-                    _elementInputCount = Mathf.Max(0, _elementInputCount - 2);
+                    _elementInputCount = Mathf.Max(0, _elementInputCount - absorb);
                     UpdateAwakenText();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 2, AbsorbReward(before));
-                    Log($"[방해] 흡수 — 각성 게이지 -2 ({before} → {_elementInputCount})");
+                    Log($"[방해] 흡수 — 각성 게이지 -{absorb} ({before} → {_elementInputCount})");
                     return "방해: 각성 게이지 흡수!";
                 }
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)

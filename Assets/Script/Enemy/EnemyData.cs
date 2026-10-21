@@ -1,7 +1,7 @@
 using UnityEngine;
 
-// 몬스터 속성(불/물/바람/땅)
-public enum EnemyElement { None, Fire, Water, Wind, Earth }
+// 몬스터 속성(없음/불/물/바람/땅/인간형)
+public enum EnemyElement { None, Fire, Water, Wind, Earth, Humanoid }
 
 // 몬스터 타입
 public enum EnemyClass { Corrupted, Normal, Elite, Boss }
@@ -77,6 +77,8 @@ public class EnemyData : ScriptableObject
     [Tooltip("이 몬스터가 사용할 수 있는 방해행동 목록. 적 AI/랜덤 선택이 이 목록으로 제한된다.\n" +
              "비우면 6종(저주/탈진/흡수/강화/회복/버리기) 전체를 허용.")]
     public DisruptionAction[] disruptionActions; // 방해행동 목록
+    [Tooltip("방해행동 '흡수' 발동 시 각성 게이지에서 깎는 수치. 기본 2.")]
+    public int 흡수수치 = 2; // 흡수 시 각성 게이지 감소량
 
     [Header("전투 배경")]
     [Tooltip("이 몬스터와 매칭되는 전투 배경 후보. 전투 진입 시 이 중 하나가 랜덤으로 선택된다. 비우면 라운드 타입 기본 배경을 사용.")]

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uADF8\uC2A8\uC0C8"
   battlePrefab3D: {fileID: 0}
-  enemySprite: {fileID: 21300000, guid: 88e15f21bc985954cab0b14afe89c8b5, type: 3}
+  enemySprite: {fileID: 21300000, guid: 03fa104167e0ae944a016581c417216a, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
   id: 100012
@@ -22,10 +22,11 @@ MonoBehaviour:
   enemyClass: 2
   specialAbility: 7
   Note: "\uACF5\uACA9 \uC2DC \uD53C\uD574\uAC00 1\uC529 \uC99D\uAC00\uD55C\uB2E4."
-  maxHp: 100
+  maxHp: 150
   actionGaugeMax: 8
   attackSequence: 03000000
   disruptionActions: 020000000300000000000000
+  "\uD761\uC218\uC218\uCE58": 3
   backgroundSprites:
   - {fileID: 21300000, guid: 308f585d2dd7a8342b9746dc03ccf03d, type: 3}
   - {fileID: 21300000, guid: 47d614917c3cbd24eb4752ce0aa23b6c, type: 3}
