@@ -69,6 +69,7 @@ public class RoundManager : MonoBehaviour
     private readonly List<EnemyData> _injectedEnemies = new List<EnemyData>(); // 특이사항(복제) 등으로 끼어든 적 큐
     private bool _currentIsInjected = false; // 현재 적이 주입(복제)된 적인지 여부
     private int _spawnedCombatCount = 1; // 이번 전투에 스폰한 적 수(골드 계산용)
+    private int _killGoldPaid; // 처치 연출로 이미 지급한 골드(전투 종료 시 중복 지급 방지)
     private bool _waitingForRoundEnd = false; // 전멸 후 라운드 종료 예약 여부
     public event System.Action OnRoundClear; // 라운드 클리어 이벤트
     private IRoundHandler currentRoundHandler; // 현재 라운드 핸들러
@@ -541,6 +542,18 @@ public class RoundManager : MonoBehaviour
     {
         if (MoneyManager.Instance == null) return;
 
+        // 처치 순간에 적마다 이미 지급했다. 여기서는 유물 가산만 더한다.
+        if (_killGoldPaid > 0)
+        {
+            int relicGoldBonus = Battle.Relic.RelicManager.Instance != null
+                ? Battle.Relic.RelicManager.Instance.GetGoldRewardBonus() : 0;
+            if (relicGoldBonus > 0)
+                MoneyManager.Instance.AddMoney(relicGoldBonus);
+            Debug.Log($"[보상] 처치 지급분 {_killGoldPaid}" + (relicGoldBonus > 0 ? $", 유물 +{relicGoldBonus}" : ""));
+            _killGoldPaid = 0;
+            return;
+        }
+
         bool isBoss = currentRoundData is BossRoundData;
         bool isElite = currentRoundData is EliteRoundData;
         bool isNormalCombat = currentRoundData is CombatRoundData;
@@ -551,12 +564,12 @@ public class RoundManager : MonoBehaviour
         if (gold <= 0) return;
 
         // 유물(복주머니 10005): 전투 보상 골드 가산
-        int relicGoldBonus = Battle.Relic.RelicManager.Instance != null
+        int relicBonus = Battle.Relic.RelicManager.Instance != null
             ? Battle.Relic.RelicManager.Instance.GetGoldRewardBonus() : 0;
-        gold += relicGoldBonus;
+        gold += relicBonus;
 
         MoneyManager.Instance.AddMoney(gold);
-        Debug.Log($"[보상] 전투 골드 +{gold}" + (relicGoldBonus > 0 ? $" (유물 +{relicGoldBonus})" : ""));
+        Debug.Log($"[보상] 전투 골드 +{gold}" + (relicBonus > 0 ? $" (유물 +{relicBonus})" : ""));
     }
 
     // 보상 처리 후 노드를 클리어 표시하고 맵으로 복귀한다(최종 보스 클리어 시 게임 클리어 화면).
@@ -626,6 +639,7 @@ public class RoundManager : MonoBehaviour
 
         currentEnemyIndex = 0;
         _spawnedCombatCount = 0;
+        _killGoldPaid = 0;
         _waitingForRoundEnd = false;
     }
 
@@ -693,6 +707,7 @@ public class RoundManager : MonoBehaviour
         int n = enemies.Count;
         EnemyCombatParty.BeginBattle(n);
         _spawnedCombatCount = n;
+        _killGoldPaid = 0;
 
         for (int i = 0; i < n; i++)
             SpawnEnemy(enemies[i], columnIndex, nodeType, injected: false, slotIndex: i, partySize: n);
@@ -771,7 +786,9 @@ public class RoundManager : MonoBehaviour
         if (controller != null && (injected || partySize > 1))
             controller.AllowDuplication = false;
 
-        stat.OnDied += HandleEnemyDied;
+        EnemyStat dying = stat;
+        IEnemyView dyingView = view;
+        stat.OnDied += () => OnPartyMemberDied(dying, dyingView);
         currentEnemy = stat;
         if (controller != null) EnemyCombatParty.Register(controller);
 
@@ -815,7 +832,10 @@ public class RoundManager : MonoBehaviour
                 EnemyCombatParty.TrackHudClone(hud);
             }
             if (hud != null)
-                view3D.SetOverlayHud(hud, followWorld);
+            {
+                float barScale = BattleStageController.PartySideSign(slotIndex, partySize) == 0 ? 1f : 0.6f;
+                view3D.SetOverlayHud(hud, followWorld, barScale);
+            }
         }
 
         if (enemyStatusPanel == null || controller == null) return;
@@ -836,15 +856,60 @@ public class RoundManager : MonoBehaviour
         }
     }
 
-    // 적 사망 시 재화를 지급하고, 남은 적이 없으면 라운드 종료를 예약한다.
+    // 적 사망 시 재화 연출을 띄우고, 남은 적이 없으면 라운드 종료를 예약한다.
+    void OnPartyMemberDied(EnemyStat stat, IEnemyView view)
+    {
+        PlayKillReward(stat, view);
+        HandleEnemyDied();
+    }
+
+    // 처치 위치에 +N을 띄우고, 영혼이 재화 UI에 닿으면 골드를 넣는다.
+    void PlayKillReward(EnemyStat stat, IEnemyView view)
+    {
+        if (MoneyManager.Instance == null) return;
+
+        int gold;
+        if (IsNewBattleSystemActive())
+        {
+            bool isBoss = currentRoundData is BossRoundData;
+            bool isElite = currentRoundData is EliteRoundData;
+            bool isNormalCombat = currentRoundData is CombatRoundData;
+            gold = MoneyManager.Instance.RollCombatRewardGold(isBoss, isElite, isNormalCombat);
+        }
+        else
+        {
+            gold = MoneyManager.Instance.MoneyPerKill;
+        }
+
+        if (gold <= 0) return;
+        _killGoldPaid += gold;
+
+        Vector2 screen = new Vector2(Screen.width * 0.5f, Screen.height * 0.55f);
+        if (view != null && view.TryGetAimScreen(out Vector2 aim, out _))
+            screen = aim;
+        else if (stat != null)
+        {
+            Camera cam = BattleStageController.Current != null
+                ? BattleStageController.Current.StageCamera
+                : Camera.main;
+            if (cam != null)
+            {
+                Vector3 sp = cam.WorldToScreenPoint(stat.transform.position);
+                if (sp.z > 0f) screen = new Vector2(sp.x, sp.y);
+            }
+        }
+
+        int pay = gold;
+        KillRewardFx.Play(screen, pay, () =>
+        {
+            if (MoneyManager.Instance != null)
+                MoneyManager.Instance.AddMoney(pay);
+        });
+    }
+
     public void HandleEnemyDied()
     {
         Debug.Log("[RoundManager.HandleEnemyDied] 호출됨");
-
-        if (!IsNewBattleSystemActive() && MoneyManager.Instance != null)
-        {
-            MoneyManager.Instance.OnEnemyKilled();
-        }
 
         if (EnemyCombatParty.AliveCount > 0)
             return;
