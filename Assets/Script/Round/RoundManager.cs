@@ -63,6 +63,10 @@ public class RoundManager : MonoBehaviour
     [Tooltip("게임 시작 후 맵 진입 직후 정예/보스와 동일한 콤보 3택1을 표시한다.")]
     [SerializeField] private bool showStarterComboPickOnMapEntry = true;
 
+    [Header("보상 후 이동 연출")]
+    [Tooltip("ON이면 전투 보상을 마친 뒤 카드 HUD를 숨기고 다음 장소로 걸어가는 연출(BattleWalkTransition) 후 맵으로 복귀한다. 세부 수치를 조절하려면 씬 루트(전투 스테이지 밖)에 BattleWalkTransition을 배치. 없으면 자동 생성(기본값).")]
+    [SerializeField] private bool walkTransitionAfterReward = true;
+
     private RoundData currentRoundData; // 현재 진행 중인 라운드 데이터
     private int currentEnemyIndex = 0; // 현재 처리 중인 적 인덱스(레거시 순차 스폰용)
     private EnemyStat currentEnemy; // 마지막으로 스폰한 적 스탯
@@ -248,7 +252,12 @@ public class RoundManager : MonoBehaviour
     // 일반 전투를 시작한다.
     public void StartCombat(CombatRoundData data)
     {
-        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
+        List<EnemyData> roster = ResolveCombatRoster(data);
+        ShowStageThen(roster, () => BeginCombat(data, roster));
+    }
+
+    void BeginCombat(CombatRoundData data, List<EnemyData> roster)
+    {
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -256,7 +265,7 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        SpawnParty(ResolveCombatRoster(data), data.columnIndex, data.roundType);
+        SpawnParty(roster, data.columnIndex, data.roundType);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
@@ -264,7 +273,12 @@ public class RoundManager : MonoBehaviour
     // 정예 전투를 시작한다.
     public void StartCombat(EliteRoundData data)
     {
-        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
+        List<EnemyData> roster = TakeFirstEnemy(data.enemies);
+        ShowStageThen(roster, () => BeginElite(data, roster));
+    }
+
+    void BeginElite(EliteRoundData data, List<EnemyData> roster)
+    {
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -280,7 +294,12 @@ public class RoundManager : MonoBehaviour
     // 보스 전투를 시작한다.
     public void StartBoss(BossRoundData data)
     {
-        StageManager.Instance?.ShowStage(); // 3D 스테이지 표시(컨셉 미지정 → fallback)
+        var bossOnly = new List<EnemyData> { data.bossEnemy };
+        ShowStageThen(bossOnly, () => BeginBoss(data));
+    }
+
+    void BeginBoss(BossRoundData data)
+    {
         EnsureElementCombatSystems();
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.StartBattle();
@@ -302,6 +321,18 @@ public class RoundManager : MonoBehaviour
         SpawnParty(bossRoster, data.columnIndex, NodeType.Boss);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
+    }
+
+    // 적 속성에 맞는 3D 스테이지를 표시하고, 준비되면(이미 로드돼 있으면 즉시) 전투를 시작한다.
+    // StageManager가 없으면 바로 시작(2D).
+    void ShowStageThen(List<EnemyData> roster, System.Action begin)
+    {
+        if (StageManager.Instance == null)
+        {
+            begin();
+            return;
+        }
+        StageManager.Instance.ShowStage(StageManager.ResolveElement(roster), begin);
     }
 
     // 상점 스테이지를 연다.
@@ -478,9 +509,23 @@ public class RoundManager : MonoBehaviour
             return;
         }
 
-        ReturnToMap();
+        ReturnToMapWithWalk();
     });
 }
+
+    // 보상 종료 후 걷기 연출을 거쳐 맵으로 복귀한다(연출 OFF면 즉시 복귀).
+    void ReturnToMapWithWalk()
+    {
+        if (!walkTransitionAfterReward)
+        {
+            ReturnToMap();
+            return;
+        }
+        // 맵 전환 시 전투 스테이지가 비활성화돼도 연출 코루틴이 끊기지 않도록 별도 루트 오브젝트에서 실행
+        var walk = FindFirstObjectByType<BattleWalkTransition>();
+        if (walk == null) walk = new GameObject("BattleWalkTransition").AddComponent<BattleWalkTransition>();
+        walk.Play(ReturnToMap);
+    }
 
     // 카드 보상 후 콤보 책 보상을 표시할 라운드인지 판정한다(정예/보스).
     bool ShouldShowComboBookRewardAfterCard()
@@ -491,7 +536,7 @@ public class RoundManager : MonoBehaviour
     // 카드 보상 후 콤보 책 보상 UI를 표시하고 선택한 콤보를 지급한다.
     void ShowComboBookRewardAfterCard()
     {
-        ShowComboBookReward(ReturnToMap);
+        ShowComboBookReward(ReturnToMapWithWalk);
     }
 
     // 런 시작 직후 맵에서 콤보 3택1을 표시한다.
@@ -635,7 +680,9 @@ public class RoundManager : MonoBehaviour
         }
 
         // 3D: 스테이지 앵커 아래 남은 적 정리(사망 연출 중이던 잔여 포함)
-        DestroyChildrenOf(BattleStageController.Current != null ? BattleStageController.Current.EnemyAnchor : null);
+        if (BattleStageController.Current != null)
+            foreach (Transform anchor in BattleStageController.Current.AllEnemyAnchors())
+                DestroyChildrenOf(anchor);
 
         currentEnemyIndex = 0;
         _spawnedCombatCount = 0;

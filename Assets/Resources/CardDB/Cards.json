@@ -18,7 +18,7 @@
       "name": "방어",
       "element": "FIRE",
       "type": "SKILL",
-      "gauge": 1,
+      "gauge": 2,
       "rarity": "Normal",
       "tags": ["BASIC"],
       "comboSlot": true,
@@ -165,7 +165,7 @@
       "rarity": "Normal",
       "tags": [],
       "comboSlot": true,
-      "effectName": "Fire_ATK",
+      "effectName": "",
       "skillImg": "112Img",
       "description": "화상을 10 부여한다."
     },
@@ -178,7 +178,7 @@
       "rarity": "Rare",
       "tags": [],
       "comboSlot": true,
-      "effectName": "Fire_ATK",
+      "effectName": "",
       "skillImg": "113Img",
       "description": "화상을 15 부여한다. 이 카드가 소멸될 시 모든 적에게 화상을 20 부여한다."
     },
@@ -191,7 +191,7 @@
       "rarity": "Normal",
       "tags": [],
       "comboSlot": true,
-      "effectName": "Fire_ATK",
+      "effectName": "",
       "skillImg": "114Img",
       "description": "화상을 20 부여한다. 자신에게 피해를 5 준다."
     },
@@ -204,7 +204,7 @@
       "rarity": "Rare",
       "tags": [],
       "comboSlot": true,
-      "effectName": "Fire_ATK",
+      "effectName": "",
       "skillImg": "115Img",
       "description": "소멸한 카드 수 만큼 화상 부여한다."
     },
@@ -217,7 +217,7 @@
       "rarity": "Epic",
       "tags": [],
       "comboSlot": true,
-      "effectName": "Fire_ATK",
+      "effectName": "",
       "skillImg": "116Img",
       "description": "적이 보유한 화상 모두 소모하고 소모한 화상 2배만큼 피해를 준다."
     },
@@ -230,7 +230,7 @@
       "rarity": "Epic",
       "tags": [],
       "comboSlot": true,
-      "effectName": "Fire_ATK",
+      "effectName": "",
       "skillImg": "117Img",
       "description": "적이 보유한 화상 만큼 화상 부여한다."
     },
@@ -352,6 +352,32 @@
       "description": "적 행동 시에도 화상이 줄어들지 않음"
     },
     {
+      "id": 127,
+      "name": "불꽃의 가호",
+      "element": "FIRE",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "127Img",
+      "description": "방어도를 5 얻는다. 이 카드가 소멸될 시에도 발동한다."
+    },
+    {
+      "id": 128,
+      "name": "염화진",
+      "element": "FIRE",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "128Img",
+      "description": "방어도를 5 얻는다. 모든 적에게 화상을 5 부여한다."
+    },
+    {
       "id": 200,
       "name": "공격",
       "element": "WATER",
@@ -369,7 +395,7 @@
       "name": "방어",
       "element": "WATER",
       "type": "SKILL",
-      "gauge": 1,
+      "gauge": 2,
       "rarity": "Normal",
       "tags": ["BASIC"],
       "comboSlot": true,
@@ -503,7 +529,7 @@
       "rarity": "Normal",
       "tags": [],
       "comboSlot": true,
-      "effectName": "Water_ATk",
+      "effectName": "",
       "skillImg": "211Img",
       "description": "피해를 12 준다. 패에서 카드를 1장 선택하여 버린다."
     },
@@ -703,6 +729,32 @@
       "description": "물 속성 카드를 3번 사용할 때마다 빙결을 1 부여한다."
     },
     {
+      "id": 227,
+      "name": "수막",
+      "element": "WATER",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "227Img",
+      "description": "패를 모두 버리고 버린 수 만큼 방어도를 3 얻는다."
+    },
+    {
+      "id": 228,
+      "name": "생명수",
+      "element": "WATER",
+      "type": "SKILL",
+      "gauge": 2,
+      "rarity": "Rare",
+      "tags": ["EXHAUST"],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "228Img",
+      "description": "소멸, 체력을 7 회복한다."
+    },
+    {
       "id": 300,
       "name": "공격",
       "element": "WIND",
@@ -720,7 +772,7 @@
       "name": "방어",
       "element": "WIND",
       "type": "SKILL",
-      "gauge": 1,
+      "gauge": 2,
       "rarity": "Normal",
       "tags": ["BASIC"],
       "comboSlot": true,
@@ -921,7 +973,7 @@
       "comboSlot": true,
       "effectName": "",
       "skillImg": "316Img",
-      "description": "소멸 카드를 5장 드로우한다."
+      "description": "소멸, 카드를 5장 드로우한다."
     },
     {
       "id": 317,
@@ -945,7 +997,7 @@
       "rarity": "Rare",
       "tags": [],
       "comboSlot": true,
-      "effectName": "Wind_ATK",
+      "effectName": "",
       "skillImg": "318Img",
       "description": "연쇄를 5 얻는다. 이 카드가 버린 카드 더미로 이동 할 때 무작위 적에게 피해를 10 준다."
     },
@@ -1054,6 +1106,32 @@
       "description": "각성 게이지 최대치가 2 만큼 줄어든다."
     },
     {
+      "id": 327,
+      "name": "기류 변환",
+      "element": "WIND",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": ["EXHAUST"],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "327Img",
+      "description": "소멸, 카드를 1장 드로우한다. 방어도를 5 얻는다."
+    },
+    {
+      "id": 328,
+      "name": "풍벽",
+      "element": "WIND",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": ["EXHAUST"],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "328Img",
+      "description": "소멸, 방어도를 10 얻는다."
+    },
+    {
       "id": 400,
       "name": "공격",
       "element": "EARTH",
@@ -1071,7 +1149,7 @@
       "name": "방어",
       "element": "EARTH",
       "type": "SKILL",
-      "gauge": 1,
+      "gauge": 2,
       "rarity": "Normal",
       "tags": ["BASIC"],
       "comboSlot": true,
@@ -1405,6 +1483,32 @@
       "description": "파편 카드 사용 시 버린 카드 더미에 무작위 파편 카드를 1장을 추가한다."
     },
     {
+      "id": 427,
+      "name": "석화",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Normal",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "427Img",
+      "description": "방어도를 3 얻는다. 무작위 파편 카드를 1장 패로 가져온다."
+    },
+    {
+      "id": 428,
+      "name": "돌갑옷",
+      "element": "EARTH",
+      "type": "SKILL",
+      "gauge": 1,
+      "rarity": "Rare",
+      "tags": [],
+      "comboSlot": true,
+      "effectName": "",
+      "skillImg": "428Img",
+      "description": "패에 파편 카드를 모두 버리고 버린 수 만큼 방어도를 3 얻는다."
+    },
+    {
       "id": 500,
       "name": "탈진",
       "element": "NEUTRAL",
@@ -1420,7 +1524,7 @@
     {
       "id": 501,
       "name": "금속 파편",
-      "element": "EARTH",
+      "element": "FRAGMENT",
       "type": "SKILL",
       "gauge": 1,
       "rarity": "Normal",
@@ -1433,7 +1537,7 @@
     {
       "id": 502,
       "name": "모래 파편",
-      "element": "EARTH",
+      "element": "FRAGMENT",
       "type": "ATTACK",
       "gauge": 1,
       "rarity": "Normal",
@@ -1446,7 +1550,7 @@
     {
       "id": 503,
       "name": "암석 파편",
-      "element": "EARTH",
+      "element": "FRAGMENT",
       "type": "ATTACK",
       "gauge": 1,
       "rarity": "Normal",
@@ -1468,6 +1572,19 @@
       "effectName": "",
       "skillImg": "504Img",
       "description": "오염된 원소다. 사용해도 아무 일도 일어나지 않는다."
+    },
+    {
+      "id": 505,
+      "name": "매혹",
+      "element": "NEUTRAL",
+      "type": "SKILL",
+      "gauge": 0,
+      "rarity": "Normal",
+      "tags": ["NO_COMBO_SLOT"],
+      "comboSlot": false,
+      "effectName": "",
+      "skillImg": "505Img",
+      "description": "적 행동게이지를 모두 채운다."
     }
   ]
 }

@@ -21,6 +21,8 @@ public class EnemyStat : MonoBehaviour
     private bool midPatternTriggered = false; // 이번 사이클 방해행동 발동 여부
     public int GaugeStep => gaugeStep; // 현재 게이지 단계 조회
     public int GaugeMaxSteps => gaugeMaxSteps; // 이 적의 행동 게이지 최대치(10~30) 조회
+    public bool MidPatternTriggered => midPatternTriggered; // 이번 사이클 방해행동 발동 여부 조회(행동 순서 예측용)
+    public int CycleCount { get; private set; } // 게이지가 가득 찬(공격한) 누적 횟수 — 행동 순서 바 항목 식별용
 
     private EnemyData enemyData; // 적 데이터 원본
     public EnemyData Data => enemyData; // 적 데이터 원본 조회(공격 시퀀스/방해행동 등 조회용)
@@ -73,6 +75,7 @@ public class EnemyStat : MonoBehaviour
         hasDied = false;
         gaugeStep = 0;
         midPatternTriggered = false;
+        CycleCount = 0;
         NormalizeHp();
         // 기획서 0.6v: 적마다 행동 게이지 최대치 10~30 (미설정/0이면 기본 20)
         gaugeMaxSteps = Mathf.Clamp(data.actionGaugeMax > 0 ? data.actionGaugeMax : GAUGE_MAX_STEPS, 10, 30);
@@ -142,6 +145,7 @@ public class EnemyStat : MonoBehaviour
         if (!IsAlive) return;
         gaugeStep = 0;
         midPatternTriggered = false;
+        CycleCount++;
         OnGaugeStepChanged?.Invoke(0f);
         OnGaugeFull?.Invoke();
     }
@@ -193,6 +197,7 @@ public class EnemyStat : MonoBehaviour
         {
             gaugeStep = 0;
             midPatternTriggered = false;
+            CycleCount++;
             OnGaugeStepChanged?.Invoke(0f);
             OnGaugeFull?.Invoke();
         }
