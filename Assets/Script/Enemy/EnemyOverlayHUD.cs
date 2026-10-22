@@ -4,9 +4,12 @@ using UnityEngine.UI;
 using TMPro;
 
 // 3D 몬스터용 적 UI(HP/행동게이지/데미지숫자/공격예고/패턴알림).
-// 2D 전투와 같은 캔버스 좌표(EnemyPos)에 고정해 두고, EnemyView3D가 수치만 위임한다.
+// 1마리 전투는 EnemyPos의 바를 그대로 쓴다.
+// 여러 마리 전투는 그 바를 적마다 복제해 발 아래에 붙인다.
 public class EnemyOverlayHUD : MonoBehaviour
 {
+    const string BarRootName = "EnemyHudBars";
+
     public static EnemyOverlayHUD Instance { get; private set; } // 씬에 상주하는 단일 패널
 
     [Header("표시 루트")]
@@ -45,11 +48,18 @@ public class EnemyOverlayHUD : MonoBehaviour
     private Transform _worldAnchor; // 월드 팔로우 앵커(다중 전투)
     private Camera _renderCamera;   // 월드→스크린 변환 카메라
     private bool _followWorld;      // 월드 좌표를 따라갈지 여부
+    private RectTransform _barRoot; // 이 적 전용 바 묶음(여러 마리일 때만)
+    private Renderer[] _bodyRenderers; // 발 위치 계산용 메시
+    private float _barScale = 1f;       // 양옆 적 바 배율. 가운데는 1
+    private Vector2 _hpBasePos;         // 스케일 1일 때 HP 위치
+    private Vector2 _gaugeBasePos;      // 스케일 1일 때 행동 게이지 위치
+    private bool _barBaseCaptured;      // 기준 위치 저장 여부
 
     // 싱글턴 등록 및 초기 상태 정리
     void Awake()
     {
         if (Instance == null) Instance = this;
+        AdoptClonedBars();
         if (patternNoticeObject != null) patternNoticeObject.SetActive(false);
         if (damageTextTemplate != null)
         {
@@ -65,14 +75,19 @@ public class EnemyOverlayHUD : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    // 3D 몬스터 전투 시작. followWorld면 HUD가 몬스터 머리 위를 따라간다.
-    public void Bind(Transform worldAnchor, Camera renderCamera, int gaugeMax, bool followWorld = false)
+    // 3D 몬스터 전투 시작. followWorld면 이 적 전용 바를 만들어 발 아래에 붙인다.
+    public void Bind(Transform worldAnchor, Camera renderCamera, int gaugeMax, bool followWorld = false, float barScale = 1f)
     {
         _gaugeMax = Mathf.Max(1, gaugeMax);
         _worldAnchor = worldAnchor;
         _renderCamera = renderCamera;
         _followWorld = followWorld && worldAnchor != null;
+        _barScale = Mathf.Max(0.01f, barScale);
+        if (_followWorld) PreparePerEnemyBars();
+        if (_barRoot != null) ApplyBarScale();
+        CacheBodyRenderers();
         SetVisible(true);
+        FollowAnchor();
     }
 
     // 바인딩 해제(몬스터 사망/전투 종료) — 패널을 숨긴다.
@@ -84,23 +99,274 @@ public class EnemyOverlayHUD : MonoBehaviour
     }
 
     // 씬에 있는 HUD를 복제해 다른 몬스터 전용 패널을 만든다.
+    // 바를 먼저 이 오브젝트 자식으로 옮겨 두어야 클론이 같은 슬라이더를 공유하지 않는다.
     public EnemyOverlayHUD CreateClone()
     {
+        PreparePerEnemyBars();
+        // 복제 순간에는 원본 크기여야 클론이 이미 줄어든 바를 복사하지 않는다.
+        float savedScale = _barScale;
+        _barScale = 1f;
+        ApplyBarScale();
         GameObject go = Instantiate(gameObject, transform.parent);
+        _barScale = savedScale;
+        ApplyBarScale();
         go.name = gameObject.name + "_Clone";
         var hud = go.GetComponent<EnemyOverlayHUD>();
-        if (hud != null) hud.SetVisible(false);
+        if (hud != null)
+        {
+            hud.AdoptClonedBars();
+            hud.SetVisible(false);
+        }
         return hud;
     }
 
     void LateUpdate()
     {
-        if (!_followWorld || _worldAnchor == null) return;
+        FollowAnchor();
+    }
+
+    // EnemyPos에 하나뿐인 바를 이 HUD 아래로 복제하고, 원본은 꺼 둔다.
+    void PreparePerEnemyBars()
+    {
+        if (_barRoot != null) return;
+        if (AdoptClonedBars()) return;
+
+        GameObject srcHp = hpBar != null ? hpBar.gameObject : null;
+        GameObject srcGauge = actionGaugeBar != null ? actionGaugeBar.gameObject : null;
+        GameObject srcDamage = damageTextTemplate != null ? damageTextTemplate.gameObject : null;
+        GameObject srcNotice = patternNoticeObject;
+
+        _barRoot = CreateBarRoot();
+
+        GameObject hp = CloneWidget(srcHp);
+        GameObject gauge = CloneWidget(srcGauge);
+        GameObject damage = CloneWidget(srcDamage);
+        GameObject notice = CloneWidget(srcNotice);
+        Rewire(hp, gauge, damage, notice);
+        LayoutWidgets();
+
+        HideSceneTemplate(srcHp);
+        HideSceneTemplate(srcGauge);
+        HideSceneTemplate(srcDamage);
+        HideSceneTemplate(srcNotice);
+    }
+
+    RectTransform CreateBarRoot()
+    {
+        var go = new GameObject(BarRootName, typeof(RectTransform));
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(transform, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(800f, 160f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.localScale = Vector3.one;
+        return rt;
+    }
+
+    GameObject CloneWidget(GameObject src)
+    {
+        if (src == null || _barRoot == null) return null;
+        var go = Instantiate(src, _barRoot);
+        go.name = src.name;
+        return go;
+    }
+
+    void Rewire(GameObject hp, GameObject gauge, GameObject damage, GameObject notice)
+    {
+        if (hp != null)
+        {
+            hpBar = hp.GetComponent<Slider>();
+            hpValueText = FindNamed<TMP_Text>(hp.transform, "HpValueText");
+        }
+        if (gauge != null)
+        {
+            actionGaugeBar = gauge.GetComponent<Slider>();
+            actionGaugeValueText = FindNamed<TMP_Text>(gauge.transform, "GaugeValueText");
+            attackPreviewText = FindNamed<TMP_Text>(gauge.transform, "attackPreviewText");
+        }
+        if (damage != null)
+            damageTextTemplate = damage.GetComponent<TMP_Text>();
+        if (notice != null)
+        {
+            patternNoticeObject = notice;
+            patternNoticeText = FindNamed<TMP_Text>(notice.transform, "PatternNoticeText");
+        }
+    }
+
+    // 복제된 HUD는 직렬화 참조가 원본 바를 가리킬 수 있다. 자식 이름으로 다시 연결한다.
+    bool AdoptClonedBars()
+    {
+        if (_barRoot == null)
+            _barRoot = transform.Find(BarRootName) as RectTransform;
+        if (_barRoot == null) return false;
+
+        var hp = _barRoot.Find("HpBar");
+        var gauge = _barRoot.Find("gaugeSlider");
+        var damage = _barRoot.Find("damageText");
+        var notice = _barRoot.Find("PatternNoticeRoot");
+        if (hp == null && gauge == null) return false;
+
+        Rewire(
+            hp != null ? hp.gameObject : null,
+            gauge != null ? gauge.gameObject : null,
+            damage != null ? damage.gameObject : null,
+            notice != null ? notice.gameObject : null);
+        return true;
+    }
+
+    void LayoutWidgets()
+    {
+        var hpRt = hpBar != null ? hpBar.transform as RectTransform : null;
+        var gaugeRt = actionGaugeBar != null ? actionGaugeBar.transform as RectTransform : null;
+        // 씬에 있던 두 바의 세로 간격(약 28.7). 높이 50인 바가 이 간격으로 겹쳐 붙어 보인다.
+        float stacked = (hpRt != null && gaugeRt != null)
+            ? Mathf.Abs(gaugeRt.anchoredPosition.y - hpRt.anchoredPosition.y)
+            : 28.7f;
+        float hpHalf = hpRt != null ? hpRt.sizeDelta.y * 0.5f : 25f;
+
+        // 크기는 원본 그대로. 발 바로 아래에 HP, 그 아래에 행동 게이지를 붙인다.
+        PlaceBar(hpRt, new Vector2(0f, -hpHalf));
+        PlaceBar(gaugeRt, new Vector2(0f, -hpHalf - stacked));
+        if (hpRt != null) _hpBasePos = hpRt.anchoredPosition;
+        if (gaugeRt != null) _gaugeBasePos = gaugeRt.anchoredPosition;
+        _barBaseCaptured = hpRt != null || gaugeRt != null;
+        PlaceFree(damageTextTemplate != null ? damageTextTemplate.transform as RectTransform : null, new Vector2(0f, 70f));
+        if (patternNoticeObject != null)
+        {
+            var rt = patternNoticeObject.transform as RectTransform;
+            if (rt != null) PlaceFree(rt, new Vector2(0f, 120f));
+            else patternNoticeObject.transform.localPosition = new Vector3(0f, 120f, 0f);
+        }
+        if (damageTextTemplate != null)
+        {
+            damageTextTemplate.text = "";
+            _damageOriginLocal = damageTextTemplate.transform.localPosition;
+        }
+    }
+
+    // 양옆 적만 HP/행동 게이지를 줄인다. 둘의 간격 비율은 유지한다.
+    void ApplyBarScale()
+    {
+        CaptureBarBaseIfNeeded();
+        var hpRt = hpBar != null ? hpBar.transform as RectTransform : null;
+        var gaugeRt = actionGaugeBar != null ? actionGaugeBar.transform as RectTransform : null;
+        if (hpRt != null)
+        {
+            hpRt.localScale = Vector3.one * _barScale;
+            hpRt.anchoredPosition = new Vector2(_hpBasePos.x, _hpBasePos.y * _barScale);
+        }
+        if (gaugeRt != null)
+        {
+            gaugeRt.localScale = Vector3.one * _barScale;
+            gaugeRt.anchoredPosition = new Vector2(_gaugeBasePos.x, _gaugeBasePos.y * _barScale);
+        }
+    }
+
+    void CaptureBarBaseIfNeeded()
+    {
+        if (_barBaseCaptured) return;
+        var hpRt = hpBar != null ? hpBar.transform as RectTransform : null;
+        var gaugeRt = actionGaugeBar != null ? actionGaugeBar.transform as RectTransform : null;
+        if (hpRt != null) _hpBasePos = hpRt.anchoredPosition;
+        if (gaugeRt != null) _gaugeBasePos = gaugeRt.anchoredPosition;
+        _barBaseCaptured = hpRt != null || gaugeRt != null;
+    }
+
+    static void PlaceBar(RectTransform rt, Vector2 pos)
+    {
+        if (rt == null) return;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localRotation = Quaternion.identity;
+        rt.localScale = Vector3.one;
+        rt.anchoredPosition = pos;
+    }
+
+    static void PlaceFree(RectTransform rt, Vector2 pos)
+    {
+        if (rt == null) return;
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localRotation = Quaternion.identity;
+        rt.localScale = Vector3.one;
+        rt.anchoredPosition = pos;
+    }
+
+    // EnemyPos에 남은 원본만 끈다. 다른 적의 전용 바는 건드리지 않는다.
+    void HideSceneTemplate(GameObject src)
+    {
+        if (src == null) return;
+        if (src.transform.IsChildOf(transform)) return;
+        if (src.transform.parent != null && src.transform.parent.name == BarRootName) return;
+        src.SetActive(false);
+    }
+
+    void CacheBodyRenderers()
+    {
+        _bodyRenderers = null;
+        Transform root = ResolveBoundsRoot();
+        if (root == null) return;
+        _bodyRenderers = root.GetComponentsInChildren<Renderer>(true);
+    }
+
+    Transform ResolveBoundsRoot()
+    {
+        if (_worldAnchor == null) return null;
+        if (_worldAnchor.GetComponentInChildren<Renderer>(true) == null && _worldAnchor.parent != null)
+            return _worldAnchor.parent;
+        return _worldAnchor;
+    }
+
+    // 전용 바가 있으면 발 아래에 붙인다. 1마리 전투의 EnemyPos 배치는 그대로 둔다.
+    void FollowAnchor()
+    {
+        if (_barRoot == null || _worldAnchor == null) return;
         Camera cam = _renderCamera != null ? _renderCamera : Camera.main;
         if (cam == null) return;
-        Vector3 sp = cam.WorldToScreenPoint(_worldAnchor.position);
+
+        Vector3 world = UnderfootPoint();
+        Vector3 sp = cam.WorldToScreenPoint(world);
         if (sp.z < 0f) return;
-        transform.position = new Vector3(sp.x + screenOffset.x, sp.y + screenOffset.y, 0f);
+        _barRoot.position = new Vector3(sp.x, sp.y, 0f);
+    }
+
+    Vector3 UnderfootPoint()
+    {
+        Vector3 fallback = _worldAnchor.position;
+        if (_bodyRenderers == null || _bodyRenderers.Length == 0) return fallback;
+
+        bool any = false;
+        Bounds bounds = default;
+        for (int i = 0; i < _bodyRenderers.Length; i++)
+        {
+            Renderer r = _bodyRenderers[i];
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+            if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
+            if (!any)
+            {
+                bounds = r.bounds;
+                any = true;
+            }
+            else bounds.Encapsulate(r.bounds);
+        }
+        if (!any) return fallback;
+        // 가로는 메시 중심. 세로는 발(피벗). 바운드 최하단은 망토·무기 때문에 발보다 훨씬 아래라 쓰면 바가 떨어진다.
+        Transform root = ResolveBoundsRoot();
+        float footY = root != null ? root.position.y : fallback.y;
+        return new Vector3(bounds.center.x, footY, bounds.center.z);
+    }
+
+    static T FindNamed<T>(Transform root, string childName) where T : Component
+    {
+        if (root == null) return null;
+        var all = root.GetComponentsInChildren<T>(true);
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] != null && all[i].gameObject.name == childName)
+                return all[i];
+        }
+        return null;
     }
 
     // HP/게이지만 켜고 끈다. damageText 원본은 클론 소스라 항상 꺼 둔다.

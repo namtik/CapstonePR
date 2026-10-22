@@ -13,8 +13,19 @@ MonoBehaviour:
   m_Name: BossDragonData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uC774\uBB34\uAE30"
+  battlePrefab3D: {fileID: 0}
   enemySprite: {fileID: 21300000, guid: 26a27997e72efc54586dd9ba7ee8f11f, type: 3}
-  maxHp: 100
+  hitSprite: {fileID: 0}
+  attackSprites: []
+  id: 100017
+  element: 0
+  enemyClass: 3
+  specialAbility: 9
+  Note: 
+  maxHp: 400
   actionGaugeMax: 20
+  attackSequence: 0f000000140000000d000000
+  disruptionActions: 000000000300000005000000
+  "\uD761\uC218\uC218\uCE58": 8
   backgroundSprites:
   - {fileID: 21300000, guid: 2304a1efdea1f5745a9e6ed948e4c945, type: 3}

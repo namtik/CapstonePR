@@ -10,21 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
-  m_Name: WaterFishEnemyData
+  m_Name: WindCorruptedEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: "\uD0C1\uB9B0\uC5B4"
-  enemySprite: {fileID: 21300000, guid: e5fbaa84398d8e743a3df6794bea10f9, type: 3}
+  enemyName: "\uC624\uC5FC\uB41C \uBC14\uB78C"
+  battlePrefab3D: {fileID: 0}
+  enemySprite: {fileID: 21300000, guid: 2c23303a367fbfd4d8001eb2a8d4c2d0, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
-  id: 100007
-  element: 2
+  id: 100002
+  element: 3
   enemyClass: 1
   specialAbility: 0
   Note: 
-  maxHp: 100
-  actionGaugeMax: 12
-  attackSequence: 0a00000005000000
-  disruptionActions: 050000000100000004000000
+  maxHp: 50
+  actionGaugeMax: 6
+  attackSequence: 02000000
+  disruptionActions: 02000000
+  "\uD761\uC218\uC218\uCE58": 2
   backgroundSprites:
-  - {fileID: 21300000, guid: 95d6fb0b5eea0c24a9db1ab379c12a0f, type: 3}
-  - {fileID: 21300000, guid: 0bda1ef5007630643abb6e0b2f210eed, type: 3}
+  - {fileID: 21300000, guid: 2ed17f46569e7834eb0fe28e8cee9c99, type: 3}
+  - {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}
