@@ -1726,13 +1726,16 @@ namespace Battle
                     Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
                     return "방해: 탈진 카드 삽입!";
                 }
-                case 2: // 흡수 — 각성 게이지(누적 속성 카드 수) -2  [즉시형]
+                case 2: // 흡수 — 각성 게이지를 EnemyData.흡수수치만큼 감소  [즉시형]
                 {
+                    int absorb = _enemyStat != null && _enemyStat.Data != null
+                        ? Mathf.Max(0, _enemyStat.Data.흡수수치)
+                        : 2;
                     int before = _elementInputCount;
-                    _elementInputCount = Mathf.Max(0, _elementInputCount - 2);
+                    _elementInputCount = Mathf.Max(0, _elementInputCount - absorb);
                     UpdateAwakenText();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 2, AbsorbReward(before));
-                    Log($"[방해] 흡수 — 각성 게이지 -2 ({before} → {_elementInputCount})");
+                    Log($"[방해] 흡수 — 각성 게이지 -{absorb} ({before} → {_elementInputCount})");
                     return "방해: 각성 게이지 흡수!";
                 }
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
@@ -2193,6 +2196,15 @@ namespace Battle
             ApplyElementCurse(elements[Random.Range(0, elements.Length)], uses);
         }
 
+        // 특이사항: 패에서 count장을 무작위로 버림
+        public void DiscardRandomFromHand(int count)
+        {
+            if (_deck == null || count <= 0) return;
+            int discarded = _deck.DiscardRandomFromHand(count);
+            handHud?.Refresh();
+            Log($"[특이사항] 패에서 카드 {discarded}장 무작위 버리기");
+        }
+
         // 특이사항: 플레이어가 패에서 count장을 직접 선택해 버림
         public void ForcePlayerDiscard(int count)
         {
@@ -2211,6 +2223,17 @@ namespace Battle
 
         // 전투 진행 중 여부(적 특이사항 전투시작 트리거가 덱 준비 후 발동하도록)
         public bool InBattle => _inBattle;
+
+        // 특이사항(액괴): 버린 더미에서 무작위 카드 count장을 소멸
+        public void ExileRandomDiscardCards(int count)
+        {
+            if (_deck == null || count <= 0) return;
+            var exiled = _deck.ExileRandomFromDiscard(count);
+            for (int i = 0; i < exiled.Count; i++)
+                _resolver?.NotifyExile(exiled[i]);
+            handHud?.Refresh();
+            Log($"[특이사항] 버린 더미 카드 {exiled.Count}장 소멸");
+        }
 
         // 특이사항: 뽑을 더미에 탈진(무속성 더미) 카드 count장 삽입
         public void InsertExhaustCards(int count)

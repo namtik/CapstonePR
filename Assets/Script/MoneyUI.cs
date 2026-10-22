@@ -95,6 +95,18 @@ public class MoneyUI : MonoBehaviour
         moneyIconImage.raycastTarget = false;
     }
 
+    public Image IconImage => moneyIconImage;
+
+    public Sprite IconSprite
+    {
+        get
+        {
+            if (moneyIconImage != null && moneyIconImage.sprite != null)
+                return moneyIconImage.sprite;
+            return MoneyManager.Instance != null ? MoneyManager.Instance.MoneyIcon : null;
+        }
+    }
+
     void ApplyTextStyle()
     {
         if (moneyText == null)
@@ -112,4 +124,50 @@ public class MoneyUI : MonoBehaviour
         if (moneyText != null)
             moneyText.text = money.ToString();
     }
+
+    // 영혼이 도착할 때 재화 표시를 잠깐 키운다.
+    public void PlayReceivePulse()
+    {
+        if (!isActiveAndEnabled) return;
+        if (_pulseCo != null) StopCoroutine(_pulseCo);
+        _pulseCo = StartCoroutine(ReceivePulse());
+    }
+
+    public Vector2 ScreenCenter()
+    {
+        var rt = transform as RectTransform;
+        if (rt == null) return new Vector2(Screen.width - 80f, Screen.height - 36f);
+
+        Canvas canvas = GetComponentInParent<Canvas>();
+        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera
+            : null;
+        Vector3[] corners = new Vector3[4];
+        rt.GetWorldCorners(corners);
+        return RectTransformUtility.WorldToScreenPoint(cam, (corners[0] + corners[2]) * 0.5f);
+    }
+
+    System.Collections.IEnumerator ReceivePulse()
+    {
+        Vector3 from = transform.localScale;
+        Vector3 peak = from * 1.08f;
+        float t = 0f;
+        while (t < 0.08f)
+        {
+            t += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(from, peak, t / 0.08f);
+            yield return null;
+        }
+        t = 0f;
+        while (t < 0.14f)
+        {
+            t += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(peak, from, t / 0.14f);
+            yield return null;
+        }
+        transform.localScale = from;
+        _pulseCo = null;
+    }
+
+    Coroutine _pulseCo;
 }

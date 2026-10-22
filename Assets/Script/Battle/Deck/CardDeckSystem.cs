@@ -199,6 +199,22 @@ namespace Battle.Deck
             return false;
         }
 
+        // 패에서 무작위 카드를 count장 버린 더미로 이동(실제 버린 수 반환)
+        public int DiscardRandomFromHand(int count)
+        {
+            int n = Mathf.Min(count, _hand.Count);
+            for (int i = 0; i < n; i++)
+            {
+                int idx = Random.Range(0, _hand.Count);
+                CardInstance card = _hand[idx];
+                _hand.RemoveAt(idx);
+                _discardPile.Add(card);
+                OnCardDiscarded?.Invoke(card);
+            }
+            if (n > 0) OnPileChanged?.Invoke();
+            return n;
+        }
+
         // 패 전체를 버린 더미로 이동
         public int DiscardAllFromHand()
         {
@@ -297,6 +313,25 @@ namespace Battle.Deck
             int n = _drawPile.Count;
             if (n > 0) { _exilePile.AddRange(_drawPile); _drawPile.Clear(); OnPileChanged?.Invoke(); }
             return n;
+        }
+
+        // 버린 더미에서 무작위 카드를 count장 소멸 더미로 이동
+        public List<CardInstance> ExileRandomFromDiscard(int count)
+        {
+            var exiled = new List<CardInstance>();
+            if (count <= 0 || _discardPile.Count == 0) return exiled;
+
+            int n = Mathf.Min(count, _discardPile.Count);
+            for (int i = 0; i < n; i++)
+            {
+                int idx = Random.Range(0, _discardPile.Count);
+                CardInstance card = _discardPile[idx];
+                _discardPile.RemoveAt(idx);
+                _exilePile.Add(card);
+                exiled.Add(card);
+            }
+            OnPileChanged?.Invoke();
+            return exiled;
         }
 
         // 버린 더미 전체를 소멸 더미로 이동(소멸 수 반환)

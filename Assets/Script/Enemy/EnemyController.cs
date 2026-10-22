@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using UnityEngine;
 using Coffee.UIExtensions;
@@ -75,7 +75,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnMidPattern  += HandleMidPattern;
         stat.OnGaugeFull   += HandleGaugeFull;
         stat.OnGaugeStepChanged += view.UpdateActionGauge;
-        stat.OnDamaged += HandleSpecialDamaged;   // 특이사항(화웅): 피격 반사
+        stat.OnDamaged += HandleSpecialDamaged;   // 특이사항(화웅 반사, 액괴 카드 소멸)
         stat.OnHpChanged += HandleSpecialHpChanged; // 특이사항(액괴/무사): 체력 절반
         midPattern = GetComponent<MonsterMidPattern>();
 
@@ -158,13 +158,20 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
     }
 
-    // 특이사항(화웅): 피격 시 플레이어에게 1 피해 반사
+    // 특이사항: 피격 시 반사(화웅) 또는 버린 더미 소멸(액괴)
     void HandleSpecialDamaged(float dmg)
     {
         ResolveAbility();
-        if (_ability != EnemySpecialAbility.ReflectDamageOnHit) return;
-        if (player == null) player = Player.Resolve(true);
-        player?.TakeDamage(1f, "enemy_reflect");
+        if (_ability == EnemySpecialAbility.ReflectDamageOnHit)
+        {
+            if (player == null) player = Player.Resolve(true);
+            player?.TakeDamage(1f, "enemy_reflect");
+            return;
+        }
+
+        if (_ability != EnemySpecialAbility.ExileRandomDiscardOnHit) return;
+        Battle.NewBattleController.Instance?.ExileRandomDiscardCards(2);
+        view?.ShowMidPatternNotice("카드 소멸!");
     }
 
     // 특이사항(액괴/무사): 체력 절반 도달 시 1회 트리거
@@ -190,7 +197,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
     }
 
-    // 사망 시 특이사항(오염된 원소 4종) 트리거
+    // 사망 시 특이사항 트리거
     void TriggerOnDeathAbility()
     {
         ResolveAbility();
@@ -202,6 +209,10 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             case EnemySpecialAbility.OnDeathDiscardCards: nbc.ForcePlayerDiscard(2); break;  // 오염된 물
             case EnemySpecialAbility.OnDeathResetAwaken:  nbc.ResetAwakenGauge(); break;     // 오염된 바람
             case EnemySpecialAbility.OnDeathInsertExhaust: nbc.InsertExhaustCards(2); break; // 오염된 땅
+            case EnemySpecialAbility.OnDeathCurseOwnElement: nbc.CurseRandomElement(5); break;
+            case EnemySpecialAbility.OnDeathRandomDiscard: nbc.DiscardRandomFromHand(2); break;
+            case EnemySpecialAbility.OnDeathClearAwakenGauge: nbc.ResetAwakenGauge(); break;
+            case EnemySpecialAbility.OnDeathShuffleExhaust: nbc.InsertExhaustCards(2); break;
         }
     }
 

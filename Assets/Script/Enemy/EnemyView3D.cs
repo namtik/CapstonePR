@@ -71,6 +71,8 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
 
     private EnemyStat _stat;              // 적 스탯
     private EnemyOverlayHUD _hud;         // 위임 대상 Overlay HUD
+    private bool _followWorld;            // 여러 마리일 때 HUD를 발 아래에 붙일지
+    private float _barScale = 1f;         // 양옆 적은 0.6, 가운데는 1
     private float _hitReactionEndTime;    // 피격 연출 종료 시각
     private Vector3 _shakeBasePos;        // 흔들기 기준 위치
     private Coroutine _shakeCo;           // 흔들기 코루틴
@@ -139,17 +141,21 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     }
 
     // 3단계 배선용: 스테이지 카메라를 주입한다.
+    // 여기서 Bind하면 아직 슬롯 HUD가 정해지기 전에 공용 Instance를 집어가
+    // 양옆 적의 바가 풀린다. 카메라는 저장만 하고, 연결은 SetOverlayHud에서 한다.
     public void SetRenderCamera(Camera cam)
     {
         renderCamera = cam;
-        BindHud();
+        if (_hud != null) BindHud(_followWorld);
     }
 
     // RoundManager가 몬스터별 HUD를 직접 연결한다.
-    public void SetOverlayHud(EnemyOverlayHUD hud, bool followWorld)
+    public void SetOverlayHud(EnemyOverlayHUD hud, bool followWorld, float barScale = 1f)
     {
         if (_hud != null && _hud != hud) _hud.Unbind();
         _hud = hud;
+        _followWorld = followWorld;
+        _barScale = barScale;
         BindHud(followWorld);
     }
 
@@ -163,7 +169,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
 
         Transform anchor = hudAnchor != null ? hudAnchor : transform;
         Camera cam = renderCamera != null ? renderCamera : Camera.main;
-        _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS, followWorld);
+        _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS, followWorld, _barScale);
         if (_stat != null) _hud.SetHp(_stat.currentHp, _stat.maxHp);
         _hud.SetGauge(0f);
     }

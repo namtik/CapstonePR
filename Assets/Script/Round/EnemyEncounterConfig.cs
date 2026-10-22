@@ -1,23 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 일반 전투에서 스테이지마다 마릿수와 몬스터 풀을 직접 정한다.
-// 정예/보스는 RoundManager가 이 에셋을 쓰지 않고 기존처럼 1마리다.
+// 일반 전투는 스테이지마다, 정예 전투는 라운드(바퀴)마다 등장 조합 프리셋을 직접 정한다.
+// 보스는 RoundManager가 이 에셋을 쓰지 않는다.
 [CreateAssetMenu(fileName = "EnemyEncounterConfig", menuName = "Round/EnemyEncounterConfig")]
 public class EnemyEncounterConfig : ScriptableObject
 {
     [System.Serializable]
+    public class EncounterPreset
+    {
+        [Tooltip("이 프리셋이 뽑히면 여기 넣은 몬스터가 모두 등장한다.")]
+        public List<EnemyData> monsters = new List<EnemyData>();
+    }
+
+    [System.Serializable]
     public class StageEncounter
     {
-        [Tooltip("이 스테이지 일반 전투에 동시에 등장할 몬스터 수.")]
-        [Min(1)]
-        public int enemyCount = 1;
-
-        [Tooltip("이 스테이지에서 랜덤으로 뽑을 몬스터 후보. 비우면 폴백 풀을 쓴다.")]
-        public List<EnemyData> monsterPool = new List<EnemyData>();
-
-        [Tooltip("ON이면 같은 몬스터가 한 전투에 중복될 수 있다. OFF면 가능한 한 중복을 피한다.")]
-        public bool allowDuplicates = true;
+        [Tooltip("이 스테이지 일반 전투에서 하나 랜덤으로 고르는 등장 조합. 개수는 자유롭게 늘린다.")]
+        public List<EncounterPreset> presets = new List<EncounterPreset>();
     }
 
     [System.Serializable]
@@ -31,24 +31,41 @@ public class EnemyEncounterConfig : ScriptableObject
         public List<StageEncounter> stages = new List<StageEncounter>();
     }
 
+    [System.Serializable]
+    public class EliteLapEncounter
+    {
+        [Tooltip("라운드 번호. 1=1라운드(1바퀴), 2=2라운드(2바퀴).")]
+        [Min(1)]
+        public int lap = 1;
+
+        [Tooltip("이 라운드의 정예 전투에서 하나 랜덤으로 고르는 등장 조합. 개수는 자유롭게 늘린다.")]
+        public List<EncounterPreset> presets = new List<EncounterPreset>();
+    }
+
     [Tooltip("바퀴당 일반 전투 스테이지 수(보스 제외). 기본 9.")]
     [Min(1)]
     public int stagesPerLap = 9;
 
-    [Tooltip("바퀴별 스테이지 설정. 각 스테이지마다 마릿수와 몬스터 풀을 따로 정한다.")]
+    [Tooltip("바퀴별 스테이지 설정. 각 스테이지마다 등장 조합 프리셋을 따로 정한다.")]
     public List<LapEncounter> laps = new List<LapEncounter>();
 
-    [Tooltip("해당 스테이지의 몬스터 풀이 비었을 때 쓰는 폴백 후보.")]
-    public List<EnemyData> fallbackPool = new List<EnemyData>();
+    [Tooltip("라운드별 정예 등장 조합. 정예 노드는 스테이지가 랜덤이라 스테이지 칸 대신 여기 둔다.")]
+    public List<EliteLapEncounter> eliteLaps = new List<EliteLapEncounter>();
 
-    // 일반 전투 등장 명단을 구성한다. 후보가 없으면 빈 리스트.
+    // 일반 전투 등장 명단을 구성한다. 유효한 프리셋이 없으면 빈 리스트.
     public List<EnemyData> ComposeCombatEnemies(int lap, int displayStage)
     {
         StageEncounter stage = FindStage(lap, displayStage);
-        int count = stage != null ? Mathf.Max(1, stage.enemyCount) : 1;
-        bool allowDup = stage == null || stage.allowDuplicates;
-        List<EnemyData> pool = ResolvePool(stage);
-        return PickFromPool(pool, count, allowDup);
+        EncounterPreset preset = PickPreset(stage != null ? stage.presets : null);
+        return CopyMonsters(preset);
+    }
+
+    // 정예 전투 등장 명단을 구성한다. 해당 라운드에 유효한 프리셋이 없으면 빈 리스트.
+    public List<EnemyData> ComposeEliteEnemies(int lap)
+    {
+        EliteLapEncounter eliteLap = FindEliteLap(lap);
+        EncounterPreset preset = PickPreset(eliteLap != null ? eliteLap.presets : null);
+        return CopyMonsters(preset);
     }
 
     StageEncounter FindStage(int lap, int displayStage)
@@ -65,14 +82,19 @@ public class EnemyEncounterConfig : ScriptableObject
         return null;
     }
 
-    List<EnemyData> ResolvePool(StageEncounter stage)
+    EliteLapEncounter FindEliteLap(int lap)
     {
-        if (stage != null && HasAny(stage.monsterPool))
-            return stage.monsterPool;
-        return fallbackPool;
+        if (eliteLaps == null) return null;
+        for (int i = 0; i < eliteLaps.Count; i++)
+        {
+            EliteLapEncounter eliteLap = eliteLaps[i];
+            if (eliteLap != null && eliteLap.lap == lap)
+                return eliteLap;
+        }
+        return null;
     }
 
-    // 인스펙터에서 빠진 바퀴/스테이지 칸을 채운다.
+    // 인스펙터에서 빠진 바퀴/스테이지 칸과 1·2라운드 정예 칸을 채운다.
     public void EnsureLayout()
     {
         int stageCount = Mathf.Max(1, stagesPerLap);
@@ -96,64 +118,63 @@ public class EnemyEncounterConfig : ScriptableObject
             while (lapData.stages.Count < stageCount)
                 lapData.stages.Add(new StageEncounter());
         }
+
+        if (eliteLaps == null) eliteLaps = new List<EliteLapEncounter>();
+        EnsureEliteLap(1);
+        EnsureEliteLap(2);
+        for (int i = 0; i < eliteLaps.Count; i++)
+        {
+            EliteLapEncounter eliteLap = eliteLaps[i];
+            if (eliteLap == null)
+            {
+                eliteLap = new EliteLapEncounter { lap = i + 1 };
+                eliteLaps[i] = eliteLap;
+            }
+            if (eliteLap.lap < 1) eliteLap.lap = i + 1;
+            if (eliteLap.presets == null) eliteLap.presets = new List<EncounterPreset>();
+        }
+    }
+
+    void EnsureEliteLap(int lap)
+    {
+        for (int i = 0; i < eliteLaps.Count; i++)
+            if (eliteLaps[i] != null && eliteLaps[i].lap == lap) return;
+        eliteLaps.Add(new EliteLapEncounter { lap = lap, presets = new List<EncounterPreset>() });
     }
 
     void OnValidate()
     {
         EnsureLayout();
-        for (int i = 0; i < laps.Count; i++)
-        {
-            LapEncounter lapData = laps[i];
-            if (lapData == null || lapData.stages == null) continue;
-            for (int s = 0; s < lapData.stages.Count; s++)
-            {
-                StageEncounter stage = lapData.stages[s];
-                if (stage == null) continue;
-                stage.enemyCount = Mathf.Max(1, stage.enemyCount);
-            }
-        }
     }
 
-    static List<EnemyData> PickFromPool(List<EnemyData> pool, int count, bool allowDuplicates)
+    static EncounterPreset PickPreset(List<EncounterPreset> presets)
     {
-        var result = new List<EnemyData>(count);
-        if (pool == null || count <= 0) return result;
+        if (presets == null) return null;
 
-        var available = new List<EnemyData>();
-        for (int i = 0; i < pool.Count; i++)
-            if (pool[i] != null) available.Add(pool[i]);
-        if (available.Count == 0) return result;
-
-        if (allowDuplicates)
+        var valid = new List<EncounterPreset>();
+        for (int i = 0; i < presets.Count; i++)
         {
-            for (int i = 0; i < count; i++)
-                result.Add(available[Random.Range(0, available.Count)]);
-            return result;
+            EncounterPreset preset = presets[i];
+            if (HasAny(preset)) valid.Add(preset);
         }
+        if (valid.Count == 0) return null;
+        return valid[Random.Range(0, valid.Count)];
+    }
 
-        Shuffle(available);
-        int unique = Mathf.Min(count, available.Count);
-        for (int i = 0; i < unique; i++)
-            result.Add(available[i]);
-        for (int i = unique; i < count; i++)
-            result.Add(available[Random.Range(0, available.Count)]);
+    static List<EnemyData> CopyMonsters(EncounterPreset preset)
+    {
+        var result = new List<EnemyData>();
+        if (preset == null || preset.monsters == null) return result;
+        for (int i = 0; i < preset.monsters.Count; i++)
+            if (preset.monsters[i] != null) result.Add(preset.monsters[i]);
         return result;
     }
 
-    static bool HasAny(List<EnemyData> list)
+    static bool HasAny(EncounterPreset preset)
     {
-        if (list == null) return false;
-        for (int i = 0; i < list.Count; i++)
-            if (list[i] != null) return true;
+        if (preset == null || preset.monsters == null) return false;
+        for (int i = 0; i < preset.monsters.Count; i++)
+            if (preset.monsters[i] != null) return true;
         return false;
-    }
-
-    static void Shuffle(List<EnemyData> list)
-    {
-        for (int i = list.Count - 1; i > 0; i--)
-        {
-            int j = Random.Range(0, i + 1);
-            (list[i], list[j]) = (list[j], list[i]);
-        }
     }
 }

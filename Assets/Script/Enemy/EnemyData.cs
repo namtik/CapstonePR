@@ -1,10 +1,15 @@
 using UnityEngine;
 
-// 몬스터 속성(불/물/바람/땅)
-public enum EnemyElement { None, Fire, Water, Wind, Earth }
+// 몬스터 속성(없음/불/물/바람/땅/인간형)
+public enum EnemyElement { None, Fire, Water, Wind, Earth, Humanoid }
 
-// 몬스터 타입
-public enum EnemyClass { Corrupted, Normal, Elite, Boss }
+// 몬스터 타입. 값은 기존 저장 데이터(1=일반, 2=정예, 3=보스)를 유지한다.
+public enum EnemyClass
+{
+    Normal = 1,
+    Elite = 2,
+    Boss = 3,
+}
 
 // 방해행동 종류
 // 저주=0, 탈진=1, 흡수=2, 강화=3, 회복=4, 버리기=5
@@ -32,6 +37,16 @@ public enum EnemySpecialAbility
     CharmCardsOnBattleStart, // 100016 구미호: 전투 시작 시 매혹 카드 7장 삽입
     CycleElementCurse,       // 100017 백족승: 속성 저주 후 공격마다 다른 속성으로 전환
     DoubleDamageAtHalfHp,    // 100018 무사: 체력 절반이 되면 피해 2배
+    [InspectorName("피격 시 버린 더미 2장 소멸")]
+    ExileRandomDiscardOnHit, // 액괴: 피격 시 버린 카드 더미에서 무작위 카드 2장 소멸
+    [InspectorName("처치 시 랜덤 속성 5행동 저주")]
+    OnDeathCurseOwnElement,  // 처치 시 불/물/바람/땅 중 무작위 속성에 5행동 저주
+    [InspectorName("처치 시 패 2장 무작위 버리기")]
+    OnDeathRandomDiscard,    // 처치 시 패에서 카드 2장을 무작위로 버림
+    [InspectorName("처치 시 각성 게이지 초기화")]
+    OnDeathClearAwakenGauge, // 처치 시 각성 게이지 초기화
+    [InspectorName("처치 시 탈진 카드 2장 삽입")]
+    OnDeathShuffleExhaust,   // 처치 시 뽑을 더미에 탈진 카드 2장 삽입
 }
 
 [CreateAssetMenu(fileName = "EnemyData", menuName = "Enemy/EnemyData")]
@@ -56,7 +71,7 @@ public class EnemyData : ScriptableObject
     public int id; // 몬스터 ID
     [Tooltip("엑셀 '속성' 컬럼. -는 None.")]
     public EnemyElement element = EnemyElement.None; // 속성
-    [Tooltip("엑셀 '타입' 컬럼. 오염된 원소/일반/정예/보스.")]
+    [Tooltip("엑셀 '타입' 컬럼. 일반/정예/보스.")]
     public EnemyClass enemyClass = EnemyClass.Normal; // 타입
     [Tooltip("엑셀 '특이사항' 컬럼의 특수 능력. 선택 시 EnemyController가 해당 동작을 트리거한다.")]
     public EnemySpecialAbility specialAbility = EnemySpecialAbility.None; // 특이사항 능력
@@ -77,6 +92,8 @@ public class EnemyData : ScriptableObject
     [Tooltip("이 몬스터가 사용할 수 있는 방해행동 목록. 적 AI/랜덤 선택이 이 목록으로 제한된다.\n" +
              "비우면 6종(저주/탈진/흡수/강화/회복/버리기) 전체를 허용.")]
     public DisruptionAction[] disruptionActions; // 방해행동 목록
+    [Tooltip("방해행동 '흡수' 발동 시 각성 게이지에서 깎는 수치. 기본 2.")]
+    public int 흡수수치 = 2; // 흡수 시 각성 게이지 감소량
 
     [Header("전투 배경")]
     [Tooltip("이 몬스터와 매칭되는 전투 배경 후보. 전투 진입 시 이 중 하나가 랜덤으로 선택된다. 비우면 라운드 타입 기본 배경을 사용.")]
