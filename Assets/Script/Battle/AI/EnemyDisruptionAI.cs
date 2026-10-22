@@ -54,7 +54,7 @@ namespace Battle.AI
             if (burn) return CardCategory.Burn;
             if (chain || maxHits >= 2) return CardCategory.Chain;
             if (block || heal) return CardCategory.Defense;
-            if (card.element == CardElement.Earth) return CardCategory.Fragment;
+            if (card.element == CardElement.Earth || card.element == CardElement.Fragment) return CardCategory.Fragment;
             return CardCategory.Neutral;
         }
 

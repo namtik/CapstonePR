@@ -759,9 +759,22 @@ namespace Battle.Deck
                 return 0;
             }
 
+            // 매혹(505) — 적 게이지 가득 채우기는 NewBattleController.ResolveCardUse에서 처리, 카드 코스트는 0
+            if (up == "ENEMY_GAUGE_REMAINING") return 0;
+
             if (up == "USED_ATTACK_CARD_COUNT") return Ctx.usedAttackCardCount;
             if (up == "USED_FRAGMENT_CARD_COUNT") return Ctx.usedFragmentCardCount;
-            if (up == "LAST_DISCARDED_COUNT") return Ctx.lastDiscardedCount;
+            if (up.StartsWith("LAST_DISCARDED_COUNT"))
+            {
+                int v = Ctx.lastDiscardedCount;
+                int starIdx = up.IndexOf('*');
+                if (starIdx > 0)
+                {
+                    int.TryParse(up.Substring(starIdx + 1), out int mul);
+                    if (mul > 0) v *= mul;
+                }
+                return v;
+            }
             if (up == "EXHAUSTED_CARD_COUNT") return Ctx.exhaustedCardCount;
             if (up == "CONSUMED_CHAIN_COUNT") return Ctx.consumedChainCount;
             if (up == "HIT_ENEMY_COUNT") return Ctx.lastHitEnemyCount;
@@ -855,6 +868,11 @@ namespace Battle.Deck
                 else if (eff.formula.Trim().Equals("GAUGE_SINCE_DRAWN", StringComparison.OrdinalIgnoreCase))
                 {
                     amount = card.gaugeSinceDrawn;
+                }
+                else if (eff.amount > 0 && eff.formula.IndexOf('*') < 0)
+                {
+                    // Amount가 있고 공식에 배수가 없으면 Amount = 단위당 수치 (예: 수막 227·돌갑옷 428 "버린 수 만큼 방어도 3")
+                    amount = formulaVal * eff.amount;
                 }
                 else
                 {
@@ -956,6 +974,20 @@ namespace Battle.Deck
                         {
                             result.requiresHandDiscardSelection = true;
                             result.handSelectionCardFilter = eff.cardFilter ?? "";
+                        }
+                        else if (sel == "ALL" && Ctx.deck != null)
+                        {
+                            // 패에서 필터에 맞는 카드 전부 버리기 (예: 돌갑옷 428 — 파편 카드 전부)
+                            string filter = (eff.cardFilter ?? "").Trim().ToUpperInvariant();
+                            var snapshot = new List<CardInstance>(Ctx.deck.Hand);
+                            int d = 0;
+                            foreach (var c in snapshot)
+                            {
+                                if (!PassesTriggerFilter(c, filter)) continue;
+                                if (Ctx.deck.DiscardCardFromHand(c)) d++;
+                            }
+                            Ctx.lastDiscardedCount = d;
+                            if (Ctx.discardToDrawActive && d > 0) Ctx.deck.Draw(d);
                         }
                     }
                     break;
