@@ -341,7 +341,6 @@ namespace Battle
                 EndAwaken();
                 return;
             }
-            if (awakenTimerGauge != null) awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
         }
 
         // 전투 진입 — 참조/컨텍스트/덱/UI 초기화 후 시작 드로우
@@ -1273,11 +1272,7 @@ namespace Battle
                 handHud.UpdateAwakenInputHistory(_awakenInputHistory);
             }
 
-            if (awakenTimerGauge != null)
-            {
-                awakenTimerGauge.Show();
-                awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
-            }
+            if (awakenTimerGauge != null) awakenTimerGauge.Hide();
 
             _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
             SfxManager.Instance?.PlayAwakenStart();
@@ -1985,7 +1980,9 @@ namespace Battle
 
             int awakenMax = EffectiveAwakenInput;
             handHud.SetAwakenText($"{_elementInputCount}/{awakenMax}");
-            handHud.UpdateAwakenGauge(_elementInputCount, awakenMax, false, 0f, 0f);
+            handHud.UpdateAwakenGauge(
+                _elementInputCount, awakenMax,
+                _awakenActive, _awakenTimeRemaining, _awakenMaxTime);
         }
 
         // 상세 로그 출력(logVerbose ON일 때만)

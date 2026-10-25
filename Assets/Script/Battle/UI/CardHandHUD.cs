@@ -150,10 +150,11 @@ namespace Battle.UI
         [FormerlySerializedAs("feverActiveColor")]
         [SerializeField] private Color awakenActiveColor = new Color(0.75f, 0.35f, 1f, 1f); // 발동 중 색
         [Header("각성 게이지 스킨")]
-        [SerializeField] private Sprite awakenIconSprite; // 1번: 왼쪽 아이콘
-        [SerializeField] private Sprite awakenFillSprite; // 2번: 찬 칸
-        [SerializeField] private Sprite awakenEmptySprite; // 3번: 빈 칸
-        [SerializeField] private Sprite awakenFrameSprite; // 4번: 프레임
+        [SerializeField] private Sprite awakenIconSprite; // 예전 아이콘. 새 레이아웃에서는 쓰지 않음
+        [SerializeField] private Sprite awakenFillSprite; // 찬 칸 (29x16)
+        [SerializeField] private Sprite awakenEmptySprite; // 빈 칸 (29x16)
+        [SerializeField] private Sprite awakenFrameSprite; // 예전 프레임. 새 레이아웃에서는 쓰지 않음
+        [SerializeField] private Sprite awakenTimerSprite; // 각성 중 타이머 바 (274x16)
 
         [Header("각성 입력 히스토리 (왼쪽 표시)")]
         [Tooltip("OFF면 각성 입력 히스토리(왼쪽 세로 격자)를 표시하지 않는다. 콤보 슬롯/스킬 목록에는 영향 없음.")]
@@ -205,9 +206,20 @@ namespace Battle.UI
         private Image _awakenGaugeFill; // 각성 게이지 채움 이미지
         private readonly List<Image> _awakenSegments = new List<Image>(); // 각성 칸 이미지
         private RectTransform _awakenSegmentRoot; // 칸들이 들어갈 영역
+        private Image _awakenTimerImage; // 각성 중 타이머 바
         private int _awakenSegmentCount; // 현재 생성된 칸 수
         private bool _awakenSkinReady; // 커스텀 스킨 적용 여부
         const string AwakenSpriteResourcePath = "UI/AwakenGauge/"; // Resources 스킨 경로
+        // HP 프레임과 같은 왼쪽 위 기준. 표: (94+27n, 65), n = 0~9
+        const float AwakenCellX = 94f;
+        const float AwakenCellStep = 27f;
+        const float AwakenCellY = 65f;
+        const float AwakenCellW = 29f;
+        const float AwakenCellH = 16f;
+        const float AwakenTimerX = 93f;
+        const float AwakenTimerY = 65f;
+        const float AwakenTimerW = 274f;
+        const float AwakenTimerH = 16f;
 
         private System.Action<CardInstance> _selectionCallback; // 선택 모드 콜백
         private System.Func<CardInstance, bool> _selectionFilter; // 선택 가능 카드 필터
@@ -442,8 +454,19 @@ namespace Battle.UI
 
             if (_awakenSkinReady)
             {
-                EnsureAwakenSegments(max);
-                ApplyAwakenSegmentFill(filled);
+                bool showTimer = active && _awakenTimerImage != null;
+                if (_awakenSegmentRoot != null)
+                    _awakenSegmentRoot.gameObject.SetActive(!showTimer);
+                if (_awakenTimerImage != null)
+                {
+                    _awakenTimerImage.gameObject.SetActive(showTimer);
+                    if (showTimer) _awakenTimerImage.fillAmount = fill;
+                }
+                if (!showTimer)
+                {
+                    EnsureAwakenSegments(max);
+                    ApplyAwakenSegmentFill(filled);
+                }
             }
             else
             {
@@ -584,7 +607,23 @@ namespace Battle.UI
             if (le == null) le = awakenGauge.gameObject.AddComponent<LayoutElement>();
             le.ignoreLayout = true;
 
-            // anchor와 같은 정렬 기준에 오프셋 적용
+            if (_awakenSkinReady)
+            {
+                // HP바 위에 겹쳐 표의 좌표(왼쪽 위 기준)를 그대로 쓴다
+                if (rect.parent != awakenGaugeAnchor)
+                    rect.SetParent(awakenGaugeAnchor, false);
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                rect.anchoredPosition = Vector2.zero;
+                rect.localScale = Vector3.one;
+                rect.SetAsLastSibling();
+                return;
+            }
+
+            // 스킨이 없으면 예전처럼 HP바 아래에 둔다
             rect.anchorMin = awakenGaugeAnchor.anchorMin;
             rect.anchorMax = awakenGaugeAnchor.anchorMax;
             rect.pivot = awakenGaugeAnchor.pivot;
@@ -612,63 +651,72 @@ namespace Battle.UI
             return slider.GetComponentInChildren<Image>();
         }
 
-        // 1·2·3·4번 스킨을 로드해 아이콘+프레임+칸 게이지로 바꾼다
+        // 찬 칸·빈 칸·타이머 스프라이트로 HP바 안쪽 각성 게이지를 만든다
         void ApplyAwakenGaugeSkin()
         {
             if (awakenGauge == null || _awakenSkinReady) return;
             ResolveAwakenSprites();
-            if (awakenIconSprite == null || awakenFillSprite == null
-                || awakenEmptySprite == null || awakenFrameSprite == null)
+            if (awakenFillSprite == null || awakenEmptySprite == null)
                 return;
 
             Transform root = awakenGauge.transform;
             HideLegacyAwakenSliderVisuals(root);
+            HideAwakenChild(root, "Icon");
+            HideAwakenChild(root, "Frame");
 
-            Image icon = GetOrCreateAwakenImage(root, "Icon", awakenIconSprite);
-            RectTransform iconRect = icon.rectTransform;
-            iconRect.anchorMin = new Vector2(0f, 0.5f);
-            iconRect.anchorMax = new Vector2(0f, 0.5f);
-            iconRect.pivot = new Vector2(0f, 0.5f);
-            iconRect.sizeDelta = new Vector2(56f, 56f);
-            iconRect.anchoredPosition = Vector2.zero;
-            icon.preserveAspect = true;
-
-            Image frame = GetOrCreateAwakenImage(root, "Frame", awakenFrameSprite);
-            RectTransform frameRect = frame.rectTransform;
-            frameRect.anchorMin = new Vector2(0f, 0.5f);
-            frameRect.anchorMax = new Vector2(1f, 0.5f);
-            frameRect.pivot = new Vector2(0f, 0.5f);
-            frameRect.offsetMin = new Vector2(36f, -20f);
-            frameRect.offsetMax = new Vector2(0f, 20f);
-            frame.preserveAspect = false;
-            frame.type = Image.Type.Simple;
-
-            Transform segmentT = frameRect.Find("Segments");
+            Transform segmentT = root.Find("Segments");
             if (segmentT == null)
             {
                 GameObject segGo = new GameObject("Segments", typeof(RectTransform));
                 segGo.layer = root.gameObject.layer;
-                segGo.transform.SetParent(frameRect, false);
+                segGo.transform.SetParent(root, false);
                 segmentT = segGo.transform;
             }
             _awakenSegmentRoot = segmentT as RectTransform;
             _awakenSegmentRoot.anchorMin = Vector2.zero;
             _awakenSegmentRoot.anchorMax = Vector2.one;
-            _awakenSegmentRoot.offsetMin = new Vector2(14f, 6f);
-            _awakenSegmentRoot.offsetMax = new Vector2(-20f, -6f);
-
+            _awakenSegmentRoot.offsetMin = Vector2.zero;
+            _awakenSegmentRoot.offsetMax = Vector2.zero;
+            _awakenSegmentRoot.pivot = new Vector2(0.5f, 0.5f);
             HorizontalLayoutGroup layout = _awakenSegmentRoot.GetComponent<HorizontalLayoutGroup>();
-            if (layout == null) layout = _awakenSegmentRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 3f;
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = true;
-            layout.padding = new RectOffset(0, 0, 0, 0);
+            if (layout != null)
+            {
+                if (Application.isPlaying) Destroy(layout);
+                else DestroyImmediate(layout);
+            }
 
-            iconRect.SetAsLastSibling();
+            if (awakenTimerSprite != null)
+            {
+                Image timer = GetOrCreateAwakenImage(root, "Timer", awakenTimerSprite);
+                RectTransform timerRect = timer.rectTransform;
+                PlaceTopLeft(timerRect, AwakenTimerX, AwakenTimerY, AwakenTimerW, AwakenTimerH);
+                timer.type = Image.Type.Filled;
+                timer.fillMethod = Image.FillMethod.Horizontal;
+                timer.fillOrigin = (int)Image.OriginHorizontal.Left;
+                timer.fillAmount = 1f;
+                timer.preserveAspect = false;
+                timer.gameObject.SetActive(false);
+                _awakenTimerImage = timer;
+            }
+
             _awakenSkinReady = true;
+        }
+
+        // 디자인 표의 왼쪽 위 좌표를 RectTransform에 넣는다. y는 아래로 증가
+        static void PlaceTopLeft(RectTransform rect, float x, float yDown, float w, float h)
+        {
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(x, -yDown);
+            rect.sizeDelta = new Vector2(w, h);
+            rect.localScale = Vector3.one;
+        }
+
+        static void HideAwakenChild(Transform root, string name)
+        {
+            Transform child = root.Find(name);
+            if (child != null) child.gameObject.SetActive(false);
         }
 
         // Resources 폴백으로 각성 게이지 스프라이트를 채운다
@@ -682,6 +730,8 @@ namespace Battle.UI
                 awakenEmptySprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_empty");
             if (awakenFrameSprite == null)
                 awakenFrameSprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_frame");
+            if (awakenTimerSprite == null)
+                awakenTimerSprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_timer");
         }
 
         // 예전 슬라이더 배경/채움을 숨긴다
@@ -737,7 +787,9 @@ namespace Battle.UI
                 image.sprite = awakenEmptySprite;
                 image.color = Color.white;
                 image.raycastTarget = false;
-                image.preserveAspect = true;
+                image.preserveAspect = false;
+                image.type = Image.Type.Simple;
+                PlaceTopLeft(image.rectTransform, AwakenCellX + AwakenCellStep * i, AwakenCellY, AwakenCellW, AwakenCellH);
                 _awakenSegments.Add(image);
             }
             _awakenSegmentCount = count;
