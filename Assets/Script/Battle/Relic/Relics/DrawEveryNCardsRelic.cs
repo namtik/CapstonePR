@@ -15,7 +15,14 @@ namespace Battle.Relic
         public override void OnCardPlayed(IRelicBattleContext ctx, Battle.Card.CardInstance card, int cardsPlayedThisBattle)
         {
             if (everyN > 0 && cardsPlayedThisBattle % everyN == 0)
+            {
                 ctx.DrawCards(drawCount);
+                ctx.PulseRelic(this, $"유물 {DisplayLabel} 발동", null);
+            }
         }
+
+        // 다음 발동까지 남은 카드 사용 수
+        public override int GetBattleCounter(IRelicBattleContext ctx) =>
+            everyN > 0 ? everyN - ctx.CardsPlayedThisBattle % everyN : -1;
     }
 }

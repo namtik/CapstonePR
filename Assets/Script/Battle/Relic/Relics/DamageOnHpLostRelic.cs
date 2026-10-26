@@ -13,6 +13,7 @@ namespace Battle.Relic
         public override void OnPlayerHpLost(IRelicBattleContext ctx, int amount, bool firstThisBattle)
         {
             ctx.DealDamageToRandomEnemy(damage);
+            ctx.PulseRelic(this, $"유물 {DisplayLabel} 발동", null);
         }
     }
 }

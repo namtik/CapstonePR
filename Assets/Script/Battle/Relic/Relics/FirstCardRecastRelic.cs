@@ -10,5 +10,8 @@ namespace Battle.Relic
         {
             ctx.EnableFirstCardRecast();
         }
+
+        // 첫 카드 사용 전까지 1(대기), 사용 후 숫자 없음
+        public override int GetBattleCounter(IRelicBattleContext ctx) => ctx.CardsPlayedThisBattle == 0 ? 1 : -1;
     }
 }

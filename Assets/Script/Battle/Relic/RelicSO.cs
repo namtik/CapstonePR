@@ -46,6 +46,10 @@ namespace Battle.Relic
         public virtual float ShopPriceMultiplier() => 1f;           // 상점 가격 배수(곱)
         public virtual int   GoldRewardBonus() => 0;                // 전투 보상 골드 가산
 
+        // ── 행동 순서 바 표시 ──────────────────────────────────────────
+        // 아이템 칸에 띄울 숫자(남은 발동 횟수·조건 등). -1 = 숫자 없음
+        public virtual int GetBattleCounter(IRelicBattleContext ctx) => -1;
+
         // ── 특수 플래그 ────────────────────────────────────────────────
         public virtual bool  OverridesDDraw => false;               // D 드로우 동작 교체 (비급서 10011)
         public virtual bool  GrantsAllRelicsInStage => false;       // 유물 라운드서 후보 전부 획득 (유물 호리병 10018)

@@ -6,6 +6,8 @@ namespace Battle.Relic
     // 유물은 전투 내부 구현을 모른 채 이 인터페이스를 통해서만 전투에 영향을 준다.
     public interface IRelicBattleContext
     {
+        // 이번 전투 일반 카드 사용 누적 수 (행동 순서 바 유물 카운터 표시용)
+        int CardsPlayedThisBattle { get; }
         // 적에게 빙결 부여 (서리화 10008)
         void ApplyFrostToEnemy(int amount);
         // 플레이어 방어도 획득 (10002)

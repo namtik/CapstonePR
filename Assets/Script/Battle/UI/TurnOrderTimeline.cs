@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Battle.Relic;
 
 namespace Battle.UI
 {
@@ -35,6 +36,8 @@ namespace Battle.UI
         [SerializeField] private float rowSpacing = 10f;    // 행 간격
         [SerializeField] private float cellSpacing = 10f;   // 행동 칸 간격
         [SerializeField] private int actionsPerRow = 2;     // 몬스터별 표시할 다음 행동 수
+        [Tooltip("몬스터 수가 적어도 이 행 수만큼 패널 높이를 고정(더 많으면 늘어남)")]
+        [SerializeField] private int reservedRows = 3;      // 고정 몬스터 행 수
         [Tooltip("방해행동(게이지 절반)도 행동 칸에 표시")]
         [SerializeField] private bool showDisruptions = true;
         [SerializeField] private float slideSpeed = 12f;    // 위치 보간 속도
@@ -53,6 +56,17 @@ namespace Battle.UI
         [Tooltip("가장 먼저 올 행동 칸 모서리에 붙일 표식(비우면 빛나는 테두리만).")]
         [SerializeField] private Sprite nextMarker;
         [SerializeField] private float glowPulseSpeed = 3f; // 빛 깜빡임 속도
+
+        [Header("아이템(유물)")]
+        [SerializeField] private bool showItems = true;     // 몬스터 행 아래 유물 칸 표시
+        [Tooltip("전투형 유물만 표시(비전투형 — 상점 할인·최대 체력 등은 제외)")]
+        [SerializeField] private bool combatItemsOnly = true;
+        [SerializeField] private float itemSize = 56f;      // 아이템 칸 크기
+        [SerializeField] private float itemSpacing = 8f;    // 아이템 칸 간격
+        [SerializeField] private int itemsPerRow = 4;       // 한 줄 아이템 수
+        [Tooltip("유물 발동 시 현재 칸에 표시되는 시간(초) — 여러 개 동시 발동 시 순서대로")]
+        [SerializeField] private float itemShowSeconds = 0.9f;
+        [SerializeField] private Color itemColor = new Color(0.85f, 0.72f, 0.40f); // 아이템 테두리·발동 색
 
         [Header("행 상태")]
         [Tooltip("다른 적이 행동 중일 때 나머지 행 투명도")]
@@ -108,8 +122,28 @@ namespace Battle.UI
             public bool used;
         }
 
+        // 아이템(유물) 칸 화면 오브젝트
+        class ItemView
+        {
+            public RelicSO relic;
+            public RectTransform rect;
+            public Image frame;
+            public Image icon;
+            public TextMeshProUGUI fallback;
+            public Image badgeBg;
+            public TextMeshProUGUI badgeText;
+            public float flash;    // 발동 펄스(1→0)
+        }
+
         RectTransform _root;
         RectTransform _rows;   // 행 컨테이너
+        RectTransform _items;  // 아이템 컨테이너
+        RectTransform _itemDivider;
+        readonly List<ItemView> _itemViews = new List<ItemView>();
+        readonly List<RelicSO> _itemBuf = new List<RelicSO>();
+        readonly Queue<RelicSO> _triggerQueue = new Queue<RelicSO>(); // 현재 칸에 띄울 발동 유물 대기열
+        RelicSO _showingRelic;
+        float _showingUntil;
         Image _panel;
         TextMeshProUGUI _header;
         TextMeshProUGUI _lockHint;
@@ -146,6 +180,15 @@ namespace Battle.UI
         // 적 턴에 카드를 쓰려 할 때 '적 턴' 표시를 깜빡여 잠금을 알린다
         public void FlashLocked() => _lockFlash = 1f;
 
+        // 유물 발동 — 현재 칸에 순서대로 띄우고 해당 아이템 칸을 펄스
+        public void ShowRelicTrigger(RelicSO relic)
+        {
+            if (relic == null || !showItems) return;
+            _triggerQueue.Enqueue(relic);
+            for (int i = 0; i < _itemViews.Count; i++)
+                if (_itemViews[i].relic == relic) _itemViews[i].flash = 1f;
+        }
+
         // ── 매 프레임: 예측 → 배치 ─────────────────────────────
         void LateUpdate()
         {
@@ -158,22 +201,40 @@ namespace Battle.UI
             UpdateCurrent(nbc);
             SyncRows();
             BuildPredictions(nbc);
+            SyncItems(nbc);
             ApplyLayout(nbc);
         }
 
         // ── 현재 칸 ─────────────────────────────────────────────
         void UpdateCurrent(NewBattleController nbc)
         {
+            // 유물 발동 표시가 대기 중이면 현재 칸을 잠시 그 유물로 바꾼다(여러 개면 순서대로)
+            if (_showingRelic != null && Time.unscaledTime >= _showingUntil) _showingRelic = null;
+            if (_showingRelic == null && _triggerQueue.Count > 0)
+            {
+                _showingRelic = _triggerQueue.Dequeue();
+                _showingUntil = Time.unscaledTime + itemShowSeconds;
+            }
+
             EnemyController acting = nbc.ActingEnemy;
             bool enemyActing = acting != null && acting.IsAlive;
-            int id = enemyActing ? acting.GetInstanceID() * 2 + (nbc.ActingIsDisruption ? 1 : 0) : int.MinValue + 1;
+            int id = _showingRelic != null ? _showingRelic.GetInstanceID()
+                   : enemyActing ? acting.GetInstanceID() * 2 + (nbc.ActingIsDisruption ? 1 : 0) : int.MinValue + 1;
             if (id != _curId) { _curId = id; _curPulse = 1f; }
             _curPulse = Mathf.MoveTowards(_curPulse, 0f, Time.deltaTime * 3f);
 
             Sprite portrait;
             string name;
             Color c;
-            if (enemyActing)
+            if (_showingRelic != null)
+            {
+                portrait = _showingRelic.icon;
+                name = _showingRelic.DisplayLabel;
+                c = itemColor;
+                _curLabel.text = $"<b>{name}</b>\n<size=70%>발동</size>";
+                _curBadgeBg.gameObject.SetActive(false);
+            }
+            else if (enemyActing)
             {
                 EnemyActionKind kind = nbc.ActingIsDisruption ? EnemyActionKind.Disrupt : EnemyActionKind.Attack;
                 EnemyActionIcon entry = FindIcon(kind);
@@ -203,7 +264,7 @@ namespace Battle.UI
             _curPortrait.enabled = portrait != null;
             if (portrait != null && _curPortrait.sprite != portrait) _curPortrait.sprite = portrait;
             _curInitial.gameObject.SetActive(portrait == null);
-            if (portrait == null) _curInitial.text = name.Substring(0, 1);
+            if (portrait == null) _curInitial.text = string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1);
 
             float s = 1f + _curPulse * 0.12f;
             _current.localScale = new Vector3(s, s, 1f);
@@ -287,6 +348,54 @@ namespace Battle.UI
             }
         }
 
+        // 보유 유물 → 아이템 칸 동기화(목록이 바뀔 때만 재생성) + 카운터·발동 펄스 갱신
+        void SyncItems(NewBattleController nbc)
+        {
+            _itemBuf.Clear();
+            var mgr = RelicManager.Instance;
+            if (showItems && mgr != null)
+            {
+                var owned = mgr.OwnedRelics;
+                for (int i = 0; i < owned.Count; i++)
+                {
+                    RelicSO r = owned[i];
+                    if (r == null || (combatItemsOnly && r.category != RelicCategory.Combat)) continue;
+                    _itemBuf.Add(r);
+                }
+            }
+
+            bool changed = _itemBuf.Count != _itemViews.Count;
+            for (int i = 0; !changed && i < _itemBuf.Count; i++)
+                changed = _itemViews[i].relic != _itemBuf[i];
+            if (changed)
+            {
+                for (int i = 0; i < _itemViews.Count; i++) Destroy(_itemViews[i].rect.gameObject);
+                _itemViews.Clear();
+                int cols = Mathf.Max(1, itemsPerRow);
+                for (int i = 0; i < _itemBuf.Count; i++)
+                {
+                    float x = (i % cols) * (itemSize + itemSpacing);
+                    float y = -(i / cols) * (itemSize + itemSpacing);
+                    _itemViews.Add(CreateItem(_itemBuf[i], new Vector2(x + itemSize * 0.5f, y - itemSize * 0.5f)));
+                }
+            }
+
+            float dt = Time.deltaTime;
+            for (int i = 0; i < _itemViews.Count; i++)
+            {
+                ItemView v = _itemViews[i];
+                int counter = v.relic.GetBattleCounter(nbc);
+                bool hasCounter = counter >= 0;
+                if (v.badgeBg.gameObject.activeSelf != hasCounter) v.badgeBg.gameObject.SetActive(hasCounter);
+                if (hasCounter) v.badgeText.text = counter.ToString();
+
+                v.flash = Mathf.MoveTowards(v.flash, 0f, dt * 2f);
+                v.frame.color = Color.Lerp(itemColor, Color.white, v.flash);
+                float s = 1f + v.flash * 0.18f;
+                v.rect.localScale = new Vector3(s, s, 1f);
+            }
+        }
+
         // 상단 '내 턴 / 적 턴' 표시 — 턴이 바뀌는 순간 펄스
         void UpdateHeader(NewBattleController nbc)
         {
@@ -360,9 +469,31 @@ namespace Battle.UI
             }
 
             float rowsTop = HeaderH + currentSize + rowSpacing * 2f;
-            float rowsH = _order.Count > 0 ? _order.Count * (portraitSize + rowSpacing) - rowSpacing : 0f;
+            // 몬스터 수와 관계없이 최대 행 수만큼 자리를 잡아 패널 크기·아이템 위치를 고정
+            int rowSlots = Mathf.Max(_order.Count, reservedRows);
+            float rowsH = rowSlots > 0 ? rowSlots * (portraitSize + rowSpacing) - rowSpacing : 0f;
             float targetH = rowsTop + rowsH + 10f;
-            float w = Mathf.Max(currentSize + labelWidth, portraitSize + Mathf.Max(1, actionsPerRow) * (actionSize + cellSpacing)) + 22f;
+
+            // 아이템 구역 — 몬스터 행 아래 구분선 다음, 행이 줄면 함께 위로 당겨진다
+            bool hasItems = _itemViews.Count > 0;
+            if (_items.gameObject.activeSelf != hasItems) _items.gameObject.SetActive(hasItems);
+            _itemDivider.gameObject.SetActive(hasItems);
+            if (hasItems)
+            {
+                int cols = Mathf.Max(1, itemsPerRow);
+                int lines = (_itemViews.Count + cols - 1) / cols;
+                float itemsTop = rowsTop + rowsH + rowSpacing * 2f;
+                Vector2 ip = new Vector2(0f, -itemsTop);
+                _items.anchoredPosition = _items.anchoredPosition == Vector2.zero ? ip : Vector2.Lerp(_items.anchoredPosition, ip, t);
+                _itemDivider.anchoredPosition = new Vector2(0f, _items.anchoredPosition.y + rowSpacing);
+                targetH = itemsTop + lines * (itemSize + itemSpacing) - itemSpacing + 10f;
+            }
+
+            float w = Mathf.Max(currentSize + labelWidth, portraitSize + Mathf.Max(1, actionsPerRow) * (actionSize + cellSpacing));
+            if (hasItems) w = Mathf.Max(w, Mathf.Max(1, itemsPerRow) * (itemSize + itemSpacing) - itemSpacing);
+            w += 22f;
+            _divider.sizeDelta = new Vector2(w - 22f, 2f);
+            _itemDivider.sizeDelta = _divider.sizeDelta;
             Vector2 size = _panel.rectTransform.sizeDelta;
             _panel.rectTransform.sizeDelta = new Vector2(w, size.y <= 0f ? targetH : Mathf.Lerp(size.y, targetH, t));
         }
@@ -507,6 +638,60 @@ namespace Battle.UI
             TopLeft(_rows);
             _rows.anchoredPosition = new Vector2(0f, -(HeaderH + currentSize + rowSpacing * 2f));
             _rows.sizeDelta = Vector2.zero;
+
+            var idiv = NewImage("ItemDivider", _root, null, new Color(1f, 1f, 1f, 0.35f));
+            _itemDivider = idiv.rectTransform;
+            TopLeft(_itemDivider);
+            _itemDivider.pivot = new Vector2(0f, 0.5f);
+            _itemDivider.gameObject.SetActive(false);
+
+            var itemsGo = new GameObject("Items", typeof(RectTransform));
+            _items = (RectTransform)itemsGo.transform;
+            _items.SetParent(_root, false);
+            TopLeft(_items);
+            _items.sizeDelta = Vector2.zero;
+            itemsGo.SetActive(false);
+        }
+
+        // 아이템(유물) 칸 — 아이콘 + 우하단 카운터 배지
+        ItemView CreateItem(RelicSO relic, Vector2 center)
+        {
+            var v = new ItemView { relic = relic };
+            var go = new GameObject("Item", typeof(RectTransform));
+            v.rect = (RectTransform)go.transform;
+            v.rect.SetParent(_items, false);
+            TopLeft(v.rect);
+            v.rect.pivot = new Vector2(0.5f, 0.5f);
+            v.rect.sizeDelta = new Vector2(itemSize, itemSize);
+            v.rect.anchoredPosition = center;
+
+            v.frame = NewImage("Frame", v.rect, RoundedSprite(), itemColor);
+            Stretch(v.frame.rectTransform, 0f);
+            var bg = NewImage("Bg", v.rect, RoundedSprite(), new Color(0.12f, 0.12f, 0.16f, 1f));
+            Stretch(bg.rectTransform, 3f);
+
+            v.icon = NewImage("Icon", v.rect, relic.icon, Color.white);
+            v.icon.type = Image.Type.Simple;
+            v.icon.preserveAspect = true;
+            v.icon.enabled = relic.icon != null;
+            Stretch(v.icon.rectTransform, 6f);
+            v.fallback = NewText("Fallback", v.rect, 22f, TextAlignmentOptions.Center);
+            Stretch(v.fallback.rectTransform, 0f);
+            v.fallback.fontStyle = FontStyles.Bold;
+            string label = relic.DisplayLabel;
+            v.fallback.text = relic.icon == null && !string.IsNullOrEmpty(label) ? label.Substring(0, 1) : "";
+
+            v.badgeBg = NewImage("Badge", v.rect, CircleSprite(), itemColor);
+            var b = v.badgeBg.rectTransform;
+            b.anchorMin = b.anchorMax = new Vector2(1f, 0f);
+            b.anchoredPosition = new Vector2(-2f, 2f);
+            b.sizeDelta = new Vector2(24f, 24f);
+            v.badgeText = NewText("Count", b, 16f, TextAlignmentOptions.Center);
+            Stretch(v.badgeText.rectTransform, 0f);
+            v.badgeText.fontStyle = FontStyles.Bold;
+            v.badgeText.color = new Color(0.1f, 0.08f, 0.05f);
+            v.badgeBg.gameObject.SetActive(false);
+            return v;
         }
 
         // 맨 위 '현재' 칸(지금 행동하는 쪽)
@@ -574,8 +759,8 @@ namespace Battle.UI
             for (int i = 0; i < n; i++)
             {
                 float x = portraitSize + cellSpacing + i * (actionSize + cellSpacing);
-                // 칸은 초상화 아래쪽에 맞춰 정렬
-                v.cells[i] = CreateCell(v.rect, new Vector2(x + actionSize * 0.5f, -(portraitSize - actionSize * 0.5f)));
+                // 칸은 초상화 세로 중앙선에 맞춰 정렬
+                v.cells[i] = CreateCell(v.rect, new Vector2(x + actionSize * 0.5f, -portraitSize * 0.5f));
             }
             return v;
         }

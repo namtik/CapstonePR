@@ -230,6 +230,7 @@ namespace Battle
         private CardInstance _lastResolvedCard; // 물12(211): 마지막으로 사용한 카드(재사용 대상)
 
         private int _cardsPlayedThisBattle;        // 유물(웃는 탈 10006): 이번 전투 일반 카드 사용 누적 수
+        public int CardsPlayedThisBattle => _cardsPlayedThisBattle; // 유물 카운터 표시용
         private bool _hpLostThisBattle;            // 유물(혈묵주 10003): 이번 전투 체력 손실 발생 여부
         private bool _relicForceAwakenPending;     // 유물(황룡옥적 10010): 시작 드로우 후 강제 각성 예약
         private bool _relicFirstCardRecastPending; // 유물(복사경 10015): 첫 사용 카드 효과 1회 재발동 예약
@@ -2312,6 +2313,8 @@ namespace Battle
         // 좌상단 유물 아이콘 펄스 연출 후 onShown 호출 (HUD 없으면 즉시 실행)
         public void PulseRelic(Battle.Relic.RelicSO relic, string label, System.Action onShown)
         {
+            if (turnOrderTimeline == null) turnOrderTimeline = ResolveOrCreateTurnOrderTimeline();
+            turnOrderTimeline?.ShowRelicTrigger(relic); // 행동 순서 바 현재 칸에도 발동 표시
             if (RelicHUD.Instance != null && relic != null)
                 RelicHUD.Instance.PulseRelicIcon(relic, label, onShown);
             else
