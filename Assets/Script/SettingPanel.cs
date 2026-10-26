@@ -230,7 +230,7 @@ public class SettingPanel : MonoBehaviour
         return FindFirstObjectByType<MainMenuController>() != null;
     }
 
-    // 인게임 우상단 설정 아이콘을 숨긴다(메인 메뉴 설정 버튼은 유지)
+    // 예전 인게임 설정 아이콘은 숨긴다. 메뉴바의 새 설정 버튼과 메인 메뉴 버튼은 유지한다.
     void HideInGameSettingButtons()
     {
         var allButtons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -240,6 +240,9 @@ public class SettingPanel : MonoBehaviour
                 continue;
 
             if (btn.GetComponentInParent<MainMenuController>(true) != null)
+                continue;
+
+            if (btn.GetComponent<SettingsOpenButton>() != null)
                 continue;
 
             btn.gameObject.SetActive(false);
