@@ -591,6 +591,7 @@ RectTransform:
   - {fileID: 1722231436}
   - {fileID: 2033277084}
   - {fileID: 1777082903}
+  - {fileID: 1808821512}
   m_Father: {fileID: 1780698869}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -6070,7 +6071,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1424448438}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.99998015
+  m_Size: 0.9999694
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -13598,6 +13599,7 @@ MonoBehaviour:
   cardRewardCardScale: 1.5
   cardRewardCardSpacing: 480
   showStarterComboPickOnMapEntry: 1
+  walkTransitionAfterReward: 1
 --- !u!1 &620249056
 GameObject:
   m_ObjectHideFlags: 0
@@ -27067,7 +27069,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 888799007}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.9999801
+  m_Size: 0.99996936
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -34736,6 +34738,10 @@ MonoBehaviour:
   frostAppliedEffectName: Frost_EFF
   awakenScreenEffectPrefab: {fileID: 3942825033974895155, guid: 7297fe0a5e06fb644a731296af23d579, type: 3}
   awakenScreenEffectScale: 110
+  turnOrderTimeline: {fileID: 0}
+  lockInputDuringEnemyTurn: 1
+  enemyTurnStartDelay: 0.35
+  disruptionLockSeconds: 0.6
   logVerbose: 1
   useAiDisruption: 1
   aiExplorationEpsilon: 0.15
@@ -37662,7 +37668,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1630667200}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.9999801
+  m_Size: 0.99996936
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -41726,9 +41732,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ee7d953b2ee9fa4d84215c6fc8d7a60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
-  stages: []
-  fallbackStageSceneName: Stage_Forest_Battle
-  preloadFallbackOnStart: 1
+  elementStages:
+  - element: 1
+    sceneName: Fire_BurnedForest
+  - element: 4
+    sceneName: Land_ForestGate
+  defaultStageSceneName: Land_ForestGate
+  preloadAllOnStart: 1
   nonCombatCamera: {fileID: 330585545}
   logVerbose: 1
 --- !u!4 &1677812097
@@ -45168,6 +45178,92 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1800141771}
   m_CullTransparentMesh: 1
+--- !u!1 &1808821511
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1808821512}
+  - component: {fileID: 1808821514}
+  - component: {fileID: 1808821513}
+  m_Layer: 5
+  m_Name: TurnOrderManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1808821512
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1808821511}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 19061629}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1808821513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1808821511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98815f4ffd54044408e50289c4d58822, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Battle.UI.TurnOrderTimeline
+  anchoredOffset: {x: 24, y: -150}
+  currentSize: 96
+  labelWidth: 90
+  portraitSize: 80
+  actionSize: 60
+  rowSpacing: 10
+  cellSpacing: 10
+  actionsPerRow: 2
+  showDisruptions: 1
+  slideSpeed: 12
+  actionIcons:
+  - kind: 0
+    icon: {fileID: 21300000, guid: de34bf76d81ae7b4f8a44d863cf3a3d4, type: 3}
+    color: {r: 0.95, g: 0.34, b: 0.3, a: 1}
+    fallbackText: "\uACF5"
+  - kind: 1
+    icon: {fileID: 0}
+    color: {r: 0.7, g: 0.45, b: 0.98, a: 1}
+    fallbackText: '?'
+  showDamage: 1
+  nextGlowColor: {r: 1, g: 0.8, b: 0.38, a: 1}
+  nextMarker: {fileID: 0}
+  glowPulseSpeed: 3
+  idleRowAlpha: 0.55
+  font: {fileID: 0}
+  playerPortrait: {fileID: 0}
+  playerColor: {r: 0.33, g: 0.7, b: 1, a: 1}
+  attackColor: {r: 0.95, g: 0.34, b: 0.3, a: 1}
+  panelColor: {r: 0, g: 0, b: 0, a: 0.35}
+--- !u!222 &1808821514
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1808821511}
+  m_CullTransparentMesh: 1
 --- !u!1 &1810409946
 GameObject:
   m_ObjectHideFlags: 0
@@ -46493,7 +46589,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 374.99988}
+  m_AnchoredPosition: {x: 0, y: 374.99942}
   m_SizeDelta: {x: 1496, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1868692685
@@ -46781,7 +46877,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 464.99994}
+  m_AnchoredPosition: {x: -0.00018310547, y: 464.9993}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1872743179
@@ -50186,7 +50282,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 464.99994}
+  m_AnchoredPosition: {x: -0.00018310547, y: 464.9993}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2018776364

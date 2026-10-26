@@ -19,8 +19,6 @@ MonoBehaviour:
     - presets:
       - monsters:
         - {fileID: 0}
-        - {fileID: 0}
-        - {fileID: 0}
       - monsters: []
       - monsters: []
     - presets: []

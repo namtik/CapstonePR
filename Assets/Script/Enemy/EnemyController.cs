@@ -224,18 +224,26 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (seq == null || seq.Length == 0) return;
         if (view == null) return;
 
-        int nextDamage = seq[_newSystemAttackIndex % seq.Length];
+        view.SetAttackPreviewDamage(GetPredictedAttackDamage());
+    }
 
-        // 실제 공격 계산(HandleGaugeFull)과 동일하게 예고에도 데미지 수정 효과를 반영한다
+    // 앞으로 ahead번째 공격(0=다음 공격)의 예상 피해 — 행동 순서 바·공격 예고 공용
+    // 실제 공격 계산(HandleGaugeFull)과 동일하게 데미지 수정 효과를 반영한다(강화 버프는 다음 공격에만)
+    public int GetPredictedAttackDamage(int ahead = 0)
+    {
+        int[] seq = EffectiveAttackSequence();
+        if (seq == null || seq.Length == 0) return fallbackGaugeFullDamage;
+
+        int nextDamage = seq[(_newSystemAttackIndex + Mathf.Max(0, ahead)) % seq.Length];
+
         ResolveAbility();
         if (_ability == EnemySpecialAbility.EscalatingAttack)
             nextDamage += _escalateBonus;                       // 풍식귀: 이번 공격에 더해질 누적 증가
-        if (_nextAttackBuffed)
+        if (_nextAttackBuffed && ahead == 0)
             nextDamage = Mathf.CeilToInt(nextDamage * 1.5f);    // 방해행동-강화: 다음 공격 +50%
         if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp && _halfHpTriggered)
             nextDamage *= 2;                                    // 무사: 체력 절반 도달 후 2배
-
-        view.SetAttackPreviewDamage(nextDamage);
+        return nextDamage;
     }
 
     // 카드 타입을 고려해 적에게 피해를 가한다
