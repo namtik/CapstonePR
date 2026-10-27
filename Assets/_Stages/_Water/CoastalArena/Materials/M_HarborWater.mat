@@ -1,0 +1,93 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_HarborWater
+  m_Shader: {fileID: 4800000, guid: 12ee098563ab68f498109a87baff3f16, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 2990
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _RippleNormal:
+        m_Texture: {fileID: 2800000, guid: b55ff4c2dc5a36a4f91906efdd82b657, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SkyCube:
+        m_Texture: {fileID: 8900000, guid: 918b910544e851d4eb6cc73fb47cb136, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _StageReflection:
+        m_Texture: {fileID: 2800000, guid: 578672d2e4c08e64aa0248367244d5b2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Alpha: 1
+    - _AlphaClip: 0
+    - _CameraDepthFadeLength: 1
+    - _CameraDepthFadeOffset: 0.5
+    - _Cutoff: 0.5
+    - _DepthFadeDistance: 1.5
+    - _Dissolve: 1
+    - _EdgeDistance: 1
+    - _EdgeFade2: 1
+    - _EdgeFoamHardness1: 0.33
+    - _EdgeFoamOpacity1: 0.65
+    - _EnableSurfaceFoam: 0
+    - _EnvironmentAvailable: 0
+    - _EnvironmentReflections: 1
+    - _FoamStrength: 0.24
+    - _GlintStrength: 0.6
+    - _NormalMapScale: 0
+    - _NormalTiling: 0.16
+    - _Occlusion1: 0.65
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _ReceiveShadows: 1
+    - _RefractionStrength: 0.018
+    - _RippleStrength: 0.48
+    - _ShoreZ: -1.55
+    - _SkyReflection: 0.58
+    - _Smoothness1: 0.65
+    - _SpecularHighlights: 1
+    - _StageReflectionAvailable: 0
+    - _SurfaceFoamIntensity: 0
+    - _SurfaceFoamSmoothness: 0.35
+    - _SurfaceFoamStrength: 0.035
+    - _TilingSize: 6
+    - _WaterDetailTime: -1
+    - _WaveStrength: 0.65
+    - _X: 0.15
+    - _X1: 0.15
+    - _Z: 0.15
+    - _Z1: 0.15
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 0}
+    - _DeepColor: {r: 0.055, g: 0.22, b: 0.3, a: 1}
+    - _EdgeFoamColor1: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _EnvironmentBoxMax: {r: 18, g: 10, b: 26, a: 1}
+    - _EnvironmentBoxMin: {r: -18, g: -1.3, b: -4, a: 1}
+    - _EnvironmentCapturePosition: {r: 0, g: -0.1, b: 7, a: 1}
+    - _FoamColor: {r: 0.72, g: 0.79, b: 0.8, a: 1}
+    - _HorizonColor: {r: 0.25, g: 0.43, b: 0.59, a: 1}
+    - _NearColor: {r: 0.08, g: 0.36, b: 0.38, a: 1}
+    - _SurfaceFoamColor: {r: 1, g: 1, b: 1, a: 1}
+    - _WaterColor: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_Wind_MountainStone
+  m_Shader: {fileID: 4800000, guid: 8355fe54a5fae794c8c63c82fc961141, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 26290ef5f7e00294ea03a44c37e93f20, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 0a176e6a6015d0b4bb94f600aa5291bd, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GrassMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _StoneMap:
+        m_Texture: {fileID: 2800000, guid: 18d07ff6a390e4d4e917f28f159ea159, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _DistanceFogStrength: 0.76
+    - _Ground: 0
+    - _MossStrength: 0.12
+    - _Tiling: 0.075
+    - _ValleyFade: 0.65
+    m_Colors:
+    - _BaseColor: {r: 0.91, g: 0.98, b: 0.98, a: 1}
+    - _MossColor: {r: 0.31, g: 0.38, b: 0.19, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

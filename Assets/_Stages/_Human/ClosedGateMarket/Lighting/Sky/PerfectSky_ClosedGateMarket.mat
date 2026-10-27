@@ -1,0 +1,115 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: PerfectSky_ClosedGateMarket
+  m_Shader: {fileID: 4800000, guid: 8eca235ddd84321488b885e47e25385d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CloudNoiseAtlas:
+        m_Texture: {fileID: 2800000, guid: 97f339766e5236b4dbb3e597553b4ad7, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AddPrecomputedVelocity: 0
+    - _AlphaClip: 0
+    - _AlphaToMask: 0
+    - _Blend: 0
+    - _BlendModePreserveSpecular: 1
+    - _BumpScale: 1
+    - _ClearCoatMask: 0
+    - _ClearCoatSmoothness: 0
+    - _CloudBrightness: 1.28
+    - _CloudClump: 0.7
+    - _CloudClumpScale: 0.45
+    - _CloudContrast: 1.8
+    - _CloudCoverage: 0.5
+    - _CloudDetail: 0.3
+    - _CloudEvolve: 0.03
+    - _CloudLightStep: 0.42
+    - _CloudMix: 0.5
+    - _CloudMorph: 0.7
+    - _CloudScale: 1.5
+    - _CloudSeed: 3
+    - _CloudShapeMotion: 0.06
+    - _CloudSoftness: 0.06
+    - _Cull: 2
+    - _Cutoff: 0.5
+    - _DetailAlbedoMapScale: 1
+    - _DetailNormalMapScale: 1
+    - _DstBlend: 0
+    - _DstBlendAlpha: 0
+    - _EnvironmentReflections: 1
+    - _Exposure: 1.26
+    - _GlossMapScale: 0
+    - _Glossiness: 0
+    - _GlossyReflections: 0
+    - _Metallic: 0
+    - _MoonGlow: 0.6
+    - _MoonSize: 4
+    - _MoonVisibility: 0
+    - _OcclusionStrength: 1
+    - _Parallax: 0.005
+    - _QueueOffset: 0
+    - _ReceiveShadows: 1
+    - _SilverLining: 1
+    - _Smoothness: 0.5
+    - _SmoothnessTextureChannel: 0
+    - _SpecularHighlights: 1
+    - _SrcBlend: 1
+    - _SrcBlendAlpha: 1
+    - _StarAmount: 1
+    - _StarBrightness: 1.3
+    - _StarDensity: 150
+    - _StarTwinkleStrength: 0
+    - _StarVisibility: 0
+    - _SunCoreBright: 9.679143
+    - _SunDiskSize: 2.2
+    - _SunDiskSoftness: 0.6
+    - _SunGlow: 0.55
+    - _SunHaloSize: 900
+    - _SunHaloStrength: 1.8
+    - _SunSize: 30
+    - _Surface: 0
+    - _Wind2X: 0.1
+    - _Wind2Y: 0.1
+    - _WindX: 0.008
+    - _WindY: 0.003
+    - _WorkflowMode: 1
+    - _XRMotionVectorsPass: 1
+    - _ZWrite: 1
+    m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _CloudColor: {r: 1, g: 0.93097794, b: 0.83542776, a: 1}
+    - _CloudShadowColor: {r: 0.4974954, g: 0.5162553, b: 0.6862614, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _MoonColor: {r: 0.9, g: 0.93, b: 1, a: 1}
+    - _SkyHorizonColor: {r: 0.8924043, g: 0.8074163, b: 0.74723697, a: 1}
+    - _SkyMidColor: {r: 0.36824968, g: 0.48798215, b: 0.75578594, a: 1}
+    - _SkyTopColor: {r: 0.10860641, g: 0.24611245, b: 0.6436185, a: 1}
+    - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _SunColor: {r: 1, g: 0.83313686, b: 0.6437691, a: 1}
+    - _SunCoreColor: {r: 1, g: 0.9319287, b: 0.8382787, a: 1}
+    - _SunDir: {r: 0.27059796, g: 0.9238795, b: -0.27059805, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
