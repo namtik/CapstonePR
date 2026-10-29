@@ -6069,8 +6069,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1424448439}
   m_HandleRect: {fileID: 1424448438}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.99998015
+  m_Value: 0
+  m_Size: 0.99999666
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -13598,6 +13598,7 @@ MonoBehaviour:
   cardRewardCardScale: 1.5
   cardRewardCardSpacing: 480
   showStarterComboPickOnMapEntry: 1
+  walkTransitionAfterReward: 1
 --- !u!1 &620249056
 GameObject:
   m_ObjectHideFlags: 0
@@ -27066,8 +27067,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 888799008}
   m_HandleRect: {fileID: 888799007}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.9999801
+  m_Value: 0
+  m_Size: 0.9999967
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -34736,6 +34737,10 @@ MonoBehaviour:
   frostAppliedEffectName: Frost_EFF
   awakenScreenEffectPrefab: {fileID: 3942825033974895155, guid: 7297fe0a5e06fb644a731296af23d579, type: 3}
   awakenScreenEffectScale: 110
+  turnOrderTimeline: {fileID: 0}
+  lockInputDuringEnemyTurn: 1
+  enemyTurnStartDelay: 0.35
+  disruptionLockSeconds: 0.6
   logVerbose: 1
   useAiDisruption: 1
   aiExplorationEpsilon: 0.15
@@ -37661,8 +37666,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1630667201}
   m_HandleRect: {fileID: 1630667200}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.9999801
+  m_Value: 0
+  m_Size: 0.9999967
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -41726,9 +41731,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ee7d953b2ee9fa4d84215c6fc8d7a60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
-  stages: []
-  fallbackStageSceneName: Stage_Forest_Battle
-  preloadFallbackOnStart: 1
+  elementStages:
+  - element: 1
+    sceneName: Fire_BurnedForest
+  - element: 4
+    sceneName: Land_ForestGate
+  - element: 2
+    sceneName: Water_FishingVillagePier
+  - element: 3
+    sceneName: Wind_BrokenSuspensionBridge
+  - element: 5
+    sceneName: Human_ClosedGateMarket
+  defaultStageSceneName: Land_ForestGate
+  preloadAllOnStart: 1
   nonCombatCamera: {fileID: 330585545}
   logVerbose: 1
 --- !u!4 &1677812097
@@ -46493,7 +46508,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 374.99988}
+  m_AnchoredPosition: {x: 0, y: 374.99997}
   m_SizeDelta: {x: 1496, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1868692685
@@ -46781,7 +46796,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 464.99994}
+  m_AnchoredPosition: {x: -0.00018310547, y: 465}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1872743179
@@ -50186,7 +50201,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 464.99994}
+  m_AnchoredPosition: {x: -0.00018310547, y: 465}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2018776364
