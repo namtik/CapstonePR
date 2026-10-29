@@ -6071,7 +6071,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1424448438}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.9999699
+  m_Size: 0.99999815
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -27068,8 +27068,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 888799008}
   m_HandleRect: {fileID: 888799007}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.9999699
+  m_Value: 0
+  m_Size: 0.99999815
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -37667,8 +37667,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1630667201}
   m_HandleRect: {fileID: 1630667200}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.9999699
+  m_Value: 0
+  m_Size: 0.99999815
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -45230,25 +45230,24 @@ MonoBehaviour:
   anchoredOffset: {x: 24, y: -150}
   currentSize: 100
   labelWidth: 90
-  portraitSize: 100
-  actionSize: 60
+  actionSize: 90
   rowSpacing: 10
-  cellSpacing: 10
+  cellSpacing: 30
   actionsPerRow: 2
   reservedRows: 3
   showDisruptions: 1
   slideSpeed: 12
   actionIcons:
   - kind: 0
-    icon: {fileID: 21300000, guid: de34bf76d81ae7b4f8a44d863cf3a3d4, type: 3}
-    color: {r: 0.95, g: 0.34, b: 0.3, a: 1}
+    icon: {fileID: 21300000, guid: 804efdf6ab50d5e4aafcf355a1811852, type: 3}
+    color: {r: 0.3018868, g: 0.3018868, b: 0.3018868, a: 1}
     fallbackText: "\uACF5"
   - kind: 1
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: a991cd7c0c2b2464b9f6b9125e663448, type: 3}
     color: {r: 0.7, g: 0.45, b: 0.98, a: 1}
     fallbackText: '?'
   showDamage: 1
-  nextGlowColor: {r: 1, g: 0.8, b: 0.38, a: 1}
+  nextGlowColor: {r: 1, g: 0.8, b: 0.38, a: 0.6666667}
   nextMarker: {fileID: 0}
   glowPulseSpeed: 3
   showItems: 1
@@ -46600,7 +46599,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 374.99954}
+  m_AnchoredPosition: {x: 0, y: 374.99994}
   m_SizeDelta: {x: 1496, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1868692685
@@ -46888,7 +46887,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 464.9995}
+  m_AnchoredPosition: {x: -0.00018310547, y: 465}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1872743179
@@ -50293,7 +50292,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 464.9995}
+  m_AnchoredPosition: {x: -0.00018310547, y: 465}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2018776364

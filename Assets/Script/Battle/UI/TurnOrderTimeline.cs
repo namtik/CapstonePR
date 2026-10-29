@@ -31,8 +31,7 @@ namespace Battle.UI
         [SerializeField] private float currentSize = 96f;   // '현재' 칸 크기
         [Tooltip("현재 칸 오른쪽 이름 라벨 폭")]
         [SerializeField] private float labelWidth = 90f;    // 이름 라벨 폭
-        [SerializeField] private float portraitSize = 80f;  // 몬스터 행 초상화 크기
-        [SerializeField] private float actionSize = 60f;    // 행동 칸 크기
+        [SerializeField] private float actionSize = 80f;    // 행동 칸 크기(몬스터 초상화 + 모서리 정보)
         [SerializeField] private float rowSpacing = 10f;    // 행 간격
         [SerializeField] private float cellSpacing = 10f;   // 행동 칸 간격
         [SerializeField] private int actionsPerRow = 2;     // 몬스터별 표시할 다음 행동 수
@@ -97,11 +96,14 @@ namespace Battle.UI
             public RectTransform rect;
             public Image glow;
             public Image frame;
+            public Image portrait;            // 몬스터 초상화(칸 배경)
+            public TextMeshProUGUI initial;   // 초상화 없을 때 이름 첫 글자
+            public Image typeBg;              // 좌하단 행동 유형 배지
             public Image icon;
             public TextMeshProUGUI fallback;
-            public Image badgeBg;
+            public Image badgeBg;             // 우하단 남은 턴 배지
             public TextMeshProUGUI badgeText;
-            public RectTransform dmgPill;
+            public RectTransform dmgPill;     // 좌상단 공격력
             public TextMeshProUGUI dmgText;
             public Image marker;
         }
@@ -114,9 +116,6 @@ namespace Battle.UI
             public RectTransform rect;
             public CanvasGroup group;
             public Image highlight;
-            public Image frame;
-            public Image portrait;
-            public TextMeshProUGUI initial;
             public CellView[] cells;
             public readonly List<Prediction> preds = new List<Prediction>();
             public bool used;
@@ -452,7 +451,7 @@ namespace Battle.UI
                 row.group.alpha = Mathf.MoveTowards(row.group.alpha, targetAlpha, dt * 5f);
                 FillRow(row, isActing, nbc.ActingIsDisruption, r == nextRow ? nextCell : -1, glow);
 
-                y -= portraitSize + rowSpacing;
+                y -= actionSize + rowSpacing;
             }
 
             // 죽은 적의 행 — 왼쪽으로 빠지며 사라지고, 아래 행들이 위로 당겨진다
@@ -471,7 +470,7 @@ namespace Battle.UI
             float rowsTop = HeaderH + currentSize + rowSpacing * 2f;
             // 몬스터 수와 관계없이 최대 행 수만큼 자리를 잡아 패널 크기·아이템 위치를 고정
             int rowSlots = Mathf.Max(_order.Count, reservedRows);
-            float rowsH = rowSlots > 0 ? rowSlots * (portraitSize + rowSpacing) - rowSpacing : 0f;
+            float rowsH = rowSlots > 0 ? rowSlots * (actionSize + rowSpacing) - rowSpacing : 0f;
             float targetH = rowsTop + rowsH + 10f;
 
             // 아이템 구역 — 몬스터 행 아래 구분선 다음, 행이 줄면 함께 위로 당겨진다
@@ -489,7 +488,7 @@ namespace Battle.UI
                 targetH = itemsTop + lines * (itemSize + itemSpacing) - itemSpacing + 10f;
             }
 
-            float w = Mathf.Max(currentSize + labelWidth, portraitSize + Mathf.Max(1, actionsPerRow) * (actionSize + cellSpacing));
+            float w = Mathf.Max(currentSize + labelWidth, RowWidth());
             if (hasItems) w = Mathf.Max(w, Mathf.Max(1, itemsPerRow) * (itemSize + itemSpacing) - itemSpacing);
             w += 22f;
             _divider.sizeDelta = new Vector2(w - 22f, 2f);
@@ -498,20 +497,15 @@ namespace Battle.UI
             _panel.rectTransform.sizeDelta = new Vector2(w, size.y <= 0f ? targetH : Mathf.Lerp(size.y, targetH, t));
         }
 
-        // 한 행의 초상화·행동 칸 채우기
+        // 한 행의 행동 칸 채우기
         void FillRow(RowView row, bool isActing, bool actingDisrupt, int nextCell, float glow)
         {
             GetEnemyInfo(row.enemy, out Sprite portrait, out string name);
-            row.portrait.enabled = portrait != null;
-            if (portrait != null && row.portrait.sprite != portrait) row.portrait.sprite = portrait;
-            row.initial.gameObject.SetActive(portrait == null);
-            if (portrait == null) row.initial.text = name.Substring(0, 1);
 
-            // 행동 중인 행 — 배경 강조 + 테두리 행동 색
+            // 행동 중인 행 — 배경 강조
             Color actColor = KindColor(actingDisrupt ? EnemyActionKind.Disrupt : EnemyActionKind.Attack);
             Color hl = isActing ? new Color(actColor.r, actColor.g, actColor.b, 0.35f) : new Color(1f, 1f, 1f, 0f);
             row.highlight.color = Color.Lerp(row.highlight.color, hl, 0.25f);
-            row.frame.color = isActing ? actColor : new Color(0.75f, 0.75f, 0.8f, 0.9f);
 
             for (int c = 0; c < row.cells.Length; c++)
             {
@@ -519,22 +513,31 @@ namespace Battle.UI
                 bool has = c < row.preds.Count;
                 if (cell.rect.gameObject.activeSelf != has) cell.rect.gameObject.SetActive(has);
                 if (!has) continue;
-                FillCell(cell, row.preds[c], c == nextCell, glow);
+                FillCell(cell, row.preds[c], portrait, name, c == nextCell, glow);
             }
         }
 
-        void FillCell(CellView cell, Prediction p, bool isNext, float glow)
+        void FillCell(CellView cell, Prediction p, Sprite portrait, string name, bool isNext, float glow)
         {
             EnemyActionIcon entry = FindIcon(p.kind);
             Color c = KindColor(p.kind);
             cell.frame.color = c;
 
+            // 칸 배경 = 몬스터 초상화
+            cell.portrait.enabled = portrait != null;
+            if (portrait != null && cell.portrait.sprite != portrait) cell.portrait.sprite = portrait;
+            cell.initial.gameObject.SetActive(portrait == null);
+            if (portrait == null) cell.initial.text = string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1);
+
+            // 좌하단 행동 유형
+            cell.typeBg.color = c;
             bool hasIcon = entry != null && entry.icon != null;
             cell.icon.enabled = hasIcon;
             if (hasIcon && cell.icon.sprite != entry.icon) cell.icon.sprite = entry.icon;
             cell.fallback.gameObject.SetActive(!hasIcon);
-            if (!hasIcon) { cell.fallback.text = entry != null ? entry.fallbackText : "?"; cell.fallback.color = c; }
+            if (!hasIcon) cell.fallback.text = entry != null ? entry.fallbackText : "?";
 
+            // 우하단 남은 턴
             cell.badgeBg.color = c;
             cell.badgeText.text = p.steps < 0 ? "!" : p.steps.ToString();
 
@@ -630,7 +633,7 @@ namespace Battle.UI
             TopLeft(_divider);
             _divider.pivot = new Vector2(0f, 0.5f);
             _divider.anchoredPosition = new Vector2(0f, -(HeaderH + currentSize + rowSpacing));
-            _divider.sizeDelta = new Vector2(Mathf.Max(currentSize + labelWidth, portraitSize + actionsPerRow * (actionSize + cellSpacing)), 2f);
+            _divider.sizeDelta = new Vector2(Mathf.Max(currentSize + labelWidth, RowWidth()), 2f);
 
             var rowsGo = new GameObject("Rows", typeof(RectTransform));
             _rows = (RectTransform)rowsGo.transform;
@@ -737,7 +740,7 @@ namespace Battle.UI
             v.rect = (RectTransform)go.transform;
             v.rect.SetParent(_rows, false);
             TopLeft(v.rect);
-            v.rect.sizeDelta = new Vector2(portraitSize + actionsPerRow * (actionSize + cellSpacing), portraitSize);
+            v.rect.sizeDelta = new Vector2(RowWidth(), actionSize);
             v.group = go.GetComponent<CanvasGroup>();
             v.group.alpha = 0f;
             v.group.blocksRaycasts = false;
@@ -747,23 +750,18 @@ namespace Battle.UI
             v.highlight = NewImage("Highlight", v.rect, RoundedSprite(), new Color(1f, 1f, 1f, 0f));
             Stretch(v.highlight.rectTransform, -5f);
 
-            var pGo = new GameObject("Portrait", typeof(RectTransform));
-            var pr = (RectTransform)pGo.transform;
-            pr.SetParent(v.rect, false);
-            TopLeft(pr);
-            pr.sizeDelta = new Vector2(portraitSize, portraitSize);
-            BuildPortrait(pr, 32f, out v.frame, out v.portrait, out v.initial);
-
             int n = Mathf.Max(1, actionsPerRow);
             v.cells = new CellView[n];
             for (int i = 0; i < n; i++)
             {
-                float x = portraitSize + cellSpacing + i * (actionSize + cellSpacing);
-                // 칸은 초상화 세로 중앙선에 맞춰 정렬
-                v.cells[i] = CreateCell(v.rect, new Vector2(x + actionSize * 0.5f, -portraitSize * 0.5f));
+                float x = i * (actionSize + cellSpacing);
+                v.cells[i] = CreateCell(v.rect, new Vector2(x + actionSize * 0.5f, -actionSize * 0.5f));
             }
             return v;
         }
+
+        // 몬스터 행 폭(행동 칸 N개)
+        float RowWidth() => Mathf.Max(1, actionsPerRow) * (actionSize + cellSpacing) - cellSpacing;
 
         CellView CreateCell(RectTransform parent, Vector2 center)
         {
@@ -781,15 +779,19 @@ namespace Battle.UI
             Stretch(c.glow.rectTransform, -5f);
             c.glow.gameObject.SetActive(false);
 
-            c.frame = NewImage("Frame", c.rect, RoundedSprite(), Color.white);
-            Stretch(c.frame.rectTransform, 0f);
-            var bg = NewImage("Bg", c.rect, RoundedSprite(), new Color(0.12f, 0.12f, 0.16f, 1f));
-            Stretch(bg.rectTransform, 3f);
+            // 테두리(행동 종류 색) + 몬스터 초상화
+            BuildPortrait(c.rect, actionSize * 0.4f, out c.frame, out c.portrait, out c.initial);
 
-            c.icon = NewImage("Icon", c.rect, null, Color.white);
+            // 행동 유형 배지(좌하단 원)
+            c.typeBg = NewImage("Type", c.rect, CircleSprite(), Color.white);
+            var tb = c.typeBg.rectTransform;
+            tb.anchorMin = tb.anchorMax = new Vector2(0f, 0f);
+            tb.anchoredPosition = new Vector2(2f, 2f);
+            tb.sizeDelta = new Vector2(28f, 28f);
+            c.icon = NewImage("Icon", tb, null, Color.white);
             c.icon.preserveAspect = true;
-            Stretch(c.icon.rectTransform, 9f);
-            c.fallback = NewText("Fallback", c.rect, 24f, TextAlignmentOptions.Center);
+            Stretch(c.icon.rectTransform, 4f);
+            c.fallback = NewText("Fallback", tb, 16f, TextAlignmentOptions.Center);
             Stretch(c.fallback.rectTransform, 0f);
             c.fallback.fontStyle = FontStyles.Bold;
 
