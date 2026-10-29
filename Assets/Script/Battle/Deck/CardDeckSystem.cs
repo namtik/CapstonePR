@@ -109,6 +109,7 @@ namespace Battle.Deck
             _drawPile.RemoveAt(_drawPile.Count - 1);
             _hand.Add(card);
             OnCardDrawn?.Invoke(card);
+            Battle.UI.BattleLog.RecordDraw(card.data);
             return true;
         }
 
@@ -123,6 +124,7 @@ namespace Battle.Deck
             _hand.Add(card);
             OnCardDrawn?.Invoke(card);
             OnPileChanged?.Invoke();
+            Battle.UI.BattleLog.RecordDraw(card.data);
             return true;
         }
 

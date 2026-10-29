@@ -29,6 +29,8 @@ namespace Battle
         [SerializeField] private CardEffectOverlay effectOverlay;     // 카드 효과 이펙트 오버레이
         [Tooltip("플레이어 피격 시 화면 빨간 플래시. 비우면 자동 생성.")]
         [SerializeField] private PlayerDamageOverlay damageOverlay;   // 플레이어 피격 화면 오버레이
+        [Tooltip("전투 중 Tab으로 띄우는 요괴 정보 패널. CombatStage 캔버스에 배치. 비우면 씬에서 찾는다.")]
+        [SerializeField] private BattleTabPanel tabPanel;             // 요괴 정보 탭 패널
         [Tooltip("각성 동안 화면 상단에 남은 시간을 표시할 전용 게이지. 씬에 직접 만들어 연결(코드로 생성하지 않음). 비우면 표시 생략.")]
         [SerializeField] private AwakenTimerGauge awakenTimerGauge;   // 상단 각성 타이머 게이지
 
@@ -401,8 +403,11 @@ namespace Battle
             EnsureEventSystem();
 
             if (turnOrderTimeline == null) turnOrderTimeline = ResolveOrCreateTurnOrderTimeline();
+            if (tabPanel == null) tabPanel = ResolveTabPanel();
+            tabPanel?.Hide();
 
             _inBattle = true;
+            BattleLog.Clear();
             _cardPresenting = false;
             ResetEnemyTurnState();
             _elementInputCount = 0;
@@ -431,7 +436,15 @@ namespace Battle
             if (handHud != null)
                 handHud.SetAwakenGaugeVisible(true);
 
-            _deck.Draw(START_DRAW);
+            BattleLog.SetDrawLogging(false);
+            try
+            {
+                _deck.Draw(START_DRAW);
+            }
+            finally
+            {
+                BattleLog.SetDrawLogging(true);
+            }
             UpdateAwakenText();
             Log($"전투 시작 — {START_DRAW}장 드로우");
 
@@ -466,6 +479,7 @@ namespace Battle
         public void EndBattle()
         {
             _inBattle = false;
+            BattleLog.Clear();
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
@@ -492,6 +506,7 @@ namespace Battle
             _awakenMarkerHandles.Clear();
             if (effectOverlay != null) effectOverlay.ClearAll();
             StopAwakenScreenEffect();
+            if (tabPanel != null) tabPanel.Hide();
             Log("전투 종료");
         }
 
@@ -855,6 +870,12 @@ namespace Battle
         // 키 입력 처리 (D 드로우)
         void HandleInput()
         {
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                if (tabPanel == null) tabPanel = ResolveTabPanel();
+                tabPanel?.Toggle();
+            }
+
             if (Input.GetKeyDown(KeyCode.D))
             {
                 if (_cardPresenting) return;
@@ -971,6 +992,26 @@ namespace Battle
             return true;
         }
 
+        // 카드 효과를 실행하고, 피해·방어도를 카드 이미지와 한 기록으로 남긴다.
+        CardEffectResolver.ResolveResult ResolveLoggedCard(CardInstance card)
+        {
+            int before = _player != null ? Mathf.RoundToInt(_player.guard) : 0;
+            BattleLog.SetGuardLogging(false);
+            CardEffectResolver.ResolveResult result;
+            try
+            {
+                result = _resolver.Resolve(card);
+            }
+            finally
+            {
+                BattleLog.SetGuardLogging(true);
+            }
+
+            int gained = _player != null ? Mathf.Max(0, Mathf.RoundToInt(_player.guard) - before) : 0;
+            BattleLog.RecordCardPlay(card != null ? card.data : null, result.totalDamage, gained);
+            return result;
+        }
+
         // 카드 사용 실제 효과 처리 — 중앙 연출 종료 시점 호출(카드는 이미 패에서 제거됨)
         void ResolveCardUse(CardInstance card)
         {
@@ -988,7 +1029,7 @@ namespace Battle
 
             int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
 
-            var result = _resolver.Resolve(card);
+            var result = ResolveLoggedCard(card);
 
             card.selfUseCount++;
 
@@ -996,7 +1037,7 @@ namespace Battle
             if (_relicFirstCardRecastPending)
             {
                 _relicFirstCardRecastPending = false;
-                _resolver.Resolve(card);
+                ResolveLoggedCard(card);
                 Log("[유물] 복사경 — 첫 카드 효과 재발동");
             }
 
@@ -1022,7 +1063,7 @@ namespace Battle
             if (result.recastLastCard && _lastResolvedCard != null)
             {
                 Log($"[재사용] {_lastResolvedCard.data.displayName} 효과 한 번 더");
-                _resolver.Resolve(_lastResolvedCard);
+                ResolveLoggedCard(_lastResolvedCard);
             }
 
             // 패에서 카드 선택 → 소멸 (불4/103, 불13/112, 물10/209)
@@ -1708,6 +1749,7 @@ namespace Battle
                     CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
                     CardElement target = elements[Random.Range(0, elements.Length)];
                     ApplyElementCurse(target, CURSE_DURATION_USES);
+                    BattleLog.RecordDisruption();
                     if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0);
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
                     return $"방해: {ElementName(target)} 저주!";
@@ -1716,6 +1758,7 @@ namespace Battle
                 {
                     var dummy = CardDatabase.CreateNeutralFillerInstance();
                     if (dummy != null) _deck.AddToDrawShuffled(dummy);
+                    BattleLog.RecordDisruption();
                     handHud?.Refresh();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 1); if (_track != null) _track.exhaustCard = dummy; }
                     Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
@@ -1728,6 +1771,7 @@ namespace Battle
                         : 2;
                     int before = _elementInputCount;
                     _elementInputCount = Mathf.Max(0, _elementInputCount - absorb);
+                    BattleLog.RecordDisruption(absorb);
                     UpdateAwakenText();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 2, AbsorbReward(before));
                     Log($"[방해] 흡수 — 각성 게이지 -{absorb} ({before} → {_elementInputCount})");
@@ -1736,6 +1780,7 @@ namespace Battle
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
                 {
                     _enemy?.BuffNextAttack();
+                    BattleLog.RecordDisruption();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 3); if (_track != null) _track.playerHpAtFire = _player != null ? _player.currentHp : 0; }
                     Log("[방해] 강화 — 적 다음 공격 피해 증가(1회)");
                     return "방해: 적 강화!";
@@ -1744,12 +1789,16 @@ namespace Battle
                 {
                     _recoverCooldown = 2;
                     float enemyHpBefore = _enemyStat != null ? _enemyStat.currentHp : 0f;
+                    int healed = 0;
                     if (_enemyStat != null)
                     {
                         float heal = _enemyStat.maxHp * 0.3f;
+                        healed = Mathf.RoundToInt(heal);
                         _enemyStat.Heal(heal);
                         Log($"[방해] 회복 — 적 HP +{heal:F0} (최대 30%)");
                     }
+                    if (healed > 0) BattleLog.RecordDisruption(healed);
+                    else BattleLog.RecordDisruption();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 4, RecoverReward(enemyHpBefore));
                     return "방해: 적 체력 회복!";
                 }
@@ -1757,6 +1806,7 @@ namespace Battle
                 {
                     int handBefore = _deck != null ? _deck.HandCount : 0;
                     int n = Mathf.Min(2, _deck.HandCount);
+                    BattleLog.RecordDisruption();
                     if (n > 0) StartCoroutine(EnemyForcedDiscardRoutine(n));
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
                     Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");
@@ -2309,6 +2359,7 @@ namespace Battle
         // 좌상단 유물 아이콘 펄스 연출 후 onShown 호출 (HUD 없으면 즉시 실행)
         public void PulseRelic(Battle.Relic.RelicSO relic, string label, System.Action onShown)
         {
+            if (relic != null) BattleLog.RecordRelic(relic.icon);
             if (RelicHUD.Instance != null && relic != null)
                 RelicHUD.Instance.PulseRelicIcon(relic, label, onShown);
             else
@@ -2462,6 +2513,18 @@ namespace Battle
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
             return go.AddComponent<TurnOrderTimeline>();
+        }
+
+        // CombatStage에 배치된 요괴 정보 탭 패널을 찾는다. 없으면 생성하지 않는다.
+        BattleTabPanel ResolveTabPanel()
+        {
+            if (tabPanel != null) return tabPanel;
+
+            var existing = FindFirstObjectByType<BattleTabPanel>(FindObjectsInactive.Include);
+            if (existing != null) return existing;
+
+            Debug.LogWarning("[NewBattle] BattleTabPanel이 CombatStage에 없습니다. 캔버스에 배치하세요.");
+            return null;
         }
     }
 }
