@@ -220,6 +220,13 @@ public class RoundManager : MonoBehaviour
             combatStageController.Initialize(roundData);
         }
 
+        if (roundData is BossRoundData)
+            GameAudio.Instance?.SetCombatTrack(NodeType.Boss);
+        else if (roundData is EliteRoundData)
+            GameAudio.Instance?.SetCombatTrack(NodeType.Elite);
+        else if (roundData is CombatRoundData)
+            GameAudio.Instance?.SetCombatTrack(NodeType.Combat);
+
         currentRoundHandler = roundData.CreateHandler();
         currentRoundHandler.OnEnterRound(this);
     }
@@ -672,11 +679,18 @@ public class RoundManager : MonoBehaviour
 
         StopAllCoroutines();
 
-        // 2D: enemySpawnPoint 아래 남은 적 정리
+        // 2D 스폰 위치(EnemyPos) 아래 남은 적만 지운다.
+        // 같은 트랜스폼에 3D 전투 HP바·예고 글자가 상주하므로, 적 컴포넌트가 없는 자식은 남긴다.
         if (enemySpawnPoint != null)
         {
             for (int i = enemySpawnPoint.childCount - 1; i >= 0; i--)
-                Destroy(enemySpawnPoint.GetChild(i).gameObject);
+            {
+                Transform child = enemySpawnPoint.GetChild(i);
+                if (child == null) continue;
+                if (child.GetComponent<EnemyStat>() == null && child.GetComponent<EnemyController>() == null)
+                    continue;
+                Destroy(child.gameObject);
+            }
         }
 
         // 3D: 스테이지 앵커 아래 남은 적 정리(사망 연출 중이던 잔여 포함)

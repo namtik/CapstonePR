@@ -1688,6 +1688,12 @@ namespace Battle
             return pool[Random.Range(0, pool.Count)];
         }
 
+        void LogEnemyDisruption(int action)
+        {
+            Sprite portrait = _enemyStat != null && _enemyStat.Data != null ? _enemyStat.Data.enemySprite : null;
+            BattleLog.RecordDisruption(action, portrait, EnemyCombatParty.AliveIndexOf(_enemy));
+        }
+
         // 적 방해행동 발동 — AI(또는 랜덤)로 1개 선택 후 분기 실행, 보상 추적 시작
         public string TriggerDisruption() => TriggerDisruption(_enemy);
 
@@ -1742,6 +1748,8 @@ namespace Battle
             // 회복 쿨다운 진행 — 회복이 아닌 행동이 발동되면 1 감소
             if (pick != 4 && _recoverCooldown > 0) _recoverCooldown--;
 
+            LogEnemyDisruption(pick);
+
             switch (pick)
             {
                 case 0: // 저주 — 한 속성 카드 사용 시 플레이어 피해(2회 지속)
@@ -1749,7 +1757,6 @@ namespace Battle
                     CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
                     CardElement target = elements[Random.Range(0, elements.Length)];
                     ApplyElementCurse(target, CURSE_DURATION_USES);
-                    BattleLog.RecordDisruption();
                     if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0);
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
                     return $"방해: {ElementName(target)} 저주!";
@@ -1758,7 +1765,6 @@ namespace Battle
                 {
                     var dummy = CardDatabase.CreateNeutralFillerInstance();
                     if (dummy != null) _deck.AddToDrawShuffled(dummy);
-                    BattleLog.RecordDisruption();
                     handHud?.Refresh();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 1); if (_track != null) _track.exhaustCard = dummy; }
                     Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
@@ -1771,7 +1777,6 @@ namespace Battle
                         : 2;
                     int before = _elementInputCount;
                     _elementInputCount = Mathf.Max(0, _elementInputCount - absorb);
-                    BattleLog.RecordDisruption(absorb);
                     UpdateAwakenText();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 2, AbsorbReward(before));
                     Log($"[방해] 흡수 — 각성 게이지 -{absorb} ({before} → {_elementInputCount})");
@@ -1780,7 +1785,6 @@ namespace Battle
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
                 {
                     _enemy?.BuffNextAttack();
-                    BattleLog.RecordDisruption();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 3); if (_track != null) _track.playerHpAtFire = _player != null ? _player.currentHp : 0; }
                     Log("[방해] 강화 — 적 다음 공격 피해 증가(1회)");
                     return "방해: 적 강화!";
@@ -1789,16 +1793,12 @@ namespace Battle
                 {
                     _recoverCooldown = 2;
                     float enemyHpBefore = _enemyStat != null ? _enemyStat.currentHp : 0f;
-                    int healed = 0;
                     if (_enemyStat != null)
                     {
                         float heal = _enemyStat.maxHp * 0.3f;
-                        healed = Mathf.RoundToInt(heal);
                         _enemyStat.Heal(heal);
                         Log($"[방해] 회복 — 적 HP +{heal:F0} (최대 30%)");
                     }
-                    if (healed > 0) BattleLog.RecordDisruption(healed);
-                    else BattleLog.RecordDisruption();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 4, RecoverReward(enemyHpBefore));
                     return "방해: 적 체력 회복!";
                 }
@@ -1806,7 +1806,6 @@ namespace Battle
                 {
                     int handBefore = _deck != null ? _deck.HandCount : 0;
                     int n = Mathf.Min(2, _deck.HandCount);
-                    BattleLog.RecordDisruption();
                     if (n > 0) StartCoroutine(EnemyForcedDiscardRoutine(n));
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
                     Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");

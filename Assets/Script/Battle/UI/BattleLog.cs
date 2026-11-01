@@ -15,17 +15,22 @@ namespace Battle.UI
             public readonly int Id;
             public readonly Sprite Icon;
             public readonly Sprite Badge;
+            public readonly Sprite MonsterNumber;
             public readonly bool HasNumber;
             public readonly int Number;
-            public int Slots => (HasNumber || Badge != null) ? 2 : 1;
+            public readonly string Caption;
+            public bool HasCaption => HasNumber || !string.IsNullOrEmpty(Caption);
+            public int Slots => (HasCaption || Badge != null) ? 2 : 1;
 
-            public Entry(int id, Sprite icon, Sprite badge, bool hasNumber, int number)
+            public Entry(int id, Sprite icon, Sprite badge, bool hasNumber, int number, string caption, Sprite monsterNumber)
             {
                 Id = id;
                 Icon = icon;
                 Badge = badge;
                 HasNumber = hasNumber;
                 Number = number;
+                Caption = caption;
+                MonsterNumber = monsterNumber;
             }
         }
 
@@ -54,24 +59,23 @@ namespace Battle.UI
             Changed?.Invoke();
         }
 
-        public static void RecordEnemyAttack(Sprite portrait, int damage)
+        public static void RecordEnemyAttack(Sprite portrait, int damage, int monsterIndex)
         {
             if (!InBattle) return;
             Sprite attack = Load("UI/Tab/UI_Icon_Attack");
             if (portrait == null) portrait = attack;
-            Push(portrait, attack, true, damage);
+            Push(portrait, attack, true, damage, null, MonsterMark(monsterIndex));
         }
 
-        public static void RecordDisruption()
-        {
-            if (!InBattle) return;
-            Push(Load("UI/Tab/UI_Icon_Interference"), null, false, 0);
-        }
+        static readonly string[] DisruptionNames = { "저주", "탈진", "흡수", "강화", "회복", "버리기" };
 
-        public static void RecordDisruption(int number)
+        public static void RecordDisruption(int action, Sprite portrait, int monsterIndex)
         {
             if (!InBattle) return;
-            Push(Load("UI/Tab/UI_Icon_Interference"), null, true, number);
+            Sprite icon = Load("UI/Tab/UI_Icon_Interference");
+            if (portrait == null) portrait = icon;
+            string name = action >= 0 && action < DisruptionNames.Length ? DisruptionNames[action] : "방해";
+            Push(portrait, icon, false, 0, name, MonsterMark(monsterIndex));
         }
 
         public static void RecordEnemyBurn(Sprite portrait, int damage)
@@ -79,7 +83,7 @@ namespace Battle.UI
             if (!InBattle || damage <= 0) return;
             Sprite burn = Load("UI/Tab/UI_Icon_Burn");
             if (portrait == null) portrait = burn;
-            Push(portrait, burn, true, damage);
+            Push(portrait, burn, true, damage, null, null);
         }
 
         // 카드를 쓰면 피해·방어도를 카드 이미지 한 칸에 붙인다. 둘 다 없으면 카드 이미지만.
@@ -90,15 +94,15 @@ namespace Battle.UI
             bool logged = false;
             if (damage > 0)
             {
-                Push(card, Load("UI/Tab/UI_Icon_Attack"), true, damage);
+                Push(card, Load("UI/Tab/UI_Icon_Attack"), true, damage, null, null);
                 logged = true;
             }
             if (guardGained > 0)
             {
-                Push(card, Load("UI/Tab/UI_Icon_Shield"), true, guardGained);
+                Push(card, Load("UI/Tab/UI_Icon_Shield"), true, guardGained, null, null);
                 logged = true;
             }
-            if (!logged) Push(card, null, false, 0);
+            if (!logged) Push(card, null, false, 0, null, null);
         }
 
         // 카드 효과 처리 중에는 방어도를 따로 남기지 않고, 카드 기록에 합친다.
@@ -116,28 +120,35 @@ namespace Battle.UI
         public static void RecordDraw(CardData data)
         {
             if (!_logDraws || !InBattle || data == null) return;
-            Push(LoadCard(data), Load("UI/Tab/UI_Icon_Draw"), false, 0);
+            Push(LoadCard(data), Load("UI/Tab/UI_Icon_Draw"), false, 0, null, null);
         }
 
         public static void RecordGuard(int amount)
         {
             if (!_logGuard || !InBattle || amount <= 0) return;
-            Push(Load("UI/Tab/UI_Icon_Shield"), null, true, amount);
+            Push(Load("UI/Tab/UI_Icon_Shield"), null, true, amount, null, null);
         }
 
         public static void RecordRelic(Sprite icon)
         {
             if (!InBattle || icon == null) return;
-            Push(icon, null, false, 0);
+            Push(icon, null, false, 0, null, null);
         }
 
-        static void Push(Sprite icon, Sprite badge, bool hasNumber, int number)
+        static Sprite MonsterMark(int monsterIndex)
         {
-            int cost = (hasNumber || badge != null) ? 2 : 1;
+            if (monsterIndex < 0 || monsterIndex > 2) return null;
+            return Load("UI/Tab/UI_IconNum" + (monsterIndex + 1));
+        }
+
+        static void Push(Sprite icon, Sprite badge, bool hasNumber, int number, string caption, Sprite monsterNumber)
+        {
+            bool hasCaption = hasNumber || !string.IsNullOrEmpty(caption);
+            int cost = (hasCaption || badge != null) ? 2 : 1;
             while (_entries.Count > 0 && UsedSlots() + cost > MaxSlots)
                 _entries.RemoveAt(0);
 
-            _entries.Add(new Entry(++_nextId, icon, badge, hasNumber, number));
+            _entries.Add(new Entry(++_nextId, icon, badge, hasNumber, number, caption, monsterNumber));
             Changed?.Invoke();
         }
 

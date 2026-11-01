@@ -504,7 +504,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         {
             player.TakeDamage(damage, "enemy_attack");
             Sprite portrait = stat != null && stat.Data != null ? stat.Data.enemySprite : null;
-            Battle.UI.BattleLog.RecordEnemyAttack(portrait, damage);
+            Battle.UI.BattleLog.RecordEnemyAttack(portrait, damage, EnemyCombatParty.AliveIndexOf(this));
             // 공격 모션이 있으면 마지막(임팩트) 프레임에서만 이펙트(이벤트로 처리). 모션이 없을 때만 시작 시 폴백 재생.
             if (view == null || !view.HasAttackMotion) PlayAttackVfx();
 

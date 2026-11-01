@@ -8,7 +8,7 @@ namespace Battle.UI
 {
     // 전투 중 Tab으로 띄우는 요괴 정보 패널.
     // 프레임과 정보 칸은 CombatStage 캔버스에 미리 배치한다.
-    // 플레이 중에는 이 스크립트가 위치·크기를 다시 쓰지 않는다.
+    // 플레이 중에는 프레임 위치·크기를 다시 쓰지 않는다. 이름 글자는 인스펙터 값을 따른다.
     public class BattleTabPanel : MonoBehaviour
     {
         [Tooltip("열고 닫을 프레임. CombatStage 캔버스에 배치된 UI_Tab_Frame.")]
@@ -16,6 +16,25 @@ namespace Battle.UI
 
         [Tooltip("왼쪽, 가운데, 오른쪽 요괴 정보 칸.")]
         [SerializeField] private MonsterInfoColumn[] columns;
+
+        [Header("몬스터 이름")]
+        [Tooltip("초상화 아래 이름 글꼴.")]
+        [SerializeField] private TMP_FontAsset nameFont;
+        [Tooltip("이름 글자 크기.")]
+        [SerializeField] private float nameFontSize = 26f;
+        [Tooltip("이름 색.")]
+        [SerializeField] private Color nameColor = new Color(0.78f, 0.09f, 0.1f, 1f);
+        [Tooltip("이름 정렬.")]
+        [SerializeField] private TextAlignmentOptions nameAlignment = TextAlignmentOptions.Center;
+        [Tooltip("초상화 아래쪽 기준 위치. X는 좌우, Y는 위로 겹치는 정도.")]
+        [SerializeField] private Vector2 nameOffset = new Vector2(0f, 12f);
+        [Tooltip("이름 칸 너비.")]
+        [SerializeField] private float nameWidth = 240f;
+        [Tooltip("이름 외곽선 두께. 0이면 외곽선이 없습니다.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float nameOutlineWidth = 0f;
+        [Tooltip("이름 외곽선 색.")]
+        [SerializeField] private Color nameOutlineColor = Color.black;
 
         readonly List<EnemyController> _alive = new List<EnemyController>();
         readonly StringBuilder _label = new StringBuilder();
@@ -96,6 +115,7 @@ namespace Battle.UI
             }
 
             ApplySlotNumber(column, show ? enemyIndex : -1);
+            ApplyName(column, show ? data.enemyName : string.Empty, show);
             SetText(column.attackText, show ? FormatAttack(data) : string.Empty);
             SetText(column.absorbText, show ? data.흡수수치.ToString() : string.Empty);
             SetText(column.interferenceText, show ? FormatInterference(data) : string.Empty);
@@ -138,6 +158,59 @@ namespace Battle.UI
             _numberSprites[0] = Resources.Load<Sprite>("UI/Tab/UI_IconNum1");
             _numberSprites[1] = Resources.Load<Sprite>("UI/Tab/UI_IconNum2");
             _numberSprites[2] = Resources.Load<Sprite>("UI/Tab/UI_IconNum3");
+        }
+
+        void ApplyName(MonsterInfoColumn column, string value, bool show)
+        {
+            TMP_Text label = EnsureName(column);
+            if (label == null) return;
+
+            label.gameObject.SetActive(show);
+            if (!show) return;
+
+            if (label.text != value) label.text = value ?? string.Empty;
+            if (nameFont != null && label.font != nameFont) label.font = nameFont;
+            label.fontSize = Mathf.Max(8f, nameFontSize);
+            label.color = nameColor;
+            label.alignment = nameAlignment;
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.raycastTarget = false;
+
+            float outline = Mathf.Clamp01(nameOutlineWidth);
+            if (!Mathf.Approximately(label.outlineWidth, outline)) label.outlineWidth = outline;
+            Color32 outlineColor = nameOutlineColor;
+            Color32 currentOutline = label.outlineColor;
+            if (currentOutline.r != outlineColor.r || currentOutline.g != outlineColor.g
+                || currentOutline.b != outlineColor.b || currentOutline.a != outlineColor.a)
+                label.outlineColor = outlineColor;
+
+            RectTransform rect = label.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            float outlinePad = outline * label.fontSize;
+            rect.sizeDelta = new Vector2(Mathf.Max(40f, nameWidth), Mathf.Max(16f, label.fontSize + 10f + outlinePad));
+            rect.anchoredPosition = nameOffset;
+        }
+
+        TMP_Text EnsureName(MonsterInfoColumn column)
+        {
+            if (column.nameText != null) return column.nameText;
+            if (column.enemyImage == null) return null;
+
+            Transform parent = column.enemyImage.transform.parent;
+            if (parent == null) return null;
+            Transform found = parent.Find("MonsterName");
+            if (found != null) column.nameText = found.GetComponent<TMP_Text>();
+            if (column.nameText != null) return column.nameText;
+
+            GameObject go = new GameObject("MonsterName", typeof(RectTransform));
+            go.layer = parent.gameObject.layer;
+            go.transform.SetParent(parent, false);
+            go.transform.SetAsLastSibling();
+            column.nameText = go.AddComponent<TextMeshProUGUI>();
+            return column.nameText;
         }
 
         static void SetText(TMP_Text label, string value)
@@ -220,6 +293,7 @@ namespace Battle.UI
             public TMP_Text attackText;
             public TMP_Text absorbText;
             public TMP_Text interferenceText;
+            public TMP_Text nameText;
         }
     }
 }

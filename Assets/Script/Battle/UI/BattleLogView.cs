@@ -236,12 +236,13 @@ namespace Battle.UI
             infoImage.raycastTarget = false;
             infoImage.color = Color.white;
             BuildIcon(info, entry.Icon, InfoInnerSize(info));
+            BuildMonsterNumber(info, entry.MonsterNumber);
 
             float right = pad + plate + 6f + badgeOffsetX;
             if (entry.Badge != null)
             {
                 float badge = BadgeSize();
-                if (!entry.HasNumber)
+                if (!entry.HasCaption)
                 {
                     float areaLeft = pad + plate;
                     float areaRight = root.sizeDelta.x;
@@ -261,7 +262,7 @@ namespace Battle.UI
                 right += badge + 4f;
             }
 
-            if (!entry.HasNumber) return;
+            if (!entry.HasCaption) return;
 
             GameObject textGo = new GameObject("Number", typeof(RectTransform));
             textGo.layer = gameObject.layer;
@@ -274,14 +275,43 @@ namespace Battle.UI
             textRect.offsetMax = new Vector2(-8f + numberOffsetX, -4f);
 
             TextMeshProUGUI label = textGo.AddComponent<TextMeshProUGUI>();
-            label.text = entry.Number.ToString();
-            label.fontSize = Mathf.Max(8f, fontSize);
+            bool caption = !string.IsNullOrEmpty(entry.Caption);
+            label.text = caption ? entry.Caption : entry.Number.ToString();
+            float captionSize = Mathf.Max(8f, fontSize * 0.78f);
+            label.fontSize = caption ? captionSize : Mathf.Max(8f, fontSize);
+            if (caption)
+            {
+                label.enableAutoSizing = true;
+                label.fontSizeMin = 14f;
+                label.fontSizeMax = captionSize;
+            }
             label.alignment = numberAlignment;
             label.color = numberColor;
             label.raycastTarget = false;
             label.enableWordWrapping = false;
             label.overflowMode = TextOverflowModes.Overflow;
             if (font != null) label.font = font;
+        }
+
+        void BuildMonsterNumber(RectTransform parent, Sprite mark)
+        {
+            if (mark == null) return;
+            float height = Mathf.Clamp(parent.sizeDelta.y * 0.34f, 16f, 40f);
+            float aspect = mark.rect.height > 0f ? mark.rect.width / mark.rect.height : 1f;
+            GameObject go = new GameObject("MonsterNumber", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.layer = parent.gameObject.layer;
+            go.transform.SetParent(parent, false);
+            RectTransform rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.sizeDelta = new Vector2(height * aspect, height);
+            rect.anchoredPosition = Vector2.zero;
+            Image image = go.GetComponent<Image>();
+            image.sprite = mark;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            image.color = Color.white;
         }
 
         void BuildIcon(RectTransform parent, Sprite sprite, float size)
