@@ -17,7 +17,7 @@ namespace Battle
         public const float AWAKEN_DURATION_SECONDS = 4f;               // 각성 기본 지속 시간(초)
         public const float AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS = 1f; // 보유 콤보 1개당 추가 지속 시간(초)
         public const float COMBO_BONUS_SECONDS = 0.1f;                 // 콤보 1회 성공 시 추가 시간(초)
-        public const int COMBO_REUSE_INPUT = 5;                        // 콤보 재사용까지 필요한 속성 입력 횟수
+        public const float COMBO_REUSE_SECONDS = 5f;                   // 콤보 재사용까지 걸리는 시간(초)
         public const int START_DRAW = 5;                              // 전투 시작 시 드로우 수
 
         public static NewBattleController Instance { get; private set; } // 싱글톤 인스턴스
@@ -175,7 +175,7 @@ namespace Battle
         private List<CardInstance> _awakenSnapshotDiscard; // 각성 직전 버린 더미 스냅샷(복원용)
 
         private readonly List<CardElement> _comboInput = new List<CardElement>(); // 콤보 슬롯(슬라이딩 윈도우 3장)
-        private int[] _comboCooldown = System.Array.Empty<int>(); // 콤보별 재사용 쿨다운(남은 입력 횟수)
+        private float[] _comboCooldown = System.Array.Empty<float>(); // 콤보별 남은 재사용 대기(초)
         private readonly List<ComboSkillDef> _queuedComboSkills = new List<ComboSkillDef>(); // 각성 종료 시 발동할 콤보 큐
         private readonly List<CardElement> _awakenInputHistory = new List<CardElement>(); // 각성 중 입력 속성 전체 기록
         private readonly List<Vector2> _awakenMarkerPositions = new List<Vector2>(); // 콤보 큐와 1:1 표식 위치
@@ -336,6 +336,7 @@ namespace Battle
         void TickAwakenTimer()
         {
             if (!_awakenActive) return;
+            TickComboCooldownTime();
             _awakenTimeRemaining -= Time.deltaTime;
             if (_awakenTimeRemaining <= 0f)
             {
@@ -525,8 +526,8 @@ namespace Battle
                 return;
             }
             ownedComboSkills = BuildOwnedComboDefs();
-            _comboCooldown = new int[ownedComboSkills.Count];
-            if (handHud != null) handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+            _comboCooldown = new float[ownedComboSkills.Count];
+            PushComboCooldownUi();
             Debug.Log($"[NewBattle] 보유 콤보 갱신 — {ownedComboSkills.Count}개 " +
                       (ownedComboIds != null && ownedComboIds.Count > 0
                           ? $"(ids: {string.Join(",", ownedComboIds)})" : "(전체)"));
@@ -582,7 +583,7 @@ namespace Battle
             }
 
             if (handHud != null)
-                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                PushComboCooldownUi();
 
             Debug.Log($"[NewBattle] 콤보 {refComboId} 슬롯 변경: {ComboSkillDef.ElementsLabel(slot1, slot2, slot3)}");
         }
@@ -634,9 +635,9 @@ namespace Battle
 
             ownedComboSkills?.Clear();
             _comboSlotOverrides.Clear();
-            _comboCooldown = new int[0];
+            _comboCooldown = System.Array.Empty<float>();
             if (handHud != null)
-                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                PushComboCooldownUi();
 
             Debug.Log("[NewBattle] 런 재시작 — 보유 콤보 초기화");
         }
@@ -940,7 +941,6 @@ namespace Battle
                 if (card.data.comboSlot)
                 {
                     AddToComboSlot(card.Element);
-                    TickComboCooldowns();
                     comboTriggered = TryActivateCombo();
                 }
 
@@ -969,7 +969,7 @@ namespace Battle
                         handHud.PlayComboSlotInputEffect(_comboInput.Count - 1);
                         SfxManager.Instance?.PlayAwakenSlotInput();
                     }
-                    handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                    PushComboCooldownUi();
                     handHud.UpdateAwakenInputHistory(_awakenInputHistory);
                     handHud.PlayCardUsePresentation(card, null, interruptable: true);
                 }
@@ -1299,7 +1299,7 @@ namespace Battle
             _deck.Draw(_deck.HandLimit);
 
             _comboInput.Clear();
-            _comboCooldown = new int[ownedComboSkills != null ? ownedComboSkills.Count : 0];
+            _comboCooldown = new float[ownedComboSkills != null ? ownedComboSkills.Count : 0];
             _queuedComboSkills.Clear();
             _awakenInputHistory.Clear();
             _awakenMarkerPositions.Clear();
@@ -1309,7 +1309,7 @@ namespace Battle
             {
                 handHud.SetAwakenMode(true);
                 handHud.UpdateComboSlot(_comboInput);
-                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                PushComboCooldownUi();
                 handHud.UpdateAwakenInputHistory(_awakenInputHistory);
             }
 
@@ -1476,14 +1476,14 @@ namespace Battle
             }
 
             _comboInput.Clear();
-            _comboCooldown = System.Array.Empty<int>();
+            _comboCooldown = System.Array.Empty<float>();
             _awakenInputHistory.Clear();
 
             if (handHud != null)
             {
                 handHud.SetAwakenMode(false);
                 handHud.UpdateComboSlot(_comboInput);
-                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                PushComboCooldownUi();
                 handHud.UpdateAwakenInputHistory(_awakenInputHistory);
             }
         }
@@ -1562,11 +1562,49 @@ namespace Battle
             _awakenInputHistory.Add(element);
         }
 
-        // 쿨다운 중인 콤보들의 남은 횟수를 1씩 감소
-        void TickComboCooldowns()
+        // 각성 중 콤보 재사용 대기를 초 단위로 줄이고, 표시 숫자가 바뀔 때만 UI를 갱신한다
+        void TickComboCooldownTime()
         {
+            if (_comboCooldown.Length == 0) return;
+
+            bool changed = _comboCooldownShown.Length != _comboCooldown.Length;
+            if (changed)
+                _comboCooldownShown = new int[_comboCooldown.Length];
+
             for (int i = 0; i < _comboCooldown.Length; i++)
-                if (_comboCooldown[i] > 0) _comboCooldown[i]--;
+            {
+                if (_comboCooldown[i] > 0f)
+                {
+                    _comboCooldown[i] -= Time.deltaTime;
+                    if (_comboCooldown[i] < 0f) _comboCooldown[i] = 0f;
+                }
+
+                int shown = _comboCooldown[i] > 0f ? Mathf.CeilToInt(_comboCooldown[i]) : 0;
+                if (_comboCooldownShown[i] != shown)
+                {
+                    _comboCooldownShown[i] = shown;
+                    changed = true;
+                }
+            }
+
+            if (changed) PushComboCooldownUi();
+        }
+
+        int[] _comboCooldownShown = System.Array.Empty<int>(); // 마지막으로 목록에 그린 남은 초
+
+        // 남은 초를 올림한 숫자로 콤보 스킬 목록을 갱신한다
+        void PushComboCooldownUi()
+        {
+            if (handHud == null) return;
+            var display = new int[_comboCooldown.Length];
+            if (_comboCooldownShown.Length != display.Length)
+                _comboCooldownShown = new int[display.Length];
+            for (int i = 0; i < display.Length; i++)
+            {
+                display[i] = _comboCooldown[i] > 0f ? Mathf.CeilToInt(_comboCooldown[i]) : 0;
+                _comboCooldownShown[i] = display[i];
+            }
+            handHud.UpdateComboSkillList(ownedComboSkills, display);
         }
 
         // 콤보 매칭 — 매칭 시 큐에 적재·쿨다운 부여, 매칭 여부 반환(시간 보너스용)
@@ -1577,14 +1615,14 @@ namespace Battle
 
             for (int i = 0; i < ownedComboSkills.Count; i++)
             {
-                if (i < _comboCooldown.Length && _comboCooldown[i] > 0) continue;
+                if (i < _comboCooldown.Length && _comboCooldown[i] > 0f) continue;
                 var skill = ownedComboSkills[i];
                 if (skill == null) continue;
                 if (skill.Matches(_comboInput))
                 {
                     _queuedComboSkills.Add(skill);
-                    if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_INPUT;
-                    Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 {COMBO_REUSE_INPUT}입력)");
+                    if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_SECONDS;
+                    Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 {COMBO_REUSE_SECONDS:0}초)");
                     return true;
                 }
             }

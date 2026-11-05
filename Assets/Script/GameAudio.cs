@@ -14,12 +14,18 @@ public class GameAudio : MonoBehaviour
     [SerializeField] private AudioClip normalCombatClip; // 일반 전투 곡
     [SerializeField] private AudioClip eliteCombatClip; // 정예 전투 곡
     [SerializeField] private AudioClip bossCombatClip; // 보스 전투 곡
+    [SerializeField] private AudioClip shopClip; // 상점 곡
+    [SerializeField] private AudioClip restClip; // 휴식 곡
     [Tooltip("켜져 있는 동안 메인 곡을 재생한다.")]
     [SerializeField] private GameObject mainMenuRoot; // 메인 화면 루트
     [Tooltip("켜져 있는 동안 맵 곡을 재생한다. 메인 화면이 켜져 있으면 메인 곡이 우선한다.")]
     [SerializeField] private GameObject mapRoot; // 맵 화면 루트
     [Tooltip("켜져 있는 동안 전투 곡을 재생한다. 메인·맵보다 나중에 본다.")]
     [SerializeField] private GameObject combatRoot; // 전투 화면 루트
+    [Tooltip("켜져 있는 동안 상점 곡을 재생한다.")]
+    [SerializeField] private GameObject shopRoot; // 상점 화면 루트
+    [Tooltip("켜져 있는 동안 휴식 곡을 재생한다.")]
+    [SerializeField] private GameObject restRoot; // 휴식 화면 루트
     [Range(0f, 1f)]
     [SerializeField] private float bgmVolume = 1f; // 배경음 기본 볼륨(BGM 채널과 곱함)
 
@@ -53,8 +59,15 @@ public class GameAudio : MonoBehaviour
                 mainMenuRoot = menu.gameObject;
         }
 
-        if (combatRoot == null && GameStateController.Instance != null)
+        if (GameStateController.Instance == null)
+            return;
+
+        if (combatRoot == null)
             combatRoot = GameStateController.Instance.combatStage;
+        if (shopRoot == null)
+            shopRoot = GameStateController.Instance.shopStage;
+        if (restRoot == null)
+            restRoot = GameStateController.Instance.restStage;
     }
 
     void OnDestroy()
@@ -83,7 +96,7 @@ public class GameAudio : MonoBehaviour
             PlayUiClick();
     }
 
-    // 메인 화면, 맵 화면 순으로 곡을 고르고 화면이 바뀌면 교체한다
+    // 보이는 화면에 맞는 곡을 고르고, 화면이 바뀌면 교체한다
     void UpdateBgm()
     {
         if (bgmSource == null)
@@ -96,6 +109,10 @@ public class GameAudio : MonoBehaviour
             next = mapClip;
         else if (combatRoot != null && combatRoot.activeInHierarchy)
             next = CombatClip();
+        else if (shopRoot != null && shopRoot.activeInHierarchy)
+            next = shopClip;
+        else if (restRoot != null && restRoot.activeInHierarchy)
+            next = restClip;
 
         if (next != playingBgm)
         {
