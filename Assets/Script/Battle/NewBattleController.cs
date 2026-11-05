@@ -117,6 +117,8 @@ namespace Battle
         [SerializeField] private float disruptionLockSeconds = 0.6f;  // 방해행동 연출 잠금 시간
 
         [Header("디버그")]
+        [Tooltip("켜 두면 각성이 한 번 발동된 뒤 시간이 줄지 않고 유지된다. 전투가 끝나면 같이 끝난다.")]
+        [SerializeField] private bool holdAwakenForever;             // 각성 무한 유지
         [SerializeField] private bool logVerbose = true;             // 상세 로그 출력 여부
 
         [Header("적 AI (방해행동 선택)")]
@@ -337,6 +339,12 @@ namespace Battle
         {
             if (!_awakenActive) return;
             TickComboCooldownTime();
+            if (holdAwakenForever)
+            {
+                if (_awakenMaxTime > 0f)
+                    _awakenTimeRemaining = _awakenMaxTime;
+                return;
+            }
             _awakenTimeRemaining -= Time.deltaTime;
             if (_awakenTimeRemaining <= 0f)
             {
@@ -963,6 +971,8 @@ namespace Battle
                 if (handHud != null)
                 {
                     handHud.UpdateComboSlot(_comboInput);
+                    if (comboTriggered)
+                        handHud.PlayComboSlotSurge();
                     // 속성이 슬롯에 들어왔을 때만 해당 칸 강조(가장 최근 = 마지막 칸)
                     if (card.data.comboSlot && _comboInput.Count > 0)
                     {

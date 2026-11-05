@@ -108,6 +108,8 @@ namespace Battle.UI
         [SerializeField] private float comboSlotPopDuration = 0.28f; // 팝 전체 시간
         [Tooltip("입력 순간 칸을 흰색으로 잠깐 플래시할지 여부.")]
         [SerializeField] private bool comboSlotFlashEnabled = true; // 입력 칸 플래시 사용 여부
+        [Tooltip("각성 중 콤보 칸에 속성이 들어오면 금색 프레임 주변을 그 속성 빛으로 감싼다.")]
+        [SerializeField] private bool comboSlotElementVfxEnabled = true; // 콤보 슬롯 속성 테두리 이펙트
 
         [Header("콤보 스킬 목록 (SkillListItem 프리팹)")]
         [Tooltip("콤보 스킬 한 항목을 표현할 프리팹. SkillListItem.prefab 사용.")]
@@ -1088,6 +1090,7 @@ namespace Battle.UI
                 Image icon = GetComboSlotIcon(frame);
                 if (icon == null) continue;
 
+                var vfx = frame.GetComponent<ComboSlotElementVfx>();
                 if (input != null && i < input.Count)
                 {
                     Sprite s = GetComboSlotElementSprite(input[i]);
@@ -1096,11 +1099,16 @@ namespace Battle.UI
                     iconColor.a = comboSlotIconAlpha;
                     icon.color = iconColor;
                     icon.enabled = true;
+                    if (comboSlotElementVfxEnabled)
+                        GetComboSlotVfx(frame).Show(input[i]);
+                    else if (vfx != null)
+                        vfx.Hide();
                 }
                 else
                 {
                     icon.sprite = null;
                     icon.enabled = false;
+                    if (vfx != null) vfx.Hide();
                 }
             }
         }
@@ -1130,6 +1138,7 @@ namespace Battle.UI
                     if (img.gameObject == comboSlotPanel) continue; // 패널 자체 제외
                     if (img.gameObject.name == "ElementIcon") continue; // 프레임 안의 아이콘 제외
                     if (img.gameObject.name == "SlotBg") continue; // 프레임 안 배경 제외
+                    if (img.transform.parent != null && img.transform.parent.name == "ElementVfx") continue; // 테두리 이펙트 제외
                     if (collected.Contains(img)) continue;
                     collected.Add(img);
                     if (collected.Count >= 3) break;
@@ -1315,13 +1324,40 @@ namespace Battle.UI
         private Coroutine[] _comboSlotPopCos;   // 콤보 슬롯 칸별 팝 코루틴
         private Vector3[] _comboSlotBaseScales; // 콤보 슬롯 칸별 기준 스케일
 
+        // 프레임에 속성 테두리 이펙트를 붙인다
+        ComboSlotElementVfx GetComboSlotVfx(Image frame)
+        {
+            var vfx = frame.GetComponent<ComboSlotElementVfx>();
+            if (vfx == null) vfx = frame.gameObject.AddComponent<ComboSlotElementVfx>();
+            return vfx;
+        }
+
+        // 콤보가 맞았을 때 채워진 칸의 속성 이펙트를 한꺼번에 요동친다.
+        public void PlayComboSlotSurge()
+        {
+            if (!comboSlotElementVfxEnabled) return;
+            EnsureComboSlotImagesBound();
+            if (comboSlotImages == null) return;
+
+            for (int i = 0; i < comboSlotImages.Length; i++)
+            {
+                if (comboSlotImages[i] == null) continue;
+                var vfx = comboSlotImages[i].GetComponent<ComboSlotElementVfx>();
+                if (vfx != null) vfx.Surge();
+            }
+        }
+
         // 콤보 슬롯 slotIndex 칸을 팝(+플래시)으로 강조 — 각성 중 속성이 들어올 때 호출
         public void PlayComboSlotInputEffect(int slotIndex)
         {
-            if (!comboSlotPopEnabled) return;
             EnsureComboSlotImagesBound();
             if (comboSlotImages == null || slotIndex < 0 || slotIndex >= comboSlotImages.Length) return;
             if (comboSlotImages[slotIndex] == null) return;
+
+            if (comboSlotElementVfxEnabled)
+                GetComboSlotVfx(comboSlotImages[slotIndex]).Pulse();
+
+            if (!comboSlotPopEnabled) return;
 
             // 칸 수에 맞춰 풀/기준 스케일 초기화
             if (_comboSlotPopCos == null || _comboSlotPopCos.Length != comboSlotImages.Length)
