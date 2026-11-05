@@ -51,8 +51,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyController
   fallbackGaugeFullDamage: 10
   hitVFX: {fileID: 0}
-  hitVfxUiScale: 100
+  hitVfxPrefab: {fileID: 5154359554198368120, guid: 90d832da1e7d54a46a9ae35f9cee29c8, type: 3}
+  hitVfxUiScale: 700
   hitVfxPlaybackSpeed: 0.7
+  attackImpactMaxWait: 2
+  burnPresentDuration: 0.5
   newSystemAttackSequence: 080000000900000014000000
   AllowDuplication: 1
 --- !u!114 &271770845427890237
@@ -125,6 +128,26 @@ MonoBehaviour:
   rEffect: {fileID: 0}
   lEffect: {fileID: 0}
   attackVfx: {fileID: 0}
+  enableHitStop: 1
+  attackImpactNormalizedTime: 0.45
+  attackImpactFallbackDelay: 0.35
+  attackImpactTimeout: 1.5
+  hitStopDuration: 0.22
+  hitStopAnimSpeed: 0
+  resumeSpeedBoost: 1.8
+  resumeBoostDuration: 0.12
+  hitStopTremble: 0.05
+  hitStopFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitStopFlashStrength: 0.55
+  logHitStop: 1
+  cameraPunch:
+    enabled: 1
+    holdDuration: 0.22
+    recoverDuration: 0.28
+    zoomAmount: 4
+    pushTowardFocus: 0.25
+    shakeAmplitude: 0.08
+    shakeFrequency: 28
   hudAnchor: {fileID: 2497167294407682542}
   renderCamera: {fileID: 0}
   deathDuration: 1

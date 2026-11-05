@@ -9,11 +9,22 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [Header("공격 설정")]
     [SerializeField] private int fallbackGaugeFullDamage = 10; // 게이지 가득 시 폴백 피해
     [SerializeField] private ParticleSystem hitVFX; // 적 공격 파티클
+    [Tooltip("hitVFX가 비어 있을 때 런타임에 생성할 공격 이펙트 프리팹(3D 몬스터 임시: 2D 몬스터용 Enemy_ATK_2). " +
+             "Overlay 캔버스에 만들고 공격 임팩트 순간 몬스터 화면 위치로 옮겨 재생한다.")]
+    [SerializeField] private ParticleSystem hitVfxPrefab; // 공격 이펙트 프리팹(폴백)
+    private bool _hitVfxRuntime;   // hitVFX를 프리팹으로 런타임 생성했는지(화면 위치 추적·파괴 책임)
+    private Canvas _hitVfxCanvas;  // 런타임 생성 이펙트가 올라간 캔버스
     [Tooltip("적 공격 파티클(hitVFX)을 UI 위에 렌더(UIParticle)할 때 배율. 안 보이면 키우고, 너무 크면 줄이세요(플레이로 튜닝).")]
     [SerializeField] private float hitVfxUiScale = 100f; // 공격 파티클 UI 배율
     [Tooltip("적 공격 파티클(hitVFX) 재생 속도 배율 — 1 미만이면 더 천천히(=더 오래) 보인다. 순식간에 사라질 때 낮춰라.")]
     [Range(0.2f, 2f)]
     [SerializeField] private float hitVfxPlaybackSpeed = 0.7f; // 공격 파티클 재생 속도 배율
+
+    [Header("공격 임팩트 동기화")]
+    [Tooltip("공격 모션이 있을 때 임팩트(피해 적용) 신호를 기다리는 최대 시간(초). 넘기면 즉시 피해 적용.")]
+    [SerializeField] private float attackImpactMaxWait = 2f; // 임팩트 대기 상한
+    [Tooltip("공격 후 화상이 발동했을 때 다음 행동으로 넘어가기 전 대기(초) — 화상 숫자/알림 연출 시간.")]
+    [SerializeField] private float burnPresentDuration = 0.5f; // 화상 연출 대기
 
     [Header("새 전투 시스템 공격 시퀀스 (폴백)")]
     [Tooltip("EnemyData.attackSequence(엑셀 1차/2차/3차 공격)가 비어 있을 때만 사용하는 폴백 시퀀스.")]
@@ -82,6 +93,19 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         // 공격 모션이 마지막(임팩트) 프레임에 도달할 때 공격 이펙트를 한 번 더 재생
         if (view != null) view.OnAttackMotionLastFrame += PlayAttackVfx;
 
+        // 3D 몬스터 등 hitVFX가 비어 있으면 2D용 공격 이펙트 프리팹을 Overlay 캔버스에 생성(임시)
+        if (hitVFX == null && hitVfxPrefab != null)
+        {
+            _hitVfxCanvas = ResolveHitVfxCanvas();
+            if (_hitVfxCanvas != null)
+            {
+                hitVFX = Instantiate(hitVfxPrefab, _hitVfxCanvas.transform);
+                hitVFX.name = $"{name}_AttackVFX";
+                hitVFX.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                _hitVfxRuntime = true;
+            }
+        }
+
         // 적 공격 파티클(hitVFX)이 Screen Space - Overlay UI 뒤로 가려지지 않도록 UIParticle로
         // UI 레이어 안에서 렌더한다. (월드 ParticleSystem은 어떤 sortingOrder로도 Overlay UI 위로 못 올라옴 →
         // CardEffectOverlay와 동일하게 UIParticle 사용)
@@ -118,6 +142,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnDamaged -= HandleSpecialDamaged;
         stat.OnHpChanged -= HandleSpecialHpChanged;
         if (view != null) view.OnAttackMotionLastFrame -= PlayAttackVfx;
+        if (_hitVfxRuntime && hitVFX != null) Destroy(hitVFX.gameObject); // 캔버스에 따로 붙어 있으므로 직접 정리
         CompleteQueuedAttack();
     }
 
@@ -335,6 +360,23 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     // 방해행동을 실행하고 알림을 표시한다
     void HandleMidPattern()
     {
+        // 새 전투 시스템: 방해행동도 행동 대기열로 — 카드 연출/이전 행동이 끝난 뒤 발동
+        var nbc = Battle.NewBattleController.Instance;
+        if (nbc != null && nbc.InBattle)
+        {
+            nbc.EnqueueEnemyDisruption(this);
+            return;
+        }
+        RunMidPatternNow();
+    }
+
+    // 피격 반응(플래시·흔들기) 잔여 시간 — 행동 대기열이 피격 연출 종료를 기다릴 때 사용
+    public float HitReactionRemaining => view != null ? view.HitReactionRemaining : 0f;
+
+    // 방해행동을 즉시 실행하고 알림을 띄운다(대기열 차례가 왔을 때 호출)
+    public void RunMidPatternNow()
+    {
+        if (!stat.IsAlive) return;
         string patternMessage = null;
 
         // 새 전투 시스템: NewBattleController가 방해 행동 처리
@@ -405,16 +447,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (player == null)
             player = Player.Resolve(true);
 
-        // 새 전투 시스템: 적 공격 피격 처리 전 화상 발동 (PDF 명세)
-        if (Battle.NewBattleController.Instance != null)
-        {
-            ApplyBurnBeforeAttack();
-            if (!stat.IsAlive)
-            {
-                CompleteQueuedAttack();
-                return;
-            }
-        }
+        // 화상은 공격이 완전히 끝난 뒤 발동(ExecuteMultiHit 끝에서 ApplyBurnAfterAttack 호출)
 
         int damagePerHit;
         int hitCount;
@@ -462,7 +495,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
         else
         {
-            CompleteQueuedAttack();
+            StartCoroutine(BurnThenComplete());
         }
 
         // 특이사항(백족승): 공격 시 다른 속성으로 저주 전환
@@ -478,12 +511,23 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         UpdateAttackPreviewForNewSystem();
     }
 
-    // PDF [화상]: 적 공격 전 화상 스택만큼 고정피해를 주고 화상을 절반으로 줄인다
-    void ApplyBurnBeforeAttack()
+    // 공격이 끝난 뒤 화상을 처리하고, 화상 연출이 끝나면 행동 완료를 알린다
+    IEnumerator BurnThenComplete()
     {
-        if (stat == null) return;
-        if (!stat.statusEffects.TryGetValue("burn", out int burn)) return;
-        if (burn <= 0) return;
+        if (Battle.NewBattleController.Instance != null && stat != null && stat.IsAlive && ApplyBurnAfterAttack())
+        {
+            // 화상 데미지 숫자/알림이 보이도록 대기(화상으로 죽으면 파괴 시 OnDestroy가 완료 처리)
+            if (burnPresentDuration > 0f) yield return new WaitForSeconds(burnPresentDuration);
+        }
+        CompleteQueuedAttack();
+    }
+
+    // [화상]: 적 공격이 끝난 뒤 화상 스택만큼 고정피해를 주고 화상을 절반으로 줄인다. 발동했으면 true.
+    bool ApplyBurnAfterAttack()
+    {
+        if (stat == null) return false;
+        if (!stat.statusEffects.TryGetValue("burn", out int burn)) return false;
+        if (burn <= 0) return false;
 
         stat.TakeDamage(burn);
 
@@ -501,11 +545,34 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.statusEffects["burn"] = after;
         OnStatusChanged?.Invoke("burn", after);
         Debug.Log($"[화상] 적 {burn} 고정피해, 잔여 화상={after}{(burnPersists ? " (유지)" : "")}");
+        return true;
     }
     // 공격 모션과 함께 지정 횟수만큼 연타 피해를 가한다
     IEnumerator ExecuteMultiHit(int count, int damage)
     {
-        view?.PlayAttackMotion(); // 공격 모션(이미지 교체) 재생 — 피격 방식과 동일 구조
+        // 공격 모션이 있으면 임팩트(타격 프레임) 순간까지 기다렸다가 피해를 넣는다 —
+        // 3D 뷰는 이 순간 히트스톱(정지 후 재개)을 걸므로, 피해 숫자/화면 플래시가 '멈춘 프레임'에 맞춰 터진다.
+        bool waitImpact = view != null && view.HasAttackMotion;
+        bool impacted = false;
+        System.Action onImpact = () => impacted = true;
+        if (waitImpact) view.OnAttackMotionLastFrame += onImpact;
+
+        view?.PlayAttackMotion(); // 공격 모션(이미지 교체/애니) 재생
+
+        if (waitImpact)
+        {
+            float deadline = Time.time + attackImpactMaxWait;
+            while (!impacted && Time.time < deadline) yield return null;
+            if (view != null) view.OnAttackMotionLastFrame -= onImpact;
+
+            // 휘두르는 도중 적이 쓰러졌으면 공격 무효
+            if (stat == null || !stat.IsAlive)
+            {
+                CompleteQueuedAttack();
+                yield break;
+            }
+        }
+
         for (int i = 0; i < count; i++)
         {
             player.TakeDamage(damage, "enemy_attack");
@@ -517,7 +584,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
         Debug.Log($"[EnemyController] {count} hit");
         yield return new WaitForSeconds(0.45f);
-        CompleteQueuedAttack();
+        // 공격 애니메이션이 끝까지 재생될 때까지 대기(뒤이은 화상/유물 피격 모션이 공격 모션을 끊지 않게)
+        float motionDeadline = Time.time + 3f;
+        while (view != null && view.IsAttackMotionPlaying && Time.time < motionDeadline) yield return null;
+        // 공격이 완전히 끝난 뒤 화상 발동, 화상 연출까지 끝나면 행동 완료
+        yield return BurnThenComplete();
     }
 
     // 적 공격 파티클을 활성화 보장 후 재생한다
@@ -526,9 +597,36 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (hitVFX == null) return;
         // VFX 오브젝트가 비활성 상태면 Play()해도 보이지 않으므로 먼저 활성화 보장(공격 이펙트 누락 방지)
         if (!hitVFX.gameObject.activeSelf) hitVFX.gameObject.SetActive(true);
+        if (_hitVfxRuntime) PlaceRuntimeHitVfx();
         hitVFX.Stop();
         hitVFX.Play();
     }
+    // 런타임 생성 이펙트를 몬스터의 현재 화면 위치로 옮기고 맨 위에 그린다
+    void PlaceRuntimeHitVfx()
+    {
+        if (_hitVfxCanvas == null || view == null) return;
+        if (!view.TryGetAimScreen(out Vector2 screen, out _)) return;
+        var canvasRect = _hitVfxCanvas.transform as RectTransform;
+        Camera cam = _hitVfxCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _hitVfxCanvas.worldCamera;
+        if (canvasRect != null &&
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, cam, out Vector2 local))
+            hitVFX.transform.localPosition = new Vector3(local.x, local.y, 0f);
+        hitVFX.transform.SetAsLastSibling();
+    }
+
+    // 런타임 공격 이펙트를 올릴 캔버스 — 적 HUD 캔버스 우선, 없으면 Overlay 루트 캔버스
+    Canvas ResolveHitVfxCanvas()
+    {
+        var hud = EnemyOverlayHUD.Instance != null
+            ? EnemyOverlayHUD.Instance
+            : FindFirstObjectByType<EnemyOverlayHUD>(FindObjectsInactive.Include);
+        Canvas c = hud != null ? hud.GetComponentInParent<Canvas>(true) : null;
+        if (c != null) return c.rootCanvas;
+        foreach (var cv in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            if (cv.isRootCanvas && cv.renderMode == RenderMode.ScreenSpaceOverlay) return cv;
+        return null;
+    }
+
     // 사망 처리 후 피격 연출이 끝나면 적을 제거한다
     void HandleDeath()
     {

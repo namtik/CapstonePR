@@ -550,6 +550,8 @@ public class EnemyView : MonoBehaviour, IEnemyView
 
     public float AttackMotionRemaining => _attackMotionEndTime > 0f ? Mathf.Max(0f, _attackMotionEndTime - Time.time) : 0f; // 공격 모션 잔여 시간(초)
 
+    public bool IsAttackMotionPlaying => AttackMotionRemaining > 0f; // 공격 모션 재생 중 여부
+
     public bool HasAttackMotion => attackMotionEnabled && attackSprites != null && attackSprites.Length > 0; // 공격 모션 재생 가능 여부
 
     // 2D 스프라이트 뷰는 버프/디버프 등 별도 동작 애니메이션을 지원하지 않음(no-op).

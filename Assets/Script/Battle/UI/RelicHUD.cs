@@ -366,23 +366,82 @@ namespace Battle.UI
             _tooltip.SetActive(true);
         }
 
-        // 유물 발동 시 좌상단 해당 아이콘을 펄스(커졌다 복귀)하고 아래에 텍스트를 띄운 뒤, 끝나면 onShown 호출
+        // 펄스 대기열 항목 — 여러 유물이 동시에 발동해도 하나씩 차례로 펄스하고, 각 효과를 빠짐없이 발동한다
+        private struct PulseRequest
+        {
+            public RelicSO relic;
+            public string label;
+            public System.Action onShown;
+        }
+        private readonly Queue<PulseRequest> _pulseQueue = new Queue<PulseRequest>();
+        private System.Action _pulseOnShown; // 진행 중인 펄스의 효과 콜백(중단 시 대신 발동)
+
+        // 유물 아이콘 펄스(끝나면 유물 효과 발동)가 진행 중이거나 대기 중인지 — 적 행동은 이게 끝난 뒤 시작한다
+        public bool IsPulsing => _pulseCo != null || _pulseQueue.Count > 0;
+
+        // 유물 발동 시 좌상단 해당 아이콘을 펄스(커졌다 복귀)하고 아래에 텍스트를 띄운 뒤, 끝나면 onShown 호출.
+        // 이미 펄스 중이면 대기열에 넣어 앞 펄스가 끝난 뒤 진행(예전엔 앞 펄스를 끊어 앞 유물 효과가 사라졌음).
         public void PulseRelicIcon(RelicSO relic, string labelText, System.Action onShown)
         {
             if (relic == null) { onShown?.Invoke(); return; }
 
+            if (_pulseCo != null || !isActiveAndEnabled)
+            {
+                if (!isActiveAndEnabled) { onShown?.Invoke(); return; } // 코루틴 불가 — 즉시 효과
+                _pulseQueue.Enqueue(new PulseRequest { relic = relic, label = labelText, onShown = onShown });
+                return;
+            }
+            StartPulse(relic, labelText, onShown);
+        }
+
+        // 펄스 1회 시작(아이콘이 없으면 즉시 효과 후 다음 대기열로)
+        void StartPulse(RelicSO relic, string labelText, System.Action onShown)
+        {
             int idx = _relics.IndexOf(relic);
             GameObject iconGo = (idx >= 0 && idx < _iconItems.Count) ? _iconItems[idx] : null;
-            if (iconGo == null) { onShown?.Invoke(); return; } // 아이콘이 없으면 즉시 효과
+            if (iconGo == null) // 아이콘이 없으면 즉시 효과
+            {
+                onShown?.Invoke();
+                StartNextPulse();
+                return;
+            }
 
             if (!string.IsNullOrEmpty(labelText)) ShowActivationLabel(idx, labelText);
 
-            if (_pulseCo != null) StopCoroutine(_pulseCo);
-            _pulseCo = StartCoroutine(PulseRoutine(iconGo.transform, onShown));
+            _pulseOnShown = onShown;
+            _pulseCo = StartCoroutine(PulseRoutine(iconGo.transform));
         }
 
-        // 아이콘을 커졌다 원래대로 돌려놓는 펄스 코루틴(복귀 후 onShown 호출)
-        IEnumerator PulseRoutine(Transform iconTr, System.Action onShown)
+        // 대기 중인 다음 펄스 시작
+        void StartNextPulse()
+        {
+            if (_pulseCo != null || _pulseQueue.Count == 0 || !isActiveAndEnabled) return;
+            var next = _pulseQueue.Dequeue();
+            StartPulse(next.relic, next.label, next.onShown);
+        }
+
+        // 진행 중 펄스의 효과를 발동하고 다음 펄스로 넘어간다
+        void FinishPulse()
+        {
+            var cb = _pulseOnShown;
+            _pulseOnShown = null;
+            _pulseCo = null;
+            cb?.Invoke(); // 펄스가 끝난 뒤 효과 발동(빙결 부여 후 이펙트)
+            StartNextPulse();
+        }
+
+        // HUD가 꺼지면 코루틴이 멈추므로, 진행·대기 중이던 유물 효과를 즉시 모두 발동해 누락을 막는다
+        void OnDisable()
+        {
+            if (_pulseCo != null) { StopCoroutine(_pulseCo); _pulseCo = null; }
+            var cb = _pulseOnShown;
+            _pulseOnShown = null;
+            cb?.Invoke();
+            while (_pulseQueue.Count > 0) _pulseQueue.Dequeue().onShown?.Invoke();
+        }
+
+        // 아이콘을 커졌다 원래대로 돌려놓는 펄스 코루틴(복귀 후 효과 발동)
+        IEnumerator PulseRoutine(Transform iconTr)
         {
             Vector3 baseScale = iconTr != null ? iconTr.localScale : Vector3.one;
             Vector3 peak = baseScale * Mathf.Max(1f, relicPulseScale);
@@ -392,7 +451,7 @@ namespace Battle.UI
             float t = 0f;
             while (t < dur)
             {
-                if (iconTr == null) { onShown?.Invoke(); _pulseCo = null; yield break; }
+                if (iconTr == null) { FinishPulse(); yield break; }
                 t += Time.unscaledDeltaTime;
                 float n = Mathf.Clamp01(t / dur);
 
@@ -405,10 +464,7 @@ namespace Battle.UI
             }
 
             if (iconTr != null) iconTr.localScale = baseScale;
-            _pulseCo = null;
-
-            // 펄스가 끝난 뒤 효과 발동(빙결 부여 → 이펙트)
-            onShown?.Invoke();
+            FinishPulse();
         }
 
         // iconIndex번째 아이콘 아래에 발동 텍스트를 띄우고 유지 후 페이드아웃

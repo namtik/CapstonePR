@@ -179,6 +179,11 @@ namespace Battle.UI
         // 적 턴에 카드를 쓰려 할 때 '적 턴' 표시를 깜빡여 잠금을 알린다
         public void FlashLocked() => _lockFlash = 1f;
 
+        // 유물 발동 표시가 진행 중이거나 대기 중인지 — 적 행동은 이게 끝난 뒤 시작한다
+        public bool IsShowingRelicTrigger =>
+            isActiveAndEnabled && showItems
+            && (_triggerQueue.Count > 0 || (_showingRelic != null && Time.unscaledTime < _showingUntil));
+
         // 유물 발동 — 현재 칸에 순서대로 띄우고 해당 아이템 칸을 펄스
         public void ShowRelicTrigger(RelicSO relic)
         {

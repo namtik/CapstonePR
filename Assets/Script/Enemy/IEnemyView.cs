@@ -38,6 +38,8 @@ public interface IEnemyView
     void PlayMotion(EnemyMotion motion);
     // 공격 모션 재생 가능 여부.
     bool HasAttackMotion { get; }
+    // 공격 모션이 아직 재생 중인지(임팩트 대기·히트스톱 포함).
+    bool IsAttackMotionPlaying { get; }
     // 진행 중인 피격 연출의 잔여 시간(초).
     float HitReactionRemaining { get; }
     // 공격 모션이 임팩트 프레임에 도달할 때 발생(공격 VFX 동기화용).
