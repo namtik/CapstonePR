@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1446514766708260407}
   - component: {fileID: 5586995051907599478}
   m_Layer: 0
-  m_Name: EnemyBoneFist
+  m_Name: XEnemyBoneFist
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

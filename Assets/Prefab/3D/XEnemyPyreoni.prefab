@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8974283741588171352}
   - component: {fileID: 5563744922129606028}
   m_Layer: 0
-  m_Name: EnemyPyreoni
+  m_Name: XEnemyPyreoni
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
