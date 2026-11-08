@@ -36221,7 +36221,7 @@ MonoBehaviour:
   lockInputDuringEnemyTurn: 1
   enemyTurnStartDelay: 0.35
   disruptionLockSeconds: 0.6
-  holdAwakenForever: 1
+  holdAwakenForever: 0
   logVerbose: 1
   useAiDisruption: 1
   aiExplorationEpsilon: 0.15
