@@ -71,6 +71,20 @@ public static class EnemyCombatParty
         return AliveBuffer[Random.Range(0, AliveBuffer.Count)];
     }
 
+    // 살아있는 적 순서. 정보 탭의 1, 2, 3번과 같다.
+    public static int AliveIndexOf(EnemyController enemy)
+    {
+        if (enemy == null) return -1;
+        int index = 0;
+        for (int i = 0; i < Members.Count; i++)
+        {
+            if (!IsUsable(Members[i])) continue;
+            if (Members[i] == enemy) return index;
+            index++;
+        }
+        return -1;
+    }
+
     public static void CollectAlive(List<EnemyController> dest)
     {
         if (dest == null) return;

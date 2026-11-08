@@ -247,6 +247,7 @@ public class EventStageController : MonoBehaviour
 
     private RoundManager roundManager;   // 라운드 관리자 참조
     private int currentEventIndex;   // 현재 진행 중인 이벤트 인덱스(0~4)
+    public int CurrentEventIndex => currentEventIndex; // 배경음이 이벤트 번호를 읽는다
     private EventPhase phase = EventPhase.Idle;   // 현재 이벤트 단계
     private int phaseEnteredFrame;   // 단계 진입 시점의 프레임 번호
     private Coroutine typingRoutine;   // 타이핑 연출 코루틴 핸들

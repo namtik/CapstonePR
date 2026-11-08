@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// 메뉴바 재화 표시. pill 배경 위에 아이콘 + 숫자를 함께 표시한다.
+// 메뉴바 TopBar1 재화 표시. 장식 바 위에 아이콘과 보유량을 함께 표시한다.
 public class MoneyUI : MonoBehaviour
 {
     [Header("UI References")]
@@ -16,7 +16,7 @@ public class MoneyUI : MonoBehaviour
 
     [Header("Text Style (Inspector)")]
     [SerializeField] private TMP_FontAsset fontAsset;
-    [SerializeField] private float fontSize = 36f;
+    [SerializeField] private float fontSize = 22f;
     [SerializeField] private Color textColor = Color.white;
 
     void Awake()

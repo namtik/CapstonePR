@@ -267,6 +267,8 @@ public class GameStateController : MonoBehaviour
         if (isBossNode || nodeType == NodeType.Combat || nodeType == NodeType.Elite || nodeType == NodeType.Boss)
         {
             targetStage = combatStage;
+            NodeType track = (isBossNode || nodeType == NodeType.Boss) ? NodeType.Boss : nodeType;
+            GameAudio.Instance?.SetCombatTrack(track);
         }
         else
         {

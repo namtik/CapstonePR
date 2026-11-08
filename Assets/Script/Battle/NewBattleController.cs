@@ -17,7 +17,7 @@ namespace Battle
         public const float AWAKEN_DURATION_SECONDS = 4f;               // 각성 기본 지속 시간(초)
         public const float AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS = 1f; // 보유 콤보 1개당 추가 지속 시간(초)
         public const float COMBO_BONUS_SECONDS = 0.1f;                 // 콤보 1회 성공 시 추가 시간(초)
-        public const int COMBO_REUSE_INPUT = 5;                        // 콤보 재사용까지 필요한 속성 입력 횟수
+        public const float COMBO_REUSE_SECONDS = 5f;                   // 콤보 재사용까지 걸리는 시간(초)
         public const int START_DRAW = 5;                              // 전투 시작 시 드로우 수
 
         public static NewBattleController Instance { get; private set; } // 싱글톤 인스턴스
@@ -29,6 +29,8 @@ namespace Battle
         [SerializeField] private CardEffectOverlay effectOverlay;     // 카드 효과 이펙트 오버레이
         [Tooltip("플레이어 피격 시 화면 빨간 플래시. 비우면 자동 생성.")]
         [SerializeField] private PlayerDamageOverlay damageOverlay;   // 플레이어 피격 화면 오버레이
+        [Tooltip("전투 중 Tab으로 띄우는 요괴 정보 패널. CombatStage 캔버스에 배치. 비우면 씬에서 찾는다.")]
+        [SerializeField] private BattleTabPanel tabPanel;             // 요괴 정보 탭 패널
         [Tooltip("각성 동안 화면 상단에 남은 시간을 표시할 전용 게이지. 씬에 직접 만들어 연결(코드로 생성하지 않음). 비우면 표시 생략.")]
         [SerializeField] private AwakenTimerGauge awakenTimerGauge;   // 상단 각성 타이머 게이지
 
@@ -115,6 +117,8 @@ namespace Battle
         [SerializeField] private float disruptionLockSeconds = 0.6f;  // 방해행동 연출 잠금 시간
 
         [Header("디버그")]
+        [Tooltip("켜 두면 각성이 한 번 발동된 뒤 시간이 줄지 않고 유지된다. 전투가 끝나면 같이 끝난다.")]
+        [SerializeField] private bool holdAwakenForever;             // 각성 무한 유지
         [SerializeField] private bool logVerbose = true;             // 상세 로그 출력 여부
 
         [Header("적 AI (방해행동 선택)")]
@@ -188,7 +192,7 @@ namespace Battle
         private List<CardInstance> _awakenSnapshotDiscard; // 각성 직전 버린 더미 스냅샷(복원용)
 
         private readonly List<CardElement> _comboInput = new List<CardElement>(); // 콤보 슬롯(슬라이딩 윈도우 3장)
-        private int[] _comboCooldown = System.Array.Empty<int>(); // 콤보별 재사용 쿨다운(남은 입력 횟수)
+        private float[] _comboCooldown = System.Array.Empty<float>(); // 콤보별 남은 재사용 대기(초)
         private readonly List<ComboSkillDef> _queuedComboSkills = new List<ComboSkillDef>(); // 각성 종료 시 발동할 콤보 큐
         private readonly List<CardElement> _awakenInputHistory = new List<CardElement>(); // 각성 중 입력 속성 전체 기록
         private readonly List<Vector2> _awakenMarkerPositions = new List<Vector2>(); // 콤보 큐와 1:1 표식 위치
@@ -350,6 +354,13 @@ namespace Battle
         void TickAwakenTimer()
         {
             if (!_awakenActive) return;
+            TickComboCooldownTime();
+            if (holdAwakenForever)
+            {
+                if (_awakenMaxTime > 0f)
+                    _awakenTimeRemaining = _awakenMaxTime;
+                return;
+            }
             _awakenTimeRemaining -= Time.deltaTime;
             if (_awakenTimeRemaining <= 0f)
             {
@@ -357,7 +368,6 @@ namespace Battle
                 EndAwaken();
                 return;
             }
-            if (awakenTimerGauge != null) awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
         }
 
         // 전투 진입 — 참조/컨텍스트/덱/UI 초기화 후 시작 드로우
@@ -418,8 +428,11 @@ namespace Battle
             EnsureEventSystem();
 
             if (turnOrderTimeline == null) turnOrderTimeline = ResolveOrCreateTurnOrderTimeline();
+            if (tabPanel == null) tabPanel = ResolveTabPanel();
+            tabPanel?.Hide();
 
             _inBattle = true;
+            BattleLog.Clear();
             _cardPresenting = false;
             ResetEnemyTurnState();
             _elementInputCount = 0;
@@ -448,7 +461,15 @@ namespace Battle
             if (handHud != null)
                 handHud.SetAwakenGaugeVisible(true);
 
-            _deck.Draw(START_DRAW);
+            BattleLog.SetDrawLogging(false);
+            try
+            {
+                _deck.Draw(START_DRAW);
+            }
+            finally
+            {
+                BattleLog.SetDrawLogging(true);
+            }
             UpdateAwakenText();
             Log($"전투 시작 — {START_DRAW}장 드로우");
 
@@ -483,6 +504,7 @@ namespace Battle
         public void EndBattle()
         {
             _inBattle = false;
+            BattleLog.Clear();
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
@@ -509,6 +531,7 @@ namespace Battle
             _awakenMarkerHandles.Clear();
             if (effectOverlay != null) effectOverlay.ClearAll();
             StopAwakenScreenEffect();
+            if (tabPanel != null) tabPanel.Hide();
             Log("전투 종료");
         }
 
@@ -527,8 +550,8 @@ namespace Battle
                 return;
             }
             ownedComboSkills = BuildOwnedComboDefs();
-            _comboCooldown = new int[ownedComboSkills.Count];
-            if (handHud != null) handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+            _comboCooldown = new float[ownedComboSkills.Count];
+            PushComboCooldownUi();
             Debug.Log($"[NewBattle] 보유 콤보 갱신 — {ownedComboSkills.Count}개 " +
                       (ownedComboIds != null && ownedComboIds.Count > 0
                           ? $"(ids: {string.Join(",", ownedComboIds)})" : "(전체)"));
@@ -584,7 +607,7 @@ namespace Battle
             }
 
             if (handHud != null)
-                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                PushComboCooldownUi();
 
             Debug.Log($"[NewBattle] 콤보 {refComboId} 슬롯 변경: {ComboSkillDef.ElementsLabel(slot1, slot2, slot3)}");
         }
@@ -636,9 +659,9 @@ namespace Battle
 
             ownedComboSkills?.Clear();
             _comboSlotOverrides.Clear();
-            _comboCooldown = new int[0];
+            _comboCooldown = System.Array.Empty<float>();
             if (handHud != null)
-                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                PushComboCooldownUi();
 
             Debug.Log("[NewBattle] 런 재시작 — 보유 콤보 초기화");
         }
@@ -889,6 +912,12 @@ namespace Battle
         // 키 입력 처리 (D 드로우)
         void HandleInput()
         {
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                if (tabPanel == null) tabPanel = ResolveTabPanel();
+                tabPanel?.Toggle();
+            }
+
             if (Input.GetKeyDown(KeyCode.D))
             {
                 if (_cardPresenting) return;
@@ -953,7 +982,6 @@ namespace Battle
                 if (card.data.comboSlot)
                 {
                     AddToComboSlot(card.Element);
-                    TickComboCooldowns();
                     comboTriggered = TryActivateCombo();
                 }
 
@@ -976,13 +1004,15 @@ namespace Battle
                 if (handHud != null)
                 {
                     handHud.UpdateComboSlot(_comboInput);
+                    if (comboTriggered)
+                        handHud.PlayComboSlotSurge();
                     // 속성이 슬롯에 들어왔을 때만 해당 칸 강조(가장 최근 = 마지막 칸)
                     if (card.data.comboSlot && _comboInput.Count > 0)
                     {
                         handHud.PlayComboSlotInputEffect(_comboInput.Count - 1);
                         SfxManager.Instance?.PlayAwakenSlotInput();
                     }
-                    handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                    PushComboCooldownUi();
                     handHud.UpdateAwakenInputHistory(_awakenInputHistory);
                     handHud.PlayCardUsePresentation(card, null, interruptable: true);
                 }
@@ -1005,6 +1035,26 @@ namespace Battle
             return true;
         }
 
+        // 카드 효과를 실행하고, 피해·방어도를 카드 이미지와 한 기록으로 남긴다.
+        CardEffectResolver.ResolveResult ResolveLoggedCard(CardInstance card)
+        {
+            int before = _player != null ? Mathf.RoundToInt(_player.guard) : 0;
+            BattleLog.SetGuardLogging(false);
+            CardEffectResolver.ResolveResult result;
+            try
+            {
+                result = _resolver.Resolve(card);
+            }
+            finally
+            {
+                BattleLog.SetGuardLogging(true);
+            }
+
+            int gained = _player != null ? Mathf.Max(0, Mathf.RoundToInt(_player.guard) - before) : 0;
+            BattleLog.RecordCardPlay(card != null ? card.data : null, result.totalDamage, gained);
+            return result;
+        }
+
         // 카드 사용 실제 효과 처리 — 중앙 연출 종료 시점 호출(카드는 이미 패에서 제거됨)
         void ResolveCardUse(CardInstance card)
         {
@@ -1022,7 +1072,7 @@ namespace Battle
 
             int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
 
-            var result = _resolver.Resolve(card);
+            var result = ResolveLoggedCard(card);
 
             card.selfUseCount++;
 
@@ -1030,7 +1080,7 @@ namespace Battle
             if (_relicFirstCardRecastPending)
             {
                 _relicFirstCardRecastPending = false;
-                _resolver.Resolve(card);
+                ResolveLoggedCard(card);
                 Log("[유물] 복사경 — 첫 카드 효과 재발동");
             }
 
@@ -1056,7 +1106,7 @@ namespace Battle
             if (result.recastLastCard && _lastResolvedCard != null)
             {
                 Log($"[재사용] {_lastResolvedCard.data.displayName} 효과 한 번 더");
-                _resolver.Resolve(_lastResolvedCard);
+                ResolveLoggedCard(_lastResolvedCard);
             }
 
             // 패에서 카드 선택 → 소멸 (불4/103, 불13/112, 물10/209)
@@ -1292,7 +1342,7 @@ namespace Battle
             _deck.Draw(_deck.HandLimit);
 
             _comboInput.Clear();
-            _comboCooldown = new int[ownedComboSkills != null ? ownedComboSkills.Count : 0];
+            _comboCooldown = new float[ownedComboSkills != null ? ownedComboSkills.Count : 0];
             _queuedComboSkills.Clear();
             _awakenInputHistory.Clear();
             _awakenMarkerPositions.Clear();
@@ -1302,15 +1352,11 @@ namespace Battle
             {
                 handHud.SetAwakenMode(true);
                 handHud.UpdateComboSlot(_comboInput);
-                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                PushComboCooldownUi();
                 handHud.UpdateAwakenInputHistory(_awakenInputHistory);
             }
 
-            if (awakenTimerGauge != null)
-            {
-                awakenTimerGauge.Show();
-                awakenTimerGauge.SetTime(_awakenTimeRemaining, _awakenMaxTime);
-            }
+            if (awakenTimerGauge != null) awakenTimerGauge.Hide();
 
             _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
             SfxManager.Instance?.PlayAwakenStart();
@@ -1473,14 +1519,14 @@ namespace Battle
             }
 
             _comboInput.Clear();
-            _comboCooldown = System.Array.Empty<int>();
+            _comboCooldown = System.Array.Empty<float>();
             _awakenInputHistory.Clear();
 
             if (handHud != null)
             {
                 handHud.SetAwakenMode(false);
                 handHud.UpdateComboSlot(_comboInput);
-                handHud.UpdateComboSkillList(ownedComboSkills, _comboCooldown);
+                PushComboCooldownUi();
                 handHud.UpdateAwakenInputHistory(_awakenInputHistory);
             }
         }
@@ -1559,11 +1605,49 @@ namespace Battle
             _awakenInputHistory.Add(element);
         }
 
-        // 쿨다운 중인 콤보들의 남은 횟수를 1씩 감소
-        void TickComboCooldowns()
+        // 각성 중 콤보 재사용 대기를 초 단위로 줄이고, 표시 숫자가 바뀔 때만 UI를 갱신한다
+        void TickComboCooldownTime()
         {
+            if (_comboCooldown.Length == 0) return;
+
+            bool changed = _comboCooldownShown.Length != _comboCooldown.Length;
+            if (changed)
+                _comboCooldownShown = new int[_comboCooldown.Length];
+
             for (int i = 0; i < _comboCooldown.Length; i++)
-                if (_comboCooldown[i] > 0) _comboCooldown[i]--;
+            {
+                if (_comboCooldown[i] > 0f)
+                {
+                    _comboCooldown[i] -= Time.deltaTime;
+                    if (_comboCooldown[i] < 0f) _comboCooldown[i] = 0f;
+                }
+
+                int shown = _comboCooldown[i] > 0f ? Mathf.CeilToInt(_comboCooldown[i]) : 0;
+                if (_comboCooldownShown[i] != shown)
+                {
+                    _comboCooldownShown[i] = shown;
+                    changed = true;
+                }
+            }
+
+            if (changed) PushComboCooldownUi();
+        }
+
+        int[] _comboCooldownShown = System.Array.Empty<int>(); // 마지막으로 목록에 그린 남은 초
+
+        // 남은 초를 올림한 숫자로 콤보 스킬 목록을 갱신한다
+        void PushComboCooldownUi()
+        {
+            if (handHud == null) return;
+            var display = new int[_comboCooldown.Length];
+            if (_comboCooldownShown.Length != display.Length)
+                _comboCooldownShown = new int[display.Length];
+            for (int i = 0; i < display.Length; i++)
+            {
+                display[i] = _comboCooldown[i] > 0f ? Mathf.CeilToInt(_comboCooldown[i]) : 0;
+                _comboCooldownShown[i] = display[i];
+            }
+            handHud.UpdateComboSkillList(ownedComboSkills, display);
         }
 
         // 콤보 매칭 — 매칭 시 큐에 적재·쿨다운 부여, 매칭 여부 반환(시간 보너스용)
@@ -1574,14 +1658,14 @@ namespace Battle
 
             for (int i = 0; i < ownedComboSkills.Count; i++)
             {
-                if (i < _comboCooldown.Length && _comboCooldown[i] > 0) continue;
+                if (i < _comboCooldown.Length && _comboCooldown[i] > 0f) continue;
                 var skill = ownedComboSkills[i];
                 if (skill == null) continue;
                 if (skill.Matches(_comboInput))
                 {
                     _queuedComboSkills.Add(skill);
-                    if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_INPUT;
-                    Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 {COMBO_REUSE_INPUT}입력)");
+                    if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_SECONDS;
+                    Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 {COMBO_REUSE_SECONDS:0}초)");
                     return true;
                 }
             }
@@ -1685,6 +1769,12 @@ namespace Battle
             return pool[Random.Range(0, pool.Count)];
         }
 
+        void LogEnemyDisruption(int action)
+        {
+            Sprite portrait = _enemyStat != null && _enemyStat.Data != null ? _enemyStat.Data.enemySprite : null;
+            BattleLog.RecordDisruption(action, portrait, EnemyCombatParty.AliveIndexOf(_enemy));
+        }
+
         // 적 방해행동 발동 — AI(또는 랜덤)로 1개 선택 후 분기 실행, 보상 추적 시작
         public string TriggerDisruption() => TriggerDisruption(_enemy);
 
@@ -1738,6 +1828,8 @@ namespace Battle
 
             // 회복 쿨다운 진행 — 회복이 아닌 행동이 발동되면 1 감소
             if (pick != 4 && _recoverCooldown > 0) _recoverCooldown--;
+
+            LogEnemyDisruption(pick);
 
             switch (pick)
             {
@@ -2018,7 +2110,9 @@ namespace Battle
 
             int awakenMax = EffectiveAwakenInput;
             handHud.SetAwakenText($"{_elementInputCount}/{awakenMax}");
-            handHud.UpdateAwakenGauge(_elementInputCount, awakenMax, false, 0f, 0f);
+            handHud.UpdateAwakenGauge(
+                _elementInputCount, awakenMax,
+                _awakenActive, _awakenTimeRemaining, _awakenMaxTime);
         }
 
         // 상세 로그 출력(logVerbose ON일 때만)
@@ -2347,6 +2441,7 @@ namespace Battle
         {
             if (turnOrderTimeline == null) turnOrderTimeline = ResolveOrCreateTurnOrderTimeline();
             turnOrderTimeline?.ShowRelicTrigger(relic); // 행동 순서 바 현재 칸에도 발동 표시
+            if (relic != null) BattleLog.RecordRelic(relic.icon);
             if (RelicHUD.Instance != null && relic != null)
                 RelicHUD.Instance.PulseRelicIcon(relic, label, onShown);
             else
@@ -2552,6 +2647,18 @@ namespace Battle
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
             return go.AddComponent<TurnOrderTimeline>();
+        }
+
+        // CombatStage에 배치된 요괴 정보 탭 패널을 찾는다. 없으면 생성하지 않는다.
+        BattleTabPanel ResolveTabPanel()
+        {
+            if (tabPanel != null) return tabPanel;
+
+            var existing = FindFirstObjectByType<BattleTabPanel>(FindObjectsInactive.Include);
+            if (existing != null) return existing;
+
+            Debug.LogWarning("[NewBattle] BattleTabPanel이 CombatStage에 없습니다. 캔버스에 배치하세요.");
+            return null;
         }
     }
 }

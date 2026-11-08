@@ -442,8 +442,11 @@ public class Player : MonoBehaviour, IBattleUnit
     // 방어도를 더하며 최대 999로 제한한다
     public void AddGuard(float amount)
     {
+        float before = guard;
         guard = Mathf.Clamp(guard + amount, 0f, 999f);
         OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
+        int gained = Mathf.RoundToInt(guard - before);
+        if (gained > 0) Battle.UI.BattleLog.RecordGuard(gained);
     }
 
     // 사망 처리 — 게임오버 연출을 재생한다

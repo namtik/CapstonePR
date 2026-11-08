@@ -77,9 +77,27 @@ namespace Battle.UI
         [SerializeField] private GameObject comboSlotPanel; // 콤보 슬롯 패널
         [Tooltip("각성 발동 시 활성화될 콤보 스킬 목록 패널.")]
         [SerializeField] private GameObject comboSkillPanel; // 콤보 스킬 패널
-        [Tooltip("콤보 슬롯 3칸의 Image. 비워두면 comboSlotPanel 자식에서 자동 탐색.")]
-        [SerializeField] private Image[] comboSlotImages = new Image[3]; // 콤보 슬롯 이미지 3칸
-        [SerializeField] private Color emptyComboSlotColor = new Color(0.25f, 0.25f, 0.25f, 0.4f); // 빈 콤보 슬롯 색
+        [Tooltip("콤보 슬롯 3칸의 프레임 Image. 비워두면 comboSlotPanel 자식에서 자동 탐색.")]
+        [SerializeField] private Image[] comboSlotImages = new Image[3]; // 콤보 슬롯 프레임 3칸
+        [Tooltip("원소 아이콘이 들어가는 프레임. 비우면 Resources/UI/UI_ElementSlot_Frame 를 사용.")]
+        [SerializeField] private Sprite comboSlotFrameSprite; // 콤보 슬롯 프레임 스프라이트
+        [Tooltip("프레임 불투명도.")]
+        [SerializeField, Range(0f, 1f)] private float comboSlotFrameAlpha = 0.5f; // 프레임 불투명도
+        [Tooltip("프레임 안 속성 아이콘 불투명도.")]
+        [SerializeField, Range(0f, 1f)] private float comboSlotIconAlpha = 0.5f; // 속성 아이콘 불투명도
+        [Tooltip("프레임 안쪽 배경. 비우면 Resources/UI/UI_ElementSlot_BG.")]
+        [SerializeField] private Sprite comboSlotBgSprite; // 콤보 슬롯 안쪽 배경
+        [Tooltip("프레임 안쪽 배경 불투명도.")]
+        [SerializeField, Range(0f, 1f)] private float comboSlotBgAlpha = 0.5f; // 안쪽 배경 불투명도
+        [Tooltip("프레임 안에 표시할 불 아이콘. 비우면 Resources/UI/UI_Awake_FireIcon.")]
+        [SerializeField] private Sprite comboSlotFireSprite; // 각성 슬롯 불 아이콘
+        [Tooltip("프레임 안에 표시할 물 아이콘. 비우면 Resources/UI/UI_Awake_WaterIcon.")]
+        [SerializeField] private Sprite comboSlotWaterSprite; // 각성 슬롯 물 아이콘
+        [Tooltip("프레임 안에 표시할 바람 아이콘. 비우면 Resources/UI/UI_Awake_WindIcon.")]
+        [SerializeField] private Sprite comboSlotWindSprite; // 각성 슬롯 바람 아이콘
+        [Tooltip("프레임 안에 표시할 땅 아이콘. 비우면 Resources/UI/UI_Awake_LandIcon.")]
+        [SerializeField] private Sprite comboSlotEarthSprite; // 각성 슬롯 땅 아이콘
+        [SerializeField] private Color emptyComboSlotColor = new Color(0.25f, 0.25f, 0.25f, 0.4f); // 프레임이 없을 때 빈 칸 색
 
         [Header("콤보 슬롯 입력 연출 (각성 중 속성이 슬롯에 들어올 때)")]
         [Tooltip("각성 중 콤보 슬롯에 속성이 들어올 때 해당 칸을 팝(확대→복귀)시키는 연출 ON/OFF.")]
@@ -90,12 +108,27 @@ namespace Battle.UI
         [SerializeField] private float comboSlotPopDuration = 0.28f; // 팝 전체 시간
         [Tooltip("입력 순간 칸을 흰색으로 잠깐 플래시할지 여부.")]
         [SerializeField] private bool comboSlotFlashEnabled = true; // 입력 칸 플래시 사용 여부
+        [Tooltip("각성 중 콤보 칸에 속성이 들어오면 금색 프레임 주변을 그 속성 빛으로 감싼다.")]
+        [SerializeField] private bool comboSlotElementVfxEnabled = true; // 콤보 슬롯 속성 테두리 이펙트
 
         [Header("콤보 스킬 목록 (SkillListItem 프리팹)")]
         [Tooltip("콤보 스킬 한 항목을 표현할 프리팹. SkillListItem.prefab 사용.")]
         [SerializeField] private SkillListItemUI comboSkillItemPrefab; // 콤보 스킬 항목 프리팹
         [Tooltip("콤보 스킬 항목들이 배치될 컨테이너. 비워두면 comboSkillPanel을 사용.")]
         [SerializeField] private RectTransform comboSkillItemContainer; // 콤보 스킬 항목 컨테이너
+
+        [Header("콤보 스킬 이름")]
+        [Tooltip("비우면 프리팹에 지정된 폰트를 유지한다.")]
+        [SerializeField] private TMP_FontAsset comboSkillNameFont; // 콤보 이름 폰트
+        [SerializeField] private float comboSkillNameFontSize = 24f; // 콤보 이름 크기
+        [SerializeField] private Color comboSkillNameColor = Color.white; // 콤보 이름 색
+        [SerializeField] private FontStyles comboSkillNameFontStyle = FontStyles.Bold; // 콤보 이름 스타일
+        [SerializeField] private TextAlignmentOptions comboSkillNameAlignment = TextAlignmentOptions.MidlineLeft; // 콤보 이름 정렬
+
+        [Header("콤보 스킬 쿨타임 숫자")]
+        [SerializeField] private float comboSkillCooldownFontSize = 32f; // 쿨타임 숫자 크기
+        [SerializeField] private Color comboSkillCooldownColor = new Color(0.808f, 0.682f, 0.404f, 1f); // #ceae67
+        [SerializeField] private FontStyles comboSkillCooldownFontStyle = FontStyles.Bold; // 쿨타임 숫자 스타일
 
         [Header("정보 텍스트")]
         [SerializeField] private TMP_Text drawCountText; // 뽑을 더미 수 텍스트
@@ -150,10 +183,11 @@ namespace Battle.UI
         [FormerlySerializedAs("feverActiveColor")]
         [SerializeField] private Color awakenActiveColor = new Color(0.75f, 0.35f, 1f, 1f); // 발동 중 색
         [Header("각성 게이지 스킨")]
-        [SerializeField] private Sprite awakenIconSprite; // 1번: 왼쪽 아이콘
-        [SerializeField] private Sprite awakenFillSprite; // 2번: 찬 칸
-        [SerializeField] private Sprite awakenEmptySprite; // 3번: 빈 칸
-        [SerializeField] private Sprite awakenFrameSprite; // 4번: 프레임
+        [SerializeField] private Sprite awakenIconSprite; // 예전 아이콘. 새 레이아웃에서는 쓰지 않음
+        [SerializeField] private Sprite awakenFillSprite; // 찬 칸 (29x16)
+        [SerializeField] private Sprite awakenEmptySprite; // 빈 칸 (29x16)
+        [SerializeField] private Sprite awakenFrameSprite; // 예전 프레임. 새 레이아웃에서는 쓰지 않음
+        [SerializeField] private Sprite awakenTimerSprite; // 각성 중 타이머 바 (274x16)
 
         [Header("각성 입력 히스토리 (왼쪽 표시)")]
         [Tooltip("OFF면 각성 입력 히스토리(왼쪽 세로 격자)를 표시하지 않는다. 콤보 슬롯/스킬 목록에는 영향 없음.")]
@@ -205,9 +239,20 @@ namespace Battle.UI
         private Image _awakenGaugeFill; // 각성 게이지 채움 이미지
         private readonly List<Image> _awakenSegments = new List<Image>(); // 각성 칸 이미지
         private RectTransform _awakenSegmentRoot; // 칸들이 들어갈 영역
+        private Image _awakenTimerImage; // 각성 중 타이머 바
         private int _awakenSegmentCount; // 현재 생성된 칸 수
         private bool _awakenSkinReady; // 커스텀 스킨 적용 여부
         const string AwakenSpriteResourcePath = "UI/AwakenGauge/"; // Resources 스킨 경로
+        // HP 프레임과 같은 왼쪽 위 기준. 표: (94+27n, 65), n = 0~9
+        const float AwakenCellX = 94f;
+        const float AwakenCellStep = 27f;
+        const float AwakenCellY = 65f;
+        const float AwakenCellW = 29f;
+        const float AwakenCellH = 16f;
+        const float AwakenTimerX = 93f;
+        const float AwakenTimerY = 65f;
+        const float AwakenTimerW = 274f;
+        const float AwakenTimerH = 16f;
 
         private System.Action<CardInstance> _selectionCallback; // 선택 모드 콜백
         private System.Func<CardInstance, bool> _selectionFilter; // 선택 가능 카드 필터
@@ -221,9 +266,16 @@ namespace Battle.UI
         [SerializeField] private RectTransform dimOverlay; // 화면 딤 오버레이
         [Tooltip("dim 오버레이 색(알파로 어둡기 조절) — 선택/픽커 모드.")]
         [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f); // 선택/픽커 딤 색
-        [Tooltip("각성 모드 dim 색 — 일반 선택 모드와 다른 톤으로 구분 가능. 카드 선택 dim(dimColor)과 독립.")]
+        [Tooltip("각성 딤의 가장자리 색. 알파는 가장자리가 얼마나 어두운지. 중심은 이 색이 걷혀 화면이 밝게 남는다.")]
         [FormerlySerializedAs("feverDimColor")]
-        [SerializeField] private Color awakenDimColor = new Color(0.02f, 0.0f, 0.08f, 0.82f); // 각성 모드 딤 색
+        [SerializeField] private Color awakenDimColor = new Color(0.02f, 0.0f, 0.08f, 0.82f); // 각성 딤 가장자리 색
+        [Tooltip("밝은 중심이 유지되는 반경. 0이면 중심부터 어두워지고, 1이면 가장 가까운 화면 가장자리까지 밝다.")]
+        [SerializeField, Range(0f, 1f)] private float awakenDimBrightRadius = 0.18f; // 각성 딤 밝은 중심 반경
+        [Tooltip("완전히 어두워지는 지점. 1이면 화면 가장자리에서 가장 어둡고, 작을수록 어두운 영역이 중심 쪽으로 넓어진다.")]
+        [SerializeField, Range(0.05f, 1.5f)] private float awakenDimFadeEnd = 1f; // 각성 딤이 가장 어두워지는 거리
+
+        private Material _awakenDimMaterial; // 각성 전용 방사형 딤 머티리얼
+        private bool _awakenDimActive; // 각성 딤이 켜져 있는지
 
         [Header("더미/덱 보기 — 닫기")]
         [Tooltip("비워 두면 런타임에 화면 하단 중앙에 생성.")]
@@ -380,6 +432,8 @@ namespace Battle.UI
                 _deck.OnPileChanged -= Refresh;
                 _deck.OnReshuffled -= HandleReshuffled;
             }
+            if (_awakenDimMaterial != null)
+                Destroy(_awakenDimMaterial);
         }
 
         // 각성 카운트 텍스트를 설정
@@ -442,8 +496,19 @@ namespace Battle.UI
 
             if (_awakenSkinReady)
             {
-                EnsureAwakenSegments(max);
-                ApplyAwakenSegmentFill(filled);
+                bool showTimer = active && _awakenTimerImage != null;
+                if (_awakenSegmentRoot != null)
+                    _awakenSegmentRoot.gameObject.SetActive(!showTimer);
+                if (_awakenTimerImage != null)
+                {
+                    _awakenTimerImage.gameObject.SetActive(showTimer);
+                    if (showTimer) _awakenTimerImage.fillAmount = fill;
+                }
+                if (!showTimer)
+                {
+                    EnsureAwakenSegments(max);
+                    ApplyAwakenSegmentFill(filled);
+                }
             }
             else
             {
@@ -584,7 +649,23 @@ namespace Battle.UI
             if (le == null) le = awakenGauge.gameObject.AddComponent<LayoutElement>();
             le.ignoreLayout = true;
 
-            // anchor와 같은 정렬 기준에 오프셋 적용
+            if (_awakenSkinReady)
+            {
+                // HP바 위에 겹쳐 표의 좌표(왼쪽 위 기준)를 그대로 쓴다
+                if (rect.parent != awakenGaugeAnchor)
+                    rect.SetParent(awakenGaugeAnchor, false);
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+                rect.anchoredPosition = Vector2.zero;
+                rect.localScale = Vector3.one;
+                rect.SetAsLastSibling();
+                return;
+            }
+
+            // 스킨이 없으면 예전처럼 HP바 아래에 둔다
             rect.anchorMin = awakenGaugeAnchor.anchorMin;
             rect.anchorMax = awakenGaugeAnchor.anchorMax;
             rect.pivot = awakenGaugeAnchor.pivot;
@@ -612,63 +693,72 @@ namespace Battle.UI
             return slider.GetComponentInChildren<Image>();
         }
 
-        // 1·2·3·4번 스킨을 로드해 아이콘+프레임+칸 게이지로 바꾼다
+        // 찬 칸·빈 칸·타이머 스프라이트로 HP바 안쪽 각성 게이지를 만든다
         void ApplyAwakenGaugeSkin()
         {
             if (awakenGauge == null || _awakenSkinReady) return;
             ResolveAwakenSprites();
-            if (awakenIconSprite == null || awakenFillSprite == null
-                || awakenEmptySprite == null || awakenFrameSprite == null)
+            if (awakenFillSprite == null || awakenEmptySprite == null)
                 return;
 
             Transform root = awakenGauge.transform;
             HideLegacyAwakenSliderVisuals(root);
+            HideAwakenChild(root, "Icon");
+            HideAwakenChild(root, "Frame");
 
-            Image icon = GetOrCreateAwakenImage(root, "Icon", awakenIconSprite);
-            RectTransform iconRect = icon.rectTransform;
-            iconRect.anchorMin = new Vector2(0f, 0.5f);
-            iconRect.anchorMax = new Vector2(0f, 0.5f);
-            iconRect.pivot = new Vector2(0f, 0.5f);
-            iconRect.sizeDelta = new Vector2(56f, 56f);
-            iconRect.anchoredPosition = Vector2.zero;
-            icon.preserveAspect = true;
-
-            Image frame = GetOrCreateAwakenImage(root, "Frame", awakenFrameSprite);
-            RectTransform frameRect = frame.rectTransform;
-            frameRect.anchorMin = new Vector2(0f, 0.5f);
-            frameRect.anchorMax = new Vector2(1f, 0.5f);
-            frameRect.pivot = new Vector2(0f, 0.5f);
-            frameRect.offsetMin = new Vector2(36f, -20f);
-            frameRect.offsetMax = new Vector2(0f, 20f);
-            frame.preserveAspect = false;
-            frame.type = Image.Type.Simple;
-
-            Transform segmentT = frameRect.Find("Segments");
+            Transform segmentT = root.Find("Segments");
             if (segmentT == null)
             {
                 GameObject segGo = new GameObject("Segments", typeof(RectTransform));
                 segGo.layer = root.gameObject.layer;
-                segGo.transform.SetParent(frameRect, false);
+                segGo.transform.SetParent(root, false);
                 segmentT = segGo.transform;
             }
             _awakenSegmentRoot = segmentT as RectTransform;
             _awakenSegmentRoot.anchorMin = Vector2.zero;
             _awakenSegmentRoot.anchorMax = Vector2.one;
-            _awakenSegmentRoot.offsetMin = new Vector2(14f, 6f);
-            _awakenSegmentRoot.offsetMax = new Vector2(-20f, -6f);
-
+            _awakenSegmentRoot.offsetMin = Vector2.zero;
+            _awakenSegmentRoot.offsetMax = Vector2.zero;
+            _awakenSegmentRoot.pivot = new Vector2(0.5f, 0.5f);
             HorizontalLayoutGroup layout = _awakenSegmentRoot.GetComponent<HorizontalLayoutGroup>();
-            if (layout == null) layout = _awakenSegmentRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 3f;
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = true;
-            layout.padding = new RectOffset(0, 0, 0, 0);
+            if (layout != null)
+            {
+                if (Application.isPlaying) Destroy(layout);
+                else DestroyImmediate(layout);
+            }
 
-            iconRect.SetAsLastSibling();
+            if (awakenTimerSprite != null)
+            {
+                Image timer = GetOrCreateAwakenImage(root, "Timer", awakenTimerSprite);
+                RectTransform timerRect = timer.rectTransform;
+                PlaceTopLeft(timerRect, AwakenTimerX, AwakenTimerY, AwakenTimerW, AwakenTimerH);
+                timer.type = Image.Type.Filled;
+                timer.fillMethod = Image.FillMethod.Horizontal;
+                timer.fillOrigin = (int)Image.OriginHorizontal.Left;
+                timer.fillAmount = 1f;
+                timer.preserveAspect = false;
+                timer.gameObject.SetActive(false);
+                _awakenTimerImage = timer;
+            }
+
             _awakenSkinReady = true;
+        }
+
+        // 디자인 표의 왼쪽 위 좌표를 RectTransform에 넣는다. y는 아래로 증가
+        static void PlaceTopLeft(RectTransform rect, float x, float yDown, float w, float h)
+        {
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(x, -yDown);
+            rect.sizeDelta = new Vector2(w, h);
+            rect.localScale = Vector3.one;
+        }
+
+        static void HideAwakenChild(Transform root, string name)
+        {
+            Transform child = root.Find(name);
+            if (child != null) child.gameObject.SetActive(false);
         }
 
         // Resources 폴백으로 각성 게이지 스프라이트를 채운다
@@ -682,6 +772,8 @@ namespace Battle.UI
                 awakenEmptySprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_empty");
             if (awakenFrameSprite == null)
                 awakenFrameSprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_frame");
+            if (awakenTimerSprite == null)
+                awakenTimerSprite = Resources.Load<Sprite>(AwakenSpriteResourcePath + "awaken_timer");
         }
 
         // 예전 슬라이더 배경/채움을 숨긴다
@@ -737,7 +829,9 @@ namespace Battle.UI
                 image.sprite = awakenEmptySprite;
                 image.color = Color.white;
                 image.raycastTarget = false;
-                image.preserveAspect = true;
+                image.preserveAspect = false;
+                image.type = Image.Type.Simple;
+                PlaceTopLeft(image.rectTransform, AwakenCellX + AwakenCellStep * i, AwakenCellY, AwakenCellW, AwakenCellH);
                 _awakenSegments.Add(image);
             }
             _awakenSegmentCount = count;
@@ -760,7 +854,11 @@ namespace Battle.UI
             if (comboSkillPanel != null) comboSkillPanel.SetActive(active);
             if (awakenHistoryContainer != null) awakenHistoryContainer.gameObject.SetActive(active && awakenHistoryEnabled);
 
-            if (active) ShowAwakenDim();
+            if (active)
+            {
+                ShowAwakenDim();
+                EnsureComboSlotFrames();
+            }
             else HideAwakenDim();
         }
 
@@ -768,11 +866,17 @@ namespace Battle.UI
         void ShowAwakenDim()
         {
             EnsureDimOverlay();
+            _awakenDimActive = true;
             if (dimOverlay != null)
             {
-                // 딤 색을 각성 전용으로 변경
                 var img = dimOverlay.GetComponent<Image>();
-                if (img != null) img.color = awakenDimColor;
+                if (img != null)
+                {
+                    img.color = awakenDimColor;
+                    Material mat = EnsureAwakenDimMaterial();
+                    if (mat != null) img.material = mat;
+                    ApplyAwakenDimGradient();
+                }
                 dimOverlay.gameObject.SetActive(true);
                 dimOverlay.SetAsLastSibling();
             }
@@ -816,17 +920,59 @@ namespace Battle.UI
             _awakenMarkerLayer.gameObject.SetActive(false);
         }
 
-        // 각성 딤을 끄고 색을 기본으로 복구
+        // 각성 딤을 끄고 선택/픽커용 단색 딤으로 복구
         void HideAwakenDim()
         {
+            _awakenDimActive = false;
             if (dimOverlay != null)
             {
                 dimOverlay.gameObject.SetActive(false);
-                // 다음 선택/픽커 모드를 위해 기본 딤 색으로 복구
                 var img = dimOverlay.GetComponent<Image>();
-                if (img != null) img.color = dimColor;
+                if (img != null)
+                {
+                    img.color = dimColor;
+                    if (_awakenDimMaterial != null && img.material == _awakenDimMaterial)
+                        img.material = null;
+                }
             }
             if (handRoot != null) handRoot.SetAsLastSibling();
+        }
+
+        const string AwakenDimShaderResourcePath = "UI/AwakenRadialDim"; // Resources 셰이더 경로
+
+        // 각성 딤용 방사형 그라데이션 머티리얼을 준비한다
+        Material EnsureAwakenDimMaterial()
+        {
+            if (_awakenDimMaterial != null) return _awakenDimMaterial;
+
+            Shader shader = Resources.Load<Shader>(AwakenDimShaderResourcePath);
+            if (shader == null)
+                shader = Shader.Find("UI/AwakenRadialDim");
+            if (shader == null)
+            {
+                Debug.LogWarning("[CardHandHUD] 각성 방사형 딤 셰이더를 찾지 못했습니다. 단색 딤으로 대체합니다.");
+                return null;
+            }
+
+            _awakenDimMaterial = new Material(shader) { name = "AwakenRadialDim" };
+            _awakenDimMaterial.SetColor("_Color", Color.white);
+            return _awakenDimMaterial;
+        }
+
+        // 화면 비율에 맞춰 중심은 밝고 가장자리는 어두운 원형 폴오프를 갱신한다
+        void ApplyAwakenDimGradient()
+        {
+            if (_awakenDimMaterial == null || dimOverlay == null) return;
+
+            float width = dimOverlay.rect.width;
+            float height = dimOverlay.rect.height;
+            float aspect = (width > 1f && height > 1f)
+                ? width / height
+                : (Screen.height > 0 ? (float)Screen.width / Screen.height : 1.777f);
+
+            _awakenDimMaterial.SetFloat("_Aspect", Mathf.Max(0.01f, aspect));
+            _awakenDimMaterial.SetFloat("_InnerRadius", awakenDimBrightRadius);
+            _awakenDimMaterial.SetFloat("_Softness", Mathf.Max(awakenDimBrightRadius + 0.001f, awakenDimFadeEnd));
         }
 
         private readonly List<Image> _awakenHistoryViews = new List<Image>(); // 입력 히스토리 뷰 풀
@@ -926,10 +1072,10 @@ namespace Battle.UI
             awakenHistoryContainer.sizeDelta = new Vector2(awakenHistoryItemSize.x, 600f);
         }
 
-        // 콤보 슬롯 3칸을 현재 입력 시퀀스로 갱신(빈 칸은 회색)
+        // 콤보 슬롯 3칸의 원소 아이콘을 현재 입력 시퀀스로 갱신. 프레임은 유지한다.
         public void UpdateComboSlot(IList<CardElement> input)
         {
-            EnsureComboSlotImagesBound();
+            EnsureComboSlotFrames();
 
             if (comboSlotImages == null || comboSlotImages.Length == 0)
             {
@@ -939,29 +1085,30 @@ namespace Battle.UI
 
             for (int i = 0; i < comboSlotImages.Length; i++)
             {
-                var img = comboSlotImages[i];
-                if (img == null) continue;
+                Image frame = comboSlotImages[i];
+                if (frame == null) continue;
+                Image icon = GetComboSlotIcon(frame);
+                if (icon == null) continue;
 
+                var vfx = frame.GetComponent<ComboSlotElementVfx>();
                 if (input != null && i < input.Count)
                 {
-                    Sprite s = cardPrefab != null ? cardPrefab.GetElementSprite(input[i]) : null;
-                    if (s != null)
-                    {
-                        img.sprite = s;
-                        img.color = Color.white;
-                    }
-                    else
-                    {
-                        img.sprite = null;
-                        img.color = ColorForElement(input[i]);
-                    }
-                    img.enabled = true;
+                    Sprite s = GetComboSlotElementSprite(input[i]);
+                    icon.sprite = s;
+                    Color iconColor = s != null ? Color.white : ColorForElement(input[i]);
+                    iconColor.a = comboSlotIconAlpha;
+                    icon.color = iconColor;
+                    icon.enabled = true;
+                    if (comboSlotElementVfxEnabled)
+                        GetComboSlotVfx(frame).Show(input[i]);
+                    else if (vfx != null)
+                        vfx.Hide();
                 }
                 else
                 {
-                    img.sprite = null;
-                    img.color = emptyComboSlotColor;
-                    img.enabled = true;
+                    icon.sprite = null;
+                    icon.enabled = false;
+                    if (vfx != null) vfx.Hide();
                 }
             }
         }
@@ -989,6 +1136,9 @@ namespace Battle.UI
                 {
                     if (img == null) continue;
                     if (img.gameObject == comboSlotPanel) continue; // 패널 자체 제외
+                    if (img.gameObject.name == "ElementIcon") continue; // 프레임 안의 아이콘 제외
+                    if (img.gameObject.name == "SlotBg") continue; // 프레임 안 배경 제외
+                    if (img.transform.parent != null && img.transform.parent.name == "ElementVfx") continue; // 테두리 이펙트 제외
                     if (collected.Contains(img)) continue;
                     collected.Add(img);
                     if (collected.Count >= 3) break;
@@ -1002,16 +1152,212 @@ namespace Battle.UI
             }
         }
 
+        const string ComboSlotFrameResourcePath = "UI/UI_ElementSlot_Frame"; // 프레임 스프라이트 경로
+        const string ComboSlotBgResourcePath = "UI/UI_ElementSlot_BG"; // 프레임 안쪽 배경 경로
+        const float ComboSlotIconInset = 0.033f; // 150px 프레임의 6px 테두리 안쪽에 맞닿는 여백
+
+        // 3칸 프레임에 스프라이트를 깔고 불투명도를 맞춘다
+        void EnsureComboSlotFrames()
+        {
+            EnsureComboSlotImagesBound();
+            if (comboSlotImages == null) return;
+
+            Sprite frameSprite = ResolveComboSlotFrameSprite();
+            for (int i = 0; i < comboSlotImages.Length; i++)
+            {
+                Image frame = comboSlotImages[i];
+                if (frame == null) continue;
+
+                if (frameSprite != null)
+                {
+                    frame.sprite = frameSprite;
+                    frame.type = Image.Type.Simple;
+                    frame.preserveAspect = true;
+                    frame.color = new Color(1f, 1f, 1f, comboSlotFrameAlpha);
+                    RectTransform rect = frame.rectTransform;
+                    float side = Mathf.Max(rect.sizeDelta.x, rect.sizeDelta.y);
+                    if (side < 1f) side = 120f;
+                    rect.sizeDelta = new Vector2(side, side);
+                }
+                else
+                {
+                    frame.sprite = null;
+                    frame.color = emptyComboSlotColor;
+                }
+
+                GetComboSlotBackground(frame);
+                Image icon = GetComboSlotIcon(frame);
+                if (icon != null) icon.transform.SetAsLastSibling();
+            }
+        }
+
+        Sprite _comboSlotFrameSpriteResolved; // 한 번 찾은 프레임 스프라이트
+        bool _comboSlotFrameLookupFailed; // 프레임을 못 찾으면 경고는 한 번만
+        Sprite _comboSlotBgSpriteResolved; // 한 번 찾은 안쪽 배경 스프라이트
+        bool _comboSlotBgLookupFailed; // 배경을 못 찾으면 경고는 한 번만
+
+        // 인스펙터 스프라이트가 없으면 Resources에서 프레임을 불러온다
+        Sprite ResolveComboSlotFrameSprite()
+        {
+            if (comboSlotFrameSprite != null) return comboSlotFrameSprite;
+            if (_comboSlotFrameSpriteResolved != null) return _comboSlotFrameSpriteResolved;
+            if (_comboSlotFrameLookupFailed) return null;
+
+            _comboSlotFrameSpriteResolved = Resources.Load<Sprite>(ComboSlotFrameResourcePath);
+            if (_comboSlotFrameSpriteResolved == null)
+            {
+                _comboSlotFrameLookupFailed = true;
+                Debug.LogWarning("[CardHandHUD] 콤보 슬롯 프레임 스프라이트를 찾지 못했습니다: " + ComboSlotFrameResourcePath);
+            }
+            return _comboSlotFrameSpriteResolved;
+        }
+
+        // 인스펙터 스프라이트가 없으면 Resources에서 안쪽 배경을 불러온다
+        Sprite ResolveComboSlotBgSprite()
+        {
+            if (comboSlotBgSprite != null) return comboSlotBgSprite;
+            if (_comboSlotBgSpriteResolved != null) return _comboSlotBgSpriteResolved;
+            if (_comboSlotBgLookupFailed) return null;
+
+            _comboSlotBgSpriteResolved = Resources.Load<Sprite>(ComboSlotBgResourcePath);
+            if (_comboSlotBgSpriteResolved == null)
+            {
+                _comboSlotBgLookupFailed = true;
+                Debug.LogWarning("[CardHandHUD] 콤보 슬롯 안쪽 배경을 찾지 못했습니다: " + ComboSlotBgResourcePath);
+            }
+            return _comboSlotBgSpriteResolved;
+        }
+
+        // 금색 프레임 안쪽에 배경을 깔아 둔다. 속성 아이콘은 이 위에 올라온다.
+        Image GetComboSlotBackground(Image frame)
+        {
+            if (frame == null) return null;
+
+            Image bg;
+            Transform existing = frame.transform.Find("SlotBg");
+            if (existing != null)
+                bg = existing.GetComponent<Image>();
+            else
+            {
+                var go = new GameObject("SlotBg", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.transform.SetParent(frame.transform, false);
+                bg = go.GetComponent<Image>();
+                bg.raycastTarget = false;
+            }
+            if (bg == null) return null;
+
+            FitInsideComboSlotFrame((RectTransform)bg.transform);
+            bg.transform.SetAsFirstSibling();
+            bg.sprite = ResolveComboSlotBgSprite();
+            bg.type = Image.Type.Simple;
+            bg.preserveAspect = false;
+            bg.color = new Color(1f, 1f, 1f, comboSlotBgAlpha);
+            bg.enabled = bg.sprite != null;
+            return bg;
+        }
+
+        readonly HashSet<string> _missingComboSlotSprites = new HashSet<string>(); // 못 찾은 아이콘 경로
+
+        // 프레임 안에 넣을 각성 전용 원소 아이콘. 불/물/바람/땅만 교체한다.
+        Sprite GetComboSlotElementSprite(CardElement element)
+        {
+            switch (element)
+            {
+                case CardElement.Fire:
+                    return ResolveComboSlotElementSprite(ref comboSlotFireSprite, "UI/UI_Awake_FireIcon");
+                case CardElement.Water:
+                    return ResolveComboSlotElementSprite(ref comboSlotWaterSprite, "UI/UI_Awake_WaterIcon");
+                case CardElement.Wind:
+                    return ResolveComboSlotElementSprite(ref comboSlotWindSprite, "UI/UI_Awake_WindIcon");
+                case CardElement.Earth:
+                    return ResolveComboSlotElementSprite(ref comboSlotEarthSprite, "UI/UI_Awake_LandIcon");
+                default:
+                    return cardPrefab != null ? cardPrefab.GetElementSprite(element) : null;
+            }
+        }
+
+        // 인스펙터 스프라이트가 없으면 Resources에서 원소 아이콘을 불러온다
+        Sprite ResolveComboSlotElementSprite(ref Sprite slot, string resourcePath)
+        {
+            if (slot != null) return slot;
+            slot = Resources.Load<Sprite>(resourcePath);
+            if (slot == null && _missingComboSlotSprites.Add(resourcePath))
+                Debug.LogWarning("[CardHandHUD] 각성 원소 아이콘을 찾지 못했습니다: " + resourcePath);
+            return slot;
+        }
+
+        // 프레임 안에 원소 아이콘용 Image를 만들거나 찾아 반환한다
+        Image GetComboSlotIcon(Image frame)
+        {
+            if (frame == null) return null;
+
+            Image icon;
+            Transform existing = frame.transform.Find("ElementIcon");
+            if (existing != null)
+                icon = existing.GetComponent<Image>();
+            else
+            {
+                var go = new GameObject("ElementIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.transform.SetParent(frame.transform, false);
+                icon = go.GetComponent<Image>();
+                icon.raycastTarget = false;
+                icon.enabled = false;
+            }
+            if (icon == null) return null;
+
+            FitInsideComboSlotFrame((RectTransform)icon.transform);
+            icon.preserveAspect = true;
+            return icon;
+        }
+
+        // 금색 테두리 안쪽에 딱 맞도록 자식 영역을 맞춘다
+        void FitInsideComboSlotFrame(RectTransform rect)
+        {
+            if (rect == null) return;
+            rect.anchorMin = new Vector2(ComboSlotIconInset, ComboSlotIconInset);
+            rect.anchorMax = new Vector2(1f - ComboSlotIconInset, 1f - ComboSlotIconInset);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.localScale = Vector3.one;
+        }
+
         private Coroutine[] _comboSlotPopCos;   // 콤보 슬롯 칸별 팝 코루틴
         private Vector3[] _comboSlotBaseScales; // 콤보 슬롯 칸별 기준 스케일
+
+        // 프레임에 속성 테두리 이펙트를 붙인다
+        ComboSlotElementVfx GetComboSlotVfx(Image frame)
+        {
+            var vfx = frame.GetComponent<ComboSlotElementVfx>();
+            if (vfx == null) vfx = frame.gameObject.AddComponent<ComboSlotElementVfx>();
+            return vfx;
+        }
+
+        // 콤보가 맞았을 때 채워진 칸의 속성 이펙트를 한꺼번에 요동친다.
+        public void PlayComboSlotSurge()
+        {
+            if (!comboSlotElementVfxEnabled) return;
+            EnsureComboSlotImagesBound();
+            if (comboSlotImages == null) return;
+
+            for (int i = 0; i < comboSlotImages.Length; i++)
+            {
+                if (comboSlotImages[i] == null) continue;
+                var vfx = comboSlotImages[i].GetComponent<ComboSlotElementVfx>();
+                if (vfx != null) vfx.Surge();
+            }
+        }
 
         // 콤보 슬롯 slotIndex 칸을 팝(+플래시)으로 강조 — 각성 중 속성이 들어올 때 호출
         public void PlayComboSlotInputEffect(int slotIndex)
         {
-            if (!comboSlotPopEnabled) return;
             EnsureComboSlotImagesBound();
             if (comboSlotImages == null || slotIndex < 0 || slotIndex >= comboSlotImages.Length) return;
             if (comboSlotImages[slotIndex] == null) return;
+
+            if (comboSlotElementVfxEnabled)
+                GetComboSlotVfx(comboSlotImages[slotIndex]).Pulse();
+
+            if (!comboSlotPopEnabled) return;
 
             // 칸 수에 맞춰 풀/기준 스케일 초기화
             if (_comboSlotPopCos == null || _comboSlotPopCos.Length != comboSlotImages.Length)
@@ -1054,7 +1400,12 @@ namespace Battle.UI
                 env = Mathf.Clamp01(env);
 
                 tr.localScale = Vector3.Lerp(baseScale, peak, env);
-                if (comboSlotFlashEnabled) img.color = Color.Lerp(baseColor, Color.white, env * 0.7f);
+                if (comboSlotFlashEnabled)
+                {
+                    Color flash = Color.Lerp(baseColor, Color.white, env * 0.7f);
+                    flash.a = baseColor.a;
+                    img.color = flash;
+                }
                 yield return null;
             }
 
@@ -1092,7 +1443,7 @@ namespace Battle.UI
                 _comboSkillItems.Add(item);
             }
 
-            // 속성 스프라이트는 카드 프리팹 매핑을 공유
+            // 콤보 스킬 목록의 원소 아이콘은 카드에 쓰이던 기존 스프라이트
             Sprite fireSp  = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Fire)  : null;
             Sprite waterSp = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Water) : null;
             Sprite windSp  = cardPrefab != null ? cardPrefab.GetElementSprite(CardElement.Wind)  : null;
@@ -1109,6 +1460,10 @@ namespace Battle.UI
                     item.gameObject.SetActive(true);
                     int cooldown = (cooldownRemaining != null && i < cooldownRemaining.Length)
                         ? cooldownRemaining[i] : 0;
+                    item.ApplyAwakenTextStyle(
+                        comboSkillNameFont, comboSkillNameFontSize, comboSkillNameColor,
+                        comboSkillNameFontStyle, comboSkillNameAlignment,
+                        comboSkillCooldownFontSize, comboSkillCooldownColor, comboSkillCooldownFontStyle);
                     item.SetupForCombo(skills[i], cooldown, fireSp, waterSp, windSp, earthSp);
                 }
                 else
@@ -2179,6 +2534,9 @@ namespace Battle.UI
         // 밀림 값을 목표로 부드럽게 보간하고 슬롯 위치에 반영
         void Update()
         {
+            if (_awakenDimActive)
+                ApplyAwakenDimGradient();
+
             if (!hoverSpreadEnabled || _slotSpreadCurrent == null) return;
 
             bool changed = false;

@@ -17,9 +17,8 @@ MonoBehaviour:
   - lap: 1
     stages:
     - presets:
-      - monsters: []
-      - monsters: []
-      - monsters: []
+      - monsters:
+        - {fileID: 11400000, guid: 67add3b5e97baac48a9b3240797ac667, type: 2}
     - presets: []
     - presets: []
     - presets: []

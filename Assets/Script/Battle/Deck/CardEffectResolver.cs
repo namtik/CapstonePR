@@ -1387,7 +1387,11 @@ namespace Battle.Deck
             Ctx.enemy.AddStatus(key, amount);
 
             if (isCardEffect && key == "burn" && Ctx.burnOnByCardActive && Ctx.burnOnByCardAmount > 0)
+            {
                 Ctx.enemy.TakeDamage(Ctx.burnOnByCardAmount);
+                Sprite burnPortrait = Ctx.enemyStat != null && Ctx.enemyStat.Data != null ? Ctx.enemyStat.Data.enemySprite : null;
+                Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, Ctx.burnOnByCardAmount);
+            }
 
             if (isCardEffect && key == "frost" && Ctx.frostOnFrostByCardActive
                 && Ctx.frostOnFrostByCardAmount > 0 && !Ctx.FrostTriggerReentrancy)

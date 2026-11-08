@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-// 메뉴바 중앙 상단에 현재 스테이지(바퀴-스테이지)를 n-n 형식으로 표시한다.
+// 메뉴바 TopBar2에 현재 스테이지(바퀴-스테이지)를 n-n 형식으로 표시한다.
 public class RunStageDisplayUI : MonoBehaviour
 {
     [Header("UI References")]
@@ -15,7 +15,7 @@ public class RunStageDisplayUI : MonoBehaviour
 
     [Header("Text Style (Inspector)")]
     [SerializeField] private TMP_FontAsset fontAsset;
-    [SerializeField] private float fontSize = 40f;
+    [SerializeField] private float fontSize = 18f;
     [SerializeField] private Color textColor = Color.white;
     [Tooltip("표시 형식. {0}=바퀴, {1}=스테이지. 기본 \"1-3\"")]
     [SerializeField] private string displayFormat = "{0}-{1}";

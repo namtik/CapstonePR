@@ -14,6 +14,14 @@ public class KillRewardFx : MonoBehaviour
     RectTransform _root;
     RectTransform _flyRoot;
 
+    void LateUpdate()
+    {
+        // 보상 패널이 같은 캔버스 맨 위로 올라와도, 날아가던 돈은 그 위에서 끝까지 보이게 한다.
+        if (_flyRoot == null || _flyRoot.childCount == 0) return;
+        if (_flyRoot.parent != null && _flyRoot.GetSiblingIndex() != _flyRoot.parent.childCount - 1)
+            _flyRoot.SetAsLastSibling();
+    }
+
     public static void Play(Vector2 screenPos, int amount, Action onCollected)
     {
         if (amount <= 0)
@@ -111,7 +119,7 @@ public class KillRewardFx : MonoBehaviour
         const float popTime = 0.16f;
         while (t < popTime)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float u = Mathf.Clamp01(t / popTime);
             rt.anchoredPosition = from + new Vector2(0f, 16f * u);
             rt.localScale = Vector3.one * Mathf.Lerp(0.86f, 1f, u);
@@ -122,7 +130,7 @@ public class KillRewardFx : MonoBehaviour
         float waited = 0f;
         while (!flight.done && waited < 3f)
         {
-            waited += Time.deltaTime;
+            waited += Time.unscaledDeltaTime;
             yield return null;
         }
 
@@ -130,7 +138,7 @@ public class KillRewardFx : MonoBehaviour
         const float fade = 0.22f;
         while (t < fade)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             var c = text.color;
             c.a = Mathf.Lerp(1f, 0f, t / fade);
             text.color = c;
@@ -181,7 +189,7 @@ public class KillRewardFx : MonoBehaviour
                 onCollected?.Invoke();
             }, flight));
         }
-        yield return new WaitForSeconds(latest + 0.25f);
+        yield return new WaitForSecondsRealtime(latest + 0.25f);
         if (!collected)
         {
             collected = true;
@@ -191,7 +199,7 @@ public class KillRewardFx : MonoBehaviour
 
     IEnumerator FlySoul(Vector2 origin, Vector2 target, float delay, float duration, bool pays, Action onArrive, Flight flight)
     {
-        if (delay > 0f) yield return new WaitForSeconds(delay);
+        if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
 
         RectTransform rt = CreateMoneyIcon();
         if (rt == null)
@@ -210,7 +218,7 @@ public class KillRewardFx : MonoBehaviour
         Vector2 hoverPos = from;
         while (hover < SoulHoverTime)
         {
-            hover += Time.deltaTime;
+            hover += Time.unscaledDeltaTime;
             float u = Mathf.Clamp01(hover / SoulHoverTime);
             float bob = Mathf.Sin(bobPhase + hover * 6.5f) * 7f;
             hoverPos = from + new Vector2(bob * 0.35f, 22f * u + bob);
@@ -228,7 +236,7 @@ public class KillRewardFx : MonoBehaviour
         float t = 0f;
         while (t < duration)
         {
-            t += Time.deltaTime;
+            t += Time.unscaledDeltaTime;
             float u = Mathf.Clamp01(t / duration);
             float e = u * u;
             Vector2 p = Vector2.Lerp(Vector2.Lerp(from, control, e), Vector2.Lerp(control, target, e), e);
