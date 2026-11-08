@@ -36628,11 +36628,14 @@ MonoBehaviour:
   bossCombatClip: {fileID: 8300000, guid: f9a81d49c63c6b341b223739dc386bae, type: 3}
   shopClip: {fileID: 8300000, guid: 471aeaabff123ea458bb4d72a78a0e2c, type: 3}
   restClip: {fileID: 8300000, guid: d7bbd7f82f19fb742b0500ca36dfb233, type: 3}
+  event1Clip: {fileID: 8300000, guid: 5f89e0e0ea4fe4e4593632bdfa4f73ab, type: 3}
+  event2Clip: {fileID: 8300000, guid: cdccd3c3d69766c43950b94eba7fe382, type: 3}
   mainMenuRoot: {fileID: 67308225}
   mapRoot: {fileID: 183776082}
   combatRoot: {fileID: 1780698868}
   shopRoot: {fileID: 1148724980}
   restRoot: {fileID: 895437396}
+  eventRoot: {fileID: 1879574928}
   bgmVolume: 1
   uiSource: {fileID: 1401858292}
   uiClickClip: {fileID: 8300000, guid: ad77aecc68933ee469decf2a32dd2833, type: 3}

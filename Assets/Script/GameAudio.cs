@@ -16,6 +16,8 @@ public class GameAudio : MonoBehaviour
     [SerializeField] private AudioClip bossCombatClip; // 보스 전투 곡
     [SerializeField] private AudioClip shopClip; // 상점 곡
     [SerializeField] private AudioClip restClip; // 휴식 곡
+    [SerializeField] private AudioClip event1Clip; // 이벤트 1 곡
+    [SerializeField] private AudioClip event2Clip; // 이벤트 2~5 곡
     [Tooltip("켜져 있는 동안 메인 곡을 재생한다.")]
     [SerializeField] private GameObject mainMenuRoot; // 메인 화면 루트
     [Tooltip("켜져 있는 동안 맵 곡을 재생한다. 메인 화면이 켜져 있으면 메인 곡이 우선한다.")]
@@ -26,6 +28,8 @@ public class GameAudio : MonoBehaviour
     [SerializeField] private GameObject shopRoot; // 상점 화면 루트
     [Tooltip("켜져 있는 동안 휴식 곡을 재생한다.")]
     [SerializeField] private GameObject restRoot; // 휴식 화면 루트
+    [Tooltip("켜져 있는 동안 이벤트 곡을 재생한다. 1번은 event1Clip, 2~5번은 event2Clip.")]
+    [SerializeField] private GameObject eventRoot; // 이벤트 화면 루트
     [Range(0f, 1f)]
     [SerializeField] private float bgmVolume = 1f; // 배경음 기본 볼륨(BGM 채널과 곱함)
 
@@ -68,6 +72,8 @@ public class GameAudio : MonoBehaviour
             shopRoot = GameStateController.Instance.shopStage;
         if (restRoot == null)
             restRoot = GameStateController.Instance.restStage;
+        if (eventRoot == null)
+            eventRoot = GameStateController.Instance.eventStage;
     }
 
     void OnDestroy()
@@ -113,6 +119,8 @@ public class GameAudio : MonoBehaviour
             next = shopClip;
         else if (restRoot != null && restRoot.activeInHierarchy)
             next = restClip;
+        else if (eventRoot != null && eventRoot.activeInHierarchy)
+            next = EventClip();
 
         if (next != playingBgm)
         {
@@ -137,6 +145,17 @@ public class GameAudio : MonoBehaviour
         if (combatTrack == NodeType.Elite)
             return eliteCombatClip;
         return normalCombatClip;
+    }
+
+    // 이벤트 1은 전용 곡, 2~5는 같은 곡을 쓴다.
+    AudioClip EventClip()
+    {
+        var stage = eventRoot != null ? eventRoot.GetComponent<EventStageController>() : null;
+        if (stage == null)
+            stage = FindFirstObjectByType<EventStageController>(FindObjectsInactive.Include);
+        if (stage != null && stage.CurrentEventIndex <= 0)
+            return event1Clip;
+        return event2Clip;
     }
 
     // 배경음을 처음부터 반복 재생한다
