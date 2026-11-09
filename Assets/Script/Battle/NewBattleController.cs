@@ -146,16 +146,8 @@ namespace Battle
         private EnemyStat _enemyStat;            // 현재 효과 대상 적 스탯
         private readonly List<EnemyController> _boundEnemies = new List<EnemyController>();
         private readonly List<EnemyController> _aliveBuf = new List<EnemyController>();
-        // 적 행동(공격/방해행동) 대기열 — 한 번에 하나씩, 이전 행동과 카드 연출이 완전히 끝난 뒤 진행
-        private struct EnemyAction
-        {
-            public EnemyController enemy;
-            public bool disruption; // true=방해행동, false=공격
-        }
-        private readonly Queue<EnemyAction> _attackQueue = new Queue<EnemyAction>();
+        private readonly Queue<EnemyController> _attackQueue = new Queue<EnemyController>();
         private bool _attackResolving;
-        // 적 행동 도중 플레이어가 잃은 체력 — 체력 손실 유물(피 묻은 가시 등)은 행동이 완전히 끝난 뒤 발동
-        private readonly List<(int amount, bool first)> _deferredHpLost = new List<(int amount, bool first)>();
         private EnemyController _actingEnemy;      // 지금 행동 중인 적(행동 순서 바 '현재' 칸)
         private bool _actingIsDisruption;          // 현재 행동이 방해행동인지(아니면 공격)
         private float _enemyActionLockUntil;       // 방해행동 연출 잠금 종료 시각
@@ -166,14 +158,7 @@ namespace Battle
             _inBattle && (_attackResolving || _attackQueue.Count > 0 || Time.time < _enemyActionLockUntil);
         public EnemyController ActingEnemy => IsEnemyTurn ? _actingEnemy : null; // 현재 행동 중인 적
         public bool ActingIsDisruption => _actingIsDisruption;                   // 현재 행동 종류
-        public IEnumerable<EnemyController> PendingAttackers                    // 공격 대기 중인 적(순서대로)
-        {
-            get
-            {
-                foreach (var a in _attackQueue)
-                    if (!a.disruption) yield return a.enemy;
-            }
-        }
+        public IEnumerable<EnemyController> PendingAttackers => _attackQueue;    // 공격 대기 중인 적(순서대로)
         bool InputLockedByEnemyTurn => lockInputDuringEnemyTurn && !_awakenActive && IsEnemyTurn;
 
         private bool _inBattle;                  // 전투 진행 중 여부
@@ -249,7 +234,6 @@ namespace Battle
         private CardInstance _lastResolvedCard; // 물12(211): 마지막으로 사용한 카드(재사용 대상)
 
         private int _cardsPlayedThisBattle;        // 유물(웃는 탈 10006): 이번 전투 일반 카드 사용 누적 수
-        public int CardsPlayedThisBattle => _cardsPlayedThisBattle; // 유물 카운터 표시용
         private bool _hpLostThisBattle;            // 유물(혈묵주 10003): 이번 전투 체력 손실 발생 여부
         private bool _relicForceAwakenPending;     // 유물(황룡옥적 10010): 시작 드로우 후 강제 각성 예약
         private bool _relicFirstCardRecastPending; // 유물(복사경 10015): 첫 사용 카드 효과 1회 재발동 예약
@@ -790,24 +774,7 @@ namespace Battle
             if (amount <= 0) return;
             bool first = !_hpLostThisBattle;
             _hpLostThisBattle = true;
-            // 적 행동 처리 중이면 공격 모션이 피격 모션으로 끊기지 않도록 행동이 끝난 뒤로 미룬다
-            if (_attackResolving && _attackStartRoutine != null)
-            {
-                _deferredHpLost.Add((amount, first));
-                return;
-            }
             RelicManager.Instance?.NotifyPlayerHpLost(this, amount, first);
-        }
-
-        // 미뤄 둔 체력 손실 유물 발동을 순서대로 처리
-        void FlushDeferredHpLost()
-        {
-            if (_deferredHpLost.Count == 0) return;
-            var pending = _deferredHpLost.ToArray();
-            _deferredHpLost.Clear();
-            if (!_inBattle) return;
-            for (int i = 0; i < pending.Length; i++)
-                RelicManager.Instance?.NotifyPlayerHpLost(this, pending[i].amount, pending[i].first);
         }
 
         // 땅18(417): 방어도 소모 시 무작위 파편 1장 버린 더미에
@@ -2260,6 +2227,9 @@ namespace Battle
         }
 
         // ── IRelicBattleContext 구현 (유물이 전투에 영향을 주는 동작) ──────────────
+        // 이번 전투에 사용한 일반 카드 수. 행동 순서 바의 유물 카운터가 읽는다.
+        public int CardsPlayedThisBattle => _cardsPlayedThisBattle;
+
         // 적에게 빙결 부여 (양수 → OnStatusApplied로 빙결 연출 트리거)
         public void ApplyFrostToEnemy(int amount)
         {
@@ -2439,8 +2409,6 @@ namespace Battle
         // 좌상단 유물 아이콘 펄스 연출 후 onShown 호출 (HUD 없으면 즉시 실행)
         public void PulseRelic(Battle.Relic.RelicSO relic, string label, System.Action onShown)
         {
-            if (turnOrderTimeline == null) turnOrderTimeline = ResolveOrCreateTurnOrderTimeline();
-            turnOrderTimeline?.ShowRelicTrigger(relic); // 행동 순서 바 현재 칸에도 발동 표시
             if (relic != null) BattleLog.RecordRelic(relic.icon);
             if (RelicHUD.Instance != null && relic != null)
                 RelicHUD.Instance.PulseRelicIcon(relic, label, onShown);
@@ -2520,99 +2488,48 @@ namespace Battle
         public void EnqueueEnemyAttack(EnemyController source)
         {
             if (source == null) return;
-            _attackQueue.Enqueue(new EnemyAction { enemy = source, disruption = false });
-            TryProcessAttackQueue();
-        }
-
-        // 방해행동도 공격과 같은 대기열로 — 카드 연출/이전 행동이 끝난 뒤 차례대로 발동
-        public void EnqueueEnemyDisruption(EnemyController source)
-        {
-            if (source == null) return;
-            _attackQueue.Enqueue(new EnemyAction { enemy = source, disruption = true });
+            _attackQueue.Enqueue(source);
             TryProcessAttackQueue();
         }
 
         void TryProcessAttackQueue()
         {
-            if (_attackStartRoutine != null) return; // 이미 대기열 처리 중
-            if (_attackQueue.Count == 0) return;
-            if (!isActiveAndEnabled)
-            {
-                // 코루틴을 못 돌리는 상황(비활성) — 즉시 순차 실행 폴백
-                while (_attackQueue.Count > 0)
-                {
-                    var a = _attackQueue.Dequeue();
-                    if (a.enemy == null || !a.enemy.IsAlive) continue;
-                    if (a.disruption) a.enemy.RunMidPatternNow();
-                    else a.enemy.BeginQueuedAttack(null);
-                }
-                return;
-            }
-            _attackStartRoutine = StartCoroutine(ProcessEnemyActionQueue());
-        }
-
-        // 대기열을 하나씩 처리: 카드 연출·피격 반응 종료 대기, 행동자 표시 대기, 행동 실행, 완료까지 대기 순서
-        IEnumerator ProcessEnemyActionQueue()
-        {
+            if (_attackResolving) return;
             while (_attackQueue.Count > 0)
             {
-                // 이전 동작이 완전히 끝날 때까지 대기(카드 중앙 연출 퇴장까지 + 적 피격 반응)
-                yield return WaitPlayerPresentationsFinished(_attackQueue.Peek().enemy);
-                if (!_inBattle) break;
-                if (_attackQueue.Count == 0) break;
-
-                EnemyAction a = _attackQueue.Dequeue();
-                EnemyController e = a.enemy;
+                EnemyController e = _attackQueue.Dequeue();
                 if (e == null || !e.IsAlive) continue;
-
                 _attackResolving = true;
                 _actingEnemy = e;
-                _actingIsDisruption = a.disruption;
+                _actingIsDisruption = false;
                 BindEnemy(e);
-
-                // 행동 순서 바에서 행동자가 '현재' 칸으로 올라오는 걸 보여준 뒤 행동 시작
-                if (enemyTurnStartDelay > 0f) yield return new WaitForSeconds(enemyTurnStartDelay);
-                if (!_inBattle) break;
-                if (e == null || !e.IsAlive) { _attackResolving = false; continue; }
-                BindEnemy(e);
-
-                if (a.disruption)
-                {
-                    e.RunMidPatternNow();
-                    // 방해행동 연출 잠금 시간만큼 다음 행동을 미룸
-                    float wait = Mathf.Max(disruptionLockSeconds, _enemyActionLockUntil - Time.time);
-                    if (wait > 0f) yield return new WaitForSeconds(wait);
-                }
+                // 행동 순서 바에서 행동자가 '현재' 칸으로 올라오는 걸 보여준 뒤 공격 시작
+                if (enemyTurnStartDelay > 0f && isActiveAndEnabled)
+                    _attackStartRoutine = StartCoroutine(BeginAttackAfterDelay(e));
                 else
-                {
-                    bool done = false;
-                    e.BeginQueuedAttack(() => done = true);
-                    // 적이 파괴되면 OnDestroy에서 완료 콜백이 호출됨. 혹시 모를 정지 대비 상한 대기.
-                    float deadline = Time.time + 10f;
-                    while (!done && Time.time < deadline) yield return null;
-                }
-                _attackResolving = false;
-                // 행동이 완전히 끝난 뒤 체력 손실 유물 발동(다음 행동은 그 연출이 끝날 때까지 대기)
-                FlushDeferredHpLost();
+                    e.BeginQueuedAttack(OnQueuedAttackFinished);
+                return;
             }
-            _attackResolving = false;
-            FlushDeferredHpLost();
-            _attackStartRoutine = null;
         }
 
-        // 플레이어 카드 사용 연출(등장부터 퇴장까지), 유물(아이템) 발동 연출, 대상 적의 피격 반응이 모두 끝날 때까지 대기
-        IEnumerator WaitPlayerPresentationsFinished(EnemyController next)
+        IEnumerator BeginAttackAfterDelay(EnemyController e)
         {
-            float deadline = Time.time + 5f; // 안전 상한
-            while (Time.time < deadline)
+            yield return new WaitForSeconds(enemyTurnStartDelay);
+            _attackStartRoutine = null;
+            if (!_inBattle) yield break;
+            if (e == null || !e.IsAlive)
             {
-                bool presenting = _cardPresenting || (handHud != null && handHud.IsCardUsePresenting);
-                bool relicShowing = (RelicHUD.Instance != null && RelicHUD.Instance.IsPulsing)
-                                    || (turnOrderTimeline != null && turnOrderTimeline.IsShowingRelicTrigger);
-                bool hitReacting = next != null && next.HitReactionRemaining > 0f;
-                if (!presenting && !relicShowing && !hitReacting) yield break;
-                yield return null;
+                OnQueuedAttackFinished();
+                yield break;
             }
+            BindEnemy(e);
+            e.BeginQueuedAttack(OnQueuedAttackFinished);
+        }
+
+        void OnQueuedAttackFinished()
+        {
+            _attackResolving = false;
+            TryProcessAttackQueue();
         }
 
         // 적 턴 상태(공격 대기열·행동자·잠금) 초기화
@@ -2625,7 +2542,6 @@ namespace Battle
             }
             _attackResolving = false;
             _attackQueue.Clear();
-            _deferredHpLost.Clear();
             _actingEnemy = null;
             _actingIsDisruption = false;
             _enemyActionLockUntil = 0f;

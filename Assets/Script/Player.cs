@@ -369,7 +369,9 @@ public class Player : MonoBehaviour, IBattleUnit
             currentHp -= finalDamage;
             SyncAllInstancesFrom(this);
             OnHpDecreased?.Invoke(finalDamage);
-            if (cardtype != "self_loss")
+            if (cardtype == "burn")
+                SfxManager.Instance?.PlayBurn();
+            else if (cardtype != "self_loss")
                 SfxManager.Instance?.PlayPlayerHit();
 
             if (currentHp <= 0)

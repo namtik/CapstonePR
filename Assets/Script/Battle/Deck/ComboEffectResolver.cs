@@ -88,11 +88,16 @@ namespace Battle
             switch (verb)
             {
                 case "DAMAGE":
+                {
+                    bool burnDamage = (eff.formula ?? "").IndexOf("BURN", StringComparison.OrdinalIgnoreCase) >= 0;
                     ForEachComboTarget(eff, ctx, e =>
                     {
                         for (int h = 0; h < hits; h++) e.TakeDamage(amount);
+                        if (burnDamage && amount > 0)
+                            SfxManager.Instance?.PlayBurn();
                     });
                     break;
+                }
 
                 case "APPLY_STATUS":
                 {

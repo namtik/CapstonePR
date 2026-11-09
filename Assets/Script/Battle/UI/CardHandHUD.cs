@@ -1802,9 +1802,6 @@ namespace Battle.UI
             }
         }
 
-        // 카드 사용 중앙 연출(등장~퇴장)이 아직 진행 중인지 — 적 행동은 이게 끝난 뒤 시작한다
-        public bool IsCardUsePresenting => _normalPresentCo != null || _interruptablePresentCo != null;
-
         // 진행 중인 카드 사용 연출을 onDisappear 호출 없이 즉시 정리
         public void CancelCardUsePresentations()
         {

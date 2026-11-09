@@ -591,7 +591,6 @@ RectTransform:
   - {fileID: 1722231436}
   - {fileID: 2033277084}
   - {fileID: 1777082903}
-  - {fileID: 1808821512}
   - {fileID: 1095919636}
   m_Father: {fileID: 1780698869}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -35080,6 +35079,7 @@ MonoBehaviour:
   awakenStartClip: {fileID: 8300000, guid: 0cb3247db7def0348be1a05af99f384c, type: 3}
   awakenSlotInputClip: {fileID: 8300000, guid: 29ae4dc03c504c94cad74ed675fb82c9, type: 3}
   healClip: {fileID: 8300000, guid: 2808cdc7658257a45a7114715b2c1890, type: 3}
+  burnClip: {fileID: 8300000, guid: 74544274e33872745a3fe102a1b10f4b, type: 3}
   effectClips:
   - effectName: Fire_ATK
     clip: {fileID: 8300000, guid: ffae41f8f11c27e4e8cd77744a7eaa01, type: 3}
@@ -35100,6 +35100,7 @@ MonoBehaviour:
   awakenStartVolume: 1
   awakenSlotInputVolume: 1
   healVolume: 1
+  burnVolume: 1
 --- !u!82 &1349267145
 AudioSource:
   m_ObjectHideFlags: 0
@@ -47685,99 +47686,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1800141771}
   m_CullTransparentMesh: 1
---- !u!1 &1808821511
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1808821512}
-  - component: {fileID: 1808821514}
-  - component: {fileID: 1808821513}
-  m_Layer: 5
-  m_Name: TurnOrderManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1808821512
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1808821511}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 19061629}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1808821513
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1808821511}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 98815f4ffd54044408e50289c4d58822, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Battle.UI.TurnOrderTimeline
-  anchoredOffset: {x: 24, y: -150}
-  currentSize: 100
-  labelWidth: 90
-  actionSize: 90
-  rowSpacing: 10
-  cellSpacing: 30
-  actionsPerRow: 2
-  reservedRows: 3
-  showDisruptions: 1
-  slideSpeed: 12
-  actionIcons:
-  - kind: 0
-    icon: {fileID: 21300000, guid: 804efdf6ab50d5e4aafcf355a1811852, type: 3}
-    color: {r: 0.3018868, g: 0.3018868, b: 0.3018868, a: 1}
-    fallbackText: "\uACF5"
-  - kind: 1
-    icon: {fileID: 21300000, guid: a991cd7c0c2b2464b9f6b9125e663448, type: 3}
-    color: {r: 0.7, g: 0.45, b: 0.98, a: 1}
-    fallbackText: '?'
-  showDamage: 1
-  nextGlowColor: {r: 1, g: 0.8, b: 0.38, a: 0.6666667}
-  nextMarker: {fileID: 0}
-  glowPulseSpeed: 3
-  showItems: 1
-  combatItemsOnly: 1
-  itemSize: 70
-  itemSpacing: 8
-  itemsPerRow: 4
-  itemShowSeconds: 0.9
-  itemColor: {r: 0.85, g: 0.72, b: 0.4, a: 1}
-  idleRowAlpha: 0.55
-  font: {fileID: 0}
-  playerPortrait: {fileID: 0}
-  playerColor: {r: 0.33, g: 0.7, b: 1, a: 1}
-  attackColor: {r: 0.95, g: 0.34, b: 0.3, a: 1}
-  panelColor: {r: 0, g: 0, b: 0, a: 0.35}
---- !u!222 &1808821514
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1808821511}
-  m_CullTransparentMesh: 1
 --- !u!1 &1810409946
 GameObject:
   m_ObjectHideFlags: 0
@@ -53107,7 +53015,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 465.00003}
+  m_AnchoredPosition: {x: -0.00018310547, y: 464.99994}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2018776364
