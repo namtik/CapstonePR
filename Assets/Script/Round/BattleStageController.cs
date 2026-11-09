@@ -179,6 +179,14 @@ public class BattleStageController : MonoBehaviour
             }
     }
 
+    // 이 씬의 StageLightingManager 시간대를 바꾼다(비활성 상태여도 값은 저장 → 켜질 때 OnEnable에서 적용).
+    public void SetStageTime(StageLightingManager.StageTime time)
+    {
+        foreach (var root in gameObject.scene.GetRootGameObjects())
+            foreach (var lighting in root.GetComponentsInChildren<StageLightingManager>(true))
+                lighting.SetTime(time);
+    }
+
     // StageManager가 표시할 스테이지를 현재로 지정/해제한다.
     public void MakeCurrent() { Current = this; }
     public static void ClearCurrent() { Current = null; }

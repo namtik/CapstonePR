@@ -32,6 +32,25 @@ public class StageManager : MonoBehaviour
     [Tooltip("시작 시 모든 스테이지 씬을 숨김 상태로 미리 로드해 둘지 여부(전투 진입 시 끊김 방지).")]
     [SerializeField] private bool preloadAllOnStart = true;
 
+    [Header("시간 흐름(스테이지 진행)")]
+    [Tooltip("진행(맵 컬럼)에 따라 스테이지 시간대를 순환시킨다. 끄면 각 스테이지 씬의 StageLightingManager 설정을 그대로 쓴다.")]
+    [SerializeField] private bool progressTimeOfDay = true;
+    [Tooltip("시간대가 한 칸 넘어가는 데 필요한 진행 컬럼 수(맵 10컬럼 기준 2 → 한 바퀴에 5칸 진행, 보스는 다음 시간대).")]
+    [SerializeField, Min(1)] private int columnsPerTimeStep = 2;
+    [Tooltip("순환 순서. 진행 컬럼 / columnsPerTimeStep 을 이 목록 길이로 나눈 나머지 위치의 시간대를 쓴다.")]
+    [SerializeField] private List<StageLightingManager.StageTime> timeCycle = new List<StageLightingManager.StageTime>
+    {
+        StageLightingManager.StageTime.Morning,
+        StageLightingManager.StageTime.Afternoon,
+        StageLightingManager.StageTime.LateAfternoon,
+        StageLightingManager.StageTime.Sunset,
+        StageLightingManager.StageTime.Evening,
+        StageLightingManager.StageTime.Dawn,
+    };
+
+    private bool _hasStageTime;
+    private StageLightingManager.StageTime _stageTime;
+
     [Header("카메라 전환")]
     [Tooltip("전투 밖에서 쓰는 기본(비전투) 카메라 — 보통 MainScene의 메인 카메라. 전투 중엔 자동으로 꺼서 스테이지 카메라(Base)와 충돌하지 않게 한다. URP는 Base 카메라 2개가 동시에 켜지면 서로 덮어써서 3D가 안 보인다.")]
     [SerializeField] private Camera nonCombatCamera;   // 비전투 기본 카메라(전투 중 off)
@@ -131,11 +150,20 @@ public class StageManager : MonoBehaviour
     // 로드 실패 시에도 onReady는 호출되며, 이때 BattleStageController.Current는 null(→ RoundManager 2D 폴백).
     public void ShowStage(EnemyElement element, Action onReady = null)
     {
+        ShowStage(element, -1, onReady);
+    }
+
+    // progressColumn: 누적 진행 컬럼(난이도 컬럼 = 맵컬럼 + 바퀴*10). 0 이상이면 그에 맞는 시간대를 적용한다.
+    public void ShowStage(EnemyElement element, int progressColumn, Action onReady = null)
+    {
         string target = ResolveSceneName(element);
         int id = ++_requestId;
         _visible = true;
         _shownSceneName = target;
-        if (logVerbose) Debug.Log($"[StageManager] ShowStage({element} → '{target}')");
+        _hasStageTime = progressTimeOfDay && progressColumn >= 0 && TryResolveTime(progressColumn, out _stageTime);
+        if (logVerbose)
+            Debug.Log($"[StageManager] ShowStage({element} → '{target}', column={progressColumn}" +
+                      (_hasStageTime ? $", time={_stageTime})" : ")"));
 
         if (string.IsNullOrEmpty(target))
         {
@@ -233,6 +261,7 @@ public class StageManager : MonoBehaviour
         stage.AutoWire();
         _stages[scene.name] = stage;
         bool show = _visible && scene.name == _shownSceneName;
+        if (show && _hasStageTime) stage.SetStageTime(_stageTime);
         stage.SetVisible(show);
         if (show) return;
 
@@ -256,6 +285,8 @@ public class StageManager : MonoBehaviour
 
         if (shown != null)
         {
+            // 켜기 전에 시간대를 넣어 둔다 → OnEnable의 Apply가 바로 이 시간대로 조명을 적용(깜빡임 없음).
+            if (_hasStageTime) shown.SetStageTime(_stageTime);
             shown.SetVisible(true);
             shown.MakeCurrent();
         }
@@ -275,6 +306,16 @@ public class StageManager : MonoBehaviour
 
         if (logVerbose)
             Debug.Log($"[StageManager] ApplyVisibility — visible={_visible}, scene='{_shownSceneName}', stage={stageOn}");
+    }
+
+    // 진행 컬럼 → 순환 시간대. 맵 10컬럼·2컬럼/칸 기준: 0-1 아침, 2-3 오후, 4-5 늦은오후, 6-7 노을, 8-9 저녁, 보스(10) 새벽 …
+    public bool TryResolveTime(int progressColumn, out StageLightingManager.StageTime time)
+    {
+        time = StageLightingManager.StageTime.Afternoon;
+        if (timeCycle == null || timeCycle.Count == 0) return false;
+        int step = Mathf.Max(0, progressColumn) / Mathf.Max(1, columnsPerTimeStep);
+        time = timeCycle[step % timeCycle.Count];
+        return true;
     }
 
     bool IsManagedScene(string sceneName)

@@ -173,6 +173,7 @@ MonoBehaviour:
   hitStopFlashColor: {r: 1, g: 1, b: 1, a: 1}
   hitStopFlashStrength: 0.55
   logHitStop: 1
+  pauseMotionDefault: 0.2
   cameraPunch:
     enabled: 1
     holdDuration: 0.22
@@ -597,7 +598,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b9a44de730bd215468b4c3c2dc4733a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1772507685464318381}
   m_SourcePrefab: {fileID: 100100000, guid: b9a44de730bd215468b4c3c2dc4733a0, type: 3}
 --- !u!137 &1395630902788192321 stripped
 SkinnedMeshRenderer:
@@ -609,6 +613,23 @@ Animator:
   m_CorrespondingSourceObject: {fileID: 5866666021909216657, guid: b9a44de730bd215468b4c3c2dc4733a0, type: 3}
   m_PrefabInstance: {fileID: 7781681901419729493}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &7439805452683620100 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: b9a44de730bd215468b4c3c2dc4733a0, type: 3}
+  m_PrefabInstance: {fileID: 7781681901419729493}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1772507685464318381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7439805452683620100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df0f6986e2b476944b8266af15d77628, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAnimationEventRelay
 --- !u!4 &7815063705234240958 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b9a44de730bd215468b4c3c2dc4733a0, type: 3}

@@ -260,7 +260,7 @@ public class RoundManager : MonoBehaviour
     public void StartCombat(CombatRoundData data)
     {
         List<EnemyData> roster = ResolveCombatRoster(data);
-        ShowStageThen(roster, () => BeginCombat(data, roster));
+        ShowStageThen(roster, data.columnIndex, () => BeginCombat(data, roster));
     }
 
     void BeginCombat(CombatRoundData data, List<EnemyData> roster)
@@ -281,7 +281,7 @@ public class RoundManager : MonoBehaviour
     public void StartCombat(EliteRoundData data)
     {
         List<EnemyData> roster = TakeFirstEnemy(data.enemies);
-        ShowStageThen(roster, () => BeginElite(data, roster));
+        ShowStageThen(roster, data.columnIndex, () => BeginElite(data, roster));
     }
 
     void BeginElite(EliteRoundData data, List<EnemyData> roster)
@@ -302,7 +302,7 @@ public class RoundManager : MonoBehaviour
     public void StartBoss(BossRoundData data)
     {
         var bossOnly = new List<EnemyData> { data.bossEnemy };
-        ShowStageThen(bossOnly, () => BeginBoss(data));
+        ShowStageThen(bossOnly, data.columnIndex, () => BeginBoss(data));
     }
 
     void BeginBoss(BossRoundData data)
@@ -332,14 +332,15 @@ public class RoundManager : MonoBehaviour
 
     // 적 속성에 맞는 3D 스테이지를 표시하고, 준비되면(이미 로드돼 있으면 즉시) 전투를 시작한다.
     // StageManager가 없으면 바로 시작(2D).
-    void ShowStageThen(List<EnemyData> roster, System.Action begin)
+    // progressColumn: 누적 진행 컬럼 — 스테이지 시간대(아침→…→새벽 순환)를 정하는 데 쓰인다.
+    void ShowStageThen(List<EnemyData> roster, int progressColumn, System.Action begin)
     {
         if (StageManager.Instance == null)
         {
             begin();
             return;
         }
-        StageManager.Instance.ShowStage(StageManager.ResolveElement(roster), begin);
+        StageManager.Instance.ShowStage(StageManager.ResolveElement(roster), progressColumn, begin);
     }
 
     // 상점 스테이지를 연다.
