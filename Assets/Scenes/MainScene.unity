@@ -36222,7 +36222,7 @@ MonoBehaviour:
   lockInputDuringEnemyTurn: 1
   enemyTurnStartDelay: 0.35
   disruptionLockSeconds: 0.6
-  holdAwakenForever: 0
+  holdAwakenForever: 1
   logVerbose: 1
   useAiDisruption: 1
   aiExplorationEpsilon: 0.15
@@ -51695,7 +51695,9 @@ MonoBehaviour:
     count: 1
   - cardId: 114
     count: 2
-  useAsStartingDeck: 1
+  - cardId: 114
+    count: 2
+  useAsStartingDeck: 0
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:
