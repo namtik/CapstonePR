@@ -449,6 +449,14 @@ namespace Battle.UI
         public RectTransform AwakenGaugeRect =>
             awakenGauge != null ? awakenGauge.transform as RectTransform : null;
 
+        // 첫 각성 칸의 왼쪽 아래 좌표.
+        public bool TryGetAwakenStackAnchor(out RectTransform host, out Vector2 anchoredTopLeft)
+        {
+            host = awakenGauge != null ? awakenGauge.transform as RectTransform : null;
+            anchoredTopLeft = new Vector2(AwakenCellX, -(AwakenCellY + AwakenCellH + 4f));
+            return host != null && _awakenSkinReady;
+        }
+
         // 각성 게이지 표시 여부를 제어
         public void SetAwakenGaugeVisible(bool visible)
         {

@@ -1,11 +1,26 @@
 using System.Collections.Generic;
+using Battle.UI;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class StatusPanelUI : MonoBehaviour
 {
     [Header("UI 아이콘")]
     [SerializeField] private StatusIconUI iconPrefab;   // 아이콘+숫자 프리팹
     [SerializeField] private StatusIconDatabase iconDatabase;   // 아이콘 SO 데이터베이스
+
+    [Header("스택 숫자")]
+    [SerializeField] private TMP_FontAsset countFont;   // 비우면 프리팹 폰트
+    [SerializeField] private float countFontSize = 32f;
+    [SerializeField] private Color countColor = new Color(0.5943396f, 0.5943396f, 0.5943396f, 1f);
+    [SerializeField] private FontStyles countFontStyle = FontStyles.Bold;
+    [Tooltip("아이콘 중심 기준. (0, 0)은 정중앙.")]
+    [SerializeField] private Vector2 countOffset;
+    [Tooltip("0이면 외곽선 없음.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float countOutlineWidth = 0f;
+    [SerializeField] private Color countOutlineColor = Color.black;
 
     // 현재 화면에 표시 중인 아이콘들을 저장하는 딕셔너리
     private Dictionary<string, StatusIconUI> activeIcons = new Dictionary<string, StatusIconUI>();
@@ -18,6 +33,10 @@ public class StatusPanelUI : MonoBehaviour
 
     private Transform followTarget;   // 적 피격 흔들림을 따라갈 추적 대상
     private Vector3 followWorldOffset;   // 추적 대상 대비 초기 오프셋
+    private bool dockUnderAwaken;   // 각성 게이지 왼쪽 아래
+    private bool dockAboveHpBar;    // HP바 왼쪽 위
+    private IEnemyView dockEnemyView;
+    private CardHandHUD awakenHud;
     private bool following;   // 추적 활성화 여부
     private bool followOffsetCaptured;   // 오프셋 캡처 완료 여부
     private Camera followCam;   // 지정 시 대상의 월드 위치를 이 카메라로 WorldToScreen 변환해 추적(3D)
@@ -87,15 +106,55 @@ public class StatusPanelUI : MonoBehaviour
         followOffsetCaptured = false;
     }
 
+    // 플레이어 스택을 각성 게이지 왼쪽 아래에 붙인다.
+    public void DockUnderAwakenGauge()
+    {
+        dockUnderAwaken = true;
+        dockAboveHpBar = false;
+        following = false;
+        followTarget = null;
+    }
+
+    // 적 스택을 HP바 왼쪽 위에 붙인다.
+    public void DockAboveHpBar(IEnemyView view)
+    {
+        dockEnemyView = view;
+        dockAboveHpBar = true;
+        dockUnderAwaken = false;
+        following = false;
+        followTarget = null;
+    }
+
     void LateUpdate()
     {
+        ApplyCountStyles();
+
         // 1) 타겟(적)이 파괴됐는데 아이콘이 남아 있으면 정리 — 사망 시 상태이상이 화면에 남는 문제 방지.
         if (targetUnit != null && (targetUnit as UnityEngine.Object) == null)
         {
             targetUnit = null;
             following = false;
             followTarget = null;
+            dockAboveHpBar = false;
+            dockEnemyView = null;
             ClearAllIcons();
+            return;
+        }
+
+        if (dockUnderAwaken)
+        {
+            if (awakenHud == null)
+                awakenHud = FindFirstObjectByType<CardHandHUD>(FindObjectsInactive.Include);
+            if (awakenHud != null && awakenHud.TryGetAwakenStackAnchor(out RectTransform host, out Vector2 topLeft))
+                PlaceOnHost(host, new Vector2(0f, 1f), new Vector2(0f, 1f), topLeft);
+            return;
+        }
+
+        if (dockAboveHpBar)
+        {
+            RectTransform bar = dockEnemyView != null ? dockEnemyView.HpBarRect : null;
+            if (bar != null)
+                PlaceOnHost(bar, new Vector2(0f, 1f), new Vector2(0f, 0f), Vector2.zero, sitOnTopEdge: true);
             return;
         }
 
@@ -124,6 +183,47 @@ public class StatusPanelUI : MonoBehaviour
         }
     }
 
+    // 아이콘을 호스트의 지정 위치에 왼쪽부터 붙인다.
+    void PlaceOnHost(RectTransform host, Vector2 anchor, Vector2 pivot, Vector2 anchoredPosition, bool sitOnTopEdge = false)
+    {
+        var rt = transform as RectTransform;
+        if (rt == null || host == null) return;
+
+        if (rt.parent != host)
+            rt.SetParent(host, false);
+
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+        rt.anchorMin = rt.anchorMax = anchor;
+        rt.pivot = pivot;
+        rt.anchoredPosition = anchoredPosition;
+        rt.SetAsLastSibling();
+
+        var layout = GetComponent<GridLayoutGroup>();
+        if (layout != null)
+        {
+            layout.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            layout.startAxis = GridLayoutGroup.Axis.Horizontal;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            if (sitOnTopEdge)
+            {
+                layout.constraint = GridLayoutGroup.Constraint.FixedRowCount;
+                layout.constraintCount = 1;
+                float cell = layout.cellSize.y;
+                rt.sizeDelta = new Vector2(cell * 6f, cell);
+            }
+        }
+    }
+
+    void ApplyCountStyles()
+    {
+        foreach (var icon in activeIcons.Values)
+        {
+            if (icon != null)
+                icon.ApplyCountStyle(countFont, countFontSize, countColor, countFontStyle, countOffset, countOutlineWidth, countOutlineColor);
+        }
+    }
+
     // 타겟의 상태이상이 바뀔 때 자동으로 호출되어 아이콘을 갱신한다
     public void UpdateStatusUI(string key, int count)
     {
@@ -135,6 +235,7 @@ public class StatusPanelUI : MonoBehaviour
         {
             if (count > 0)
             {
+                activeIcons[key].ApplyCountStyle(countFont, countFontSize, countColor, countFontStyle, countOffset, countOutlineWidth, countOutlineColor);
                 activeIcons[key].UpdateCount(count); // 숫자만 갱신
             }
             else
@@ -149,6 +250,7 @@ public class StatusPanelUI : MonoBehaviour
         {
             // 새 아이콘을 생성해 화면(패널 자식)에 등록
             StatusIconUI newIcon = Instantiate(iconPrefab, transform);
+            newIcon.ApplyCountStyle(countFont, countFontSize, countColor, countFontStyle, countOffset, countOutlineWidth, countOutlineColor);
             newIcon.SetStatus(dataMap[key], count, key);
             activeIcons.Add(key, newIcon);
         }

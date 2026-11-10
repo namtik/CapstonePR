@@ -305,7 +305,11 @@ ParticleSystem:
     startSize:
       serializedVersion: 2
       minMaxState: 0
+<<<<<<< Updated upstream
       scalar: 17.764532
+=======
+      scalar: 17.78481
+>>>>>>> Stashed changes
       minScalar: 1
       maxCurve:
         serializedVersion: 2
@@ -690,7 +694,11 @@ ParticleSystem:
     donutRadius: 0.2
     m_Position: {x: 0, y: 0, z: 0}
     m_Rotation: {x: 0, y: 0, z: 0}
+<<<<<<< Updated upstream
     m_Scale: {x: 17.764532, y: 10, z: 1}
+=======
+    m_Scale: {x: 17.78481, y: 10, z: 1}
+>>>>>>> Stashed changes
     placementMode: 0
     m_MeshMaterialIndex: 0
     m_MeshNormalOffset: 0

@@ -1007,6 +1007,7 @@ namespace Battle
         {
             int before = _player != null ? Mathf.RoundToInt(_player.guard) : 0;
             BattleLog.SetGuardLogging(false);
+            BattleLog.BeginDeferDraws();
             CardEffectResolver.ResolveResult result;
             try
             {
@@ -1015,10 +1016,12 @@ namespace Battle
             finally
             {
                 BattleLog.SetGuardLogging(true);
+                BattleLog.EndDeferDraws();
             }
 
             int gained = _player != null ? Mathf.Max(0, Mathf.RoundToInt(_player.guard) - before) : 0;
             BattleLog.RecordCardPlay(card != null ? card.data : null, result.totalDamage, gained);
+            BattleLog.FlushDeferredDraws();
             return result;
         }
 

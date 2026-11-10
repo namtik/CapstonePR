@@ -86,7 +86,11 @@ public class RoundManager : MonoBehaviour
         Player existingPlayer = Player.Resolve(true);
         if (existingPlayer != null)
         {
-            if (playerStatusPanel != null) playerStatusPanel.SetTarget(existingPlayer);
+            if (playerStatusPanel != null)
+            {
+                playerStatusPanel.SetTarget(existingPlayer);
+                playerStatusPanel.DockUnderAwakenGauge();
+            }
             return;
         }
 
@@ -94,7 +98,11 @@ public class RoundManager : MonoBehaviour
 
         Debug.Log("[RoundManager] Hidden runtime Player created");
 
-        if (playerStatusPanel != null) playerStatusPanel.SetTarget(newPlayer);
+        if (playerStatusPanel != null)
+        {
+            playerStatusPanel.SetTarget(newPlayer);
+            playerStatusPanel.DockUnderAwakenGauge();
+        }
 
         Debug.Log("[RoundManager] Hidden runtime Player created");
     }
@@ -859,6 +867,8 @@ public class RoundManager : MonoBehaviour
             combatStageController.ApplyEnemyBackground(data);
 
         stat.Initialize(data, columnIndex, nodeType, difficultyConfig);
+        if (view != null)
+            view.SetSpecialNote(data != null ? data.Note : null);
 
         // 게이지 최대치는 Initialize에서 확정되므로, 뷰 텍스트를 이 적의 실제 최대치로 즉시 갱신(0/max 표시)
         if (view != null)
@@ -932,10 +942,7 @@ public class RoundManager : MonoBehaviour
 
         panel.SetTarget(controller);
         if (view != null)
-        {
-            if (use3D) panel.SetFollowTarget(view.ShakeTarget, stageCam);
-            else panel.SetFollowTarget(view.ShakeTarget);
-        }
+            panel.DockAboveHpBar(view);
     }
 
     // 적 사망 시 재화 연출을 띄우고, 남은 적이 없으면 라운드 종료를 예약한다.

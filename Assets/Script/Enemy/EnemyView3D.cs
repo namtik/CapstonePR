@@ -221,6 +221,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS, followWorld, _barScale);
         if (_stat != null) _hud.SetHp(_stat.currentHp, _stat.maxHp);
         _hud.SetGauge(0f);
+        if (_pendingNote != null) _hud.SetSpecialNote(_pendingNote);
     }
 
     // 렌더러별 기준 색을 캐싱(플래시 복귀용)
@@ -492,6 +493,15 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     } // 공격 애니 보유(임팩트 이벤트 사용) 여부
     public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time);
     public Transform ShakeTarget => shakeTarget != null ? shakeTarget : transform;
+    public RectTransform HpBarRect => _hud != null ? _hud.HpBarRect : null;
+
+    string _pendingNote;
+
+    public void SetSpecialNote(string note)
+    {
+        _pendingNote = note;
+        if (_hud != null) _hud.SetSpecialNote(note);
+    }
 
     // 카드 지정용 화면 좌표 — 렌더러 바운드 중심을 스테이지 카메라로 투영
     public bool TryGetAimScreen(out Vector2 screenCenter, out float screenRadius)

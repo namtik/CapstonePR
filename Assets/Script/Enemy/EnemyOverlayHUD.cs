@@ -12,6 +12,15 @@ public class EnemyOverlayHUD : MonoBehaviour
 
     public static EnemyOverlayHUD Instance { get; private set; } // 씬에 상주하는 단일 패널
 
+    public RectTransform HpBarRect => hpBar != null ? hpBar.transform as RectTransform : null;
+
+    public void SetSpecialNote(string note)
+    {
+        var badge = GetComponent<EnemyNoteBadge>();
+        if (badge == null) badge = gameObject.AddComponent<EnemyNoteBadge>();
+        badge.Bind(HpBarRect, note);
+    }
+
     [Header("표시 루트")]
     [Tooltip("미사용(구 팔로우 필드). 비워 두면 무시.")]
     [SerializeField] private RectTransform followRoot; // 호환용
@@ -374,6 +383,11 @@ public class EnemyOverlayHUD : MonoBehaviour
     {
         if (hpBar != null) hpBar.gameObject.SetActive(on);
         if (actionGaugeBar != null) actionGaugeBar.gameObject.SetActive(on);
+        if (!on)
+        {
+            var badge = GetComponent<EnemyNoteBadge>();
+            if (badge != null) badge.HideBubble();
+        }
         if (damageTextTemplate != null)
         {
             damageTextTemplate.text = "";

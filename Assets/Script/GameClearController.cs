@@ -10,9 +10,6 @@ public class GameClearController : MonoBehaviour
     [Header("게임 클리어 캔버스 (비활성 상태로 시작)")]
     [SerializeField] private GameObject gameClearCanvas; // 클리어 화면 캔버스
 
-    [Tooltip("게임 클리어 화면이 떠 있는 동안 숨길 인게임 공용 UI(GlobalUI). 클리어 화면을 닫으면 다시 켜진다.")]
-    [SerializeField] private GameObject globalUI; // 클리어 중 숨길 공용 UI
-
     [Header("버튼")]
     [Tooltip("클릭 시 진행 중이던 런을 정리하고 메인 메뉴로 돌아간다.")]
     [SerializeField] private Button mainMenuButton; // 메인 메뉴 버튼
@@ -59,9 +56,6 @@ public class GameClearController : MonoBehaviour
             return;
         }
 
-        if (globalUI != null)
-            globalUI.SetActive(false);
-
         gameClearCanvas.SetActive(true);
         Time.timeScale = 0f;
     }
@@ -73,9 +67,6 @@ public class GameClearController : MonoBehaviour
 
         if (gameClearCanvas != null)
             gameClearCanvas.SetActive(false);
-
-        if (globalUI != null)
-            globalUI.SetActive(true);
 
         GameStateController state = GameStateController.Instance;
         if (state != null)

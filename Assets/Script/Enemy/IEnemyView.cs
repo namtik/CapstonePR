@@ -59,6 +59,12 @@ public interface IEnemyView
     // 상태이상 패널이 따라갈 추적 대상(2D: 흔들리는 RectTransform, 3D: 모델 트랜스폼).
     Transform ShakeTarget { get; }
 
+    // 이 적의 HP바.
+    RectTransform HpBarRect { get; }
+
+    // 특이사항 설명. 비어 있으면 아이콘을 숨긴다.
+    void SetSpecialNote(string note);
+
     // 카드 지정 화살표용 — 화면 좌표 조준점과 히트 반경(px).
     bool TryGetAimScreen(out Vector2 screenCenter, out float screenRadius);
     // 포인터가 이 적의 조준 영역 안에 있는지.

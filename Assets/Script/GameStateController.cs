@@ -53,6 +53,9 @@ public class GameStateController : MonoBehaviour
     public int CurrentDisplayLap => CurrentLap;
     public int CurrentDisplayStage => currentMapStageNumber;
 
+    // 맵 노드에 들어간 적이 있는지.
+    public bool HasEnteredStage => lastVisitedNodeIndex >= 0;
+
     public event System.Action OnRunStageDisplayChanged;
 
     // 초기화: 싱글턴 중복 방지
