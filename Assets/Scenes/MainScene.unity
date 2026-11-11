@@ -14595,6 +14595,8 @@ MonoBehaviour:
   twoDMultiSpawnSpacing: 220
   playerStatusPanel: {fileID: 267259484}
   enemyStatusPanel: {fileID: 1611085687}
+  enemyBarOffsetX: 18.5
+  enemyBarOffsetY: -60
   rewardHubUIController: {fileID: 0}
   cardRewardTitleFont: {fileID: 12800000, guid: 5175f24c0e704b54db9f862115bd798f, type: 3}
   cardRewardTitleFontSize: 48
@@ -46125,11 +46127,11 @@ MonoBehaviour:
   iconSize: 45
   iconOffset: {x: 0, y: 0}
   bubbleSprite: {fileID: 21300000, guid: b8d4fa2c5e304b7f9c2d1e0f8a6b4c32, type: 3}
-  bubbleSize: {x: 294, y: 122}
+  bubbleSize: {x: 324, y: 121}
   bubbleOffset: {x: 0, y: 2}
-  tailClearance: 26
-  textSidePadding: 18
-  textTopPadding: 14
+  tailClearance: 16
+  textSidePadding: 22
+  textTopPadding: 36
   font: {fileID: 11400000, guid: 6e8a3b84979cd7947b757bfd089bba8b, type: 2}
   fontSize: 26
   color: {r: 0.95686275, g: 0.80784315, b: 0.54901963, a: 1}

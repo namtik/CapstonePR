@@ -154,7 +154,13 @@ public class StatusPanelUI : MonoBehaviour
         {
             RectTransform bar = dockEnemyView != null ? dockEnemyView.HpBarRect : null;
             if (bar != null)
-                PlaceOnHost(bar, new Vector2(0f, 1f), new Vector2(0f, 0f), Vector2.zero, sitOnTopEdge: true);
+            {
+                float noteWidth = 0f;
+                var note = bar.Find("EnemyNoteIcon") as RectTransform;
+                if (note != null && note.gameObject.activeInHierarchy)
+                    noteWidth = note.rect.width > 1f ? note.rect.width : note.sizeDelta.x;
+                PlaceOnHost(bar, new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(noteWidth, 0f), sitOnTopEdge: true);
+            }
             return;
         }
 

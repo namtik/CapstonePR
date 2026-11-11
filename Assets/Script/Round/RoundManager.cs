@@ -40,6 +40,15 @@ public class RoundManager : MonoBehaviour
     [SerializeField] private StatusPanelUI playerStatusPanel; // 플레이어 상태이상 패널
     [SerializeField] private StatusPanelUI enemyStatusPanel; // 적 상태이상 패널
 
+    [Header("적 HP/행동게이지 위치")]
+    [Tooltip("머리 기준에서 좌우로 밀 거리. 화면 픽셀. 양수면 오른쪽, 음수면 왼쪽. 플레이 중에도 바로 반영된다.")]
+    [SerializeField] private float enemyBarOffsetX = 0f;
+    [Tooltip("머리 기준에서 위아래로 밀 거리. 화면 픽셀. 양수면 위, 음수면 아래. 플레이 중에도 바로 반영된다.")]
+    [SerializeField] private float enemyBarOffsetY = -60f;
+
+    public float EnemyBarOffsetX => enemyBarOffsetX;
+    public float EnemyBarOffsetY => enemyBarOffsetY;
+
     [Header("보상 UI")]
     [SerializeField] private RewardHubUIController rewardHubUIController; // 보상 허브 UI 컨트롤러
 
@@ -913,8 +922,6 @@ public class RoundManager : MonoBehaviour
 
     void AttachEnemyUi(EnemyController controller, IEnemyView view, bool use3D, Camera stageCam, int slotIndex, int partySize)
     {
-        bool followWorld = partySize > 1;
-
         if (use3D && view is EnemyView3D view3D)
         {
             EnemyOverlayHUD hud = EnemyOverlayHUD.Instance;
@@ -926,7 +933,7 @@ public class RoundManager : MonoBehaviour
             if (hud != null)
             {
                 float barScale = BattleStageController.PartySideSign(slotIndex, partySize) == 0 ? 1f : 0.6f;
-                view3D.SetOverlayHud(hud, followWorld, barScale);
+                view3D.SetOverlayHud(hud, true, barScale);
             }
         }
 

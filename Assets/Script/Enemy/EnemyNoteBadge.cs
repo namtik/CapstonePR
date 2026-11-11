@@ -3,24 +3,25 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// 적 HP바 오른쪽 위의 특이사항 아이콘. 마우스를 올리면 Note 말풍선을 띄운다.
+// 적 HP바 왼쪽 끝 위의 특이사항 아이콘. 마우스를 올리면 Note 말풍선을 띄운다.
 public class EnemyNoteBadge : MonoBehaviour
 {
     [Header("아이콘")]
     [SerializeField] private Sprite skullSprite;
     [SerializeField] private float iconSize = 45f;
-    [Tooltip("HP바 오른쪽 위 기준. X는 오른쪽, Y는 위.")]
+    [Tooltip("HP바 왼쪽 위 기준. X는 오른쪽, Y는 위.")]
     [SerializeField] private Vector2 iconOffset;
 
     [Header("말풍선")]
     [SerializeField] private Sprite bubbleSprite;
-    [SerializeField] private Vector2 bubbleSize = new Vector2(294f, 122f);
-    [Tooltip("아이콘 위 기준. X는 오른쪽, Y는 위.")]
+    [SerializeField] private Vector2 bubbleSize = new Vector2(324f, 121f);
+    [Tooltip("꼬리 끝 기준 추가 이동. X는 오른쪽, Y는 위.")]
     [SerializeField] private Vector2 bubbleOffset = new Vector2(0f, 2f);
-    [Tooltip("말풍선 꼬리 높이만큼 비우는 아래 여백.")]
-    [SerializeField] private float tailClearance = 26f;
-    [SerializeField] private float textSidePadding = 18f;
-    [SerializeField] private float textTopPadding = 14f;
+    [Tooltip("글자와 말풍선 아래 테두리 사이 여백.")]
+    [SerializeField] private float tailClearance = 16f;
+    [SerializeField] private float textSidePadding = 22f;
+    [Tooltip("위쪽 꼬리를 피해 비우는 여백.")]
+    [SerializeField] private float textTopPadding = 36f;
 
     [Header("글자")]
     [SerializeField] private TMP_FontAsset font;
@@ -100,7 +101,7 @@ public class EnemyNoteBadge : MonoBehaviour
         var bubbleImage = bubbleGo.GetComponent<Image>();
         bubbleImage.sprite = bubbleSprite;
         bubbleImage.type = Image.Type.Simple;
-        bubbleImage.preserveAspect = false;
+        bubbleImage.preserveAspect = true;
         bubbleImage.raycastTarget = true;
         WireHover(bubbleGo);
 
@@ -129,8 +130,8 @@ public class EnemyNoteBadge : MonoBehaviour
     void Place()
     {
         if (_root == null) return;
-        _root.anchorMin = _root.anchorMax = new Vector2(1f, 1f);
-        _root.pivot = new Vector2(1f, 0f);
+        _root.anchorMin = _root.anchorMax = new Vector2(0f, 1f);
+        _root.pivot = new Vector2(0f, 0f);
         _root.anchoredPosition = iconOffset;
         _root.sizeDelta = new Vector2(iconSize, iconSize);
         _root.localScale = Vector3.one;
@@ -138,8 +139,9 @@ public class EnemyNoteBadge : MonoBehaviour
 
         if (_bubble == null) return;
         var bubbleRt = _bubble.transform as RectTransform;
-        bubbleRt.anchorMin = bubbleRt.anchorMax = new Vector2(0.5f, 1f);
-        bubbleRt.pivot = new Vector2(0.5f, 0f);
+        // 꼬리 끝(그림 왼쪽 위)이 아이콘 아래에 닿고, 몸통은 오른쪽으로 펼쳐진다.
+        bubbleRt.anchorMin = bubbleRt.anchorMax = new Vector2(0.2f, 0f);
+        bubbleRt.pivot = new Vector2(2f / 270f, 1f);
         bubbleRt.anchoredPosition = bubbleOffset;
         bubbleRt.sizeDelta = bubbleSize;
         bubbleRt.localScale = Vector3.one;
@@ -168,7 +170,12 @@ public class EnemyNoteBadge : MonoBehaviour
         var icon = _root != null ? _root.GetComponent<Image>() : null;
         if (icon != null && skullSprite != null) icon.sprite = skullSprite;
         var bubbleImage = _bubble != null ? _bubble.GetComponent<Image>() : null;
-        if (bubbleImage != null && bubbleSprite != null) bubbleImage.sprite = bubbleSprite;
+        if (bubbleImage != null && bubbleSprite != null)
+        {
+            bubbleImage.sprite = bubbleSprite;
+            bubbleImage.type = Image.Type.Simple;
+            bubbleImage.preserveAspect = true;
+        }
     }
 
     void WireHover(GameObject go)

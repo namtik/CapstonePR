@@ -4,8 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 
 // 3D 몬스터용 적 UI(HP/행동게이지/데미지숫자/공격예고/패턴알림).
-// 1마리 전투는 EnemyPos의 바를 그대로 쓴다.
-// 여러 마리 전투는 그 바를 적마다 복제해 발 아래에 붙인다.
+// 적마다 바를 복제해 머리 위에 붙인다. 1마리도 같다.
 public class EnemyOverlayHUD : MonoBehaviour
 {
     const string BarRootName = "EnemyHudBars";
@@ -57,12 +56,18 @@ public class EnemyOverlayHUD : MonoBehaviour
     private Transform _worldAnchor; // 월드 팔로우 앵커(다중 전투)
     private Camera _renderCamera;   // 월드→스크린 변환 카메라
     private bool _followWorld;      // 월드 좌표를 따라갈지 여부
-    private RectTransform _barRoot; // 이 적 전용 바 묶음(여러 마리일 때만)
-    private Renderer[] _bodyRenderers; // 발 위치 계산용 메시
+    private RectTransform _barRoot; // 이 적 전용 바 묶음
+    private Renderer[] _bodyRenderers; // 머리 위치 계산용 메시
     private float _barScale = 1f;       // 양옆 적 바 배율. 가운데는 1
     private Vector2 _hpBasePos;         // 스케일 1일 때 HP 위치
     private Vector2 _gaugeBasePos;      // 스케일 1일 때 행동 게이지 위치
     private bool _barBaseCaptured;      // 기준 위치 저장 여부
+    private bool _headLocked;           // 머리 위치를 한 번 잡았는지
+    private Vector3 _lockedHead;        // 전투 시작 시 머리 월드 좌표. 애니메이션·피격 흔들림은 무시한다.
+    private RoundManager _roundManager; // 바 높이 조절값. 씬에 있는 RoundManager에서 읽는다.
+
+    const float DefaultOffsetX = 0f;
+    const float DefaultOffsetY = -60f;
 
     // 싱글턴 등록 및 초기 상태 정리
     void Awake()
@@ -84,7 +89,7 @@ public class EnemyOverlayHUD : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    // 3D 몬스터 전투 시작. followWorld면 이 적 전용 바를 만들어 발 아래에 붙인다.
+    // 3D 몬스터 전투 시작. followWorld면 이 적 전용 바를 만들어 머리 위에 붙인다.
     public void Bind(Transform worldAnchor, Camera renderCamera, int gaugeMax, bool followWorld = false, float barScale = 1f)
     {
         _gaugeMax = Mathf.Max(1, gaugeMax);
@@ -92,6 +97,8 @@ public class EnemyOverlayHUD : MonoBehaviour
         _renderCamera = renderCamera;
         _followWorld = followWorld && worldAnchor != null;
         _barScale = Mathf.Max(0.01f, barScale);
+        _headLocked = false;
+        if (_roundManager == null) _roundManager = FindFirstObjectByType<RoundManager>();
         if (_followWorld) PreparePerEnemyBars();
         if (_barRoot != null) ApplyBarScale();
         CacheBodyRenderers();
@@ -104,6 +111,7 @@ public class EnemyOverlayHUD : MonoBehaviour
     {
         _followWorld = false;
         _worldAnchor = null;
+        _headLocked = false;
         SetVisible(false);
     }
 
@@ -144,11 +152,13 @@ public class EnemyOverlayHUD : MonoBehaviour
         GameObject srcGauge = actionGaugeBar != null ? actionGaugeBar.gameObject : null;
         GameObject srcDamage = damageTextTemplate != null ? damageTextTemplate.gameObject : null;
         GameObject srcNotice = patternNoticeObject;
+        // 게이지는 HP바 자식이다. HP를 복제하면 같이 따라오므로 따로 복제하지 않는다.
+        bool gaugeInsideHp = srcGauge != null && srcHp != null && srcGauge.transform.IsChildOf(srcHp.transform);
 
         _barRoot = CreateBarRoot();
 
         GameObject hp = CloneWidget(srcHp);
-        GameObject gauge = CloneWidget(srcGauge);
+        GameObject gauge = gaugeInsideHp ? null : CloneWidget(srcGauge);
         GameObject damage = CloneWidget(srcDamage);
         GameObject notice = CloneWidget(srcNotice);
         Rewire(hp, gauge, damage, notice);
@@ -187,6 +197,14 @@ public class EnemyOverlayHUD : MonoBehaviour
         {
             hpBar = hp.GetComponent<Slider>();
             hpValueText = FindNamed<TMP_Text>(hp.transform, "HpValueText");
+            // HP 바 안에 들어 있는 게이지가 세트다. 루트에 따로 붙은 복제본은 지운다.
+            var nested = hp.transform.Find("gaugeSlider");
+            if (nested != null)
+            {
+                if (gauge != null && gauge != nested.gameObject)
+                    Destroy(gauge);
+                gauge = nested.gameObject;
+            }
         }
         if (gauge != null)
         {
@@ -228,24 +246,47 @@ public class EnemyOverlayHUD : MonoBehaviour
     {
         var hpRt = hpBar != null ? hpBar.transform as RectTransform : null;
         var gaugeRt = actionGaugeBar != null ? actionGaugeBar.transform as RectTransform : null;
-        // 씬에 있던 두 바의 세로 간격(약 28.7). 높이 50인 바가 이 간격으로 겹쳐 붙어 보인다.
-        float stacked = (hpRt != null && gaugeRt != null)
-            ? Mathf.Abs(gaugeRt.anchoredPosition.y - hpRt.anchoredPosition.y)
-            : 28.7f;
         float hpHalf = hpRt != null ? hpRt.sizeDelta.y * 0.5f : 25f;
+        bool gaugeInsideHp = gaugeRt != null && hpRt != null && gaugeRt.IsChildOf(hpRt);
+        // HP바의 씬 좌표(y 약 -317)와 게이지의 로컬 좌표(y 약 5.5)는 부모가 다르다.
+        // 둘을 빼서 간격을 만들면 게이지만 수백 px 아래로 나간다. 값은 그대로라 작동은 된다.
+        Vector2 gaugeAnchorMin = Vector2.zero, gaugeAnchorMax = Vector2.zero, gaugePivot = Vector2.zero;
+        Vector2 gaugePos = Vector2.zero, gaugeSize = Vector2.zero;
+        if (gaugeInsideHp)
+        {
+            gaugeAnchorMin = gaugeRt.anchorMin;
+            gaugeAnchorMax = gaugeRt.anchorMax;
+            gaugePivot = gaugeRt.pivot;
+            gaugePos = gaugeRt.anchoredPosition;
+            gaugeSize = gaugeRt.sizeDelta;
+        }
 
-        // 크기는 원본 그대로. 발 바로 아래에 HP, 그 아래에 행동 게이지를 붙인다.
-        PlaceBar(hpRt, new Vector2(0f, -hpHalf));
-        PlaceBar(gaugeRt, new Vector2(0f, -hpHalf - stacked));
+        // 세트 바닥이 머리 기준점에 닿게 올린다. HP 안 게이지는 원래 자리를 유지한다.
+        PlaceBar(hpRt, new Vector2(0f, hpHalf));
+        if (gaugeInsideHp)
+        {
+            gaugeRt.anchorMin = gaugeAnchorMin;
+            gaugeRt.anchorMax = gaugeAnchorMax;
+            gaugeRt.pivot = gaugePivot;
+            gaugeRt.anchoredPosition = gaugePos;
+            gaugeRt.sizeDelta = gaugeSize;
+        }
+        else
+        {
+            float gaugeHalf = gaugeRt != null ? gaugeRt.sizeDelta.y * 0.5f : 4f;
+            PlaceBar(gaugeRt, new Vector2(0f, hpHalf * 2f + 6f + gaugeHalf));
+        }
         if (hpRt != null) _hpBasePos = hpRt.anchoredPosition;
         if (gaugeRt != null) _gaugeBasePos = gaugeRt.anchoredPosition;
         _barBaseCaptured = hpRt != null || gaugeRt != null;
-        PlaceFree(damageTextTemplate != null ? damageTextTemplate.transform as RectTransform : null, new Vector2(0f, 70f));
+
+        float aboveBars = hpHalf * 2f + 28f;
+        PlaceFree(damageTextTemplate != null ? damageTextTemplate.transform as RectTransform : null, new Vector2(0f, aboveBars));
         if (patternNoticeObject != null)
         {
             var rt = patternNoticeObject.transform as RectTransform;
-            if (rt != null) PlaceFree(rt, new Vector2(0f, 120f));
-            else patternNoticeObject.transform.localPosition = new Vector3(0f, 120f, 0f);
+            if (rt != null) PlaceFree(rt, new Vector2(0f, aboveBars + 50f));
+            else patternNoticeObject.transform.localPosition = new Vector3(0f, aboveBars + 50f, 0f);
         }
         if (damageTextTemplate != null)
         {
@@ -260,12 +301,13 @@ public class EnemyOverlayHUD : MonoBehaviour
         CaptureBarBaseIfNeeded();
         var hpRt = hpBar != null ? hpBar.transform as RectTransform : null;
         var gaugeRt = actionGaugeBar != null ? actionGaugeBar.transform as RectTransform : null;
+        bool gaugeInsideHp = gaugeRt != null && hpRt != null && gaugeRt.IsChildOf(hpRt);
         if (hpRt != null)
         {
             hpRt.localScale = Vector3.one * _barScale;
             hpRt.anchoredPosition = new Vector2(_hpBasePos.x, _hpBasePos.y * _barScale);
         }
-        if (gaugeRt != null)
+        if (gaugeRt != null && !gaugeInsideHp)
         {
             gaugeRt.localScale = Vector3.one * _barScale;
             gaugeRt.anchoredPosition = new Vector2(_gaugeBasePos.x, _gaugeBasePos.y * _barScale);
@@ -327,23 +369,32 @@ public class EnemyOverlayHUD : MonoBehaviour
         return _worldAnchor;
     }
 
-    // 전용 바가 있으면 발 아래에 붙인다. 1마리 전투의 EnemyPos 배치는 그대로 둔다.
+    // 전용 바가 있으면 머리 위에 붙인다.
     void FollowAnchor()
     {
         if (_barRoot == null || _worldAnchor == null) return;
         Camera cam = _renderCamera != null ? _renderCamera : Camera.main;
         if (cam == null) return;
 
-        Vector3 world = UnderfootPoint();
+        if (!_headLocked && TrySampleHead(out Vector3 sampled))
+        {
+            _lockedHead = sampled;
+            _headLocked = true;
+        }
+
+        float offsetX = _roundManager != null ? _roundManager.EnemyBarOffsetX : DefaultOffsetX;
+        float offsetY = _roundManager != null ? _roundManager.EnemyBarOffsetY : DefaultOffsetY;
+        Vector3 world = _headLocked ? _lockedHead : _worldAnchor.position + Vector3.up * 1.6f;
         Vector3 sp = cam.WorldToScreenPoint(world);
         if (sp.z < 0f) return;
-        _barRoot.position = new Vector3(sp.x, sp.y, 0f);
+        _barRoot.position = new Vector3(sp.x + offsetX, sp.y + offsetY, 0f);
     }
 
-    Vector3 UnderfootPoint()
+    // 메시 꼭대기를 한 번만 읽는다. 이후 공격·대기·피격 흔들림은 바 위치에 반영하지 않는다.
+    bool TrySampleHead(out Vector3 point)
     {
-        Vector3 fallback = _worldAnchor.position;
-        if (_bodyRenderers == null || _bodyRenderers.Length == 0) return fallback;
+        point = _worldAnchor.position + Vector3.up * 1.6f;
+        if (_bodyRenderers == null || _bodyRenderers.Length == 0) return false;
 
         bool any = false;
         Bounds bounds = default;
@@ -359,11 +410,9 @@ public class EnemyOverlayHUD : MonoBehaviour
             }
             else bounds.Encapsulate(r.bounds);
         }
-        if (!any) return fallback;
-        // 가로는 메시 중심. 세로는 발(피벗). 바운드 최하단은 망토·무기 때문에 발보다 훨씬 아래라 쓰면 바가 떨어진다.
-        Transform root = ResolveBoundsRoot();
-        float footY = root != null ? root.position.y : fallback.y;
-        return new Vector3(bounds.center.x, footY, bounds.center.z);
+        if (!any) return false;
+        point = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+        return true;
     }
 
     static T FindNamed<T>(Transform root, string childName) where T : Component
