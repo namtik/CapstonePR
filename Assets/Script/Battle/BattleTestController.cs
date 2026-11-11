@@ -4,7 +4,6 @@ using static SkillDataParser;
 using Battle;
 using Battle.Card;
 using Battle.Relic;
-using Battle.UI;
 
 // 전투 단일 라운드 테스트용 진입점.
 [DefaultExecutionOrder(-1000)]
@@ -158,18 +157,6 @@ public class BattleTestController : MonoBehaviour
         {
             foreach (var relic in testRelics)
                 RelicManager.Instance?.AddRelic(relic);
-        }
-
-        // RelicHUD 생성
-        if (RelicHUD.Instance == null)
-        {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
-            if (canvas != null)
-            {
-                var hudGo = new GameObject("RelicHUD", typeof(RectTransform));
-                hudGo.transform.SetParent(canvas.transform, false);
-                hudGo.AddComponent<RelicHUD>();
-            }
         }
 
         // 인스펙터 덱 → CardInstance 리스트로 변환 후 사용

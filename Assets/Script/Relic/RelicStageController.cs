@@ -70,28 +70,6 @@ public class RelicStageController : MonoBehaviour
         public float hoverAmplitude; // 부유 진폭
     }
 
-    // 보상 흡수(아이템 -> UI 슬롯) 연출 설정
-    [System.Serializable]
-    private struct RewardAbsorbSettings
-    {
-        [Header("References")]
-        public RectTransform uiCanvasRect; // UI 캔버스 Rect
-        public RectTransform targetSlotRect; // 목표 슬롯 Rect
-        public Image targetSlotImage; // 목표 슬롯 이미지
-        public Image flyingImageTemplate; // 날아가는 이미지 템플릿
-
-        [Header("Timing")]
-        public float flyDuration; // 이동 지속 시간
-        public AnimationCurve xMoveCurve; // X 이동 곡선
-        public AnimationCurve yMoveCurve; // Y 이동 곡선
-        public AnimationCurve arcCurve; // 포물선 곡선
-        public float arcHeight; // 포물선 높이
-
-        [Header("Scale")]
-        public float startScale; // 시작 스케일
-        public float endScale; // 종료 스케일
-    }
-
     [Header("툴팁 팝업 (Optional)")]
     [SerializeField] private RectTransform tooltipPopupRoot; // 툴팁 팝업 루트
     [SerializeField] private Image tooltipPopupBackground; // 툴팁 배경 이미지
@@ -122,9 +100,6 @@ public class RelicStageController : MonoBehaviour
     [SerializeField] private float itemHoverScaleMultiplier = 1.08f; // 호버 시 확대 배율
     [SerializeField] private float itemHoverScaleLerpSpeed = 10f; // 호버 스케일 보간 속도
     [SerializeField] private Sprite fallbackRewardSprite; // 보상 폴백 스프라이트
-
-    [Header("획득 연출: 월드 -> 좌측 상단 UI 슬롯")]
-    [SerializeField] private RewardAbsorbSettings rewardAbsorbSettings; // 보상 흡수 연출 설정
 
     [Header("받지 않기 버튼")]
     [SerializeField] private RewardSkipButtonStyle declineButtonStyle = new RewardSkipButtonStyle
@@ -728,14 +703,25 @@ public class RelicStageController : MonoBehaviour
         HideTooltipPopup();
     }
 
-    // 보상 클릭 시 흡수 연출 시작
+    // 유물을 지급하고 맵으로 돌아간다
     void OnRewardPointerClick()
     {
         if (!isChestOpened || isAbsorbSequenceRunning)
             return;
 
+        isAbsorbSequenceRunning = true;
         SetDeclineButtonVisible(false);
-        StartCoroutine(PlayRewardAbsorbAndReturn());
+        isHovering = false;
+        isRewardPointerHover = false;
+        wasHoveringByMouse = false;
+        HideTooltipPopup();
+
+        if (itemSettings.itemObject != null)
+            itemSettings.itemObject.SetActive(false);
+
+        GrantPendingRewardIfAny();
+        isAbsorbSequenceRunning = false;
+        ReturnToMapAfterReward();
     }
 
     // 받지 않기 — 유물 지급 없이 맵으로 복귀
@@ -795,231 +781,9 @@ public class RelicStageController : MonoBehaviour
         _declineButton.transform.SetAsLastSibling();
     }
 
-    // 보상 흡수 연출 후 지급하고 맵으로 복귀
-    IEnumerator PlayRewardAbsorbAndReturn()
-    {
-        isAbsorbSequenceRunning = true;
-        SetDeclineButtonVisible(false);
-        isHovering = false;
-        isRewardPointerHover = false;
-        wasHoveringByMouse = false;
-        HideTooltipPopup();
-
-        Sprite rewardSprite = null;
-        if (itemSettings.itemImage != null)
-            rewardSprite = itemSettings.itemImage.sprite;
-        if (rewardSprite == null)
-            rewardSprite = grantedRewardSprite != null ? grantedRewardSprite : fallbackRewardSprite;
-
-        bool played = false;
-        if (rewardSprite != null)
-            played = TryCreateAndPlayAbsorbFx(rewardSprite);
-
-        if (!played && itemSettings.itemObject != null)
-            itemSettings.itemObject.SetActive(false);
-
-        if (played)
-            yield return StartCoroutine(AnimateFlyingImageToSlot());
-
-        GrantPendingRewardIfAny();
-        EnableTargetSlotImage();
-        isAbsorbSequenceRunning = false;
-        ReturnToMapAfterReward();
-    }
-
-    RectTransform flyingImageRect; // 날아가는 이미지 Rect
-    Image flyingImage; // 날아가는 이미지
-    Vector2 flyStartLocalPos; // 이동 시작 로컬 위치
-    Vector2 flyEndLocalPos; // 이동 종료 로컬 위치
-
-    // 흡수 연출용 날아가는 이미지를 생성하고 시작 위치 설정
-    bool TryCreateAndPlayAbsorbFx(Sprite sprite)
-    {
-        if (sprite == null)
-            return false;
-
-        Canvas canvas = ResolveCanvas();
-        RectTransform canvasRect = rewardAbsorbSettings.uiCanvasRect;
-        if (canvasRect == null && canvas != null)
-            canvasRect = canvas.transform as RectTransform;
-
-        if (canvasRect == null || rewardAbsorbSettings.targetSlotRect == null)
-            return false;
-
-        Image runtimeFlyImage = null;
-        if (rewardAbsorbSettings.flyingImageTemplate != null)
-        {
-            runtimeFlyImage = Instantiate(rewardAbsorbSettings.flyingImageTemplate, canvasRect);
-            runtimeFlyImage.name = "FlyingRelicImage(Clone)";
-        }
-        else
-        {
-            var go = new GameObject("FlyingRelicImage(Clone)", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(canvasRect, false);
-            runtimeFlyImage = go.GetComponent<Image>();
-        }
-
-        if (runtimeFlyImage == null)
-            return false;
-
-        runtimeFlyImage.sprite = sprite;
-        runtimeFlyImage.enabled = true;
-        runtimeFlyImage.raycastTarget = false;
-        runtimeFlyImage.color = Color.white;
-        flyingImage = runtimeFlyImage;
-        flyingImageRect = runtimeFlyImage.rectTransform;
-        flyingImageRect.SetAsLastSibling();
-
-        Vector2 fromLocal;
-        Vector2 toLocal;
-        if (!TryResolveLocalPositions(canvasRect, canvas, out fromLocal, out toLocal))
-        {
-            Destroy(runtimeFlyImage.gameObject);
-            flyingImageRect = null;
-            flyingImage = null;
-            return false;
-        }
-
-        flyStartLocalPos = fromLocal;
-        flyEndLocalPos = toLocal;
-
-        flyingImageRect.anchorMin = new Vector2(0.5f, 0.5f);
-        flyingImageRect.anchorMax = new Vector2(0.5f, 0.5f);
-        flyingImageRect.pivot = new Vector2(0.5f, 0.5f);
-        flyingImageRect.anchoredPosition = flyStartLocalPos;
-
-        if (itemSettings.itemTransform != null)
-            flyingImageRect.sizeDelta = itemSettings.itemTransform.rect.size;
-        else if (runtimeFlyImage.sprite != null)
-            flyingImageRect.sizeDelta = new Vector2(runtimeFlyImage.sprite.rect.width, runtimeFlyImage.sprite.rect.height);
-        else
-            flyingImageRect.sizeDelta = new Vector2(96f, 96f);
-
-        float startScale = Mathf.Max(0.01f, rewardAbsorbSettings.startScale <= 0f ? 1f : rewardAbsorbSettings.startScale);
-        flyingImageRect.localScale = Vector3.one * startScale;
-
-        if (itemSettings.itemObject != null)
-            itemSettings.itemObject.SetActive(false);
-
-        return true;
-    }
-
-    // 아이템과 목표 슬롯의 캔버스 로컬 좌표를 계산
-    bool TryResolveLocalPositions(RectTransform canvasRect, Canvas canvas, out Vector2 fromLocal, out Vector2 toLocal)
-    {
-        fromLocal = Vector2.zero;
-        toLocal = Vector2.zero;
-
-        Camera cam = null;
-        if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-            cam = canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
-
-        Vector3 sourceWorld = itemSettings.itemTransform != null
-            ? itemSettings.itemTransform.position
-            : transform.position;
-        Vector3 sourceScreen = RectTransformUtility.WorldToScreenPoint(cam, sourceWorld);
-
-        Vector3 targetScreen;
-        if (rewardAbsorbSettings.targetSlotRect != null)
-        {
-            Vector3 targetWorld = rewardAbsorbSettings.targetSlotRect.position;
-            targetScreen = RectTransformUtility.WorldToScreenPoint(cam, targetWorld);
-        }
-        else
-        {
-            Vector2 fallback = new Vector2(80f, Screen.height - 80f);
-            targetScreen = new Vector3(fallback.x, fallback.y, 0f);
-        }
-
-        bool okFrom = RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, sourceScreen, cam, out fromLocal);
-        bool okTo = RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, targetScreen, cam, out toLocal);
-        if (!okFrom && itemSettings.itemTransform != null)
-        {
-            okFrom = RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                canvasRect,
-                RectTransformUtility.WorldToScreenPoint(cam, itemSettings.itemTransform.position),
-                cam,
-                out fromLocal);
-        }
-
-        return okFrom && okTo;
-    }
-
-    // 날아가는 이미지를 목표 슬롯까지 곡선 이동·축소시키는 코루틴
-    IEnumerator AnimateFlyingImageToSlot()
-    {
-        if (flyingImageRect == null)
-            yield break;
-
-        float duration = Mathf.Max(0.01f, rewardAbsorbSettings.flyDuration <= 0f ? 0.55f : rewardAbsorbSettings.flyDuration);
-        float startScale = Mathf.Max(0.01f, rewardAbsorbSettings.startScale <= 0f ? 1f : rewardAbsorbSettings.startScale);
-        float endScale = Mathf.Max(0.01f, rewardAbsorbSettings.endScale <= 0f ? 0.5f : rewardAbsorbSettings.endScale);
-
-        AnimationCurve xCurve = rewardAbsorbSettings.xMoveCurve != null && rewardAbsorbSettings.xMoveCurve.length > 0
-            ? rewardAbsorbSettings.xMoveCurve
-            : AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-        AnimationCurve yCurve = rewardAbsorbSettings.yMoveCurve != null && rewardAbsorbSettings.yMoveCurve.length > 0
-            ? rewardAbsorbSettings.yMoveCurve
-            : AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-        AnimationCurve arcCurve = rewardAbsorbSettings.arcCurve != null && rewardAbsorbSettings.arcCurve.length > 0
-            ? rewardAbsorbSettings.arcCurve
-            : AnimationCurve.EaseInOut(0f, 0f, 1f, 0f);
-
-        float arcHeight = rewardAbsorbSettings.arcHeight;
-        float elapsed = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-
-            float xT = Mathf.Clamp01(xCurve.Evaluate(t));
-            float yT = Mathf.Clamp01(yCurve.Evaluate(t));
-            float arc = arcCurve.Evaluate(t) * arcHeight;
-
-            float x = Mathf.LerpUnclamped(flyStartLocalPos.x, flyEndLocalPos.x, xT);
-            float y = Mathf.LerpUnclamped(flyStartLocalPos.y, flyEndLocalPos.y, yT) + arc;
-            flyingImageRect.anchoredPosition = new Vector2(x, y);
-
-            float s = Mathf.Lerp(startScale, endScale, t);
-            flyingImageRect.localScale = Vector3.one * s;
-
-            yield return null;
-        }
-
-        flyingImageRect.anchoredPosition = flyEndLocalPos;
-        flyingImageRect.localScale = Vector3.one * endScale;
-
-        if (flyingImage != null)
-            Destroy(flyingImage.gameObject);
-
-        flyingImageRect = null;
-        flyingImage = null;
-    }
-
-    // 목표 슬롯 이미지를 활성화하고 보상 스프라이트 설정
-    void EnableTargetSlotImage()
-    {
-        var slotImage = rewardAbsorbSettings.targetSlotImage;
-        if (slotImage == null)
-            return;
-
-        if (!slotImage.gameObject.activeSelf)
-            slotImage.gameObject.SetActive(true);
-
-        if (!slotImage.enabled)
-            slotImage.enabled = true;
-
-        if (slotImage.sprite == null)
-            slotImage.sprite = grantedRewardSprite != null ? grantedRewardSprite : fallbackRewardSprite;
-    }
-
-    // 연출에 사용할 캔버스를 탐색해 반환
+    // 버튼이 붙을 캔버스를 찾는다
     Canvas ResolveCanvas()
     {
-        if (rewardAbsorbSettings.uiCanvasRect != null)
-            return rewardAbsorbSettings.uiCanvasRect.GetComponentInParent<Canvas>();
-
         if (itemSettings.itemImage != null && itemSettings.itemImage.canvas != null)
             return itemSettings.itemImage.canvas;
 

@@ -100,7 +100,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
 
     private EnemyStat _stat;              // 적 스탯
     private EnemyOverlayHUD _hud;         // 위임 대상 Overlay HUD
-    private bool _followWorld;            // 여러 마리일 때 HUD를 발 아래에 붙일지
+    private bool _followWorld;            // HUD를 머리 위에 붙일지
     private float _barScale = 1f;         // 양옆 적은 0.6, 가운데는 1
     private float _hitReactionEndTime;    // 피격 연출 종료 시각
     private Vector3 _shakeBasePos;        // 흔들기 기준 위치
@@ -247,6 +247,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS, followWorld, _barScale);
         if (_stat != null) _hud.SetHp(_stat.currentHp, _stat.maxHp);
         _hud.SetGauge(0f);
+        if (_pendingNote != null) _hud.SetSpecialNote(_pendingNote);
     }
 
     // 렌더러별 기준 색을 캐싱(플래시 복귀용)
@@ -518,6 +519,15 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     } // 공격 애니 보유(임팩트 이벤트 사용) 여부
     public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time);
     public Transform ShakeTarget => shakeTarget != null ? shakeTarget : transform;
+    public RectTransform HpBarRect => _hud != null ? _hud.HpBarRect : null;
+
+    string _pendingNote;
+
+    public void SetSpecialNote(string note)
+    {
+        _pendingNote = note;
+        if (_hud != null) _hud.SetSpecialNote(note);
+    }
 
     // 카드 지정용 화면 좌표 — 렌더러 바운드 중심을 스테이지 카메라로 투영
     public bool TryGetAimScreen(out Vector2 screenCenter, out float screenRadius)

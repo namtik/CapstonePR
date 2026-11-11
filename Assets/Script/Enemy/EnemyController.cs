@@ -256,14 +256,15 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     // 실제 공격 계산(HandleGaugeFull)과 동일하게 데미지 수정 효과를 반영한다(강화 버프는 다음 공격에만)
     public int GetPredictedAttackDamage(int ahead = 0)
     {
+        ahead = Mathf.Max(0, ahead);
         int[] seq = EffectiveAttackSequence();
-        if (seq == null || seq.Length == 0) return fallbackGaugeFullDamage;
-
-        int nextDamage = seq[(_newSystemAttackIndex + Mathf.Max(0, ahead)) % seq.Length];
+        int nextDamage = (seq != null && seq.Length > 0)
+            ? seq[(_newSystemAttackIndex + ahead) % seq.Length]
+            : fallbackGaugeFullDamage;
 
         ResolveAbility();
         if (_ability == EnemySpecialAbility.EscalatingAttack)
-            nextDamage += _escalateBonus;                       // 풍식귀: 이번 공격에 더해질 누적 증가
+            nextDamage += _escalateBonus + ahead;               // 풍식귀: 공격마다 1씩 누적
         if (_nextAttackBuffed && ahead == 0)
             nextDamage = Mathf.CeilToInt(nextDamage * 1.5f);    // 방해행동-강화: 다음 공격 +50%
         if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp && _halfHpTriggered)
@@ -530,6 +531,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (burn <= 0) return false;
 
         stat.TakeDamage(burn);
+        SfxManager.Instance?.PlayBurn();
         Sprite burnPortrait = stat.Data != null ? stat.Data.enemySprite : null;
         Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, burn);
 

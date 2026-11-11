@@ -29,6 +29,8 @@ public class SfxManager : MonoBehaviour
     [SerializeField] private AudioClip awakenSlotInputClip; // 콤보 슬롯 입력 효과음
     [Tooltip("플레이어 체력이 실제로 오를 때 재생. 이미 최대 체력이면 나지 않는다.")]
     [SerializeField] private AudioClip healClip; // 회복 효과음
+    [Tooltip("화상 피해로 체력이 깎일 때 재생. 플레이어와 적 모두.")]
+    [SerializeField] private AudioClip burnClip; // 화상 피해 효과음
 
     // 이펙트 이름과 전용 클립을 묶는 매핑 데이터
     [System.Serializable]
@@ -53,6 +55,7 @@ public class SfxManager : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float awakenStartVolume = 1f; // 각성 시작 볼륨
     [Range(0f, 1f)] [SerializeField] private float awakenSlotInputVolume = 1f; // 콤보 슬롯 입력 볼륨
     [Range(0f, 1f)] [SerializeField] private float healVolume = 1f; // 회복 볼륨
+    [Range(0f, 1f)] [SerializeField] private float burnVolume = 1f; // 화상 피해 볼륨
 
     // 싱글톤 등록 및 오디오 소스 초기화
     void Awake()
@@ -95,6 +98,9 @@ public class SfxManager : MonoBehaviour
 
     // 플레이어 회복 효과음을 재생한다
     public void PlayHeal() => Play(healClip, healVolume);
+
+    // 화상 피해 효과음을 재생한다
+    public void PlayBurn() => Play(burnClip, burnVolume);
 
     // 이펙트 이름에 맞는 클립을 찾고 없으면 기본 클립을 반환한다
     AudioClip ResolveEffectClip(string effectName)

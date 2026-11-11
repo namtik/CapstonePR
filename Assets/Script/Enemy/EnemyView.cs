@@ -442,6 +442,14 @@ public class EnemyView : MonoBehaviour, IEnemyView
     public float HitReactionRemaining => Mathf.Max(0f, _hitReactionEndTime - Time.time); // 피격 연출 잔여 시간(초)
 
     public Transform ShakeTarget => shakeTarget != null ? (Transform)shakeTarget : transform; // 흔들기 대상(상태패널 추적용)
+    public RectTransform HpBarRect => hpBar != null ? hpBar.transform as RectTransform : null;
+
+    public void SetSpecialNote(string note)
+    {
+        var badge = GetComponent<EnemyNoteBadge>();
+        if (badge == null) badge = gameObject.AddComponent<EnemyNoteBadge>();
+        badge.Bind(HpBarRect, note);
+    }
 
     // 카드 지정용 화면 좌표 — 적 이미지 Rect의 중심과 반경
     public bool TryGetAimScreen(out Vector2 screenCenter, out float screenRadius)

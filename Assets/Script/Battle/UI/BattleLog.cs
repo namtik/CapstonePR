@@ -36,7 +36,9 @@ namespace Battle.UI
 
         static readonly List<Entry> _entries = new List<Entry>();
         static readonly Dictionary<string, Sprite> _sprites = new Dictionary<string, Sprite>();
+        static readonly List<CardData> _deferredDraws = new List<CardData>();
         static int _nextId;
+        static int _drawDeferDepth;
         static bool _logDraws = true;
         static bool _logGuard = true;
 
@@ -54,6 +56,8 @@ namespace Battle.UI
 
         public static void Clear()
         {
+            _deferredDraws.Clear();
+            _drawDeferDepth = 0;
             if (_entries.Count == 0) return;
             _entries.Clear();
             Changed?.Invoke();
@@ -117,9 +121,41 @@ namespace Battle.UI
             _logDraws = enabled;
         }
 
+        // 카드 사용 로그 뒤로 보내기 위해 드로우 기록을 보류한다.
+        public static void BeginDeferDraws()
+        {
+            _drawDeferDepth++;
+        }
+
+        public static void EndDeferDraws()
+        {
+            if (_drawDeferDepth > 0) _drawDeferDepth--;
+        }
+
+        // 보류한 드로우를 순서대로 기록한다.
+        public static void FlushDeferredDraws()
+        {
+            if (_drawDeferDepth > 0 || _deferredDraws.Count == 0) return;
+            CardData[] pending = _deferredDraws.ToArray();
+            _deferredDraws.Clear();
+            for (int i = 0; i < pending.Length; i++)
+                PushDraw(pending[i]);
+        }
+
         public static void RecordDraw(CardData data)
         {
             if (!_logDraws || !InBattle || data == null) return;
+            if (_drawDeferDepth > 0)
+            {
+                _deferredDraws.Add(data);
+                return;
+            }
+            PushDraw(data);
+        }
+
+        static void PushDraw(CardData data)
+        {
+            if (!InBattle || data == null) return;
             Push(LoadCard(data), Load("UI/Tab/UI_Icon_Draw"), false, 0, null, null);
         }
 

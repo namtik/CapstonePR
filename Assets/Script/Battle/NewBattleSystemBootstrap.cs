@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Battle.Relic;
-using Battle.UI;
 
 namespace Battle
 {
@@ -67,7 +66,7 @@ namespace Battle
             Debug.Log("[Bootstrap] NewBattleController 자동 생성");
         }
 
-        // 유물 매니저/HUD를 찾거나 생성해 보장
+        // 유물 매니저를 찾거나 생성해 보장
         void EnsureRelicSystems()
         {
             if (RelicManager.Instance == null)
@@ -75,17 +74,6 @@ namespace Battle
                 var existing = FindFirstObjectByType<RelicManager>(FindObjectsInactive.Include);
                 if (existing == null)
                     new GameObject("RelicManager").AddComponent<RelicManager>();
-            }
-
-            if (RelicHUD.Instance == null && FindFirstObjectByType<RelicHUD>(FindObjectsInactive.Include) == null)
-            {
-                Canvas canvas = FindFirstObjectByType<Canvas>();
-                if (canvas != null)
-                {
-                    var hudGo = new GameObject("RelicHUD", typeof(RectTransform));
-                    hudGo.transform.SetParent(canvas.transform, false);
-                    hudGo.AddComponent<RelicHUD>();
-                }
             }
         }
     }

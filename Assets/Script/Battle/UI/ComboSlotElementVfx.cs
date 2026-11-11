@@ -5,7 +5,7 @@ using Battle.Card;
 namespace Battle.UI
 {
     // 각성 콤보 칸 프레임 주변 속성 연출.
-    // 불은 위로 치솟는 불길, 물은 느리게 도는 파도, 바람은 가느다란 줄기, 땅은 굴러가는 돌이다.
+    // 불은 테두리에 붙어 이글거리는 불길, 물은 느리게 도는 파도, 바람은 가느다란 줄기, 땅은 굴러가는 돌이다.
     [DisallowMultipleComponent]
     public class ComboSlotElementVfx : MonoBehaviour
     {
@@ -29,7 +29,8 @@ namespace Battle.UI
         }
 
         static Sprite _ringSprite;
-        static Sprite _flameSprite;
+        static Sprite[] _flameSprites;
+        static Sprite _emberSprite;
         static Sprite _waveSprite;
         static Sprite _tearSprite;
         static Sprite _streakSprite;
@@ -128,6 +129,7 @@ namespace Battle.UI
             float halfW = width * 0.5f;
             float halfH = height * 0.5f;
             float kick = _pulse;
+            if (_ring != null) _ring.transform.SetAsFirstSibling();
 
             switch (_element)
             {
@@ -148,31 +150,82 @@ namespace Battle.UI
             ApplyFullOpacity(clear);
         }
 
-        // 불: 테두리를 따라 옮겨 붙으며 혀가 위로 길어진다. 콤보 때는 기둥만 높아진다.
+        // 불: 테두리 밖으로 긴 혀가 따로 일렁인다. 링은 열기만 남기고, 겹쳐 네온처럼 보이지 않게 간격을 둔다.
         void PlaceFire(float halfW, float halfH, float radius, float kick, float surge)
         {
-            TintRing(new Color(1f, 0.28f, 0.04f, 1f), 0.55f + 0.45f * Mathf.Abs(Mathf.Sin(Time.time * 16f)), 1f);
+            float glow = FlameFlicker(Time.time, 0.17f, 0.4f);
+            TintRing(new Color(1f, 0.28f, 0.04f, 1f), 0.1f + glow * 0.08f, 1f);
 
             for (int i = 0; i < _motes.Length; i++)
             {
                 Mote mote = _motes[i];
-                mote.phase = Mathf.Repeat(mote.phase + Time.deltaTime * 0.7f * mote.speed * (1f + kick * 0.35f), 1f);
-                SampleBorder(mote.phase, halfW, halfH, radius, out Vector2 pos, out Vector2 tangent, out _);
+                if (mote.band == 3)
+                {
+                    mote.image.enabled = false;
+                    continue;
+                }
 
-                float tongue = Mathf.Pow(Mathf.Abs(Mathf.Sin(Time.time * (7f + mote.seed * 6f) + mote.phase * 9f)), 1.5f);
-                bool ember = mote.size < 0.38f;
-                float lift = surge * (ember ? 42f : 76f);
-                float height = ember ? 8f + tongue * 26f + lift : 12f + tongue * 20f + lift;
-                float width = (ember ? 4f + mote.size * 6f : 9f + mote.size * 8f) * (1f + surge * 0.45f);
+                mote.image.enabled = true;
+                if (mote.band == 1)
+                {
+                    PlaceFireEmber(mote, halfW, halfH, radius, surge);
+                    continue;
+                }
 
-                mote.rect.anchoredPosition = pos + Vector2.up * (height * 0.12f + kick * 4f) + tangent * (mote.seed - 0.5f) * 4f;
+                mote.phase = Mathf.Repeat(mote.phase + Time.deltaTime * 0.06f * mote.speed, 1f);
+                SampleBorder(mote.phase, halfW, halfH, radius, out Vector2 pos, out Vector2 tangent, out Vector2 outward);
+
+                float flick = FlameFlicker(Time.time, mote.seed, mote.phase);
+                float sway = Mathf.Sin(Time.time * (7f + mote.seed * 6f) + mote.phase * 11f);
+                Vector2 dir = (outward + Vector2.up * 0.7f + tangent * sway * 0.22f).normalized;
+                float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f;
+
+                float height = Mathf.Lerp(86f, 128f, mote.size) * (0.74f + flick * 0.42f) + surge * (46f + flick * 36f) + kick * 18f;
+                float width = Mathf.Lerp(44f, 68f, mote.size) * (0.92f + (1f - flick) * 0.22f) * (1f + surge * 0.08f);
+
+                mote.rect.localScale = Vector3.one;
+                mote.rect.localRotation = Quaternion.Euler(0f, 0f, ang + sway * 16f);
                 mote.rect.sizeDelta = new Vector2(width, height);
-                mote.rect.localRotation = Quaternion.Euler(0f, 0f, tangent.x * 28f + Mathf.Sin(Time.time * 13f + mote.seed * 20f) * 12f);
+                mote.rect.anchoredPosition = pos + outward * 10f + tangent * sway * 6f;
+                mote.rect.SetAsLastSibling();
 
-                Color color = Color.Lerp(new Color(0.85f, 0.1f, 0.02f, 1f), new Color(1f, 0.9f, 0.25f, 1f), Mathf.Clamp01(tongue + surge * 0.35f));
-                color.a = ember ? 0.75f : 0.95f;
-                mote.image.color = color;
+                float hot = Mathf.Clamp01(0.35f + flick * 0.65f + surge * 0.25f);
+                Color mul = Color.Lerp(new Color(1f, 0.78f, 0.55f, 1f), Color.white, hot);
+                mul.a = 1f;
+                mote.image.color = mul;
             }
+        }
+
+        // 테두리에서 떨어져 올라가다 사그라지는 불씨.
+        void PlaceFireEmber(Mote mote, float halfW, float halfH, float radius, float surge)
+        {
+            float life = Mathf.Repeat(mote.phase + Time.time * (0.42f + mote.speed * 0.28f), 1f);
+            SampleBorder(mote.phase, halfW, halfH, radius, out Vector2 pos, out Vector2 tangent, out Vector2 outward);
+
+            float fade = Mathf.Sin(life * Mathf.PI);
+            float rise = life * life * (48f + mote.size * 40f + surge * 36f);
+            float drift = Mathf.Sin(Time.time * (2.4f + mote.seed * 3f) + mote.seed * 11f) * 14f * life;
+            float s = Mathf.Lerp(11f, 18f, mote.size) * (0.7f + fade * 0.55f);
+
+            mote.rect.localScale = Vector3.one;
+            mote.rect.localRotation = Quaternion.identity;
+            mote.rect.sizeDelta = new Vector2(s, s);
+            mote.rect.anchoredPosition = pos + Vector2.up * rise + outward * (12f + life * 16f) + tangent * drift;
+            mote.rect.SetAsLastSibling();
+
+            Color color = Color.Lerp(new Color(1f, 0.42f, 0.08f, 1f), new Color(1f, 0.97f, 0.78f, 1f), fade);
+            color.a = fade;
+            mote.image.color = color;
+        }
+
+        // 여러 주기를 겹쳐 불꽃이 규칙적으로 숨 쉬지 않게 한다.
+        static float FlameFlicker(float time, float seed, float phase)
+        {
+            float a = Mathf.Sin(time * (8.5f + seed * 5f) + phase * 12f);
+            float b = Mathf.Sin(time * (15f + seed * 9f) + seed * 7f);
+            float c = Mathf.Sin(time * (27f + seed * 4f) + phase * 4f);
+            float pop = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(time * (5.5f + seed * 2.5f) + seed * 3f)), 3f);
+            return Mathf.Clamp01(0.38f + 0.22f * a + 0.14f * b + 0.1f * c + 0.2f * pop);
         }
 
         // 물: 테두리를 따라 파도 두 개가 천천히 밀려간다. 콤보 때는 마루만 높아진다.
@@ -363,6 +416,9 @@ namespace Battle.UI
         {
             if (_root != null) return;
 
+            Transform leftover = transform.Find("ElementVfx");
+            if (leftover != null) Destroy(leftover.gameObject);
+
             var rootGo = new GameObject("ElementVfx", typeof(RectTransform));
             rootGo.transform.SetParent(transform, false);
             _root = rootGo.GetComponent<RectTransform>();
@@ -393,6 +449,7 @@ namespace Battle.UI
                 moteRect.pivot = new Vector2(0.5f, 0.5f);
                 var image = go.GetComponent<Image>();
                 image.raycastTarget = false;
+                image.useSpriteMesh = false;
                 _motes[i] = new Mote { rect = moteRect, image = image, phase = i / (float)MoteCount };
             }
         }
@@ -409,12 +466,28 @@ namespace Battle.UI
                 mote.spin = Random.Range(70f, 160f) * (Random.value < 0.5f ? -1f : 1f);
                 mote.band = 0;
                 mote.rect.localScale = Vector3.one;
+                mote.image.enabled = true;
 
                 switch (_element)
                 {
                     case CardElement.Fire:
-                        mote.image.sprite = FlameSprite();
-                        mote.rect.pivot = new Vector2(0.5f, 0f);
+                        if (i % 3 == 2)
+                        {
+                            mote.band = 1;
+                            mote.image.sprite = EmberSprite();
+                            mote.rect.pivot = new Vector2(0.5f, 0.5f);
+                        }
+                        else if (i % 3 == 0)
+                        {
+                            mote.band = 0;
+                            mote.image.sprite = FlameSprite((i / 3) % 3);
+                            mote.rect.pivot = new Vector2(0.5f, 0f);
+                        }
+                        else
+                        {
+                            mote.band = 3;
+                            mote.image.enabled = false;
+                        }
                         break;
                     case CardElement.Water:
                         if (i % 6 == 0)
@@ -556,29 +629,100 @@ namespace Battle.UI
             return Mathf.Min(Mathf.Max(q.x, q.y), 0f) + new Vector2(Mathf.Max(q.x, 0f), Mathf.Max(q.y, 0f)).magnitude - r;
         }
 
-        // 위가 뾰족한 불길. 피벗은 바닥.
-        static Sprite FlameSprite()
+        // 휘어진 혀와 노란 속심, 붉은 가장자리를 구운 불길. variant마다 휘는 방향이 다르다.
+        static Sprite FlameSprite(int variant)
         {
-            if (_flameSprite != null) return _flameSprite;
-            const int n = 48;
-            var tex = NewTex(n, "ComboSlotFlame");
+            if (_flameSprites == null) _flameSprites = new Sprite[3];
+            variant = Mathf.Clamp(variant, 0, 2);
+            if (_flameSprites[variant] != null) return _flameSprites[variant];
+
+            const int w = 96;
+            const int h = 160;
+            var tex = NewTex(w, h, "ComboSlotFlame" + variant);
+            float mid = (w - 1) * 0.5f;
+            float phase = variant * 2.15f;
+
+            for (int y = 0; y < h; y++)
+            {
+                float ny = y / (h - 1f);
+                float env = FlameEnvelope(ny, variant);
+                float curve = Mathf.Sin(ny * Mathf.PI * (1.15f + variant * 0.35f) + phase) * 0.22f * (0.2f + ny);
+                curve += Mathf.Sin(ny * Mathf.PI * (2.2f + variant * 0.4f) + phase) * 0.08f * ny;
+                float cx = mid + curve * mid;
+                float half = Mathf.Max(2f, env * w * 0.46f);
+                float tipFade = Mathf.SmoothStep(1f, 0.9f, ny);
+                float baseFade = Mathf.SmoothStep(0f, 0.05f, ny);
+
+                for (int x = 0; x < w; x++)
+                {
+                    float adx = Mathf.Abs(x - cx);
+                    float edge = half * 0.96f;
+                    if (adx >= edge)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                        continue;
+                    }
+
+                    float radial = 1f - adx / edge;
+                    float alpha = Mathf.Clamp01(Mathf.SmoothStep(0f, 0.18f, radial) * tipFade * baseFade);
+                    float heat = Mathf.Pow(radial, 0.85f) * Mathf.Lerp(1f, 0.55f, ny);
+                    Color color = FlameHeatColor(heat);
+                    color.a = alpha;
+                    tex.SetPixel(x, y, color);
+                }
+            }
+
+            tex.Apply();
+            _flameSprites[variant] = Sprite.Create(
+                tex, new Rect(0f, 0f, w, h), new Vector2(0.5f, 0f), 100f, 0, SpriteMeshType.FullRect);
+            return _flameSprites[variant];
+        }
+
+        // 아래는 불룩하고 위로 갈수록 좁아지는 불꽃 윤곽.
+        static float FlameEnvelope(float ny, int variant)
+        {
+            float taper = Mathf.Pow(1f - ny, 0.52f + variant * 0.05f);
+            float belly = Mathf.Sin(Mathf.Clamp01(ny * (1.05f + variant * 0.12f)) * Mathf.PI);
+            float width = taper * (0.38f + 0.62f * Mathf.Pow(belly, 0.8f));
+            width *= 1f + 0.1f * Mathf.Sin(ny * Mathf.PI * (2f + variant * 0.65f));
+            return Mathf.Max(0.02f, width);
+        }
+
+        // 가장자리는 붉고 속은 노랗다가 흰빛으로 달아오른다.
+        static Color FlameHeatColor(float heat)
+        {
+            Color red = new Color(0.62f, 0.05f, 0.01f, 1f);
+            Color orange = new Color(1f, 0.38f, 0.04f, 1f);
+            Color yellow = new Color(1f, 0.86f, 0.28f, 1f);
+            Color white = new Color(1f, 0.98f, 0.86f, 1f);
+            if (heat < 0.35f) return Color.Lerp(red, orange, heat / 0.35f);
+            if (heat < 0.7f) return Color.Lerp(orange, yellow, (heat - 0.35f) / 0.35f);
+            return Color.Lerp(yellow, white, (heat - 0.7f) / 0.3f);
+        }
+
+        // 위로 흩어지는 작은 불씨.
+        static Sprite EmberSprite()
+        {
+            if (_emberSprite != null) return _emberSprite;
+            const int n = 32;
+            var tex = NewTex(n, "ComboSlotEmber");
             float c = (n - 1) * 0.5f;
             for (int y = 0; y < n; y++)
             {
-                float ny = y / (n - 1f);
-                float halfW = Mathf.Lerp(0.46f, 0.05f, ny * ny) * c;
                 for (int x = 0; x < n; x++)
                 {
-                    float dx = Mathf.Abs(x - c) / Mathf.Max(0.01f, halfW);
-                    float a = Mathf.Clamp01(1f - dx);
-                    a *= Mathf.Clamp01(ny * 1.8f);
-                    a = Mathf.Pow(a, 0.8f);
-                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                    float d = Vector2.Distance(new Vector2(x, y), new Vector2(c, c)) / c;
+                    float a = Mathf.Pow(Mathf.Clamp01(1f - d), 1.45f);
+                    float heat = Mathf.Clamp01(1f - d * 1.15f);
+                    Color color = Color.Lerp(new Color(1f, 0.42f, 0.08f, 1f), new Color(1f, 0.96f, 0.75f, 1f), heat);
+                    color.a = a;
+                    tex.SetPixel(x, y, color);
                 }
             }
             tex.Apply();
-            _flameSprite = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0f), 100f);
-            return _flameSprite;
+            _emberSprite = Sprite.Create(
+                tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
+            return _emberSprite;
         }
 
         // 왼쪽 골에서 오른쪽 마루로 넘어가며 끝이 말리는 파도.
@@ -724,7 +868,12 @@ namespace Battle.UI
 
         static Texture2D NewTex(int n, string name)
         {
-            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
+            return NewTex(n, n, name);
+        }
+
+        static Texture2D NewTex(int width, int height, string name)
+        {
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
             tex.wrapMode = TextureWrapMode.Clamp;
             tex.filterMode = FilterMode.Bilinear;
             tex.name = name;

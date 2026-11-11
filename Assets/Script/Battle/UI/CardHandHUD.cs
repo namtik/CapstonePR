@@ -81,14 +81,8 @@ namespace Battle.UI
         [SerializeField] private Image[] comboSlotImages = new Image[3]; // 콤보 슬롯 프레임 3칸
         [Tooltip("원소 아이콘이 들어가는 프레임. 비우면 Resources/UI/UI_ElementSlot_Frame 를 사용.")]
         [SerializeField] private Sprite comboSlotFrameSprite; // 콤보 슬롯 프레임 스프라이트
-        [Tooltip("프레임 불투명도.")]
-        [SerializeField, Range(0f, 1f)] private float comboSlotFrameAlpha = 0.5f; // 프레임 불투명도
-        [Tooltip("프레임 안 속성 아이콘 불투명도.")]
-        [SerializeField, Range(0f, 1f)] private float comboSlotIconAlpha = 0.5f; // 속성 아이콘 불투명도
         [Tooltip("프레임 안쪽 배경. 비우면 Resources/UI/UI_ElementSlot_BG.")]
         [SerializeField] private Sprite comboSlotBgSprite; // 콤보 슬롯 안쪽 배경
-        [Tooltip("프레임 안쪽 배경 불투명도.")]
-        [SerializeField, Range(0f, 1f)] private float comboSlotBgAlpha = 0.5f; // 안쪽 배경 불투명도
         [Tooltip("프레임 안에 표시할 불 아이콘. 비우면 Resources/UI/UI_Awake_FireIcon.")]
         [SerializeField] private Sprite comboSlotFireSprite; // 각성 슬롯 불 아이콘
         [Tooltip("프레임 안에 표시할 물 아이콘. 비우면 Resources/UI/UI_Awake_WaterIcon.")]
@@ -458,6 +452,14 @@ namespace Battle.UI
 
         public RectTransform AwakenGaugeRect =>
             awakenGauge != null ? awakenGauge.transform as RectTransform : null;
+
+        // 첫 각성 칸의 왼쪽 아래 좌표.
+        public bool TryGetAwakenStackAnchor(out RectTransform host, out Vector2 anchoredTopLeft)
+        {
+            host = awakenGauge != null ? awakenGauge.transform as RectTransform : null;
+            anchoredTopLeft = new Vector2(AwakenCellX, -(AwakenCellY + AwakenCellH + 4f));
+            return host != null && _awakenSkinReady;
+        }
 
         // 각성 게이지 표시 여부를 제어
         public void SetAwakenGaugeVisible(bool visible)
@@ -1100,7 +1102,7 @@ namespace Battle.UI
                     Sprite s = GetComboSlotElementSprite(input[i]);
                     icon.sprite = s;
                     Color iconColor = s != null ? Color.white : ColorForElement(input[i]);
-                    iconColor.a = comboSlotIconAlpha;
+                    iconColor.a = 1f;
                     icon.color = iconColor;
                     icon.enabled = true;
                     if (comboSlotElementVfxEnabled)
@@ -1177,7 +1179,7 @@ namespace Battle.UI
                     frame.sprite = frameSprite;
                     frame.type = Image.Type.Simple;
                     frame.preserveAspect = true;
-                    frame.color = new Color(1f, 1f, 1f, comboSlotFrameAlpha);
+                    frame.color = Color.white;
                     RectTransform rect = frame.rectTransform;
                     float side = Mathf.Max(rect.sizeDelta.x, rect.sizeDelta.y);
                     if (side < 1f) side = 120f;
@@ -1255,7 +1257,7 @@ namespace Battle.UI
             bg.sprite = ResolveComboSlotBgSprite();
             bg.type = Image.Type.Simple;
             bg.preserveAspect = false;
-            bg.color = new Color(1f, 1f, 1f, comboSlotBgAlpha);
+            bg.color = Color.white;
             bg.enabled = bg.sprite != null;
             return bg;
         }

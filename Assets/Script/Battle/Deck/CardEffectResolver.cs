@@ -1389,6 +1389,7 @@ namespace Battle.Deck
             if (isCardEffect && key == "burn" && Ctx.burnOnByCardActive && Ctx.burnOnByCardAmount > 0)
             {
                 Ctx.enemy.TakeDamage(Ctx.burnOnByCardAmount);
+                SfxManager.Instance?.PlayBurn();
                 Sprite burnPortrait = Ctx.enemyStat != null && Ctx.enemyStat.Data != null ? Ctx.enemyStat.Data.enemySprite : null;
                 Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, Ctx.burnOnByCardAmount);
             }
@@ -1421,6 +1422,8 @@ namespace Battle.Deck
             EnemyController savedEnemy = Ctx.enemy;
             EnemyStat savedStat = Ctx.enemyStat;
             CollectEnemyTargets(eff != null ? eff.target : null, false);
+            bool burnDamage = eff != null
+                && (eff.formula ?? "").IndexOf("BURN", StringComparison.OrdinalIgnoreCase) >= 0;
             int total = 0;
             int hit = 0;
             for (int i = 0; i < _targetBuf.Count; i++)
@@ -1429,7 +1432,10 @@ namespace Battle.Deck
                 if (t == null || !t.IsAlive) continue;
                 Ctx.enemy = t;
                 Ctx.enemyStat = t.GetComponent<EnemyStat>();
-                total += DealDamage(amount, isAttackCard, actualHits);
+                int dealt = DealDamage(amount, isAttackCard, actualHits);
+                if (burnDamage && dealt > 0)
+                    SfxManager.Instance?.PlayBurn();
+                total += dealt;
                 hit++;
             }
             Ctx.enemy = savedEnemy;

@@ -84,6 +84,7 @@ public class RunStageDisplayUI : MonoBehaviour
 
         stageText.fontSize = fontSize;
         stageText.color = textColor;
+        stageText.alignment = TextAlignmentOptions.Center;
     }
 
     void RefreshDisplay()
@@ -92,9 +93,9 @@ public class RunStageDisplayUI : MonoBehaviour
             return;
 
         GameStateController state = GameStateController.Instance;
-        if (state == null)
+        if (state == null || !state.HasEnteredStage)
         {
-            stageText.text = string.Format(displayFormat, 1, 1);
+            stageText.text = "-";
             return;
         }
 
