@@ -42,6 +42,8 @@ namespace Battle.UI
 
         public bool IsVisible => panelRoot != null && panelRoot.activeSelf;
 
+        CardHandHUD _handHud; // 더미 보기 창과 동시 표시 방지용
+
         // 플레이 시작 시 닫아 둔다. 에디트 모드의 배치 상태는 유지된다.
         void Awake()
         {
@@ -50,8 +52,15 @@ namespace Battle.UI
 
         void Update()
         {
-            if (IsVisible) RefreshEnemyPortraits();
+            if (!IsVisible) return;
+            // Tab이 열린 채 인벤토리/설정(Esc)/도감이 열리면 Tab 패널을 닫아 두 창이 겹치지 않게 한다
+            if (IsOtherOverlayOpen) { Hide(); return; }
+            RefreshEnemyPortraits();
         }
+
+        // Tab 패널과 동시에 띄우지 않을 전역 창(인벤토리·설정/사운드·도감)이 열려 있는지
+        static bool IsOtherOverlayOpen =>
+            InventoryPanelController.IsOpen || SettingPanel.IsOverlayOpen || CodexPanelController.IsOpen;
 
         public void Toggle()
         {
@@ -62,6 +71,11 @@ namespace Battle.UI
         public void Show()
         {
             if (panelRoot == null) return;
+            // 인벤토리/설정(Esc)/도감이 떠 있는 동안에는 Tab 패널을 열지 않는다
+            if (IsOtherOverlayOpen) return;
+            // 정보 창은 한 번에 하나 — 더미(묘지/덱) 보기가 열려 있으면 닫고 Tab 패널을 연다
+            if (_handHud == null) _handHud = FindFirstObjectByType<CardHandHUD>();
+            if (_handHud != null && _handHud.IsViewerMode) _handHud.CloseViewer();
             transform.SetAsLastSibling();
             panelRoot.SetActive(true);
             RefreshEnemyPortraits();

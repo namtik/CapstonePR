@@ -435,6 +435,7 @@ namespace Battle
             BattleLog.Clear();
             _cardPresenting = false;
             ResetEnemyTurnState();
+            ClearSelectionQueue();
             _elementInputCount = 0;
             _awakenActive = false;
             _awakenPending = false;
@@ -509,6 +510,7 @@ namespace Battle
             _awakenActive = false;
             _awakenPending = false;
             ResetEnemyTurnState();
+            ClearSelectionQueue();
             UnbindPartyEvents();
             ResolveTrackUnfired();
             TdFlushTerminal();
@@ -834,21 +836,104 @@ namespace Battle
                 _player.AddGuard(_ctx.blockOnEnemyAttackAmount);
         }
 
-        // 직전 효과의 시각 갱신 후 다음 프레임에 선택 모드 진입
-        IEnumerator DeferredSelection(string prompt,
-            System.Action<CardInstance> callback,
+        // ── 손패 선택/픽커 요청 직렬화 ──
+        // CardHandHUD의 선택 모드는 콜백 슬롯이 1개라, 카드 효과 선택(소멸/버리기/복사/픽커)과
+        // 적 방해 '버리기' 선택이 겹치면 나중 요청이 앞 요청의 콜백을 덮어써 효과가 유실되거나
+        // 버리기 코루틴이 영원히 대기했다. 모든 선택 요청을 이 대기열로 받아 한 번에 하나씩 연다.
+        private class SelectionRequest
+        {
+            public bool picker;                                  // true=픽커(카드 목록), false=손패 선택
+            public string prompt;                                // 안내 문구
+            public System.Action<CardInstance> callback;         // 선택 결과 콜백
+            public System.Func<CardInstance, bool> filter;       // 손패 선택 필터(null=아무 카드)
+            public System.Func<IList<CardInstance>> pickerCards; // 픽커 후보(진입 시점에 생성)
+        }
+        private readonly Queue<SelectionRequest> _selectionQueue = new Queue<SelectionRequest>();
+        private bool _selectionActive;          // 대기열이 연 선택창이 아직 열려 있음
+        private Coroutine _selectionRoutine;    // 대기열 처리 코루틴
+
+        // 선택창이 열려 있거나 열릴 예정인지 — 이 동안 카드 사용/D 드로우/적 행동/각성 발동을 미룬다
+        public bool HasPendingSelection =>
+            _selectionActive || _selectionQueue.Count > 0
+            || (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode));
+
+        // 손패 1장 선택 요청을 대기열에 넣는다(직전 효과의 시각 갱신 후 다음 프레임 이후 진입)
+        void EnqueueHandSelection(string prompt, System.Action<CardInstance> callback,
             System.Func<CardInstance, bool> filter)
         {
-            yield return null;
-            if (handHud != null) handHud.EnterSelectionMode(prompt, callback, filter: filter);
+            _selectionQueue.Enqueue(new SelectionRequest { picker = false, prompt = prompt, callback = callback, filter = filter });
+            StartSelectionQueue();
         }
 
-        // 다음 프레임에 카드 픽커 모드 진입
-        IEnumerator DeferredPicker(string prompt, IList<CardInstance> cards,
+        // 카드 픽커 요청을 대기열에 넣는다(후보 목록은 실제로 열 때 만든다)
+        void EnqueuePicker(string prompt, System.Func<IList<CardInstance>> cards,
             System.Action<CardInstance> callback)
         {
-            yield return null;
-            if (handHud != null) handHud.EnterCardPickerMode(prompt, cards, callback);
+            _selectionQueue.Enqueue(new SelectionRequest { picker = true, prompt = prompt, callback = callback, pickerCards = cards });
+            StartSelectionQueue();
+        }
+
+        void StartSelectionQueue()
+        {
+            if (_selectionRoutine != null) return;
+            if (!isActiveAndEnabled) { _selectionQueue.Clear(); return; }
+            _selectionRoutine = StartCoroutine(ProcessSelectionQueue());
+        }
+
+        IEnumerator ProcessSelectionQueue()
+        {
+            while (_selectionQueue.Count > 0)
+            {
+                yield return null; // 직전 효과의 패 갱신이 화면에 반영된 뒤 진입
+                // 대기열 밖에서 연 선택창이 있으면 닫힐 때까지 대기(콜백 덮어쓰기 방지)
+                while (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode)) yield return null;
+                if (!_inBattle || handHud == null || _selectionQueue.Count == 0) break;
+
+                SelectionRequest req = _selectionQueue.Dequeue();
+                IList<CardInstance> cards = null;
+                if (req.picker)
+                {
+                    cards = req.pickerCards != null ? req.pickerCards() : null;
+                    if (cards == null || cards.Count == 0) { Log($"[선택] '{req.prompt}' — 후보 없음, 건너뜀"); continue; }
+                }
+                else if (!HandHasMatch(req.filter))
+                {
+                    // 앞선 선택(예: 방해 버리기)으로 패가 바뀌어 고를 카드가 없어진 경우
+                    Log($"[선택] '{req.prompt}' — 고를 수 있는 카드 없음, 건너뜀");
+                    continue;
+                }
+
+                bool closed = false;
+                _selectionActive = true;
+                System.Action<CardInstance> wrapped = c =>
+                {
+                    // HUD가 SelectionClosedCallback(보류 각성)을 부르기 전에 활성 표시를 내린다
+                    _selectionActive = false;
+                    closed = true;
+                    req.callback?.Invoke(c);
+                };
+                if (req.picker) handHud.EnterCardPickerMode(req.prompt, cards, wrapped);
+                else handHud.EnterSelectionMode(req.prompt, wrapped, filter: req.filter);
+
+                while (!closed)
+                {
+                    // 전투 종료 등으로 외부에서 창이 닫힘 → 이 요청은 취소로 간주
+                    if (!_inBattle || handHud == null || (!handHud.IsSelectionMode && !handHud.IsPickerMode)) break;
+                    yield return null;
+                }
+                _selectionActive = false;
+            }
+            _selectionRoutine = null;
+            // 선택이 모두 끝났으면 보류 중이던 각성을 발동
+            TryActivatePendingAwaken();
+        }
+
+        // 선택 대기열을 비우고 처리 코루틴을 멈춘다(전투 종료/시작 시)
+        void ClearSelectionQueue()
+        {
+            if (_selectionRoutine != null) { StopCoroutine(_selectionRoutine); _selectionRoutine = null; }
+            _selectionQueue.Clear();
+            _selectionActive = false;
         }
 
         // 카드 사용 후 보류된 각성을 선택 모드 진입 대기 후 발동 시도
@@ -922,7 +1007,7 @@ namespace Battle
             {
                 if (_cardPresenting) return;
                 if (InputLockedByEnemyTurn) { Log("적 턴 — D 드로우 잠금"); return; }
-                if (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode || handHud.IsViewerMode)) return;
+                if (HasPendingSelection || (handHud != null && handHud.IsViewerMode)) return;
                 TryDDraw();
             }
         }
@@ -964,6 +1049,12 @@ namespace Battle
         {
             if (!_inBattle) return false;
             if (card == null) return false;
+            // 선택창이 열려 있거나 열릴 예정(버리기 2장 사이 프레임 포함)이면 사용 금지 — 선택이 끝난 뒤 사용
+            if (HasPendingSelection)
+            {
+                Log("선택 진행 중 — 카드 사용 잠금");
+                return false;
+            }
             if (InputLockedByEnemyTurn)
             {
                 Log("적 턴 — 카드 사용 잠금");
@@ -1115,13 +1206,13 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    StartCoroutine(DeferredSelection("패에서 소멸할 카드를 선택하세요",
+                    EnqueueHandSelection("패에서 소멸할 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
                             _deck.ExileFromHand(selected);
                             _resolver.NotifyExile(selected);
-                        }, filter));
+                        }, filter);
                 }
                 else Log("[효과] 소멸 가능한 카드 없음 — 건너뜀");
             }
@@ -1132,13 +1223,13 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    StartCoroutine(DeferredSelection("패에서 버릴 카드를 선택하세요",
+                    EnqueueHandSelection("패에서 버릴 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
                             _deck.DiscardCardFromHand(selected);
                             if (_ctx.discardToDrawActive) _deck.Draw(1);
-                        }, filter));
+                        }, filter);
                 }
                 else Log("[효과] 버릴 카드 없음 — 건너뜀");
             }
@@ -1149,13 +1240,13 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    StartCoroutine(DeferredSelection("복사할 카드를 선택하세요",
+                    EnqueueHandSelection("복사할 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
                             var copy = new CardInstance(selected.data, transient: true);
                             if (!_deck.AddToHand(copy)) _deck.AddToDiscard(copy);
-                        }, filter));
+                        }, filter);
                 }
                 else Log("[효과] 복사 가능한 카드 없음 — 건너뜀");
             }
@@ -1163,9 +1254,9 @@ namespace Battle
             // 뽑을 더미에서 카드 선택 → 패로 (물7/206)
             if (result.requiresDrawPileMoveSelection && handHud != null)
             {
-                StartCoroutine(DeferredPicker("뽑을 더미에서 카드를 선택하세요",
-                    new List<CardInstance>(_deck.DrawPile),
-                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); }));
+                EnqueuePicker("뽑을 더미에서 카드를 선택하세요",
+                    () => new List<CardInstance>(_deck.DrawPile),
+                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); });
             }
 
             // 버린 더미에서 카드 선택 → toZone에 따라 패 또는 뽑을 더미 맨 위 (역류203/물213)
@@ -1174,8 +1265,8 @@ namespace Battle
                 if (_deck.DiscardCount > 0)
                 {
                     string zone = (result.discardMoveTargetZone ?? "").Trim().ToUpperInvariant();
-                    StartCoroutine(DeferredPicker("버린 더미에서 카드를 선택하세요",
-                        new List<CardInstance>(_deck.DiscardPile),
+                    EnqueuePicker("버린 더미에서 카드를 선택하세요",
+                        () => new List<CardInstance>(_deck.DiscardPile),
                         (picked) =>
                         {
                             if (picked == null) return;
@@ -1185,7 +1276,7 @@ namespace Battle
                                 : _deck.MoveFromDiscardToDrawPileTop(picked);
                             if (!ok && toHand)
                                 Log("[효과] 패가 가득 차 버린 더미 카드를 패로 가져올 수 없습니다.");
-                        }));
+                        });
                 }
                 else Log("[효과] 버린 더미에 카드 없음 — 건너뜀");
             }
@@ -1201,8 +1292,8 @@ namespace Battle
                 }
                 string zone = result.fragmentPickerTargetZone;
                 int copies = Mathf.Max(1, result.fragmentPickerCopyCount);
-                StartCoroutine(DeferredPicker("파편 카드를 선택하세요",
-                    pool,
+                EnqueuePicker("파편 카드를 선택하세요",
+                    () => pool,
                     (picked) =>
                     {
                         if (picked == null) return;
@@ -1212,7 +1303,7 @@ namespace Battle
                             if (inst == null) continue;
                             PlaceFragmentInZone(inst, zone);
                         }
-                    }));
+                    });
             }
 
             // 게이지 누적
@@ -1307,7 +1398,8 @@ namespace Battle
         void TryActivatePendingAwaken()
         {
             if (!_awakenPending || _awakenActive || !_inBattle) return;
-            if (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode)) return;
+            if (HasPendingSelection) return; // 선택(버리기 연쇄 포함)이 모두 끝난 뒤 대기열이 다시 호출
+
             _awakenPending = false;
             ActivateAwaken();
         }
@@ -1887,7 +1979,7 @@ namespace Battle
                 {
                     int handBefore = _deck != null ? _deck.HandCount : 0;
                     int n = Mathf.Min(2, _deck.HandCount);
-                    if (n > 0) StartCoroutine(EnemyForcedDiscardRoutine(n));
+                    if (n > 0) EnqueueEnemyForcedDiscard(n);
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
                     Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");
                     return "방해: 카드 버리기!";
@@ -1895,23 +1987,18 @@ namespace Battle
             }
         }
 
-        // 방해(버리기): 플레이어가 패에서 count장을 직접 선택해 버림(선택 모드 연쇄)
-        IEnumerator EnemyForcedDiscardRoutine(int count)
+        // 방해(버리기): 플레이어가 패에서 count장을 직접 선택해 버림.
+        // 선택 대기열로 넣어, 카드 효과 선택창과 겹쳐도 콜백이 덮어써지지 않고 차례대로 열린다.
+        void EnqueueEnemyForcedDiscard(int count)
         {
-            int done = 0;
-            while (done < count && _deck.HandCount > 0 && handHud != null)
+            if (handHud == null) return;
+            for (int i = 0; i < count; i++)
             {
-                yield return null;
-                if (_deck.HandCount == 0) break;
-                bool picked = false;
-                int idx = done + 1;
-                handHud.EnterSelectionMode($"버릴 카드를 선택하세요 ({idx}/{count})", card =>
+                int idx = i + 1;
+                EnqueueHandSelection($"버릴 카드를 선택하세요 ({idx}/{count})", card =>
                 {
                     if (card != null) _deck.DiscardCardFromHand(card);
-                    picked = true;
-                }, filter: null);
-                while (!picked) yield return null;
-                done++;
+                }, null);
             }
         }
 
@@ -2336,7 +2423,7 @@ namespace Battle
         public void ForcePlayerDiscard(int count)
         {
             int n = Mathf.Min(count, _deck != null ? _deck.HandCount : 0);
-            if (n > 0) StartCoroutine(EnemyForcedDiscardRoutine(n));
+            if (n > 0) EnqueueEnemyForcedDiscard(n);
             Log($"[특이사항] 카드 버리기 {n}장");
         }
 
@@ -2582,6 +2669,8 @@ namespace Battle
                     // 방해행동 연출 잠금 시간만큼 다음 행동을 미룸
                     float wait = Mathf.Max(disruptionLockSeconds, _enemyActionLockUntil - Time.time);
                     if (wait > 0f) yield return new WaitForSeconds(wait);
+                    // '버리기'처럼 선택을 요구하는 방해는 선택이 끝날 때까지 적 행동으로 유지(그동안 카드 사용 잠금)
+                    while (_inBattle && HasPendingSelection) yield return null;
                 }
                 else
                 {
@@ -2603,6 +2692,10 @@ namespace Battle
         // 플레이어 카드 사용 연출(등장부터 퇴장까지), 유물(아이템) 발동 연출, 대상 적의 피격 반응이 모두 끝날 때까지 대기
         IEnumerator WaitPlayerPresentationsFinished(EnemyController next)
         {
+            // 카드 효과 선택창(소멸/버리기/복사/픽커)이 열려 있으면 고를 때까지 적 행동을 미룸 —
+            // 선택 도중 방해 '버리기'가 끼어들어 선택 흐름이 꼬이지 않게(선택은 플레이어가 반드시 끝냄)
+            while (_inBattle && HasPendingSelection) yield return null;
+
             float deadline = Time.time + 5f; // 안전 상한
             while (Time.time < deadline)
             {

@@ -302,6 +302,7 @@ namespace Battle.UI
         }
 
         private bool _viewerMode; // 더미 보기 모드 여부
+        private BattleTabPanel _tabPanel; // Tab 패널(더미 보기와 동시 표시 방지용)
         private int _viewerPile = -1; // 보는 더미(0=뽑을, 1=버린, -2=런 덱)
         public bool IsViewerMode => _viewerMode; // 더미 보기 모드 여부
 
@@ -349,6 +350,9 @@ namespace Battle.UI
                 return;
             }
             CloseViewer();
+            // 정보 창은 한 번에 하나 — Tab(적 정보/로그) 패널이 열려 있으면 닫고 더미 보기를 연다
+            if (_tabPanel == null) _tabPanel = FindFirstObjectByType<BattleTabPanel>(FindObjectsInactive.Include);
+            if (_tabPanel != null && _tabPanel.IsVisible) _tabPanel.Hide();
             _viewerMode = true;
             _viewerPile = pile;
 

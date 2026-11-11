@@ -218,10 +218,47 @@ public class SettingPanel : MonoBehaviour
             return;
         }
 
+        // 인벤토리·도감·더미(덱/묘지) 보기·적 정보(Tab) 창이 떠 있으면 설정 대신 그 창을 하나 닫는다
+        if (CloseTopGameWindow())
+            return;
+
         if (IsMainMenuVisible())
             return;
 
         OpenSettings();
+    }
+
+    Battle.UI.CardHandHUD _handHud;      // 덱/묘지 보기 닫기용
+    Battle.UI.BattleTabPanel _tabPanel;  // 적 정보(Tab) 패널 닫기용
+
+    // 열린 게임 창을 위쪽부터 하나 닫는다. 닫았으면 true.
+    bool CloseTopGameWindow()
+    {
+        if (Battle.UI.InventoryPanelController.IsOpen)
+        {
+            Battle.UI.InventoryPanelController.Instance.Close();
+            return true;
+        }
+        if (Battle.UI.CodexPanelController.IsOpen)
+        {
+            Battle.UI.CodexPanelController.Instance.Close();
+            return true;
+        }
+
+        if (_handHud == null) _handHud = FindFirstObjectByType<Battle.UI.CardHandHUD>();
+        if (_handHud != null && _handHud.IsViewerMode)
+        {
+            _handHud.CloseViewer();
+            return true;
+        }
+
+        if (_tabPanel == null) _tabPanel = FindFirstObjectByType<Battle.UI.BattleTabPanel>(FindObjectsInactive.Include);
+        if (_tabPanel != null && _tabPanel.IsVisible)
+        {
+            _tabPanel.Hide();
+            return true;
+        }
+        return false;
     }
 
     // 메인 메뉴가 떠 있는 동안에는 인게임 설정 창을 열지 않는다

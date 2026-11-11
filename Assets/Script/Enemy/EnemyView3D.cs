@@ -126,6 +126,9 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     {
         _stat = GetComponent<EnemyStat>();
         if (animator == null) animator = GetComponentInChildren<Animator>();
+        // 스테이지 몬스터는 몇 마리뿐이라 항상 평가한다. FBX 기본 컬링(Cull Update Transforms/Completely)이면
+        // 화면 효과·카메라 연출 중 '보이지 않음'으로 판정될 때 Idle이 멈춰 보일 수 있다.
+        if (animator != null) animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         // Animator가 자식에 있으면 Animation Event(OnAttackImpact)가 이 컴포넌트에 닿지 않으므로 중계기를 붙인다.
         if (animator != null && animator.gameObject != gameObject)
         {
@@ -165,8 +168,13 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         if (_motionMap.TryGetValue(motion, out var states) && states.Length > 0)
         {
             string state = states.Length == 1 ? states[0] : states[UnityEngine.Random.Range(0, states.Length)];
-            animator.CrossFade(state, motionCrossFade);
-            return state;
+            // 인스펙터 상태 이름이 컨트롤러와 다르면(대소문자 포함) CrossFade가 무시되므로 확인 후 폴백
+            if (animator.HasState(0, Animator.StringToHash(state)))
+            {
+                animator.CrossFade(state, motionCrossFade);
+                return state;
+            }
+            Debug.LogWarning($"[EnemyView3D] {name}: Animator에 '{state}' 상태가 없습니다({motion}). motionStates 이름을 컨트롤러와 맞추세요.");
         }
         if (!string.IsNullOrEmpty(fallbackTrigger)) animator.SetTrigger(fallbackTrigger);
         return null;
@@ -176,6 +184,24 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     void Start()
     {
         if (_hud == null) BindHud();
+    }
+
+    // 정지 연출(히트스톱·PauseMotion)은 코루틴이 속도를 되돌리므로, 코루틴이 끊기면 speed=0이 남는다.
+    // 비활성화로 코루틴이 멈추는 경우 즉시 복귀시키고, 그 밖의 이유로 정지가 남으면 매 프레임 자가 복구한다.
+    void OnDisable()
+    {
+        CancelHitStop();
+    }
+
+    void Update()
+    {
+        if (_dead || animator == null || _hitStopActive || _pauseActive) return;
+        if (animator.speed < 0.01f)
+        {
+            float restore = _baseAnimSpeed > 0.01f ? _baseAnimSpeed : 1f;
+            Debug.LogWarning($"[EnemyView3D] {name}: 정지 연출 없이 Animator 속도가 0으로 남아 {restore:F2}로 복구합니다.");
+            animator.speed = restore;
+        }
     }
 
     void OnDestroy()
