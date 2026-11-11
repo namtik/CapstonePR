@@ -156,11 +156,18 @@ public class StageManager : MonoBehaviour
     // progressColumn: 누적 진행 컬럼(난이도 컬럼 = 맵컬럼 + 바퀴*10). 0 이상이면 그에 맞는 시간대를 적용한다.
     public void ShowStage(EnemyElement element, int progressColumn, Action onReady = null)
     {
-        string target = ResolveSceneName(element);
+        // [테스트] StageTestPanel이 스테이지 씬/시간대를 강제할 수 있다(평소에는 null → 기존 동작)
+        string target = !string.IsNullOrEmpty(DebugSceneOverride) ? DebugSceneOverride : ResolveSceneName(element);
         int id = ++_requestId;
         _visible = true;
         _shownSceneName = target;
-        _hasStageTime = progressTimeOfDay && progressColumn >= 0 && TryResolveTime(progressColumn, out _stageTime);
+        if (DebugTimeOverride.HasValue)
+        {
+            _stageTime = DebugTimeOverride.Value;
+            _hasStageTime = true;
+        }
+        else
+            _hasStageTime = progressTimeOfDay && progressColumn >= 0 && TryResolveTime(progressColumn, out _stageTime);
         if (logVerbose)
             Debug.Log($"[StageManager] ShowStage({element} → '{target}', column={progressColumn}" +
                       (_hasStageTime ? $", time={_stageTime})" : ")"));
@@ -324,6 +331,13 @@ public class StageManager : MonoBehaviour
             if (s == sceneName) return true;
         return false;
     }
+
+    // [테스트] 다음 ShowStage에서 쓸 스테이지 씬/시간대 강제값(null이면 적 속성·진행 컬럼으로 결정)
+    public static string DebugSceneOverride;
+    public static StageLightingManager.StageTime? DebugTimeOverride;
+
+    // 관리 중인 스테이지 씬 이름 목록(테스트 패널 선택지용)
+    public List<string> StageSceneNames => new List<string>(AllSceneNames());
 
     IEnumerable<string> AllSceneNames()
     {

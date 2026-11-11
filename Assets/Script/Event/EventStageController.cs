@@ -108,7 +108,7 @@ public class EventStageController : MonoBehaviour
         public TextMeshProUGUI amount;
     }
 
-    private const int EventCount = 5;
+    public const int EventCount = 5;
     private const int Event3Branch1Choice1HpLoss = 10;
     private const int Event3PollutedElementCardId = 504;
 
@@ -124,6 +124,8 @@ public class EventStageController : MonoBehaviour
     [Header("Debug")]
     [Tooltip("켜면 아래에서 고른 이벤트만 등장한다. 끄면 기존처럼 무작위.")]
     [SerializeField] private bool useDebugEventPick;
+    // [테스트] 다음 BeginEvent 한 번만 이 이벤트(0~4)를 연다. -1이면 사용 안 함.
+    public static int DebugEventOverride = -1;
     [SerializeField] private DebugEventPick debugEventPick = DebugEventPick.Event3;
 
     [Header("Event Canvases")]
@@ -364,9 +366,16 @@ public class EventStageController : MonoBehaviour
     {
         roundManager = manager;
 
-        currentEventIndex = useDebugEventPick
-            ? (int)debugEventPick
-            : PickEventIndexForRun();
+        if (DebugEventOverride >= 0)
+        {
+            // [테스트] StageTestPanel이 고른 이벤트(1회용)
+            currentEventIndex = DebugEventOverride;
+            DebugEventOverride = -1;
+        }
+        else
+            currentEventIndex = useDebugEventPick
+                ? (int)debugEventPick
+                : PickEventIndexForRun();
         SetCanvasState(currentEventIndex);
         HideAllGoldRewardRows();
         pendingGoldReward = 0;

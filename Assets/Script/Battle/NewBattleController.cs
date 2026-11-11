@@ -119,6 +119,10 @@ namespace Battle
         [Header("디버그")]
         [Tooltip("켜 두면 각성이 한 번 발동된 뒤 시간이 줄지 않고 유지된다. 전투가 끝나면 같이 끝난다.")]
         [SerializeField] private bool holdAwakenForever;             // 각성 무한 유지
+
+        [Header("적 행동 카메라 포커스")]
+        [Tooltip("적이 공격/방해행동을 하는 동안 스테이지 카메라를 그 적 쪽으로 당기고 줌인해 누가 행동하는지 강조한다.")]
+        [SerializeField] private EnemyActionFocusCamera.Settings enemyActionFocus = EnemyActionFocusCamera.Settings.Default;
         [SerializeField] private bool logVerbose = true;             // 상세 로그 출력 여부
 
         [Header("적 AI (방해행동 선택)")]
@@ -1912,6 +1916,15 @@ namespace Battle
                 pick = RandomFallbackPick(recoverReady, allowedMask);
             }
 
+            // [테스트] StageTestPanel이 지정한 방해행동으로 교체(AI 학습 보상에는 반영하지 않음)
+            if (_debugForcedDisruption.HasValue)
+            {
+                pick = Mathf.Clamp(_debugForcedDisruption.Value, 0, 5);
+                _debugForcedDisruption = null;
+                rewardDecision = null;
+                Log($"[테스트] 방해행동 강제 → {pick}");
+            }
+
             // 다음 방해행동이 이번 것과 연속되지 않도록 직전 행동으로 기록
             _lastDisruptionAction = pick;
 
@@ -1985,6 +1998,27 @@ namespace Battle
                     return "방해: 카드 버리기!";
                 }
             }
+        }
+
+        // ── [테스트] StageTestPanel 전용 ──
+        private int? _debugForcedDisruption; // 다음 방해행동 강제값(0 저주·1 탈진·2 흡수·3 강화·4 회복·5 버리기)
+
+        // 지정한 방해행동을 적 행동 대기열로 발동(실제 흐름과 같은 순서·잠금으로 처리)
+        public void DebugTriggerDisruption(int pick)
+        {
+            if (!_inBattle) return;
+            EnemyController source = _enemy != null && _enemy.IsAlive ? _enemy : EnemyCombatParty.FirstAlive();
+            if (source == null) return;
+            _debugForcedDisruption = pick;
+            EnqueueEnemyDisruption(source);
+        }
+
+        // 각성을 즉시 발동(선택창이 열려 있으면 끝난 뒤 발동)
+        public void DebugForceAwaken()
+        {
+            if (!_inBattle || _awakenActive) return;
+            _awakenPending = true;
+            TryActivatePendingAwaken();
         }
 
         // 방해(버리기): 플레이어가 패에서 count장을 직접 선택해 버림.
@@ -2656,6 +2690,8 @@ namespace Battle
                 _actingEnemy = e;
                 _actingIsDisruption = a.disruption;
                 BindEnemy(e);
+                // 행동하는 적 쪽으로 카메라를 당겨 누가 행동하는지 강조(행동 시작 대기 동안 들어감)
+                EnemyActionFocusCamera.Focus(e.transform, enemyActionFocus);
 
                 // 행동 순서 바에서 행동자가 '현재' 칸으로 올라오는 걸 보여준 뒤 행동 시작
                 if (enemyTurnStartDelay > 0f) yield return new WaitForSeconds(enemyTurnStartDelay);
@@ -2687,6 +2723,8 @@ namespace Battle
             _attackResolving = false;
             FlushDeferredHpLost();
             _attackStartRoutine = null;
+            // 대기열이 모두 끝나면 원래 시점으로(연속 행동 사이에는 돌아가지 않고 다음 적으로 옮겨 감)
+            EnemyActionFocusCamera.Release();
         }
 
         // 플레이어 카드 사용 연출(등장부터 퇴장까지), 유물(아이템) 발동 연출, 대상 적의 피격 반응이 모두 끝날 때까지 대기
@@ -2719,6 +2757,7 @@ namespace Battle
             _attackResolving = false;
             _attackQueue.Clear();
             _deferredHpLost.Clear();
+            EnemyActionFocusCamera.Release(immediate: true); // 전투 시작/종료 — 카메라 오프셋 즉시 원복
             _actingEnemy = null;
             _actingIsDisruption = false;
             _enemyActionLockUntil = 0f;

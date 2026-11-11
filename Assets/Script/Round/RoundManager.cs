@@ -639,6 +639,15 @@ public class RoundManager : MonoBehaviour
             return;
         }
 
+        // [테스트] StageTestPanel로 들어온 라운드는 런 진행(보스 처치 수·바퀴·게임 클리어)을 바꾸지 않는다
+        bool debugRound = DebugRoundActive;
+        DebugRoundActive = false;
+        if (debugRound)
+        {
+            stateController.ShowMap();
+            return;
+        }
+
         if (currentRoundData is BossRoundData)
         {
             stateController.RegisterBossDefeat();
@@ -666,9 +675,23 @@ public class RoundManager : MonoBehaviour
         stateController.ShowMap();
     }
 
+    // [테스트] StageTestPanel이 시작한 라운드인지 — ReturnToMap에서 런 진행 반영을 건너뛴다
+    public static bool DebugRoundActive;
+    // [테스트] 테스트 라운드에서 쓸 적 명단(비어 있으면 평소처럼 등장 구성 사용)
+    public static List<EnemyData> DebugRosterOverride;
+
+    static bool TryGetDebugRoster(out List<EnemyData> roster)
+    {
+        roster = null;
+        if (!DebugRoundActive || DebugRosterOverride == null || DebugRosterOverride.Count == 0) return false;
+        roster = new List<EnemyData>(DebugRosterOverride);
+        return true;
+    }
+
     // 진행 중이던 전투를 정리하고 남은 적 GameObject를 제거한다(플레이어 사망/재시작 시).
     public void AbortActiveCombat()
     {
+        DebugRoundActive = false;
         StageManager.Instance?.HideStage(); // 전투 중단 — 3D 스테이지 숨김
         if (IsNewBattleSystemActive())
             Battle.NewBattleController.Instance?.EndBattle();
@@ -715,6 +738,12 @@ public class RoundManager : MonoBehaviour
     // 일반 전투 명단: 인스펙터 구간 설정이 있으면 그걸 쓰고, 없으면 라운드 에셋 목록.
     List<EnemyData> ResolveCombatRoster(CombatRoundData data)
     {
+        if (TryGetDebugRoster(out List<EnemyData> debugRoster))
+        {
+            data.enemies = debugRoster;
+            return debugRoster;
+        }
+
         int lap = 1;
         int stage = 1;
         GameStateController state = GameStateController.Instance;
@@ -741,6 +770,8 @@ public class RoundManager : MonoBehaviour
     // 정예 전투 명단: 현재 라운드의 정예 프리셋이 있으면 그걸 쓰고, 없으면 라운드 에셋의 첫 적.
     List<EnemyData> ResolveEliteRoster(EliteRoundData data)
     {
+        if (TryGetDebugRoster(out List<EnemyData> debugRoster)) return debugRoster;
+
         int lap = 1;
         GameStateController state = GameStateController.Instance;
         if (state != null)
