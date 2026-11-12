@@ -300,8 +300,12 @@ public class EnemyView : MonoBehaviour, IEnemyView
     // 새 전투 시스템: 다음 공격 데미지를 예고 텍스트에 표시한다
     public void SetAttackPreviewDamage(int damage)
     {
-        if (attackPreviewText == null) return;
-        attackPreviewText.text = damage.ToString();
+        if (attackPreviewText != null)
+            attackPreviewText.text = damage.ToString();
+
+        var intent = GetComponent<EnemyAttackIntent>();
+        if (intent == null) intent = gameObject.AddComponent<EnemyAttackIntent>();
+        intent.SetDamage(HpBarRect, damage);
     }
 
     // 일반 데미지 숫자를 띄운다

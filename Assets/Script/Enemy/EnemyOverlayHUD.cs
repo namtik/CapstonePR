@@ -436,6 +436,8 @@ public class EnemyOverlayHUD : MonoBehaviour
         {
             var badge = GetComponent<EnemyNoteBadge>();
             if (badge != null) badge.HideBubble();
+            var intent = GetComponent<EnemyAttackIntent>();
+            if (intent != null) intent.Hide();
         }
         if (damageTextTemplate != null)
         {
@@ -480,11 +482,12 @@ public class EnemyOverlayHUD : MonoBehaviour
         if (actionGaugeValueText != null)
             actionGaugeValueText.text = $"{Mathf.Clamp(Mathf.RoundToInt(ratio * _gaugeMax), 0, _gaugeMax)}/{_gaugeMax}";
     }
-
-    // 다음 공격 예고 데미지 표시
     public void SetPreview(int damage)
     {
         if (attackPreviewText != null) attackPreviewText.text = damage.ToString();
+        var intent = GetComponent<EnemyAttackIntent>();
+        if (intent == null) intent = gameObject.AddComponent<EnemyAttackIntent>();
+        intent.SetDamage(HpBarRect, damage);
     }
 
     // 방해행동/특이사항 알림 표시(일정 시간 후 숨김)

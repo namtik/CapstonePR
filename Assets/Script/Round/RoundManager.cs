@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 using Battle.Relic;
+using TMPro;
 
 public class RoundManager : MonoBehaviour
 {
@@ -48,6 +49,40 @@ public class RoundManager : MonoBehaviour
 
     public float EnemyBarOffsetX => enemyBarOffsetX;
     public float EnemyBarOffsetY => enemyBarOffsetY;
+
+    [Header("적 다음 공격")]
+    [InspectorName("아이콘")]
+    [SerializeField] private Sprite enemyAttackIcon;
+    [InspectorName("아이콘 크기")]
+    [SerializeField] private float enemyAttackIconSize = 40f;
+    [InspectorName("아이콘 위치")]
+    [Tooltip("적 HP바 왼쪽 중앙 기준. X 음수 = 더 왼쪽, Y 양수 = 위. 플레이 중에도 바로 반영된다.")]
+    [SerializeField] private Vector2 enemyAttackIconPosition = new Vector2(-9.76f, -6.03f);
+    [InspectorName("폰트")]
+    [SerializeField] private TMP_FontAsset enemyAttackFont;
+    [InspectorName("숫자 크기")]
+    [SerializeField] private float enemyAttackNumberSize = 38f;
+    [InspectorName("색깔")]
+    [SerializeField] private Color enemyAttackNumberColor = Color.red;
+    [InspectorName("아웃라인 두께")]
+    [Tooltip("0이면 외곽선 없음.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float enemyAttackOutlineWidth = 0.3f;
+    [InspectorName("아웃라인 색")]
+    [SerializeField] private Color enemyAttackOutlineColor = Color.black;
+    [InspectorName("숫자 위치")]
+    [Tooltip("아이콘 기준. X 음수 = 아이콘 왼쪽, Y 양수 = 위. 플레이 중에도 바로 반영된다.")]
+    [SerializeField] private Vector2 enemyAttackNumberPosition = new Vector2(56.9f, -11.72f);
+
+    public Sprite EnemyAttackIcon => enemyAttackIcon;
+    public float EnemyAttackIconSize => enemyAttackIconSize;
+    public Vector2 EnemyAttackIconPosition => enemyAttackIconPosition;
+    public TMP_FontAsset EnemyAttackFont => enemyAttackFont;
+    public float EnemyAttackNumberSize => enemyAttackNumberSize;
+    public Color EnemyAttackNumberColor => enemyAttackNumberColor;
+    public float EnemyAttackOutlineWidth => enemyAttackOutlineWidth;
+    public Color EnemyAttackOutlineColor => enemyAttackOutlineColor;
+    public Vector2 EnemyAttackNumberPosition => enemyAttackNumberPosition;
 
     [Header("보상 UI")]
     [SerializeField] private RewardHubUIController rewardHubUIController; // 보상 허브 UI 컨트롤러
