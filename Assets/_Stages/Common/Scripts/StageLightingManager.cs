@@ -333,7 +333,7 @@ public sealed class StageLightingManager : MonoBehaviour
         22f, 90f, 0.7f);
 
     [SerializeField, HideInInspector] private LightingProfile evening = new LightingProfile(
-        new Color(0.54f, 0.67f, 0.9f), 0.5f, 0.4f,
+        new Color(0.54f, 0.67f, 0.9f), 1.25f, 1f,
         new Color(0.29f, 0.32f, 0.38f), new Color(0.09f, 0.11f, 0.16f),
         20f, 85f, 0.35f);
 
@@ -572,7 +572,12 @@ private LightingProfile GetProfile()
             case StageTime.Dawn: return dawn;
             case StageTime.Morning: return morning;
             case StageTime.Sunset: return sunset;
-            case StageTime.Evening: return evening;
+            case StageTime.Evening:
+                // Apply the fixed preset to scenes saved with earlier profile values.
+                LightingProfile eveningProfile = evening;
+                eveningProfile.directionalIntensity = 1.25f;
+                eveningProfile.shadowStrength = 1f;
+                return eveningProfile;
             case StageTime.Overcast: return overcast;
             case StageTime.LateAfternoon: return lateAfternoon;
             case StageTime.BlueHour: return blueHour;
@@ -600,6 +605,9 @@ private AmbientProfile GetAmbientProfile()
 
 private void Apply()
     {
+        var presetFilter = GetComponent<IStageTimePresetFilter>();
+        if (presetFilter is Behaviour filterBehaviour && filterBehaviour.isActiveAndEnabled)
+            selectedTime = presetFilter.ResolveTime(selectedTime);
         if (Application.isPlaying && !isActiveAndEnabled) return;
         ResolveReferences();
         if (directionalLight == null || skyMaterial == null)
@@ -852,4 +860,10 @@ private void ConfigureSunFraming(ref float yaw, ref float tilt)
         foreach (var k in keys) c.AddKey(k.t, k.v);
         return c;
     }
+}
+
+/// <summary>Optional scene-specific time restriction; stages without a filter keep all presets.</summary>
+public interface IStageTimePresetFilter
+{
+    StageLightingManager.StageTime ResolveTime(StageLightingManager.StageTime requested);
 }
