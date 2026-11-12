@@ -354,7 +354,7 @@ public class RoundManager : MonoBehaviour
     public void StartBoss(BossRoundData data)
     {
         var bossOnly = new List<EnemyData> { data.bossEnemy };
-        ShowStageThen(bossOnly, data.columnIndex, () => BeginBoss(data));
+        ShowStageThen(bossOnly, data.columnIndex, () => BeginBoss(data), true);
     }
 
     void BeginBoss(BossRoundData data)
@@ -385,14 +385,15 @@ public class RoundManager : MonoBehaviour
     // 적 속성에 맞는 3D 스테이지를 표시하고, 준비되면(이미 로드돼 있으면 즉시) 전투를 시작한다.
     // StageManager가 없으면 바로 시작(2D).
     // progressColumn: 누적 진행 컬럼 — 스테이지 시간대(아침→…→새벽 순환)를 정하는 데 쓰인다.
-    void ShowStageThen(List<EnemyData> roster, int progressColumn, System.Action begin)
+    // isBoss: 보스 전투면 보스 전용 스테이지를 쓴다.
+    void ShowStageThen(List<EnemyData> roster, int progressColumn, System.Action begin, bool isBoss = false)
     {
         if (StageManager.Instance == null)
         {
             begin();
             return;
         }
-        StageManager.Instance.ShowStage(StageManager.ResolveElement(roster), progressColumn, begin);
+        StageManager.Instance.ShowStage(StageManager.ResolveElement(roster), progressColumn, begin, isBoss);
     }
 
     // 상점 스테이지를 연다.

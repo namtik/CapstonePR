@@ -106,7 +106,7 @@ MonoBehaviour:
     - Buff2
   - motion: 3
     stateNames:
-    - Debuff
+    - Debuff1
   - motion: 4
     stateNames:
     - Hit1
@@ -140,6 +140,7 @@ MonoBehaviour:
   hitStopFlashColor: {r: 1, g: 1, b: 1, a: 1}
   hitStopFlashStrength: 0.55
   logHitStop: 1
+  pauseMotionDefault: 0.2
   cameraPunch:
     enabled: 1
     holdDuration: 0.22

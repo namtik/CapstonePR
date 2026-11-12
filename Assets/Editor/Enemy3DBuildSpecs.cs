@@ -14,8 +14,11 @@ public class Enemy3DBuildSpecs : ScriptableObject
         public string prefabName;                    // 프리팹 파일/루트 이름
         [Tooltip("모델 자식 오브젝트 이름. 비우면 FBX 이름 사용")]
         public string modelName;                     // 모델 자식 오브젝트 이름
+        [Tooltip("모델 FBX. '완성 모델 프리팹'을 지정하면 무시")]
         public GameObject fbx;                       // 모델 FBX
-        [Tooltip("모든 렌더러 슬롯에 적용할 머티리얼. 비우면 FBX 기본 머티리얼 유지")]
+        [Tooltip("이펙트·셰이더·Avatar까지 구성된 완성 모델 프리팹(예: Boar.prefab). 지정 시 FBX 대신 중첩 프리팹으로 사용하고 머티리얼은 교체하지 않음")]
+        public GameObject sourcePrefab;              // 완성 모델 프리팹
+        [Tooltip("모든 렌더러 슬롯에 적용할 머티리얼. 비우면 FBX 기본 머티리얼 유지 (완성 모델 프리팹 사용 시 무시)")]
         public Material material;                    // 적용할 머티리얼
         [Tooltip("battlePrefab3D를 연결할 EnemyData. 비우면 연결 생략")]
         public EnemyData enemyData;                  // 연결할 EnemyData
@@ -29,7 +32,11 @@ public class Enemy3DBuildSpecs : ScriptableObject
         [Tooltip("HUD(체력바 등) 앵커 로컬 위치")]
         public Vector3 hudAnchorPosition = Vector3.zero; // HudAnchor 로컬 위치
 
-        public string ModelName => string.IsNullOrEmpty(modelName) && fbx != null ? fbx.name : modelName;
+        // 모델 원본: 완성 프리팹 우선, 없으면 FBX
+        public GameObject ModelSource => sourcePrefab != null ? sourcePrefab : fbx;
+        public bool UsesSourcePrefab => sourcePrefab != null;
+
+        public string ModelName => string.IsNullOrEmpty(modelName) && ModelSource != null ? ModelSource.name : modelName;
     }
 
     [Tooltip("컴포넌트 값을 복사할 템플릿 프리팹(무사)")]

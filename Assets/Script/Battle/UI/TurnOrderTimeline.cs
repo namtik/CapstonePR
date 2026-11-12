@@ -40,6 +40,9 @@ namespace Battle.UI
         [Tooltip("방해행동(게이지 절반)도 행동 칸에 표시")]
         [SerializeField] private bool showDisruptions = true;
         [SerializeField] private float slideSpeed = 12f;    // 위치 보간 속도
+        [Tooltip("누르면 턴 순서 바를 숨기거나 다시 표시")]
+        [SerializeField] private KeyCode hideToggleKey = KeyCode.Z; // 표시 토글 키
+        private bool _hiddenByUser;                         // 키로 숨김 상태
 
         [Header("행동 아이콘 (종류별)")]
         [SerializeField] private List<EnemyActionIcon> actionIcons = new List<EnemyActionIcon>
@@ -196,8 +199,10 @@ namespace Battle.UI
         // ── 매 프레임: 예측 → 배치 ─────────────────────────────
         void LateUpdate()
         {
+            if (Input.GetKeyDown(hideToggleKey)) _hiddenByUser = !_hiddenByUser;
+
             var nbc = NewBattleController.Instance;
-            bool show = nbc != null && nbc.InBattle && EnemyCombatParty.AliveCount > 0;
+            bool show = !_hiddenByUser && nbc != null && nbc.InBattle && EnemyCombatParty.AliveCount > 0;
             if (_root.gameObject.activeSelf != show) _root.gameObject.SetActive(show);
             if (!show) return;
 

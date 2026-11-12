@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: WaterSlimeEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uC561\uAD34"
-  battlePrefab3D: {fileID: 0}
+  battlePrefab3D: {fileID: 3677551225560907452, guid: 961d3aff2df0e6746878563c44053ba2, type: 3}
   enemySprite: {fileID: 21300000, guid: 904eb0a256870ff47b022aa2bebce8e3, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []

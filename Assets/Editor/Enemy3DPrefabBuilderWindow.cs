@@ -179,7 +179,7 @@ static class Enemy3DBuildSpecsGUI
             case Op.Duplicate:
                 Undo.RecordObject(specs, "Duplicate 3D Enemy Spec");
                 var copy = JsonUtility.FromJson<Enemy3DBuildSpecs.Entry>(JsonUtility.ToJson(e));
-                copy.fbx = e.fbx; copy.material = e.material; copy.enemyData = e.enemyData; // 에셋 참조 유지
+                copy.fbx = e.fbx; copy.sourcePrefab = e.sourcePrefab; copy.material = e.material; copy.enemyData = e.enemyData; // 에셋 참조 유지
                 copy.prefabName = e.prefabName + "_Copy";
                 specs.entries.Insert(i + 1, copy);
                 break;
@@ -218,10 +218,11 @@ static class Enemy3DBuildSpecsGUI
     }
 
     // FBX 드래그 → 스펙 자동 추가(같은 폴더의 '{이름}_Base.mat' 머티리얼 자동 지정)
+    // 완성 모델 프리팹(.prefab) 드래그 → sourcePrefab으로 스펙 추가
     static void DrawDropArea(SerializedObject so, Enemy3DBuildSpecs specs)
     {
         var rect = GUILayoutUtility.GetRect(0, 32, GUILayout.ExpandWidth(true));
-        GUI.Box(rect, "여기에 FBX를 끌어다 놓으면 스펙 추가", EditorStyles.helpBox);
+        GUI.Box(rect, "여기에 FBX 또는 완성 모델 프리팹을 끌어다 놓으면 스펙 추가", EditorStyles.helpBox);
 
         var evt = Event.current;
         if (!rect.Contains(evt.mousePosition)) return;
@@ -237,6 +238,11 @@ static class Enemy3DBuildSpecsGUI
         {
             if (!(obj is GameObject go)) continue;
             string path = AssetDatabase.GetAssetPath(go);
+            if (path.EndsWith(".prefab"))
+            {
+                specs.entries.Add(new Enemy3DBuildSpecs.Entry { prefabName = "Enemy" + go.name, sourcePrefab = go });
+                continue;
+            }
             if (!(AssetImporter.GetAtPath(path) is ModelImporter)) continue;
 
             string dir = Path.GetDirectoryName(path).Replace('\\', '/');

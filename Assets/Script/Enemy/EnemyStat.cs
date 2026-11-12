@@ -150,6 +150,15 @@ public class EnemyStat : MonoBehaviour
         OnGaugeFull?.Invoke();
     }
 
+    // [테스트] 게이지를 공격 직전(최대-1)까지 채운다 — 다음 플레이어 행동에 공격
+    public void FillGaugeToAlmostFull()
+    {
+        if (!IsAlive) return;
+        gaugeStep = Mathf.Max(0, gaugeMaxSteps - 1);
+        if (gaugeStep >= gaugeMaxSteps / 2) midPatternTriggered = true; // 건너뛴 중간 패턴은 발동하지 않음
+        OnGaugeStepChanged?.Invoke((float)gaugeStep / gaugeMaxSteps);
+    }
+
     // 플레이어 행동 시 호출 — 게이지를 한 단계 올리고 방해행동/공격을 처리한다
     public void ConsumeGaugeStep()
     {

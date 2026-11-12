@@ -6369,7 +6369,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1424448439}
   m_HandleRect: {fileID: 1424448438}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -14596,7 +14596,7 @@ MonoBehaviour:
   playerStatusPanel: {fileID: 267259484}
   enemyStatusPanel: {fileID: 1611085687}
   enemyBarOffsetX: 18.5
-  enemyBarOffsetY: -60
+  enemyBarOffsetY: 0
   enemyAttackIcon: {fileID: 21300000, guid: f37a143d4a6c6bd4b861c4d0b7e15902, type: 3}
   enemyAttackIconSize: 40
   enemyAttackIconPosition: {x: -9.76, y: -6.03}
@@ -28213,7 +28213,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 888799008}
   m_HandleRect: {fileID: 888799007}
   m_Direction: 2
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -36050,6 +36050,17 @@ MonoBehaviour:
   enemyTurnStartDelay: 0.35
   disruptionLockSeconds: 0.6
   holdAwakenForever: 0
+  enemyActionFocus:
+    enabled: 1
+    onlyWhenMultiple: 0
+    zoomAmount: 4
+    pushTowardFocus: 0.2
+    turnAmount: 0.4
+    maxTurnAngle: 12
+    pitchScale: 0.5
+    tiltDegrees: 1.5
+    easeInDuration: 0.35
+    easeOutDuration: 0.45
   logVerbose: 1
   useAiDisruption: 1
   aiExplorationEpsilon: 0.15
@@ -43806,7 +43817,14 @@ MonoBehaviour:
     sceneName: Fire_BurnedForest
   - element: 4
     sceneName: Land_ForestGate
+  - element: 2
+    sceneName: Water_FishingVillagePier
+  - element: 3
+    sceneName: Wind_BrokenSuspensionBridge
+  - element: 5
+    sceneName: Human_ClosedGateMarket
   defaultStageSceneName: Land_ForestGate
+  bossStageSceneName: Boss_ReedField
   preloadAllOnStart: 1
   progressTimeOfDay: 1
   columnsPerTimeStep: 2
@@ -52776,7 +52794,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00018310547, y: 465.0001}
+  m_AnchoredPosition: {x: -0.00018310547, y: 464.99997}
   m_SizeDelta: {x: 1582, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &2018776364

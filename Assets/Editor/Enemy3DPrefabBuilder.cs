@@ -5,6 +5,7 @@ using UnityEngine;
 // 3D 몬스터 전투 프리팹 자동 생성기.
 // 무사(EnemySamu) 프리팹을 템플릿으로 컴포넌트 값(EnemyController/EnemyView3D/EnemyStat/MonsterMidPattern)을 복사하고,
 // FBX 모델 + 머티리얼 + HudAnchor를 붙여 프리팹으로 저장한 뒤 EnemyData.battlePrefab3D에 연결한다.
+// 이펙트·전용 셰이더·Avatar까지 구성된 '완성 모델 프리팹'(멧돼지·바위거인·액괴 방식)은 FBX 대신 sourcePrefab으로 지정한다.
 // Animator Controller와 EnemyView3D의 동작 매핑(Motion States)은 만들지 않는다 — 직접 구성.
 // 스펙은 Enemy3DBuildSpecs 에셋에서 관리(Tools/3D Enemy/Prefab Builder 창 또는 인스펙터).
 // 기본은 이미 존재하는 프리팹을 덮어쓰지 않으며, 재생성은 창의 '재생성' 버튼으로만 한다.
@@ -86,7 +87,8 @@ public static class Enemy3DPrefabBuilder
     {
         if (string.IsNullOrWhiteSpace(e.prefabName)) return "프리팹 이름이 비어 있음";
         if (e.prefabName.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0) return "프리팹 이름에 파일명 불가 문자 포함";
-        if (e.fbx == null) return "FBX 미지정";
+        if (e.ModelSource == null) return "FBX 또는 완성 모델 프리팹 미지정";
+        if (e.UsesSourcePrefab && e.sourcePrefab.GetComponentInChildren<Animator>(true) == null) return "완성 모델 프리팹에 Animator 없음";
         foreach (var other in specs.entries)
             if (other != e && other.prefabName == e.prefabName) return "프리팹 이름 중복";
         return null;
@@ -134,26 +136,37 @@ public static class Enemy3DPrefabBuilder
             EditorUtility.CopySerialized(src, dst);
         }
 
-        // 모델
-        var model = (GameObject)PrefabUtility.InstantiatePrefab(e.fbx, root.transform);
+        // 모델(FBX 또는 완성 모델 프리팹을 중첩 프리팹으로 — 원본 수정이 그대로 반영됨)
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(e.ModelSource, root.transform);
         model.name = e.ModelName;
         model.transform.localPosition = e.modelPosition;
         model.transform.localRotation = Quaternion.Euler(e.modelRotation);
         model.transform.localScale = e.modelScale;
         foreach (var t in model.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = specs.enemyLayer;
 
-        var animator = model.GetComponent<Animator>() ?? model.AddComponent<Animator>(); // 컨트롤러는 직접 연결
+        // 컨트롤러는 직접 연결. 완성 프리팹은 Avatar가 붙은 기존 Animator를 그대로 사용
+        var animator = model.GetComponentInChildren<Animator>(true) ?? model.AddComponent<Animator>();
+        animator.applyRootMotion = false; // 앵커 위치 고정
 
         var renderers = new List<Renderer>();
-        foreach (var r in model.GetComponentsInChildren<Renderer>(true))
+        if (e.UsesSourcePrefab)
         {
-            if (e.material != null)
+            // 완성 프리팹: 머티리얼(전용 셰이더)은 유지, 플래시는 본체 스킨드 메쉬만(돌·먼지 등 이펙트 메쉬 제외)
+            renderers.AddRange(model.GetComponentsInChildren<SkinnedMeshRenderer>(true));
+            if (renderers.Count == 0) renderers.AddRange(model.GetComponentsInChildren<Renderer>(true));
+        }
+        else
+        {
+            foreach (var r in model.GetComponentsInChildren<Renderer>(true))
             {
-                var mats = new Material[r.sharedMaterials.Length];
-                for (int i = 0; i < mats.Length; i++) mats[i] = e.material;
-                r.sharedMaterials = mats;
+                if (e.material != null)
+                {
+                    var mats = new Material[r.sharedMaterials.Length];
+                    for (int i = 0; i < mats.Length; i++) mats[i] = e.material;
+                    r.sharedMaterials = mats;
+                }
+                renderers.Add(r);
             }
-            renderers.Add(r);
         }
 
         // HUD 앵커(기본은 무사와 동일하게 루트 원점)

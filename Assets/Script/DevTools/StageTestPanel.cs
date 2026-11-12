@@ -239,7 +239,7 @@ public class StageTestPanel : MonoBehaviour
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("즉시 승리")) KillAllEnemies();
         if (GUILayout.Button("대상 적 HP 1")) SetTargetHpToOne();
-        if (GUILayout.Button("적 게이지 가득")) FillTargetGauge();
+        if (GUILayout.Button("모든 적 게이지 최대-1")) FillAllGauges();
         GUILayout.EndHorizontal();
 
         GUILayout.BeginHorizontal();
@@ -284,12 +284,20 @@ public class StageTestPanel : MonoBehaviour
         _message = "대상 적 HP 1";
     }
 
-    void FillTargetGauge()
+    // 살아 있는 모든 적의 게이지를 최대-1까지 채운다
+    void FillAllGauges()
     {
-        var stat = TargetStat();
-        if (stat == null || !stat.IsAlive) return;
-        stat.FillGaugeToFull();
-        _message = "대상 적 게이지 가득";
+        var alive = new List<EnemyController>();
+        EnemyCombatParty.CollectAlive(alive);
+        int count = 0;
+        foreach (var e in alive)
+        {
+            var stat = e != null ? e.GetComponent<EnemyStat>() : null;
+            if (stat == null || !stat.IsAlive) continue;
+            stat.FillGaugeToAlmostFull();
+            count++;
+        }
+        _message = $"적 {count}마리 게이지 최대-1";
     }
 
     void HealPlayer()

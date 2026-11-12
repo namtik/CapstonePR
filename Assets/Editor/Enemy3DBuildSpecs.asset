@@ -20,6 +20,7 @@ MonoBehaviour:
     prefabName: EnemyClayOni
     modelName: "\uD1A0\uC6B0\uADC0"
     fbx: {fileID: 919132149155446097, guid: f9199ac208a39df47891e0b1ac9a870c, type: 3}
+    sourcePrefab: {fileID: 0}
     material: {fileID: 2100000, guid: a87d870063c8fea4298c308845dd56df, type: 2}
     enemyData: {fileID: 11400000, guid: 67add3b5e97baac48a9b3240797ac667, type: 2}
     replaceExistingLink: 0
@@ -31,6 +32,7 @@ MonoBehaviour:
     prefabName: EnemyDrownedOni
     modelName: "\uC218\uC7A5\uADC0"
     fbx: {fileID: 919132149155446097, guid: c496e14f1792beb4583fbd1e43d053f9, type: 3}
+    sourcePrefab: {fileID: 0}
     material: {fileID: 2100000, guid: 19b431c393f9c2d4bb39fafacdd030e1, type: 2}
     enemyData: {fileID: 11400000, guid: fc92ccd07cf1aa84aba45e270d2596e1, type: 2}
     replaceExistingLink: 0
@@ -42,6 +44,7 @@ MonoBehaviour:
     prefabName: EnemyPyreoni
     modelName: "\uC5FC\uB85C\uADC0"
     fbx: {fileID: 919132149155446097, guid: 2f8be1850e3254a4b9f9d3b8ae5d466f, type: 3}
+    sourcePrefab: {fileID: 0}
     material: {fileID: 2100000, guid: a678de748a1b30d4cb944a11fe4612cb, type: 2}
     enemyData: {fileID: 11400000, guid: ec5830b3574ea514985faa9c1c45b986, type: 2}
     replaceExistingLink: 0
@@ -53,6 +56,7 @@ MonoBehaviour:
     prefabName: EnemyWhiteApe
     modelName: "\uBC31\uD48D\uC6D0"
     fbx: {fileID: 919132149155446097, guid: b9a44de730bd215468b4c3c2dc4733a0, type: 3}
+    sourcePrefab: {fileID: 0}
     material: {fileID: 2100000, guid: 1ed619796ae832a4e8b290656168388e, type: 2}
     enemyData: {fileID: 11400000, guid: 26af76c23ba0baa4eae77c17a08c328a, type: 2}
     replaceExistingLink: 0
@@ -64,8 +68,45 @@ MonoBehaviour:
     prefabName: EnemyBoneFist
     modelName: "\uBF08\uC8FC\uBA39"
     fbx: {fileID: 919132149155446097, guid: 7f3ef4a7f1dd5ba4b83bba5882d9bf5e, type: 3}
+    sourcePrefab: {fileID: 0}
     material: {fileID: 2100000, guid: d26228da9b4cb7a4bacdc3ec3e75bc43, type: 2}
     enemyData: {fileID: 11400000, guid: 3fb0aaf2f17f1ae498cf7d6c232e6493, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyBoar
+    modelName: "\uBA67\uB3FC\uC9C0"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 2473198034188939957, guid: 232fc81c2739ca44f9a35e8d4cdd8aa2, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: ce576f1c3c1894c418e2beb7d28c0b6f, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyRockGiant
+    modelName: "\uBC14\uC704\uAC70\uC778"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 7215521757717687153, guid: f9804503f5ac6a24b8d84f4769258559, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: aaf403e9f6d4bc7499d40304978cce4b, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemySlime
+    modelName: "\uC561\uAD34"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 2602668344618019295, guid: 01d709b36e888cb458d3099cfc302ed3, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: 60df92f6a7d98424ab155e87558d45f0, type: 2}
     replaceExistingLink: 0
     modelPosition: {x: 0, y: 0, z: 0}
     modelRotation: {x: 0, y: 0, z: 0}

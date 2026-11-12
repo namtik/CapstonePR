@@ -26,9 +26,14 @@ public class StageManager : MonoBehaviour
     {
         new ElementStage { element = EnemyElement.Fire,  sceneName = "Fire_BurnedForest" },
         new ElementStage { element = EnemyElement.Earth, sceneName = "Land_ForestGate" },
+        new ElementStage { element = EnemyElement.Water, sceneName = "Water_FishingVillagePier" },
+        new ElementStage { element = EnemyElement.Wind,  sceneName = "Wind_BrokenSuspensionBridge" },
+        new ElementStage { element = EnemyElement.Humanoid, sceneName = "Human_ClosedGateMarket" },
     };
-    [Tooltip("매칭되는 속성 스테이지가 없을 때(무속성/물/바람 등) 사용할 기본 스테이지 씬 이름.")]
+    [Tooltip("매칭되는 속성 스테이지가 없을 때(무속성 등) 사용할 기본 스테이지 씬 이름.")]
     [SerializeField] private string defaultStageSceneName = "Land_ForestGate";
+    [Tooltip("보스 전투 전용 스테이지 씬 이름. 비우면 보스도 속성 매핑을 따른다.")]
+    [SerializeField] private string bossStageSceneName = "Boss_ReedField";
     [Tooltip("시작 시 모든 스테이지 씬을 숨김 상태로 미리 로드해 둘지 여부(전투 진입 시 끊김 방지).")]
     [SerializeField] private bool preloadAllOnStart = true;
 
@@ -138,8 +143,9 @@ public class StageManager : MonoBehaviour
     }
 
     // 속성에 해당하는 씬 이름(매칭 없으면 기본 스테이지).
-    public string ResolveSceneName(EnemyElement element)
+    public string ResolveSceneName(EnemyElement element, bool isBoss = false)
     {
+        if (isBoss && !string.IsNullOrEmpty(bossStageSceneName)) return bossStageSceneName;
         foreach (var s in elementStages)
             if (s != null && s.element == element && !string.IsNullOrEmpty(s.sceneName))
                 return s.sceneName;
@@ -154,10 +160,11 @@ public class StageManager : MonoBehaviour
     }
 
     // progressColumn: 누적 진행 컬럼(난이도 컬럼 = 맵컬럼 + 바퀴*10). 0 이상이면 그에 맞는 시간대를 적용한다.
-    public void ShowStage(EnemyElement element, int progressColumn, Action onReady = null)
+    // isBoss: 보스 전투면 bossStageSceneName을 우선 사용한다.
+    public void ShowStage(EnemyElement element, int progressColumn, Action onReady = null, bool isBoss = false)
     {
         // [테스트] StageTestPanel이 스테이지 씬/시간대를 강제할 수 있다(평소에는 null → 기존 동작)
-        string target = !string.IsNullOrEmpty(DebugSceneOverride) ? DebugSceneOverride : ResolveSceneName(element);
+        string target = !string.IsNullOrEmpty(DebugSceneOverride) ? DebugSceneOverride : ResolveSceneName(element, isBoss);
         int id = ++_requestId;
         _visible = true;
         _shownSceneName = target;
@@ -169,7 +176,7 @@ public class StageManager : MonoBehaviour
         else
             _hasStageTime = progressTimeOfDay && progressColumn >= 0 && TryResolveTime(progressColumn, out _stageTime);
         if (logVerbose)
-            Debug.Log($"[StageManager] ShowStage({element} → '{target}', column={progressColumn}" +
+            Debug.Log($"[StageManager] ShowStage({element}{(isBoss ? ", boss" : "")} → '{target}', column={progressColumn}" +
                       (_hasStageTime ? $", time={_stageTime})" : ")"));
 
         if (string.IsNullOrEmpty(target))
@@ -347,5 +354,7 @@ public class StageManager : MonoBehaviour
                 yield return s.sceneName;
         if (!string.IsNullOrEmpty(defaultStageSceneName) && seen.Add(defaultStageSceneName))
             yield return defaultStageSceneName;
+        if (!string.IsNullOrEmpty(bossStageSceneName) && seen.Add(bossStageSceneName))
+            yield return bossStageSceneName;
     }
 }

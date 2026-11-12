@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: LandTreeEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uBC14\uC704\uAC70\uC778"
-  battlePrefab3D: {fileID: 0}
+  battlePrefab3D: {fileID: 3588410521273984022, guid: 28ea39c1753c33b4ab2ce1c20d97811c, type: 3}
   enemySprite: {fileID: 21300000, guid: a661dce3f2c44534f81f5b67d4096cc7, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
