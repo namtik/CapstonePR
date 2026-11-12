@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
+using Battle.UI;
 
 // 게임 시작 화면(메인 메뉴)의 버튼과 설정/사운드 캔버스를 제어하는 컨트롤러
 public class MainMenuController : MonoBehaviour
@@ -10,12 +12,14 @@ public class MainMenuController : MonoBehaviour
 
     [Header("버튼")]
     [SerializeField] private Button playButton;     // 게임 플레이 버튼
-    [SerializeField] private Button tutorialButton; // 조작법 버튼
+    [FormerlySerializedAs("tutorialButton")]
+    [SerializeField] private Button codexButton;    // 도감 버튼
     [SerializeField] private Button settingsButton; // 설정 버튼
     [SerializeField] private Button quitButton;     // 게임 종료 버튼
 
-    [Header("조작법")]
-    [SerializeField] private TutorialPanelController tutorialPanel; // 조작법 팝업
+    [Header("도감")]
+    [Tooltip("비워두면 씬에서 비활성 오브젝트까지 포함해 찾는다.")]
+    [SerializeField] private CodexPanelController codexPanel; // 도감 패널
 
     [Header("메인 메뉴 전용 설정 캔버스")]
     [Tooltip("메인 메뉴의 설정 버튼으로 열 캔버스. 지정하면 인게임 공용 SettingCanvas 대신 이 캔버스를 연다.")]
@@ -49,10 +53,10 @@ public class MainMenuController : MonoBehaviour
             playButton.onClick.RemoveListener(OnPlay);
             playButton.onClick.AddListener(OnPlay);
         }
-        if (tutorialButton != null)
+        if (codexButton != null)
         {
-            tutorialButton.onClick.RemoveListener(OnTutorial);
-            tutorialButton.onClick.AddListener(OnTutorial);
+            codexButton.onClick.RemoveListener(OnCodex);
+            codexButton.onClick.AddListener(OnCodex);
         }
         if (settingsButton != null)
         {
@@ -86,6 +90,11 @@ public class MainMenuController : MonoBehaviour
 
         if (settingPanel == null)
             settingPanel = FindFirstObjectByType<SettingPanel>(FindObjectsInactive.Include);
+
+        if (codexPanel == null)
+            codexPanel = CodexPanelController.Instance != null
+                ? CodexPanelController.Instance
+                : FindFirstObjectByType<CodexPanelController>(FindObjectsInactive.Include);
     }
 
     // 메인 화면을 다시 표시한다 (외부 호출용)
@@ -123,16 +132,23 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
-    // [조작법]: 튜토리얼 팝업을 연다
-    void OnTutorial()
+    // [도감]: 도감 화면을 연다. 닫기 버튼으로 메인 메뉴로 돌아온다.
+    void OnCodex()
     {
-        if (tutorialPanel != null)
+        ResolveReferences();
+
+        if (codexPanel == null)
         {
-            tutorialPanel.Open();
+            Debug.LogWarning("[MainMenuController] CodexPanelController를 찾지 못해 도감을 열 수 없습니다.");
             return;
         }
 
-        Debug.LogWarning("[MainMenuController] TutorialPanelController가 연결되지 않아 조작법을 열 수 없습니다.");
+        // 도감 캔버스가 꺼져 있으면 컨트롤러가 아직 초기화되지 않는다.
+        // 켜면 Awake가 패널은 숨긴 채 캔버스만 살리고, 이어서 Open이 화면을 연다.
+        if (!codexPanel.gameObject.activeSelf)
+            codexPanel.gameObject.SetActive(true);
+
+        codexPanel.Open();
     }
 
     // [설정]: 전용 설정 캔버스 또는 공용 설정 패널을 연다
