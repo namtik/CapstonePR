@@ -87,6 +87,26 @@ namespace Battle.UI
         [Tooltip("ON이면 카드 타입 배경(baseCardType)을 타입별 색으로 칠한다.")]
         [SerializeField] private bool tintCardTypeBackground = false; // 타입 배경 틴트 여부
 
+        [Header("각성 부적 — 각성 중 손패를 속성 부적으로 표시(효과 텍스트 숨김)")]
+        [SerializeField] private Sprite fireTalismanSprite;  // 불 부적
+        [SerializeField] private Sprite waterTalismanSprite; // 물 부적
+        [SerializeField] private Sprite windTalismanSprite;  // 바람 부적
+        [SerializeField] private Sprite earthTalismanSprite; // 땅 부적
+        [Tooltip("보이던 면(카드/부적)이 타서 사라지는 시간(초).")]
+        [SerializeField] private float burnOutDuration = 0.4f;
+        [Tooltip("새 면(부적/카드)이 불꽃 테두리에서 나타나는 시간(초).")]
+        [SerializeField] private float burnInDuration = 0.3f;
+        [Tooltip("불꽃 띠 폭(카드 높이 대비 0~0.3).")]
+        [Range(0.01f, 0.3f)] [SerializeField] private float burnEdgeWidth = 0.07f;
+        [Tooltip("불꽃 띠 안쪽 그을림 폭.")]
+        [Range(0f, 0.3f)] [SerializeField] private float burnCharWidth = 0.08f;
+        [Tooltip("노이즈 크기. 클수록 잘게 타들어 감.")]
+        [SerializeField] private float burnNoiseScale = 5f;
+        [Tooltip("아래에서 위로 타 올라가는 정도(0=무작위, 1=수평선처럼).")]
+        [Range(0f, 1f)] [SerializeField] private float burnBottomUpWeight = 0.45f;
+        [SerializeField] private Color burnEdgeInner = new Color(1f, 0.92f, 0.55f, 1f); // 불꽃 중심 색
+        [SerializeField] private Color burnEdgeOuter = new Color(1f, 0.35f, 0.05f, 1f); // 불꽃 바깥 색
+
         public CardInstance Card { get; private set; } // 현재 표시 중인 카드
         public int SlotIndex { get; set; } // 슬롯 인덱스
         public CardHandHUD Hud { get; set; } // 소유 HUD 참조
@@ -106,6 +126,18 @@ namespace Battle.UI
         private Coroutine _drawIntroCo; // 등장 연출 코루틴
         private bool _playingIntro; // 등장 연출 진행 중 여부
         public bool IsPlayingDrawIntro => _playingIntro; // 등장 연출 진행 중 여부
+
+        const string BurnShaderResourcePath = "UI/CardBurn"; // Resources 셰이더 경로
+        static Shader s_burnShader;           // 불타기 셰이더(공용)
+        private Image _talismanFace;          // 부적 면(카드 전체를 덮는 이미지, 런타임 생성)
+        private Material _burnMat;            // 이 카드 전용 불타기 머티리얼(전환 중에만 사용)
+        private Coroutine _burnCo;            // 전환 연출 코루틴
+        private bool _talismanWanted;         // 목표: 부적 모드
+        private bool _talismanShown;          // 현재 화면에 부적이 보이는지
+        private readonly List<Graphic> _burnGraphics = new List<Graphic>();           // 전환 중 머티리얼을 바꾼 그래픽
+        private readonly List<Material> _burnSavedMaterials = new List<Material>();   // 원래 머티리얼(복원용)
+        public bool IsTalismanMode => _talismanWanted;          // 부적 모드 여부
+        public bool IsTalismanTransitioning => _burnCo != null; // 전환 연출 진행 중 여부
 
         // 참조 바인딩과 원본 스케일/배경 색을 캡처
         void Awake()
@@ -137,6 +169,14 @@ namespace Battle.UI
             _targetingArmed = false;
             if (Hud != null) Hud.HideEnemyTargeting();
             if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
+
+            // 전환 연출이 끊기면 목표 상태로 즉시 정착(머티리얼이 남지 않게)
+            if (_burnCo != null) FinishBurnImmediately();
+        }
+
+        void OnDestroy()
+        {
+            if (_burnMat != null) Destroy(_burnMat);
         }
 
         // 속성에 대응하는 prefab 스프라이트를 반환
@@ -197,6 +237,7 @@ namespace Battle.UI
             if (Card != card)
             {
                 CancelDrawIntro(); // 남아있던 등장 연출 정리
+                if (_burnCo != null) FinishBurnImmediately(); // 다른 카드로 바뀌면 전환 연출은 즉시 정착
                 _isHovering = false;
                 if (_hoverSlotOriginalSibling >= 0 && transform.parent != null)
                 {
@@ -299,6 +340,10 @@ namespace Battle.UI
 
             // 배경 이미지 적용
             ApplyBackgroundSprite(Card.Element);
+
+            // 부적 모드면 이 카드 속성의 부적으로 표시(전환 연출 중이면 연출이 상태를 관리)
+            if (_burnCo == null && (_talismanWanted || _talismanShown))
+                ApplyTalismanVisual(_talismanWanted && HasTalismanFor(Card));
         }
 
         // 속성에 맞는 배경 스프라이트/색을 적용
@@ -548,6 +593,219 @@ namespace Battle.UI
         {
             if (_drawIntroCo != null) { StopCoroutine(_drawIntroCo); _drawIntroCo = null; }
             if (_playingIntro) SettleIntro();
+        }
+
+        // ── 각성 부적 ──
+
+        // 속성에 대응하는 부적 스프라이트(무속성·파편 등은 없음)
+        Sprite GetTalismanSprite(CardElement element) => element switch
+        {
+            CardElement.Fire  => fireTalismanSprite,
+            CardElement.Water => waterTalismanSprite,
+            CardElement.Wind  => windTalismanSprite,
+            CardElement.Earth => earthTalismanSprite,
+            _ => null
+        };
+
+        bool HasTalismanFor(CardInstance card) => card != null && GetTalismanSprite(card.Element) != null;
+
+        // 부적 모드 전환. animate면 보이던 면이 타서 사라진 뒤 새 면이 불꽃 테두리에서 나타난다.
+        // 부적 스프라이트가 없는 카드(무속성 등)는 부적 모드여도 원래 카드로 표시한다.
+        public void SetTalismanMode(bool on, bool animate = false, float delay = 0f)
+        {
+            _talismanWanted = on;
+            if (_burnCo != null) FinishBurnImmediately();
+
+            bool show = on && HasTalismanFor(Card);
+            if (show == _talismanShown)
+            {
+                if (show) ApplyTalismanVisual(true); // 속성이 바뀌었을 수 있으니 스프라이트 갱신
+                return;
+            }
+
+            if (!animate || Card == null || !isActiveAndEnabled || ResolveBurnShader() == null)
+            {
+                ApplyTalismanVisual(show);
+                return;
+            }
+            _burnCo = StartCoroutine(BurnSwapRoutine(show, delay));
+        }
+
+        // 부적 면 생성(카드 전체를 덮는 최상단 이미지). 레이캐스트는 카드 본체가 계속 받는다.
+        void EnsureTalismanFace()
+        {
+            if (_talismanFace != null) return;
+            var go = new GameObject("TalismanFace", typeof(RectTransform), typeof(Image));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(transform, false);
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.SetAsLastSibling();
+            _talismanFace = go.GetComponent<Image>();
+            _talismanFace.raycastTarget = false;
+            _talismanFace.preserveAspect = false;
+            _talismanFace.enabled = false;
+        }
+
+        // 카드 면(부적 면 제외 모든 그래픽)의 표시 알파. CanvasRenderer 알파라 Refresh의 색 지정과 충돌하지 않고 레이캐스트도 유지된다.
+        void SetCardFaceAlpha(float alpha)
+        {
+            foreach (var g in GetComponentsInChildren<Graphic>(true))
+            {
+                if (g == null || g == _talismanFace) continue;
+                g.canvasRenderer.SetAlpha(alpha);
+            }
+        }
+
+        // 부적/카드 면 즉시 전환
+        void ApplyTalismanVisual(bool show)
+        {
+            if (show && !HasTalismanFor(Card)) show = false;
+            _talismanShown = show;
+            if (show)
+            {
+                EnsureTalismanFace();
+                _talismanFace.sprite = GetTalismanSprite(Card.Element);
+                _talismanFace.transform.SetAsLastSibling();
+                _talismanFace.canvasRenderer.SetAlpha(1f);
+                _talismanFace.enabled = true;
+            }
+            else if (_talismanFace != null)
+            {
+                _talismanFace.enabled = false;
+            }
+            SetCardFaceAlpha(show ? 0f : 1f);
+        }
+
+        Shader ResolveBurnShader()
+        {
+            if (s_burnShader == null)
+            {
+                s_burnShader = Resources.Load<Shader>(BurnShaderResourcePath);
+                if (s_burnShader == null) s_burnShader = Shader.Find("UI/CardBurn");
+                if (s_burnShader == null) Debug.LogWarning("[NewCardView] UI/CardBurn 셰이더를 찾지 못해 부적 전환을 즉시 처리합니다.");
+            }
+            return s_burnShader;
+        }
+
+        Material EnsureBurnMaterial()
+        {
+            if (_burnMat == null)
+            {
+                _burnMat = new Material(ResolveBurnShader()) { name = "CardBurn (Instance)", hideFlags = HideFlags.DontSave };
+            }
+            _burnMat.SetFloat("_BurnWidth", burnEdgeWidth);
+            _burnMat.SetFloat("_CharWidth", burnCharWidth);
+            _burnMat.SetFloat("_NoiseScale", burnNoiseScale);
+            _burnMat.SetFloat("_DirWeight", burnBottomUpWeight);
+            _burnMat.SetColor("_EdgeInner", burnEdgeInner);
+            _burnMat.SetColor("_EdgeOuter", burnEdgeOuter);
+            return _burnMat;
+        }
+
+        // 셰이더가 정점(루트 캔버스 공간)을 카드 로컬 좌표로 바꿀 수 있도록 행렬과 카드 영역 전달
+        void UpdateBurnSpace()
+        {
+            if (_burnMat == null || _rect == null) return;
+            Canvas canvas = GetComponentInParent<Canvas>();
+            Transform root = canvas != null ? canvas.rootCanvas.transform : null;
+            Matrix4x4 toCanvas = root != null ? root.localToWorldMatrix : Matrix4x4.identity;
+            _burnMat.SetMatrix("_CardMatrix", _rect.worldToLocalMatrix * toCanvas);
+            Rect r = _rect.rect;
+            _burnMat.SetVector("_CardRect", new Vector4(r.xMin, r.yMin, r.width, r.height));
+        }
+
+        // 지정 면의 이미지들에 불타기 머티리얼 적용(텍스트는 알파로만 처리)
+        void BeginBurnOn(bool talismanFace)
+        {
+            EndBurnMaterials();
+            Material mat = EnsureBurnMaterial();
+            if (talismanFace)
+            {
+                if (_talismanFace != null) AttachBurn(_talismanFace, mat);
+                return;
+            }
+            foreach (var img in GetComponentsInChildren<Image>(true))
+            {
+                if (img == null || img == _talismanFace) continue;
+                AttachBurn(img, mat);
+            }
+        }
+
+        void AttachBurn(Graphic g, Material mat)
+        {
+            _burnGraphics.Add(g);
+            _burnSavedMaterials.Add(g.material == g.defaultMaterial ? null : g.material);
+            g.material = mat;
+        }
+
+        // 원래 머티리얼 복원
+        void EndBurnMaterials()
+        {
+            for (int i = 0; i < _burnGraphics.Count; i++)
+                if (_burnGraphics[i] != null) _burnGraphics[i].material = _burnSavedMaterials[i];
+            _burnGraphics.Clear();
+            _burnSavedMaterials.Clear();
+        }
+
+        // 진행값 적용. 카드 면이면 텍스트를 불이 닿기 전에 미리 걷어낸다.
+        void ApplyBurnProgress(float progress, bool cardFace)
+        {
+            UpdateBurnSpace();
+            if (_burnMat != null) _burnMat.SetFloat("_Progress", progress);
+            if (!cardFace) return;
+            float textAlpha = 1f - Mathf.Clamp01(progress / 0.35f);
+            foreach (var t in GetComponentsInChildren<TMP_Text>(true))
+                if (t != null) t.canvasRenderer.SetAlpha(textAlpha);
+        }
+
+        System.Collections.IEnumerator BurnSwapRoutine(bool toTalisman, float delay)
+        {
+            while (delay > 0f) { delay -= Time.unscaledDeltaTime; yield return null; }
+            while (_playingIntro) yield return null; // 새로 뽑힌 카드는 등장이 끝난 뒤 탄다
+
+            // 카드마다 다른 무늬로 타도록 노이즈 시드를 바꾼다
+            EnsureBurnMaterial().SetFloat("_NoiseSeed", Random.Range(0f, 100f));
+
+            // 1) 보이던 면이 타서 사라짐
+            bool outIsTalisman = _talismanShown;
+            BeginBurnOn(outIsTalisman);
+            yield return BurnTween(0f, 1f, burnOutDuration, !outIsTalisman);
+
+            // 2) 면 교체 — 새 면은 다 탄 상태(진행 1)에서 시작
+            EndBurnMaterials();
+            ApplyTalismanVisual(toTalisman);
+            BeginBurnOn(toTalisman);
+            ApplyBurnProgress(1f, !toTalisman);
+
+            // 3) 새 면이 불꽃 테두리에서 나타남
+            yield return BurnTween(1f, 0f, burnInDuration, !toTalisman);
+
+            EndBurnMaterials();
+            ApplyTalismanVisual(toTalisman);
+            _burnCo = null;
+        }
+
+        System.Collections.IEnumerator BurnTween(float from, float to, float duration, bool cardFace)
+        {
+            float dur = Mathf.Max(0.01f, duration);
+            for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime / dur)
+            {
+                float k = t * t * (3f - 2f * t); // smoothstep
+                ApplyBurnProgress(Mathf.Lerp(from, to, k), cardFace);
+                yield return null;
+            }
+            ApplyBurnProgress(to, cardFace);
+        }
+
+        // 전환 연출을 즉시 끝내고 목표 상태로 정착
+        void FinishBurnImmediately()
+        {
+            if (_burnCo != null) { StopCoroutine(_burnCo); _burnCo = null; }
+            EndBurnMaterials();
+            ApplyTalismanVisual(_talismanWanted && HasTalismanFor(Card));
         }
 
         // 속성/저주 여부에 대응하는 색을 반환

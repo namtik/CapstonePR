@@ -29,7 +29,7 @@ public class BattleWalkTransition : MonoBehaviour
 
     public bool IsPlaying { get; private set; }
 
-    CanvasGroup _blackGroup;
+    ScreenFader _fader; // 화면 전환 공용 오버레이(맵 복귀 페이드와 겹치지 않도록 같은 것을 씀)
 
     // 걷기 연출 후 onDone 호출. 이미 재생 중이면 무시.
     public void Play(System.Action onDone)
@@ -41,8 +41,8 @@ public class BattleWalkTransition : MonoBehaviour
     IEnumerator Run(System.Action onDone)
     {
         IsPlaying = true;
-        EnsureBlackOverlay();
-        _blackGroup.blocksRaycasts = true; // 연출 중 클릭 차단
+        _fader = ScreenFader.Instance;
+        _fader.SetBlocking(true); // 연출 중 클릭 차단
 
         // 1) 카드(손패) HUD 숨김
         CanvasGroup hud = ResolveHandHudGroup();
@@ -80,10 +80,10 @@ public class BattleWalkTransition : MonoBehaviour
                 camT.rotation = startRot * Quaternion.Euler(0f, 0f, roll);
             }
             if (t >= fadeStart && fadeToBlackDuration > 0f)
-                _blackGroup.alpha = Mathf.Clamp01((t - fadeStart) / fadeToBlackDuration);
+                _fader.SetAlpha((t - fadeStart) / fadeToBlackDuration);
             yield return null;
         }
-        _blackGroup.alpha = 1f;
+        _fader.SetAlpha(1f); // 이 상태에서 ReturnToMap의 페이드 요청은 즉시 실행된다
 
         // 3) 어두운 화면 뒤에서 원상 복구 후 맵 복귀
         if (camT != null)
@@ -96,8 +96,13 @@ public class BattleWalkTransition : MonoBehaviour
         onDone?.Invoke();
 
         yield return null; // 맵 UI가 한 프레임 그려진 뒤 어둠을 걷음
-        yield return FadeGroup(_blackGroup, 1f, 0f, fadeFromBlackDuration);
-        _blackGroup.blocksRaycasts = false;
+        for (float t = 0f; t < fadeFromBlackDuration; t += Time.unscaledDeltaTime)
+        {
+            _fader.SetAlpha(1f - t / fadeFromBlackDuration);
+            yield return null;
+        }
+        _fader.SetAlpha(0f);
+        _fader.SetBlocking(false);
         IsPlaying = false;
     }
 
@@ -122,30 +127,5 @@ public class BattleWalkTransition : MonoBehaviour
         var g = hud.GetComponent<CanvasGroup>();
         if (g == null) g = hud.gameObject.AddComponent<CanvasGroup>();
         return g;
-    }
-
-    // 모든 UI 위를 덮는 전용 오버레이 캔버스(검은 화면)
-    void EnsureBlackOverlay()
-    {
-        if (_blackGroup != null) return;
-        var go = new GameObject("WalkTransitionOverlay", typeof(RectTransform), typeof(Canvas), typeof(CanvasGroup));
-        go.transform.SetParent(transform, false);
-        var canvas = go.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 32000;
-        go.AddComponent<GraphicRaycaster>();
-        _blackGroup = go.GetComponent<CanvasGroup>();
-        _blackGroup.alpha = 0f;
-        _blackGroup.blocksRaycasts = false;
-        _blackGroup.interactable = false;
-
-        var img = new GameObject("Black", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
-        img.transform.SetParent(go.transform, false);
-        var r = img.rectTransform;
-        r.anchorMin = Vector2.zero;
-        r.anchorMax = Vector2.one;
-        r.offsetMin = Vector2.zero;
-        r.offsetMax = Vector2.zero;
-        img.color = Color.black;
     }
 }

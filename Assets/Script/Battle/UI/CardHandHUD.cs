@@ -71,6 +71,21 @@ namespace Battle.UI
         [Header("드로우 등장 연출")]
         [Tooltip("여러 장을 동시에 뽑을 때 카드마다 떠오르기 시작을 늦추는 간격(초). 0이면 동시에 올라옴.")]
         [SerializeField] private float drawIntroStagger = 0.05f; // 드로우 등장 지연 간격
+        [Tooltip("각성 진입/종료 시 손패 카드↔부적 전환을 카드마다 시작하는 간격(초).")]
+        [SerializeField] private float talismanBurnStagger = 0.06f; // 부적 전환 지연 간격
+        private bool _talismanHand; // 각성 중 — 손패를 부적으로 표시
+        public bool IsTalismanHand => _talismanHand; // 손패 부적 표시 여부
+
+        // 손패 중 카드↔부적 전환 연출이 진행 중인 카드가 있는지(대기 중인 시간차 포함)
+        public bool IsTalismanTransitioning
+        {
+            get
+            {
+                for (int i = 0; i < _cardViews.Count; i++)
+                    if (_cardViews[i] != null && _cardViews[i].IsTalismanTransitioning) return true;
+                return false;
+            }
+        }
 
         [Header("콤보 UI — 각성 전용")]
         [Tooltip("각성 발동 시 활성화될 콤보 슬롯 패널.")]
@@ -326,6 +341,7 @@ namespace Battle.UI
         {
             if (_deck == null) return;
             if (IsSelectionMode || IsPickerMode) return;
+            if (_talismanHand) return; // 각성 중에는 뽑을/버린 더미 보기 금지(각성용 임시 더미)
             if (_viewerMode && _viewerPile == pile) { CloseViewer(); return; }
 
             var src = pile == 0 ? _deck.DrawPile : _deck.DiscardPile;
@@ -862,10 +878,29 @@ namespace Battle.UI
 
             if (active)
             {
+                // 열려 있던 뽑을/버린 더미 보기는 닫는다(런 덱 보기는 유지)
+                if (_viewerMode && (_viewerPile == 0 || _viewerPile == 1)) CloseViewer();
                 ShowAwakenDim();
                 EnsureComboSlotFrames();
             }
             else HideAwakenDim();
+
+            SetTalismanHand(active);
+        }
+
+        // 손패 카드를 부적으로(또는 원래 카드로) 불태우며 전환. 같은 상태면 무시.
+        void SetTalismanHand(bool on)
+        {
+            if (_talismanHand == on) return;
+            _talismanHand = on;
+            int order = 0;
+            for (int i = 0; i < _cardViews.Count; i++)
+            {
+                var view = _cardViews[i];
+                if (view == null) continue;
+                bool visible = view.gameObject.activeInHierarchy && view.Card != null;
+                view.SetTalismanMode(on, animate: visible, delay: visible ? order++ * Mathf.Max(0f, talismanBurnStagger) : 0f);
+            }
         }
 
         // 각성 전용 딤을 켜고 손패/콤보 UI를 그 위로 올림
@@ -1508,6 +1543,7 @@ namespace Battle.UI
                 {
                     view = Instantiate(cardPrefab, _slotAnchors[i]);
                     view.Bind(this, i);
+                    if (_talismanHand) view.SetTalismanMode(true); // 각성 중 새로 만든 슬롯도 부적
                     _cardViews.Add(view);
                 }
                 if (view == null) continue;
@@ -1843,6 +1879,7 @@ namespace Battle.UI
             vrect.anchoredPosition = cardUsePresentPos;
             vrect.localRotation = Quaternion.identity;
             view.SetCard(card);
+            if (_talismanHand) view.SetTalismanMode(true); // 각성 중 사용한 카드는 부적 그대로 보여 준다
             view.CaptureHome();
             vrect.SetAsLastSibling();
 

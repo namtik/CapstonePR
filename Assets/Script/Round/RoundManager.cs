@@ -678,8 +678,22 @@ public class RoundManager : MonoBehaviour
         Debug.Log($"[보상] 전투 골드 +{gold}" + (relicBonus > 0 ? $" (유물 +{relicBonus})" : ""));
     }
 
+    private bool _returnToMapPending; // 페이드 대기 중 중복 복귀 방지
+
     // 보상 처리 후 노드를 클리어 표시하고 맵으로 복귀한다(최종 보스 클리어 시 게임 클리어 화면).
+    // 화면을 어둡게 한 뒤 전환한다. 걷기 연출처럼 이미 화면이 덮여 있으면 즉시 전환.
     public void ReturnToMap()
+    {
+        if (_returnToMapPending) return;
+        _returnToMapPending = true;
+        ScreenFader.Transition(() =>
+        {
+            _returnToMapPending = false;
+            ReturnToMapNow();
+        });
+    }
+
+    void ReturnToMapNow()
     {
         StageManager.Instance?.HideStage(); // 전투 이탈 — 3D 스테이지 숨김
         if (!IsNewBattleSystemActive())

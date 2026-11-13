@@ -71,6 +71,10 @@ public class StageManager : MonoBehaviour
     private string _shownSceneName;   // 현재 표시하려는 스테이지 씬
     private bool _visible;            // 전투 중(표시) 여부
     private int _requestId;           // ShowStage/HideStage 요청 번호(대기 중 콜백 취소용)
+    private bool _showPending;        // 표시할 스테이지가 아직 로딩 중인지
+
+    // 전투 진입 직후 스테이지 로딩을 기다리는 중인지(화면 페이드가 밝아지기 전 대기용)
+    public bool IsShowPending => _showPending;
 
     // 스테이지 StageLightingManager가 RenderSettings(하늘/안개/환경광)를 덮어쓰므로, 비전투 화면용 원본을 보관했다가 복원한다.
     private struct RenderSnapshot
@@ -168,6 +172,7 @@ public class StageManager : MonoBehaviour
         int id = ++_requestId;
         _visible = true;
         _shownSceneName = target;
+        _showPending = false; // 이전 요청의 대기 상태는 무효(아래에서 비동기 로드면 다시 켬)
         if (DebugTimeOverride.HasValue)
         {
             _stageTime = DebugTimeOverride.Value;
@@ -194,6 +199,7 @@ public class StageManager : MonoBehaviour
             return;
         }
 
+        _showPending = true;
         StartCoroutine(ShowWhenLoaded(target, id, onReady));
     }
 
@@ -202,6 +208,7 @@ public class StageManager : MonoBehaviour
     {
         ++_requestId; // 로딩 대기 중인 ShowStage 콜백 취소
         _visible = false;
+        _showPending = false;
         if (logVerbose) Debug.Log("[StageManager] HideStage()");
         ApplyVisibility();
     }
@@ -211,6 +218,7 @@ public class StageManager : MonoBehaviour
         yield return EnsureLoaded(sceneName);
         if (id != _requestId) yield break; // 그 사이 다른 요청/HideStage가 들어옴
 
+        _showPending = false;
         ApplyVisibility();
         onReady?.Invoke();
     }

@@ -119,6 +119,8 @@ namespace Battle
         [Header("디버그")]
         [Tooltip("켜 두면 각성이 한 번 발동된 뒤 시간이 줄지 않고 유지된다. 전투가 끝나면 같이 끝난다.")]
         [SerializeField] private bool holdAwakenForever;             // 각성 무한 유지
+        [Tooltip("각성 진입 시 손패가 부적으로 바뀌는 연출 동안 각성 시간을 멈춘다(점진적 각성 발동 연출이 생기기 전 임시 여유 시간).")]
+        [SerializeField] private bool pauseAwakenDuringTalismanBurn = true; // 부적 전환 중 각성 시간 정지
 
         [Header("적 행동 카메라 포커스")]
         [Tooltip("적이 공격/방해행동을 하는 동안 스테이지 카메라를 그 적 쪽으로 당기고 줌인해 누가 행동하는지 강조한다.")]
@@ -365,6 +367,8 @@ namespace Battle
                     _awakenTimeRemaining = _awakenMaxTime;
                 return;
             }
+            // 손패가 부적으로 바뀌는 동안은 각성 시간이 흐르지 않음(여유 시간)
+            if (pauseAwakenDuringTalismanBurn && handHud != null && handHud.IsTalismanTransitioning) return;
             _awakenTimeRemaining -= Time.deltaTime;
             if (_awakenTimeRemaining <= 0f)
             {
@@ -2022,6 +2026,16 @@ namespace Battle
             if (!_inBattle || _awakenActive) return;
             _awakenPending = true;
             TryActivatePendingAwaken();
+        }
+
+        // [테스트] 각성 게이지를 최대-1로 채움 — 다음 속성 카드 1장으로 각성이 발동된다. 반환: 성공 여부
+        public bool DebugFillAwakenGaugeAlmost()
+        {
+            if (!_inBattle || _awakenActive) return false;
+            _elementInputCount = Mathf.Max(0, EffectiveAwakenInput - 1);
+            UpdateAwakenText();
+            Log($"[테스트] 각성 게이지 {_elementInputCount}/{EffectiveAwakenInput}");
+            return true;
         }
 
         // 방해(버리기): 플레이어가 패에서 count장을 직접 선택해 버림.

@@ -243,7 +243,8 @@ public class StageTestPanel : MonoBehaviour
         GUILayout.EndHorizontal();
 
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("각성 발동") && nbc != null) { nbc.DebugForceAwaken(); _message = "각성 발동 요청"; }
+        if (GUILayout.Button("각성 게이지 최대-1") && nbc != null)
+            _message = nbc.DebugFillAwakenGaugeAlmost() ? "각성 게이지 최대-1 — 속성 카드 1장으로 발동" : "각성 중이거나 전투 중이 아님";
         if (GUILayout.Button("플레이어 HP 회복")) HealPlayer();
         GUILayout.EndHorizontal();
 

@@ -523,6 +523,18 @@ MonoBehaviour:
   tintBackgroundByElement: 1
   backgroundTintAlpha: 0
   tintCardTypeBackground: 0
+  fireTalismanSprite: {fileID: 21300000, guid: 084f4262086ee9848a59cb1693ede04b, type: 3}
+  waterTalismanSprite: {fileID: 21300000, guid: e0a0827529f9e614889b449278c4e258, type: 3}
+  windTalismanSprite: {fileID: 21300000, guid: 9b656f1f7260b5744bdebd96837091f8, type: 3}
+  earthTalismanSprite: {fileID: 21300000, guid: 707ded8e4b7cea24fb84f982943453bf, type: 3}
+  burnOutDuration: 0.4
+  burnInDuration: 0.3
+  burnEdgeWidth: 0.07
+  burnCharWidth: 0.08
+  burnNoiseScale: 5
+  burnBottomUpWeight: 0.45
+  burnEdgeInner: {r: 1, g: 0.92, b: 0.55, a: 1}
+  burnEdgeOuter: {r: 1, g: 0.35, b: 0.05, a: 1}
 --- !u!1 &2056427473213626290
 GameObject:
   m_ObjectHideFlags: 0

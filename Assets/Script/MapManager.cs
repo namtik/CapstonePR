@@ -423,10 +423,23 @@ public class MapManager : MonoBehaviour
         // 상호작용 가능 여부 체크
         var btn = node.GetComponent<Button>();
         if (btn == null || !btn.interactable) return;
+        if (ScreenFader.IsCovering) return; // 화면 전환 중 중복 진입 방지
 
+        if (GameStateController.Instance == null) return;
+
+        // 화면을 어둡게 한 뒤 스테이지로 넘어가고, 3D 스테이지가 준비되면 밝힌다
+        ScreenFader.Transition(() => EnterNode(node), IsStageReady);
+    }
+
+    // 전투 스테이지 로딩이 끝났는지(페이드 인 시점)
+    static bool IsStageReady() => StageManager.Instance == null || !StageManager.Instance.IsShowPending;
+
+    // 노드 진입 본처리(화면이 어두운 동안 실행)
+    void EnterNode(MapNode node)
+    {
         // 현재 노드 기록
         var stateController = GameStateController.Instance;
-        if (stateController == null) return;
+        if (stateController == null || node == null) return;
 
         stateController.lastVisitedNodeIndex = node.nodeIndex;
 
@@ -468,6 +481,12 @@ public class MapManager : MonoBehaviour
     // [디버그] 노드 게이팅을 우회해 보스방 전투로 즉시 진입한다
     [ContextMenu("보스방 바로 진입")]
     public void JumpToBoss()
+    {
+        if (ScreenFader.IsCovering) return;
+        ScreenFader.Transition(JumpToBossNow, IsStageReady);
+    }
+
+    void JumpToBossNow()
     {
         if (mapData == null || mapData.nodes == null)
         {
