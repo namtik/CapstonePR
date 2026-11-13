@@ -1,0 +1,1355 @@
+fileFormatVersion: 2
+guid: 3c42562dc02c2ce4a84d66df9bcd8215
+ModelImporter:
+  serializedVersion: 24501
+  internalIDToNameTable: []
+  externalObjects: {}
+  materials:
+    materialImportMode: 0
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+    searchTexturesGlobally: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: SickleWeasel_Attack_Boomerang
+      takeName: kama_rig|SickleWeasel_Attack_Boomerang
+      internalID: -3846387793951328684
+      firstFrame: 0
+      lastFrame: 60
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Attack_CrossSlash
+      takeName: kama_rig|SickleWeasel_Attack_CrossSlash
+      internalID: 8832422524042987367
+      firstFrame: 0
+      lastFrame: 39
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Attack_Whirlwind
+      takeName: kama_rig|SickleWeasel_Attack_Whirlwind
+      internalID: 4841455745661321061
+      firstFrame: 0
+      lastFrame: 48
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Buff_WhetBlades
+      takeName: kama_rig|SickleWeasel_Buff_WhetBlades
+      internalID: 8040074080064531431
+      firstFrame: 0
+      lastFrame: 72
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Buff_WindMantle
+      takeName: kama_rig|SickleWeasel_Buff_WindMantle
+      internalID: -1391647239333098983
+      firstFrame: 0
+      lastFrame: 78
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Debuff_TripGust
+      takeName: kama_rig|SickleWeasel_Debuff_TripGust
+      internalID: 1269171291290962931
+      firstFrame: 0
+      lastFrame: 54
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Hit_Heavy
+      takeName: kama_rig|SickleWeasel_Hit_Heavy
+      internalID: -4641967983749378220
+      firstFrame: 0
+      lastFrame: 60
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Hit_Light
+      takeName: kama_rig|SickleWeasel_Hit_Light
+      internalID: -3368619827609941124
+      firstFrame: 0
+      lastFrame: 21
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Hit_Stagger
+      takeName: kama_rig|SickleWeasel_Hit_Stagger
+      internalID: 7905807065056999661
+      firstFrame: 0
+      lastFrame: 39
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    - serializedVersion: 16
+      name: SickleWeasel_Idle_Stance
+      takeName: kama_rig|SickleWeasel_Idle_Stance
+      internalID: -4992916167603500436
+      firstFrame: 0
+      lastFrame: 120
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 1
+      loopBlendPositionY: 1
+      loopBlendPositionXZ: 1
+      keepOriginalOrientation: 1
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 1
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask:
+      - path: 
+        weight: 1
+      - path: kama_mesh
+        weight: 1
+      - path: kama_rig
+        weight: 1
+      - path: kama_rig/Hips
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot
+        weight: 1
+      - path: kama_rig/Hips/LeftUpperLeg/LeftLowerLeg/LeftFoot/LeftToes
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot
+        weight: 1
+      - path: kama_rig/Hips/RightUpperLeg/RightLowerLeg/RightFoot/RightToes
+        weight: 1
+      - path: kama_rig/Hips/Spine
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/LeftShoulder/LeftUpperArm/LeftLowerArm/LeftHand/WeaponL
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/Neck/Head
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand
+        weight: 1
+      - path: kama_rig/Hips/Spine/Chest/UpperChest/RightShoulder/RightUpperArm/RightLowerArm/RightHand/WeaponR
+        weight: 1
+      - path: kama_rig/Hips/Tail1
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3
+        weight: 1
+      - path: kama_rig/Hips/Tail1/Tail2/Tail3/Tail4
+        weight: 1
+      maskType: 0
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 0
+  referencedClips: []
+  importAnimation: 0
+  humanDescription:
+    serializedVersion: 3
+    human:
+    - boneName: Hips
+      humanName: Hips
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine
+      humanName: Spine
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Chest
+      humanName: Chest
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: UpperChest
+      humanName: UpperChest
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Neck
+      humanName: Neck
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Head
+      humanName: Head
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftShoulder
+      humanName: LeftShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperArm
+      humanName: LeftUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerArm
+      humanName: LeftLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHand
+      humanName: LeftHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightShoulder
+      humanName: RightShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperArm
+      humanName: RightUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerArm
+      humanName: RightLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHand
+      humanName: RightHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpperLeg
+      humanName: LeftUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLowerLeg
+      humanName: LeftLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftFoot
+      humanName: LeftFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftToes
+      humanName: LeftToes
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpperLeg
+      humanName: RightUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLowerLeg
+      humanName: RightLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightFoot
+      humanName: RightFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightToes
+      humanName: RightToes
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    skeleton:
+    - name: "\uAC00\uB9C8\uC774\uD0C0\uCE58_\uB9AC\uADF8"
+      parentName: 
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: kama_mesh
+      parentName: 
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: kama_rig
+      parentName: 
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Hips
+      parentName: 
+      position: {x: -0.07, y: 0.1, z: 0.26}
+      rotation: {x: 0.69864565, y: -0.10906118, z: -0.10906097, w: 0.69864565}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftUpperLeg
+      parentName: 
+      position: {x: -0.06043862, y: -0.006868076, z: 0.020000013}
+      rotation: {x: 0.07856809, y: -0.00000005820766, z: 0.9969088, w: 0.00000018626451}
+      scale: {x: 1, y: 1.0000001, z: 1.0000002}
+    - name: LeftLowerLeg
+      parentName: 
+      position: {x: -0.000000014305118, y: 0.19131127, z: -0.0000000037252903}
+      rotation: {x: 0.00000016955704, y: -0.017751928, z: 0.00000005283415, w: 0.99984246}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: LeftFoot
+      parentName: 
+      position: {x: 0.0000000096857535, y: 0.15165746, z: -0.0000000027939677}
+      rotation: {x: 0.68912834, y: 0.20146614, z: 0.31709385, w: 0.6196491}
+      scale: {x: 0.99999994, y: 0.9999999, z: 0.9999999}
+    - name: LeftToes
+      parentName: 
+      position: {x: -0.000000034021213, y: 0.08958235, z: 0.0000000037252903}
+      rotation: {x: 0.16442591, y: 0.31079733, z: 0.09343415, w: 0.9314715}
+      scale: {x: 1, y: 0.99999994, z: 1}
+    - name: RightUpperLeg
+      parentName: 
+      position: {x: 0.06455948, y: 0.028845651, z: -0.019999994}
+      rotation: {x: 0.18681508, y: 0.00000010267829, z: 0.98239505, w: 0.00000027567143}
+      scale: {x: 1, y: 1, z: 0.99999994}
+    - name: RightLowerLeg
+      parentName: 
+      position: {x: 0.0000000073015687, y: 0.14866067, z: -0.0000000023283064}
+      rotation: {x: 4.2007287e-10, y: -0.029749632, z: 0.000000093914444, w: 0.99955744}
+      scale: {x: 1, y: 1.0000001, z: 1.0000001}
+    - name: RightFoot
+      parentName: 
+      position: {x: -0.000000012069949, y: 0.18574175, z: -0.000000011175871}
+      rotation: {x: 0.8549802, y: -0.01402298, z: -0.13237232, w: 0.5012881}
+      scale: {x: 0.99999994, y: 1, z: 1}
+    - name: RightToes
+      parentName: 
+      position: {x: -5.215428e-10, y: 0.081240356, z: 0.000000007450581}
+      rotation: {x: 0.1412954, y: 0.3886433, z: 0.15349479, w: 0.8974583}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Spine
+      parentName: 
+      position: {x: 0.000000020202934, y: 0.0728011, z: -0.000000007450581}
+      rotation: {x: 0.000000059604638, y: -0.011056236, z: -0.00000015646218, w: 0.99993896}
+      scale: {x: 0.9999999, y: 0.99999994, z: 0.9999999}
+    - name: Chest
+      parentName: 
+      position: {x: 0.000000008344649, y: 0.10488085, z: 0.000000007450581}
+      rotation: {x: -0.00000018826249, y: -0.46763837, z: -0.000000010559643, w: 0.8839199}
+      scale: {x: 1, y: 0.9999999, z: 0.99999994}
+    - name: UpperChest
+      parentName: 
+      position: {x: 0.000000011175871, y: 0.08660258, z: -0.0000000023283064}
+      rotation: {x: -0.00000020402642, y: 0.011675685, z: 0.00000028754687, w: 0.9999319}
+      scale: {x: 0.99999994, y: 1.0000002, z: 0.9999999}
+    - name: LeftShoulder
+      parentName: 
+      position: {x: 0.02132234, y: 0.026866004, z: -0.014952557}
+      rotation: {x: 0.6352815, y: -0.47873458, z: -0.3105112, w: 0.5203974}
+      scale: {x: 0.99999994, y: 1, z: 1}
+    - name: LeftUpperArm
+      parentName: 
+      position: {x: 0.00000011781232, y: 0.06800741, z: -0.000000037252903}
+      rotation: {x: -0.00000086426695, y: -0.9318165, z: -0.00000020861616, w: 0.36292976}
+      scale: {x: 1, y: 0.9999998, z: 0.9999999}
+    - name: LeftLowerArm
+      parentName: 
+      position: {x: 0.0000000043165707, y: 0.11499999, z: -0.000000011175871}
+      rotation: {x: 0.00000041497154, y: 0.61332417, z: 0.000000110074254, w: 0.78983134}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1.0000001}
+    - name: LeftHand
+      parentName: 
+      position: {x: 0.000000001935291, y: 0.12500001, z: -0.0000000069849193}
+      rotation: {x: 0.00946329, y: -0.009003405, z: -0.13192701, w: 0.9911734}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1}
+    - name: WeaponL
+      parentName: 
+      position: {x: -0.019863015, y: 0.084489815, z: 0.0034532743}
+      rotation: {x: 0.048300218, y: 0.046933852, z: 0.3602469, w: 0.9304228}
+      scale: {x: 1, y: 0.9999999, z: 1}
+    - name: Neck
+      parentName: 
+      position: {x: 0.000000070780516, y: 0.10049874, z: -0.0000000037252903}
+      rotation: {x: 0.00000040853044, y: 0.05506968, z: -0.000000086496215, w: 0.9984826}
+      scale: {x: 1.0000001, y: 1, z: 1}
+    - name: Head
+      parentName: 
+      position: {x: -0.000000042915346, y: 0.11575842, z: 0.000000014901161}
+      rotation: {x: -0.18965165, y: 0.043283883, z: 0.0878797, w: 0.9769524}
+      scale: {x: 0.9999999, y: 0.9999999, z: 1}
+    - name: RightShoulder
+      parentName: 
+      position: {x: 0.033506483, y: 0.05970224, z: -0.03889683}
+      rotation: {x: -0.5101392, y: 0.32389948, z: -0.48965007, w: 0.62856174}
+      scale: {x: 1, y: 1, z: 1}
+    - name: RightUpperArm
+      parentName: 
+      position: {x: 0.000000049360096, y: 0.078102544, z: 0.000000078231096}
+      rotation: {x: 0.00000075995894, y: 0.4234815, z: -0.00000008940694, w: 0.90590477}
+      scale: {x: 0.9999999, y: 0.99999994, z: 0.99999994}
+    - name: RightLowerArm
+      parentName: 
+      position: {x: 0.000000010249105, y: 0.115000024, z: -0.000000011175871}
+      rotation: {x: 0.00000009304439, y: 0.35356236, z: -0.00000045686795, w: 0.93541104}
+      scale: {x: 0.99999994, y: 0.99999994, z: 0.9999998}
+    - name: RightHand
+      parentName: 
+      position: {x: -0.000000025332003, y: 0.12500004, z: 0.000000007450581}
+      rotation: {x: 0.0048174104, y: -0.52630824, z: -0.2688516, w: 0.80665684}
+      scale: {x: 1, y: 1.0000001, z: 1}
+    - name: WeaponR
+      parentName: 
+      position: {x: -0.020594137, y: 0.064021185, z: 0.0062587243}
+      rotation: {x: -0.17551549, y: 0.53955513, z: 0.4746015, w: 0.67292494}
+      scale: {x: 0.99999994, y: 1, z: 0.9999999}
+    - name: Tail1
+      parentName: 
+      position: {x: -0.070053875, y: -0.00961523, z: -0.10000001}
+      rotation: {x: -0.017953848, y: -0.040813416, z: 0.9144379, w: 0.40226275}
+      scale: {x: 0.9999998, y: 0.9999999, z: 0.9999999}
+    - name: Tail2
+      parentName: 
+      position: {x: -0.0000000030547476, y: 0.1122497, z: -0.000000014901161}
+      rotation: {x: -0.0054182243, y: 0.040567283, z: -0.42485368, w: 0.9043364}
+      scale: {x: 0.99999994, y: 1, z: 0.9999999}
+    - name: Tail3
+      parentName: 
+      position: {x: 0.000000037327407, y: 0.09899499, z: -9.313226e-10}
+      rotation: {x: 0.009368766, y: 0.02444363, z: -0.26650244, w: 0.9634787}
+      scale: {x: 0.99999994, y: 0.99999994, z: 1.0000001}
+    - name: Tail4
+      parentName: 
+      position: {x: 0.000000008046624, y: 0.12247455, z: -0.000000014901161}
+      rotation: {x: 0.04074854, y: 0.003002031, z: -0.073411465, w: 0.99646443}
+      scale: {x: 1.0000001, y: 1, z: 1}
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 3
+  humanoidOversampling: 1
+  avatarSetup: 1
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
