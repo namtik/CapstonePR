@@ -112,3 +112,51 @@ MonoBehaviour:
     modelRotation: {x: 0, y: 0, z: 0}
     modelScale: {x: 1, y: 1, z: 1}
     hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyBulgae
+    modelName: "\uBD88\uAC1C"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 4836865607154189734, guid: da1505be0123a774ab973a2e8bed1302, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: ec5830b3574ea514985faa9c1c45b986, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyHoppingCorpse
+    modelName: "\uAC15\uC2DC"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 5030402020562480870, guid: b158f6698fa0fea429b42fc009f6b5f1, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: 5352cd8679bdc464dab8b55f8828206e, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemySickleWeasel
+    modelName: "\uAC00\uB9C8\uC774\uD0C0\uCE58"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 849545138528949143, guid: c1e567b37cb4f924488be32962211e97, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: 1618f80fedb7f0047bc366845aadc4aa, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyGumiho
+    modelName: "\uAD6C\uBBF8\uD638"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 7107151966835650883, guid: a88ee4f57733e5249936ab88907c7035, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: 61a5f5993e405aa4080188c94449f9ad, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}

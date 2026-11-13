@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: WindSpritEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uAC00\uB9C8\uC774\uD0C0\uCE58"
-  battlePrefab3D: {fileID: 0}
+  battlePrefab3D: {fileID: 8611860507454631082, guid: cd1471aa0cbe2e4409b0c14cf126d46b, type: 3}
   enemySprite: {fileID: 21300000, guid: 44ad671272a4ff142b4dba484c912844, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []

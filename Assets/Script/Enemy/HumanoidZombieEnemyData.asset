@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: HumanoidZombieEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uAC15\uC2DC"
-  battlePrefab3D: {fileID: 0}
+  battlePrefab3D: {fileID: 6120316172437240692, guid: 4b9925f1df5c30446b7ceac42d299f70, type: 3}
   enemySprite: {fileID: 21300000, guid: 9cada0a9f3ef6b44a9850d00faf842a5, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
