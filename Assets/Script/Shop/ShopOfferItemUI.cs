@@ -417,7 +417,7 @@ public class ShopOfferItemUI : MonoBehaviour
     {
         if (rootBuyButton == null)
             rootBuyButton = GetComponent<Button>();
-        if (rootBuyButton == null) return;
+        if (rootBuyButton == null || rootBuyButton == iconBuyButton) return;
 
         rootBuyButton.onClick.RemoveListener(OnBuyClicked);
         rootBuyButton.interactable = false;
@@ -984,12 +984,15 @@ public class ShopOfferItemUI : MonoBehaviour
     {
         if (!enableIconClickPurchase || iconImage == null) return;
 
-        if (iconBuyButton == null)
-            iconBuyButton = iconImage.GetComponent<Button>();
+        Button onIcon = iconImage.GetComponent<Button>();
+        if (onIcon == null)
+            onIcon = iconImage.gameObject.AddComponent<Button>();
 
-        if (iconBuyButton == null)
-            iconBuyButton = iconImage.gameObject.AddComponent<Button>();
+        if (iconBuyButton != null && iconBuyButton != onIcon)
+            iconBuyButton.onClick.RemoveListener(OnBuyClicked);
 
+        iconBuyButton = onIcon;
+        iconBuyButton.enabled = true;
         iconBuyButton.onClick.RemoveListener(OnBuyClicked);
         iconBuyButton.onClick.AddListener(OnBuyClicked);
     }
