@@ -160,11 +160,36 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         }
     }
 
+    // motionStates에 해당 동작이 비어 있으면 컨트롤러에서 관례 이름(Buff1, Debuff1, DeBuff2 …)을 찾아 채운다.
+    // 신규 프리팹에서 매핑을 빠뜨려도 버프/디버프(방해행동) 모션이 무음으로 사라지지 않게 하는 안전망.
+    // 못 찾으면 빈 배열을 캐싱해 다음부터 재탐색하지 않는다(트리거 폴백은 그대로 동작).
+    void DiscoverMotionStates(EnemyMotion motion)
+    {
+        string baseName = motion.ToString();
+        var prefixes = motion == EnemyMotion.Debuff
+            ? new[] { "Debuff", "DeBuff", "debuff" }
+            : new[] { baseName, baseName.ToLowerInvariant() };
+        var found = new List<string>();
+        foreach (var p in prefixes)
+        {
+            if (animator.HasState(0, Animator.StringToHash(p)) && !found.Contains(p)) found.Add(p);
+            for (int i = 1; i <= 6; i++)
+            {
+                string n = p + i;
+                if (!found.Contains(n) && animator.HasState(0, Animator.StringToHash(n))) found.Add(n);
+            }
+        }
+        _motionMap[motion] = found.ToArray();
+        if (found.Count > 0)
+            Debug.Log($"[EnemyView3D] {name}: motionStates에 {motion} 미등록 → 컨트롤러에서 자동 매핑 [{string.Join(", ", found)}]");
+    }
+
     // 동작 애니메이션 재생. 등록된 상태가 있으면 랜덤 CrossFade, 없으면 폴백 트리거(있을 때만).
     // 반환값: CrossFade로 재생한 상태 이름(트리거 폴백/미재생이면 null).
     string PlayMotionInternal(EnemyMotion motion, string fallbackTrigger)
     {
         if (animator == null) return null;
+        if (!_motionMap.ContainsKey(motion) && animator.runtimeAnimatorController != null) DiscoverMotionStates(motion);
         if (_motionMap.TryGetValue(motion, out var states) && states.Length > 0)
         {
             string state = states.Length == 1 ? states[0] : states[UnityEngine.Random.Range(0, states.Length)];
