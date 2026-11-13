@@ -1030,7 +1030,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 63.5, y: -21.5}
-  m_SizeDelta: {x: 25, y: 35}
+  m_SizeDelta: {x: 38, y: 38}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9101356075739633924
 CanvasRenderer:
@@ -1085,10 +1085,10 @@ MonoBehaviour:
   m_IgnoreLayout: 0
   m_MinWidth: -1
   m_MinHeight: -1
-  m_PreferredWidth: 44
-  m_PreferredHeight: -1
+  m_PreferredWidth: 38
+  m_PreferredHeight: 38
   m_FlexibleWidth: -1
-  m_FlexibleHeight: 44
+  m_FlexibleHeight: -1
   m_LayoutPriority: 1
 --- !u!1 &8824276516866348932
 GameObject:

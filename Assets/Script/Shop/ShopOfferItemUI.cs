@@ -17,9 +17,10 @@ public class ShopOfferItemUI : MonoBehaviour
     [SerializeField] private Button buyButton; // 구매 버튼
     [SerializeField] private bool enableIconClickPurchase = true; // 아이콘 클릭 구매 허용 여부
     [SerializeField] private float purchasedAlpha = 0.45f; // 구매 완료 시 알파값
+    [SerializeField] private Color unaffordablePriceColor = new Color(0.9f, 0.16f, 0.16f, 1f); // 돈 부족 시 가격 색
     [SerializeField] private string purchasedLabel = "\uAD6C\uB9E4\uC644\uB8CC"; // 구매 완료 라벨
     [SerializeField] private float cardVisualScale = 1f; // 카드 비주얼 전체 스케일
-    [SerializeField] private float moneyIconScale = 1.35f; // 재화 아이콘 스케일
+    [SerializeField] private float moneyIconScale = 1f; // 씬에 MoneyIcon이 없을 때만 쓰는 배율
     [SerializeField] private float relicIconScale = 1.45f; // 렐릭 아이콘 스케일
 
     [Header("Auto Bind")]
@@ -47,6 +48,9 @@ public class ShopOfferItemUI : MonoBehaviour
     private string offerTitle; // 호버 툴팁용 상품 이름
     private string offerDescription; // 호버 툴팁용 상품 설명
     private bool hoverTooltipWired; // 호버 툴팁 이벤트 연결 여부
+    private TextMeshProUGUI priceColorSource; // 가격 색을 되돌릴 텍스트
+    private Color normalPriceColor = Color.white; // 가격 원래 색
+    private bool normalPriceColorCaptured; // 가격 원래 색 캡처 여부
     private Vector2 iconBaseSizeDelta; // 아이콘 기준 크기
     private Vector3 iconBaseScale = Vector3.one; // 아이콘 기준 스케일
     private bool iconBaseCaptured; // 아이콘 기준값 캡처 여부
@@ -232,16 +236,61 @@ public class ShopOfferItemUI : MonoBehaviour
         baseCardVisualScaleCaptured = true;
     }
 
-    // 카드 비주얼에 설정 스케일을 적용
+    // 카드 비주얼에 설정 스케일을 적용. 상점 슬롯 자식이면 슬롯 Rect 크기에 맞춘다.
     void ApplyCardVisualScale()
     {
         if (cardVisualRect == null)
             cardVisualRect = newCardView != null ? newCardView.GetComponent<RectTransform>() : GetComponent<RectTransform>();
         if (cardVisualRect == null) return;
 
+        if (TryFitCardVisualToParentSlot())
+            return;
+
         CaptureBaseCardScaleIfNeeded();
         float scale = Mathf.Clamp(cardVisualScale, 0.5f, 1.2f);
         cardVisualRect.localScale = baseCardVisualScale * scale;
+    }
+
+    // 부모 슬롯(Card1~5)이 있으면 그 Rect 크기에 맞춘다.
+    bool TryFitCardVisualToParentSlot()
+    {
+        if (newCardView == null || cardVisualRect == null) return false;
+
+        RectTransform slot = cardVisualRect.parent as RectTransform;
+        if (slot == null || slot == cardVisualRect) return false;
+
+        return FitCardVisualToSlot(slot);
+    }
+
+    // 슬롯 Rect의 가로·세로에 카드 비주얼을 맞춘다.
+    // 프리팹 sizeDelta는 유지하고, 자식 레이아웃이 같이 줄어들도록 localScale만 바꾼다.
+    public bool FitCardVisualToSlot(RectTransform slot)
+    {
+        if (slot == null) return false;
+
+        if (newCardView == null)
+            newCardView = GetComponent<NewCardView>() ?? GetComponentInChildren<NewCardView>(true);
+        if (cardVisualRect == null)
+            cardVisualRect = newCardView != null ? newCardView.GetComponent<RectTransform>() : null;
+        if (cardVisualRect == null || newCardView == null) return false;
+
+        Vector2 native = cardVisualRect.sizeDelta;
+        if (native.x < 1f || native.y < 1f) return false;
+
+        Vector2 slotSize = slot.rect.size;
+        if (slotSize.x < 1f || slotSize.y < 1f)
+            slotSize = slot.sizeDelta;
+        if (slotSize.x < 1f || slotSize.y < 1f) return false;
+
+        Vector3 fitted = new Vector3(slotSize.x / native.x, slotSize.y / native.y, 1f);
+        baseCardVisualScale = fitted;
+        baseCardVisualScaleCaptured = true;
+        cardVisualRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardVisualRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardVisualRect.pivot = new Vector2(0.5f, 0.5f);
+        cardVisualRect.anchoredPosition = Vector2.zero;
+        cardVisualRect.localScale = fitted;
+        return true;
     }
 
     // 카드 데이터로 카드 비주얼(NewCardView) 미리보기 적용
@@ -264,8 +313,9 @@ public class ShopOfferItemUI : MonoBehaviour
     // 재화 아이콘 스케일 설정 및 적용
     public void SetMoneyIconScale(float scale)
     {
-        moneyIconScale = scale;
-        ApplyMoneyIconScale();
+        moneyIconScale = Mathf.Clamp(scale, 0.5f, 2.5f);
+        if (runtimeMoneyIconCreated)
+            ApplyMoneyIconScale();
     }
 
     // 가격 텍스트들의 폰트 크기 설정
@@ -307,6 +357,7 @@ public class ShopOfferItemUI : MonoBehaviour
 
         if (relicIconOnlyMode)
         {
+            SplitRelicIconFromSlot();
             EnableIconOnlyPurchaseMode();
             WireHoverTooltip();
         }
@@ -366,7 +417,7 @@ public class ShopOfferItemUI : MonoBehaviour
     {
         if (rootBuyButton == null)
             rootBuyButton = GetComponent<Button>();
-        if (rootBuyButton == null) return;
+        if (rootBuyButton == null || rootBuyButton == iconBuyButton) return;
 
         rootBuyButton.onClick.RemoveListener(OnBuyClicked);
         rootBuyButton.interactable = false;
@@ -391,6 +442,11 @@ public class ShopOfferItemUI : MonoBehaviour
 
         if (defaultPriceText != null && defaultPriceText != externalPriceText && !ShouldPreserveDefaultPriceText())
             defaultPriceText.text = string.Empty;
+
+        if (moneyIconImage == null)
+            moneyIconImage = FindSceneMoneyIcon();
+        if (moneyIconImage != null)
+            moneyIconImage.gameObject.SetActive(false);
     }
 
     // 이름 규칙으로 가격 텍스트를 자동 탐색해 바인딩
@@ -468,6 +524,28 @@ public class ShopOfferItemUI : MonoBehaviour
             || string.Equals(n, "GaugeCost", System.StringComparison.OrdinalIgnoreCase);
     }
 
+    // 유물 아이콘(슬롯과 다른 자식)을 슬롯 Rect 크기에 맞춘다. 맞출 수 없으면 zero.
+    static Vector3 FitRelicIconToSlot(RectTransform icon, RectTransform slot)
+    {
+        if (icon == null || slot == null || icon == slot) return Vector3.zero;
+
+        Vector2 native = icon.sizeDelta;
+        if (native.x < 1f || native.y < 1f) return Vector3.zero;
+
+        Vector2 slotSize = slot.rect.size;
+        if (slotSize.x < 1f || slotSize.y < 1f)
+            slotSize = slot.sizeDelta;
+        if (slotSize.x < 1f || slotSize.y < 1f) return Vector3.zero;
+
+        Vector3 fitted = new Vector3(slotSize.x / native.x, slotSize.y / native.y, 1f);
+        icon.anchorMin = new Vector2(0.5f, 0.5f);
+        icon.anchorMax = new Vector2(0.5f, 0.5f);
+        icon.pivot = new Vector2(0.5f, 0.5f);
+        icon.anchoredPosition = Vector2.zero;
+        icon.localScale = fitted;
+        return fitted;
+    }
+
     // 렐릭 전용 모드 여부에 따라 카드 비주얼 숨김과 아이콘 스케일/순서를 조정
     void ApplyRelicIconOnlyMode()
     {
@@ -481,18 +559,33 @@ public class ShopOfferItemUI : MonoBehaviour
             CaptureIconBaseIfNeeded();
             iconImage.enabled = true;
 
-            if (relicIconOnlyMode)
+            if (relicIconOnlyMode && iconImage.gameObject.name == "RelicIconVisual")
             {
-                float scale = Mathf.Clamp(relicIconScale, 1f, 2.5f);
-                Vector3 desiredScale = iconBaseScale * scale;
+                iconImage.enabled = true;
+            }
+            else if (relicIconOnlyMode)
+            {
+                RectTransform iconRt = iconImage.rectTransform;
+                bool iconIsSlot = iconRt == transform as RectTransform;
+                Vector3 desiredScale = iconBaseScale;
+
+                if (!iconIsSlot)
+                {
+                    RectTransform slotRt = iconRt.parent as RectTransform;
+                    Vector3 fitted = FitRelicIconToSlot(iconRt, slotRt);
+                    desiredScale = fitted == Vector3.zero
+                        ? iconBaseScale * Mathf.Clamp(relicIconScale, 1f, 2.5f)
+                        : fitted;
+                }
 
                 var hover = iconImage.GetComponent<ButtonHoverScale>();
                 if (hover != null)
                     hover.SetBaseScale(desiredScale);
                 else
-                    iconImage.rectTransform.localScale = desiredScale;
+                    iconRt.localScale = desiredScale;
 
-                iconImage.rectTransform.SetAsLastSibling();
+                if (!iconIsSlot)
+                    iconRt.SetAsLastSibling();
             }
             else
             {
@@ -591,7 +684,11 @@ public class ShopOfferItemUI : MonoBehaviour
     // 보유 골드와 구매 상태로 구매 버튼들의 활성화 갱신
     void RefreshBuyState()
     {
-        bool canBuy = !isPurchased && MoneyManager.Instance != null && MoneyManager.Instance.CurrentMoney >= price;
+        bool canBuy = CanAffordNow();
+        SuppressDisabledTint(buyButton);
+        SuppressDisabledTint(iconBuyButton);
+        SuppressDisabledTint(rootBuyButton);
+
         if (buyButton != null)
             buyButton.interactable = canBuy;
 
@@ -600,14 +697,134 @@ public class ShopOfferItemUI : MonoBehaviour
 
         if (rootBuyButton != null)
             rootBuyButton.interactable = canBuy;
+
+        ApplyUnaffordablePriceColor(canBuy);
+    }
+
+    // 구매 불가가 카드 그림을 흐리게 만들지 않도록 버튼 색 전이를 끈다
+    static void SuppressDisabledTint(Button button)
+    {
+        if (button == null) return;
+
+        button.transition = Selectable.Transition.None;
+        if (button.targetGraphic != null)
+            button.targetGraphic.CrossFadeColor(Color.white, 0f, true, true);
+    }
+
+    // 돈이 부족하면 가격 글자만 빨갛게, 살 수 있으면 원래 색으로
+    void ApplyUnaffordablePriceColor(bool canAfford)
+    {
+        TextMeshProUGUI label = externalPriceText != null ? externalPriceText : priceText;
+        if (label == null || (label == defaultPriceText && ShouldPreserveDefaultPriceText()))
+            return;
+
+        if (!normalPriceColorCaptured || priceColorSource != label)
+        {
+            normalPriceColor = label.color;
+            priceColorSource = label;
+            normalPriceColorCaptured = true;
+        }
+
+        bool broke = !isPurchased && !canAfford;
+        label.color = broke ? unaffordablePriceColor : normalPriceColor;
+    }
+
+    // 슬롯 호버는 끄고, 이 상품 오브젝트만 커지게 한다
+    public void KeepHoverOnItemOnly()
+    {
+        DisableHover(transform.parent);
+        EnableHover(gameObject);
+    }
+
+    // 가격·머니 아이콘이 딸린 슬롯 호버를 끈다
+    public void DisableSlotHover()
+    {
+        DisableHover(transform);
+    }
+
+    static void DisableHover(Transform target)
+    {
+        if (target == null) return;
+
+        var hover = target.GetComponent<ButtonHoverScale>();
+        if (hover == null) return;
+
+        hover.enabled = false;
+        var rt = target as RectTransform;
+        if (rt != null && rt.localScale.sqrMagnitude < 0.01f)
+            rt.localScale = Vector3.one;
+    }
+
+    static void EnableHover(GameObject target)
+    {
+        if (target == null) return;
+
+        var hover = target.GetComponent<ButtonHoverScale>();
+        if (hover == null)
+            hover = target.AddComponent<ButtonHoverScale>();
+
+        hover.enabled = true;
+        var rt = target.GetComponent<RectTransform>();
+        if (rt != null)
+            hover.SetBaseScale(rt.localScale);
+    }
+
+    // 유물 그림이 슬롯 자체면, 가격과 분리된 자식으로 옮겨 그 그림만 호버되게 한다
+    void SplitRelicIconFromSlot()
+    {
+        if (iconImage == null) return;
+
+        RectTransform iconRt = iconImage.rectTransform;
+        if (iconRt != transform as RectTransform) return;
+
+        const string childName = "RelicIconVisual";
+        Transform existing = iconRt.Find(childName);
+        Image visual = existing != null ? existing.GetComponent<Image>() : null;
+        if (visual == null)
+        {
+            var go = new GameObject(childName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(iconRt, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.localScale = Vector3.one;
+            visual = go.GetComponent<Image>();
+            existing = go.transform;
+        }
+
+        visual.sprite = iconImage.sprite;
+        visual.color = Color.white;
+        visual.preserveAspect = true;
+        visual.raycastTarget = true;
+        visual.enabled = true;
+        visual.type = Image.Type.Simple;
+        existing.SetSiblingIndex(0);
+
+        var slotColor = iconImage.color;
+        slotColor.a = 0f;
+        iconImage.color = slotColor;
+        iconImage.raycastTarget = false;
+        iconImage = visual;
+
+        DisableHover(transform);
+        EnableHover(visual.gameObject);
     }
 
     // 구매 버튼 클릭 처리(구매 콜백 실행)
     void OnBuyClicked()
     {
-        if (isPurchased) return;
+        if (!CanAffordNow()) return;
         onBuy?.Invoke();
         RefreshBuyState();
+    }
+
+    // 보유 골드로 이 상품을 살 수 있는지
+    bool CanAffordNow()
+    {
+        return !isPurchased && MoneyManager.Instance != null && MoneyManager.Instance.CurrentMoney >= price;
     }
 
     // 구매 상태에 따른 카드 비주얼 표시/숨김 적용
@@ -674,11 +891,15 @@ public class ShopOfferItemUI : MonoBehaviour
     void EnsureMoneyIconReady()
     {
         if (moneyIconImage == null)
+            moneyIconImage = FindSceneMoneyIcon();
+
+        if (moneyIconImage == null)
             TryCreateRuntimeMoneyIcon();
 
         if (moneyIconImage == null) return;
 
-        ApplyMoneyIconScale();
+        if (runtimeMoneyIconCreated)
+            ApplyMoneyIconScale();
 
         if (MoneyManager.Instance != null)
         {
@@ -694,7 +915,29 @@ public class ShopOfferItemUI : MonoBehaviour
         }
     }
 
-    // 가격 텍스트 옆에 런타임 재화 아이콘 생성
+    // 가격 텍스트 옆, 또는 이 오브젝트 자식에 씬에 배치된 재화 아이콘을 찾는다
+    Image FindSceneMoneyIcon()
+    {
+        Image nested = FindChildComponentByName<Image>("MoneyIcon", "CostIcon");
+        if (nested != null) return nested;
+
+        TextMeshProUGUI anchorText = externalPriceText != null ? externalPriceText : (defaultPriceText != null ? defaultPriceText : priceText);
+        if (anchorText == null || anchorText.transform.parent == null) return null;
+
+        Transform parent = anchorText.transform.parent;
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name != "MoneyIcon" && child.name != "CostIcon") continue;
+
+            Image image = child.GetComponent<Image>();
+            if (image != null) return image;
+        }
+
+        return null;
+    }
+
+    // 씬에 아이콘이 없을 때만 가격 텍스트 옆에 38x38 아이콘을 만든다
     void TryCreateRuntimeMoneyIcon()
     {
         if (runtimeMoneyIconCreated) return;
@@ -712,23 +955,27 @@ public class ShopOfferItemUI : MonoBehaviour
         RectTransform textRt = anchorText.rectTransform;
         rt.anchorMin = textRt.anchorMin;
         rt.anchorMax = textRt.anchorMax;
-        rt.pivot = new Vector2(1f, 0.5f);
-        rt.sizeDelta = new Vector2(22f, 22f);
-        rt.anchoredPosition = textRt.anchoredPosition + new Vector2(-48f, 0f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(38f, 38f);
+        rt.localScale = Vector3.one;
+        rt.anchoredPosition = textRt.anchoredPosition + new Vector2(-63f, 0f);
 
-        moneyIconImage = go.GetComponent<Image>();
+        Image image = go.GetComponent<Image>();
+        image.raycastTarget = false;
+        image.preserveAspect = true;
+        moneyIconImage = image;
         runtimeMoneyIconCreated = true;
     }
 
-    // 재화 아이콘 스케일을 적용
+    // 런타임 생성 아이콘만 배율을 적용한다. 씬 배치 아이콘의 위치·크기는 유지한다
     void ApplyMoneyIconScale()
     {
-        if (moneyIconImage == null) return;
+        if (!runtimeMoneyIconCreated || moneyIconImage == null) return;
 
         RectTransform rt = moneyIconImage.rectTransform;
         if (rt == null) return;
 
-        float scale = Mathf.Clamp(moneyIconScale, 1f, 2.5f);
+        float scale = Mathf.Clamp(moneyIconScale, 0.5f, 2.5f);
         rt.localScale = new Vector3(scale, scale, 1f);
     }
 
@@ -737,12 +984,15 @@ public class ShopOfferItemUI : MonoBehaviour
     {
         if (!enableIconClickPurchase || iconImage == null) return;
 
-        if (iconBuyButton == null)
-            iconBuyButton = iconImage.GetComponent<Button>();
+        Button onIcon = iconImage.GetComponent<Button>();
+        if (onIcon == null)
+            onIcon = iconImage.gameObject.AddComponent<Button>();
 
-        if (iconBuyButton == null)
-            iconBuyButton = iconImage.gameObject.AddComponent<Button>();
+        if (iconBuyButton != null && iconBuyButton != onIcon)
+            iconBuyButton.onClick.RemoveListener(OnBuyClicked);
 
+        iconBuyButton = onIcon;
+        iconBuyButton.enabled = true;
         iconBuyButton.onClick.RemoveListener(OnBuyClicked);
         iconBuyButton.onClick.AddListener(OnBuyClicked);
     }
