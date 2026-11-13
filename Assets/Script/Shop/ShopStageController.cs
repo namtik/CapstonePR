@@ -60,7 +60,7 @@ public class ShopStageController : MonoBehaviour
     [Header("표시 개수")]
     [SerializeField] private int cardOfferCount = 5; // 카드 상품 개수
     [SerializeField] private int relicOfferCount = 3; // 렐릭 상품 개수
-    [SerializeField] private int comboOfferCount = 1; // 콤보 상품 개수
+    [SerializeField] private int comboOfferCount = 2; // 콤보 상품 개수
 
     [Header("가격 범위")]
     [SerializeField] private int cardMinPrice = 60; // 카드 최소 가격
@@ -71,14 +71,14 @@ public class ShopStageController : MonoBehaviour
     [SerializeField] private int comboMaxPrice = 320; // 콤보 최대 가격
 
     [Header("카드 표시 (Shop)")]
-    [Tooltip("상점 카드(NewSkillCard) 전체 스케일")]
-    [SerializeField, Range(0.5f, 1.2f)] private float shopCardVisualScale = 1f; // 상점 카드 비주얼 스케일
+    [Tooltip("Card1~5 슬롯에 붙지 못한 카드에만 쓰는 폴백 스케일. 슬롯에 생성된 카드는 슬롯 Rect 크기를 따른다.")]
+    [SerializeField, Range(0.5f, 1.2f)] private float shopCardVisualScale = 1f; // 슬롯 밖 카드 폴백 스케일
     [Tooltip("상점 카드 가격 옆 재화 아이콘 스케일")]
-    [SerializeField, Range(1f, 2.5f)] private float shopMoneyIconScale = 1.35f; // 상점 카드 재화 아이콘 스케일
+    [SerializeField, Range(0.5f, 2.5f)] private float shopMoneyIconScale = 1f; // 씬에 MoneyIcon이 없을 때만 쓰는 배율
 
     [Header("렐릭 표시 (Shop)")]
-    [Tooltip("상점 렐릭 아이콘 스케일")]
-    [SerializeField, Range(1f, 2.5f)] private float shopRelicIconScale = 1.45f; // 상점 렐릭 아이콘 스케일
+    [Tooltip("유물 아이콘이 슬롯 자신일 때는 쓰지 않는다. 슬롯과 다른 오브젝트인데 크기를 못 맞출 때만 쓰는 폴백 배율.")]
+    [SerializeField, Range(1f, 2.5f)] private float shopRelicIconScale = 1.45f; // 슬롯 밖 유물 아이콘 폴백 배율
     [Tooltip("켜면 shopRelicPriceFontSize로 덮어씀. 끄면 Relic1~3_Price 씬/프리팹 폰트 크기 유지.")]
     [SerializeField] private bool overrideRelicPriceFontSize = false; // 렐릭 가격 폰트 크기 코드 덮어쓰기 여부
     [Tooltip("overrideRelicPriceFontSize가 켜져 있을 때만 적용")]
@@ -102,7 +102,8 @@ public class ShopStageController : MonoBehaviour
     [Header("콤보 책 표시 (Shop)")]
     [SerializeField] private BookRewardItemUI comboBookItemPrefab; // 콤보 책 아이템 프리팹
     [SerializeField] private string comboBookMountName = "Mid_Combo"; // 콤보 책 장착 마운트 이름
-    [SerializeField, Range(0.3f, 1.5f)] private float comboBookScale = 1f; // 콤보 책 스케일
+    [Tooltip("콤보 책을 슬롯 Rect에 맞추지 못했을 때만 쓰는 폴백 스케일.")]
+    [SerializeField, Range(0.3f, 1.5f)] private float comboBookScale = 1f; // 슬롯 밖 콤보 책 폴백 스케일
     [SerializeField] private Sprite comboBookFireSprite; // 콤보 책 불 속성 스프라이트
     [SerializeField] private Sprite comboBookWaterSprite; // 콤보 책 물 속성 스프라이트
     [SerializeField] private Sprite comboBookWindSprite; // 콤보 책 바람 속성 스프라이트
@@ -163,7 +164,7 @@ public class ShopStageController : MonoBehaviour
     void OnValidate()
     {
         shopCardVisualScale = Mathf.Clamp(shopCardVisualScale, 0.5f, 1.2f);
-        shopMoneyIconScale = Mathf.Clamp(shopMoneyIconScale, 1f, 2.5f);
+        shopMoneyIconScale = Mathf.Clamp(shopMoneyIconScale, 0.5f, 2.5f);
         shopRelicIconScale = Mathf.Clamp(shopRelicIconScale, 1f, 2.5f);
         shopRelicPriceFontSize = Mathf.Clamp(shopRelicPriceFontSize, 12f, 72f);
         comboBookScale = Mathf.Clamp(comboBookScale, 0.3f, 1.5f);
@@ -933,10 +934,12 @@ public class ShopStageController : MonoBehaviour
             Sprite icon = ResolveCardSprite(offer.card);
             slot.ui.Setup(title, desc, icon, offer.price, () => TryBuyCard(offer));
             slot.ui.SetRelicIconOnlyMode(false);
-            slot.ui.SetCardVisualScale(shopCardVisualScale);
+            if (!slot.ui.FitCardVisualToSlot(slot.container as RectTransform))
+                slot.ui.SetCardVisualScale(shopCardVisualScale);
             slot.ui.SetMoneyIconScale(shopMoneyIconScale);
             slot.ui.SetupCardVisual(offer.card, icon);
             slot.ui.SetPurchasedState(offer.purchased);
+            slot.ui.KeepHoverOnItemOnly();
         }
     }
 
@@ -1065,17 +1068,23 @@ public class ShopStageController : MonoBehaviour
         ui.Setup(title, desc, icon, offer.price, () => TryBuyCombo(offer));
         ui.SetRelicIconOnlyMode(false);
 
-        var slotHover = target.GetComponent<ButtonHoverScale>();
-        if (slotHover != null)
-            slotHover.ResetHoverState();
+        target.GetComponent<ShopOfferItemUI>()?.DisableSlotHover();
 
         if (bookUI != null)
         {
+            RectTransform bookRt = bookUI.GetComponent<RectTransform>();
+            RectTransform slotRt = target.GetComponent<RectTransform>();
+            Vector3 fitted = FitVisualToSlot(bookRt, slotRt);
+            if (fitted == Vector3.zero)
+                fitted = Vector3.one * comboBookScale;
+
             var bookHover = bookUI.GetComponent<ButtonHoverScale>();
             if (bookHover != null)
-                bookHover.SetBaseScale(comboBookScale);
-            else
-                bookUI.transform.localScale = Vector3.one * comboBookScale;
+                bookHover.SetBaseScale(fitted);
+            else if (bookRt != null)
+                bookRt.localScale = fitted;
+
+            bookUI.transform.SetSiblingIndex(0);
 
             bookUI.SetElementSprites(comboBookFireSprite, comboBookWaterSprite, comboBookWindSprite, comboBookEarthSprite);
             
@@ -1162,6 +1171,28 @@ public class ShopStageController : MonoBehaviour
 
         relicStageController = FindFirstObjectByType<RelicStageController>(FindObjectsInactive.Include);
         return relicStageController;
+    }
+
+    // 비주얼의 sizeDelta를 슬롯 Rect에 맞추는 스케일. 맞출 수 없으면 zero.
+    static Vector3 FitVisualToSlot(RectTransform visual, RectTransform slot)
+    {
+        if (visual == null || slot == null || visual == slot) return Vector3.zero;
+
+        Vector2 native = visual.sizeDelta;
+        if (native.x < 1f || native.y < 1f) return Vector3.zero;
+
+        Vector2 slotSize = slot.rect.size;
+        if (slotSize.x < 1f || slotSize.y < 1f)
+            slotSize = slot.sizeDelta;
+        if (slotSize.x < 1f || slotSize.y < 1f) return Vector3.zero;
+
+        Vector3 fitted = new Vector3(slotSize.x / native.x, slotSize.y / native.y, 1f);
+        visual.anchorMin = new Vector2(0.5f, 0.5f);
+        visual.anchorMax = new Vector2(0.5f, 0.5f);
+        visual.pivot = new Vector2(0.5f, 0.5f);
+        visual.anchoredPosition = Vector2.zero;
+        visual.localScale = fitted;
+        return fitted;
     }
 
     // 강제 이름으로 카드 루트를 탐색해 반환
