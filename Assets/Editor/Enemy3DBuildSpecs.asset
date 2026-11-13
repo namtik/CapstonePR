@@ -41,18 +41,6 @@ MonoBehaviour:
     modelScale: {x: 1, y: 1, z: 1}
     hudAnchorPosition: {x: 0, y: 0, z: 0}
   - enabled: 1
-    prefabName: EnemyPyreoni
-    modelName: "\uC5FC\uB85C\uADC0"
-    fbx: {fileID: 919132149155446097, guid: 2f8be1850e3254a4b9f9d3b8ae5d466f, type: 3}
-    sourcePrefab: {fileID: 0}
-    material: {fileID: 2100000, guid: a678de748a1b30d4cb944a11fe4612cb, type: 2}
-    enemyData: {fileID: 11400000, guid: ec5830b3574ea514985faa9c1c45b986, type: 2}
-    replaceExistingLink: 0
-    modelPosition: {x: 0, y: 0, z: 0}
-    modelRotation: {x: 0, y: 0, z: 0}
-    modelScale: {x: 1, y: 1, z: 1}
-    hudAnchorPosition: {x: 0, y: 0, z: 0}
-  - enabled: 1
     prefabName: EnemyWhiteApe
     modelName: "\uBC31\uD48D\uC6D0"
     fbx: {fileID: 919132149155446097, guid: b9a44de730bd215468b4c3c2dc4733a0, type: 3}

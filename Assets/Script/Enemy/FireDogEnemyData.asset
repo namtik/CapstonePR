@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: FireDogEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uBD88\uAC1C"
-  battlePrefab3D: {fileID: 1600445331737007319, guid: ae31b6dc0461ec649b5054ccf1fc365c, type: 3}
+  battlePrefab3D: {fileID: 7585087441751732573, guid: 0ae5d5a66510d9a4b8cb1b30ba4a99e6, type: 3}
   enemySprite: {fileID: 21300000, guid: 31bbfee7d00fcb84b9ba13ec7a5ab701, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
