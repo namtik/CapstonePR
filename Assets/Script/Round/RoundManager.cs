@@ -999,10 +999,7 @@ public class RoundManager : MonoBehaviour
                 EnemyCombatParty.TrackHudClone(hud);
             }
             if (hud != null)
-            {
-                float barScale = BattleStageController.PartySideSign(slotIndex, partySize) == 0 ? 1f : 0.6f;
-                view3D.SetOverlayHud(hud, true, barScale);
-            }
+                view3D.SetOverlayHud(hud, true);
         }
 
         if (enemyStatusPanel == null || controller == null) return;

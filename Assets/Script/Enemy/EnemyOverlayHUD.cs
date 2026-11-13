@@ -58,7 +58,7 @@ public class EnemyOverlayHUD : MonoBehaviour
     private bool _followWorld;      // 월드 좌표를 따라갈지 여부
     private RectTransform _barRoot; // 이 적 전용 바 묶음
     private Renderer[] _bodyRenderers; // 머리 위치 계산용 메시
-    private float _barScale = 1f;       // 양옆 적 바 배율. 가운데는 1
+    private float _barScale = 1f;       // HP/행동 게이지 배율. 양옆도 가운데와 동일
     private Vector2 _hpBasePos;         // 스케일 1일 때 HP 위치
     private Vector2 _gaugeBasePos;      // 스케일 1일 때 행동 게이지 위치
     private bool _barBaseCaptured;      // 기준 위치 저장 여부
@@ -295,7 +295,7 @@ public class EnemyOverlayHUD : MonoBehaviour
         }
     }
 
-    // 양옆 적만 HP/행동 게이지를 줄인다. 둘의 간격 비율은 유지한다.
+    // HP/행동 게이지에 배율을 적용한다. 둘의 간격 비율은 유지한다.
     void ApplyBarScale()
     {
         CaptureBarBaseIfNeeded();

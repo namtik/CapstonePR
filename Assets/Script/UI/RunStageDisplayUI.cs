@@ -95,7 +95,7 @@ public class RunStageDisplayUI : MonoBehaviour
         GameStateController state = GameStateController.Instance;
         if (state == null || !state.HasEnteredStage)
         {
-            stageText.text = "-";
+            stageText.text = string.Empty;
             return;
         }
 

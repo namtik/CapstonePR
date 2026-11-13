@@ -101,7 +101,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     private EnemyStat _stat;              // 적 스탯
     private EnemyOverlayHUD _hud;         // 위임 대상 Overlay HUD
     private bool _followWorld;            // HUD를 머리 위에 붙일지
-    private float _barScale = 1f;         // 양옆 적은 0.6, 가운데는 1
+    private float _barScale = 1f;         // HP바 배율. 양옆도 가운데와 동일
     private float _hitReactionEndTime;    // 피격 연출 종료 시각
     private Vector3 _shakeBasePos;        // 흔들기 기준 위치
     private Coroutine _shakeCo;           // 흔들기 코루틴
