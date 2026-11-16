@@ -703,7 +703,7 @@ public class RelicStageController : MonoBehaviour
         HideTooltipPopup();
     }
 
-    // 유물을 지급하고 맵으로 돌아간다
+    // 유물 아이콘을 인벤토리 버튼으로 날린 뒤 지급하고 맵으로 돌아간다
     void OnRewardPointerClick()
     {
         if (!isChestOpened || isAbsorbSequenceRunning)
@@ -716,12 +716,142 @@ public class RelicStageController : MonoBehaviour
         wasHoveringByMouse = false;
         HideTooltipPopup();
 
+        Sprite sprite = grantedRewardSprite;
+        if (sprite == null && itemSettings.itemImage != null)
+            sprite = itemSettings.itemImage.sprite;
+
+        Vector2 origin = ScreenCenter(itemSettings.itemTransform);
+        Vector2 startSize = ItemScreenSize(itemSettings.itemTransform);
+
         if (itemSettings.itemObject != null)
             itemSettings.itemObject.SetActive(false);
+        if (itemSettings.itemImage != null)
+            itemSettings.itemImage.raycastTarget = false;
 
+        StartCoroutine(AbsorbToInventory(sprite, origin, startSize));
+    }
+
+    // 스테이지가 연출 중에 꺼져도 보상은 남긴다
+    void OnDisable()
+    {
+        if (!isAbsorbSequenceRunning || !hasPendingReward)
+            return;
         GrantPendingRewardIfAny();
         isAbsorbSequenceRunning = false;
+    }
+
+    IEnumerator AbsorbToInventory(Sprite sprite, Vector2 origin, Vector2 startSize)
+    {
+        InventoryOpenButton.TryGetTarget(transform, out Vector2 target, out InventoryOpenButton button);
+        if (sprite != null)
+            yield return FlyIconTo(sprite, origin, target, startSize);
+
+        GrantPendingRewardIfAny();
+        if (button != null)
+            button.PlayReceivePulse();
+
+        yield return new WaitForSecondsRealtime(0.12f);
+        isAbsorbSequenceRunning = false;
         ReturnToMapAfterReward();
+    }
+
+    // 상자 위 아이콘이 오른쪽 위 인벤토리 버튼까지 곡선을 그리며 작아진다
+    IEnumerator FlyIconTo(Sprite sprite, Vector2 originScreen, Vector2 targetScreen, Vector2 startSize)
+    {
+        Canvas canvas = itemSettings.itemTransform != null
+            ? itemSettings.itemTransform.GetComponentInParent<Canvas>()
+            : GetComponentInParent<Canvas>();
+        if (canvas == null)
+            yield break;
+        canvas = canvas.rootCanvas;
+
+        var go = new GameObject("RelicAbsorbIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        go.layer = canvas.gameObject.layer;
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.localRotation = Quaternion.identity;
+        rt.localScale = Vector3.one;
+        float factor = canvas.scaleFactor > 0.01f ? canvas.scaleFactor : 1f;
+        float w = startSize.x > 8f ? startSize.x : 160f;
+        float h = startSize.y > 8f ? startSize.y : 160f;
+        rt.sizeDelta = new Vector2(w / factor, h / factor);
+        rt.SetAsLastSibling();
+
+        var image = go.GetComponent<Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.color = Color.white;
+
+        Vector2 from = originScreen;
+        Vector2 to = targetScreen;
+        Vector2 delta = to - from;
+        Vector2 side = delta.sqrMagnitude > 1f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
+        if (side.y < 0f) side = -side;
+        Vector2 control = Vector2.Lerp(from, to, 0.42f) + side * Mathf.Clamp(delta.magnitude * 0.16f, 50f, 180f);
+
+        PlaceOverlay(rt, from);
+        const float duration = 0.58f;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.unscaledDeltaTime;
+            float u = Mathf.Clamp01(t / duration);
+            float e = u * u * (3f - 2f * u);
+            Vector2 p = QuadBezier(from, control, to, e);
+            PlaceOverlay(rt, p);
+            rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.22f, e);
+            if (u > 0.88f)
+            {
+                var c = image.color;
+                c.a = Mathf.Lerp(1f, 0.15f, (u - 0.88f) / 0.12f);
+                image.color = c;
+            }
+            rt.SetAsLastSibling();
+            yield return null;
+        }
+
+        if (go != null)
+            Destroy(go);
+    }
+
+    static void PlaceOverlay(RectTransform rt, Vector2 screen)
+    {
+        rt.position = new Vector3(screen.x, screen.y, 0f);
+    }
+
+    static Vector2 QuadBezier(Vector2 a, Vector2 b, Vector2 c, float t)
+    {
+        float u = 1f - t;
+        return u * u * a + 2f * u * t * b + t * t * c;
+    }
+
+    static Vector2 ScreenCenter(RectTransform rt)
+    {
+        if (rt == null)
+            return new Vector2(Screen.width * 0.5f, Screen.height * 0.45f);
+        Canvas canvas = rt.GetComponentInParent<Canvas>();
+        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera
+            : null;
+        return RectTransformUtility.WorldToScreenPoint(cam, rt.TransformPoint(rt.rect.center));
+    }
+
+    static Vector2 ItemScreenSize(RectTransform rt)
+    {
+        if (rt == null)
+            return new Vector2(160f, 160f);
+        Canvas canvas = rt.GetComponentInParent<Canvas>();
+        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera
+            : null;
+        Vector3[] corners = new Vector3[4];
+        rt.GetWorldCorners(corners);
+        Vector2 bl = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
+        Vector2 tr = RectTransformUtility.WorldToScreenPoint(cam, corners[2]);
+        return new Vector2(Mathf.Abs(tr.x - bl.x), Mathf.Abs(tr.y - bl.y));
     }
 
     // 받지 않기 — 유물 지급 없이 맵으로 복귀

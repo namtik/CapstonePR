@@ -43,7 +43,7 @@ namespace Battle.UI
         [Header("적 지정 — 드래그 화살표")]
         [Tooltip("ON이면 target=ENEMY 카드를 드래그할 때 화살표로 적을 조준해야 사용된다.")]
         [SerializeField] private bool enemyTargetingEnabled = true; // 적 지정 사용 여부
-        [Tooltip("화살표 체브론/화살촉. 비우면 기본 삼각형. 팁이 위쪽이면 방향이 맞는다. 스프라이트 원본 색을 그대로 쓴다.")]
+        [Tooltip("화살표 체브론/화살촉. 비우면 화살표를 그리지 않고 록온 브래킷만 남긴다. 팁이 위쪽이면 방향이 맞는다.")]
         [SerializeField] private Sprite targetingArrowSprite; // 화살표 이미지
         [Tooltip("록온 코너(ㄴ자) 한 장. 비우면 기본 브래킷. 좌하단 ㄴ, 피벗은 바깥 꼭짓점.")]
         [SerializeField] private Sprite targetingBracketSprite; // 록온 브래킷 이미지
