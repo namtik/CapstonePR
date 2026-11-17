@@ -28,6 +28,23 @@ namespace Battle.UI
         [SerializeField] private RectTransform dragLayer; // 드래그 레이어
         // 드래그 레이어 반환(없으면 handRoot)
         public RectTransform DragLayer => dragLayer != null ? dragLayer : handRoot;
+        public RectTransform HandRoot => handRoot; // 손패 루트(적 행동 중 숨김용)
+
+        // 덱(뽑을 더미)·묘지(버린 더미) UI 루트 — 수치 텍스트에서 캔버스 바로 아래 오브젝트까지 거슬러 올라간 것
+        public void CollectPileRoots(List<GameObject> into)
+        {
+            AddCanvasChild(drawCountText, into);
+            AddCanvasChild(discardCountText, into);
+        }
+
+        static void AddCanvasChild(Component c, List<GameObject> into)
+        {
+            if (c == null) return;
+            Transform t = c.transform;
+            while (t.parent != null && t.parent.GetComponent<Canvas>() == null) t = t.parent;
+            if (t.parent == null) t = c.transform; // 캔버스를 못 찾으면 텍스트만
+            if (!into.Contains(t.gameObject)) into.Add(t.gameObject);
+        }
 
         [Header("레이아웃 — 슬롯 위치 자동 정렬")]
         [Tooltip("슬롯 간 간격 (x). NewSkillCard 프리팹이 scale=1, 300×400일 때 650~750 권장.")]

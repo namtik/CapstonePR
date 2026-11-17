@@ -125,6 +125,9 @@ namespace Battle
         [Header("적 행동 카메라 포커스")]
         [Tooltip("적이 공격/방해행동을 하는 동안 스테이지 카메라를 그 적 쪽으로 당기고 줌인해 누가 행동하는지 강조한다.")]
         [SerializeField] private EnemyActionFocusCamera.Settings enemyActionFocus = EnemyActionFocusCamera.Settings.Default;
+        [Tooltip("적 행동 포커스(카메라 줌인) 동안 손패·덱·묘지·몬스터 체력 바를 잠시 숨김.")]
+        [SerializeField] private EnemyActionHudFader.Settings enemyActionHudHide = EnemyActionHudFader.Settings.Default;
+        private readonly List<GameObject> _hudHideTargets = new List<GameObject>(); // 숨김 대상 재사용 버퍼
         [SerializeField] private bool logVerbose = true;             // 상세 로그 출력 여부
 
         [Header("적 AI (방해행동 선택)")]
@@ -2709,6 +2712,7 @@ namespace Battle
                 BindEnemy(e);
                 // 행동하는 적 쪽으로 카메라를 당겨 누가 행동하는지 강조(행동 시작 대기 동안 들어감)
                 EnemyActionFocusCamera.Focus(e.transform, enemyActionFocus);
+                HideHudForEnemyAction();
 
                 // 행동 순서 바에서 행동자가 '현재' 칸으로 올라오는 걸 보여준 뒤 행동 시작
                 if (enemyTurnStartDelay > 0f) yield return new WaitForSeconds(enemyTurnStartDelay);
@@ -2742,6 +2746,30 @@ namespace Battle
             _attackStartRoutine = null;
             // 대기열이 모두 끝나면 원래 시점으로(연속 행동 사이에는 돌아가지 않고 다음 적으로 옮겨 감)
             EnemyActionFocusCamera.Release();
+            EnemyActionHudFader.Show();
+        }
+
+        // 적 행동 동안 손패·덱·묘지·몬스터 HP 바를 숨긴다(카드 선택이 필요하면 그동안은 보임)
+        void HideHudForEnemyAction()
+        {
+            if (!enemyActionHudHide.enabled) return;
+            // 카메라 포커스가 실제로 걸리는 경우에만(2D 폴백·단일 적 생략 설정과 맞춤)
+            if (!enemyActionFocus.enabled) return;
+            if (enemyActionFocus.onlyWhenMultiple && !EnemyCombatParty.IsMulti) return;
+            if (BattleStageController.Current == null || BattleStageController.Current.StageCamera == null) return;
+
+            _hudHideTargets.Clear();
+            if (enemyActionHudHide.hideHand && handHud != null && handHud.HandRoot != null)
+                _hudHideTargets.Add(handHud.HandRoot.gameObject);
+            if (enemyActionHudHide.hidePiles && handHud != null)
+                handHud.CollectPileRoots(_hudHideTargets);
+            if (enemyActionHudHide.hideEnemyHp)
+                EnemyOverlayHUD.CollectHpBars(_hudHideTargets);
+            if (enemyActionHudHide.extraTargets != null)
+                foreach (var go in enemyActionHudHide.extraTargets)
+                    if (go != null && !_hudHideTargets.Contains(go)) _hudHideTargets.Add(go);
+
+            EnemyActionHudFader.Hide(_hudHideTargets, enemyActionHudHide, () => HasPendingSelection);
         }
 
         // 플레이어 카드 사용 연출(등장부터 퇴장까지), 유물(아이템) 발동 연출, 대상 적의 피격 반응이 모두 끝날 때까지 대기
@@ -2775,6 +2803,7 @@ namespace Battle
             _attackQueue.Clear();
             _deferredHpLost.Clear();
             EnemyActionFocusCamera.Release(immediate: true); // 전투 시작/종료 — 카메라 오프셋 즉시 원복
+            EnemyActionHudFader.Show(immediate: true);
             _actingEnemy = null;
             _actingIsDisruption = false;
             _enemyActionLockUntil = 0f;
