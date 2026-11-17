@@ -327,6 +327,10 @@ namespace Battle.UI
             SetupPileClickHandlers();
         }
 
+        [Header("더미 보기 패널 (프리팹)")]
+        [Tooltip("덱/묘지/런 덱 보기 패널. 비우면 기존 런타임 생성 방식(픽커 공용 UI)으로 폴백.")]
+        [SerializeField] private PileViewerPanel pileViewerPanel;
+
         private bool _viewerMode; // 더미 보기 모드 여부
         private BattleTabPanel _tabPanel; // Tab 패널(더미 보기와 동시 표시 방지용)
         private int _viewerPile = -1; // 보는 더미(0=뽑을, 1=버린, -2=런 덱)
@@ -383,6 +387,17 @@ namespace Battle.UI
             _viewerMode = true;
             _viewerPile = pile;
 
+            // 프리팹 패널이 지정돼 있으면 패널에 데이터만 넘긴다
+            if (pileViewerPanel != null)
+            {
+                PileViewerKind kind = pile == 0 ? PileViewerKind.Draw
+                    : pile == 1 ? PileViewerKind.Discard
+                    : PileViewerKind.RunDeck;
+                pileViewerPanel.Show(kind, title, cards, cardPrefab, this, CloseViewer);
+                BringAwakenGaugeToFront();
+                return;
+            }
+
             EnsureDimOverlay();
             EnsurePickerRoot();
 
@@ -429,6 +444,11 @@ namespace Battle.UI
             if (!_viewerMode) return;
             _viewerMode = false;
             _viewerPile = -1;
+            if (pileViewerPanel != null)
+            {
+                pileViewerPanel.Hide();
+                return;
+            }
             ClearPickerViews();
             if (_pickerRoot != null) _pickerRoot.gameObject.SetActive(false);
             if (dimOverlay != null) dimOverlay.gameObject.SetActive(false);
@@ -2374,8 +2394,12 @@ namespace Battle.UI
         // 카드 클릭 시 더미보기/픽커/선택 모드를 순서대로 처리
         public void OnCardClicked(NewCardView view)
         {
-            // 더미 보기 중에는 클릭으로 보기 닫기
-            if (_viewerMode) { CloseViewer(); return; }
+            // 더미 보기 중 카드 클릭 — 프리팹 패널은 인벤토리처럼 X 버튼으로만 닫음, 폴백 UI는 클릭으로 닫기
+            if (_viewerMode)
+            {
+                if (pileViewerPanel == null) CloseViewer();
+                return;
+            }
 
             // 픽커 모드 우선 처리
             if (TryHandlePickerClick(view)) return;
