@@ -47,6 +47,8 @@ namespace Battle.UI
         [Header("카드 그리드")]
         [Tooltip("한 행 최대 카드 수.")]
         [SerializeField] private int columns = 4;
+        [Tooltip("ON=좌측 정렬(덜 찬 마지막 행도 왼쪽부터), OFF=행마다 가운데 정렬.")]
+        [SerializeField] private bool alignLeft = true;
         [Tooltip("카드 가로 간격(중심→중심, px).")]
         [SerializeField] private float columnSpacing = 400f;
         [Tooltip("카드 세로 간격(중심→중심, px).")]
@@ -184,7 +186,9 @@ namespace Battle.UI
             {
                 int row = i / maxPerRow;
                 int col = i % maxPerRow;
-                int cardsInRow = (row == rows - 1) ? (total - row * maxPerRow) : maxPerRow;
+                // 좌측 정렬: 모든 행을 꽉 찬 행 기준으로 배치(그리드 블록은 가운데, 마지막 행은 왼쪽부터 채움)
+                int cardsInRow = alignLeft ? maxPerRow
+                    : (row == rows - 1) ? (total - row * maxPerRow) : maxPerRow;
                 float rowWidth = columnSpacing * (cardsInRow - 1);
                 float x = -rowWidth * 0.5f + col * columnSpacing;
                 float y = -(contentPadding.y * 0.5f) - (row * rowSpacing) - (rowSpacing * 0.5f);
