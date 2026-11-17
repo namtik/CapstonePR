@@ -964,6 +964,7 @@ MonoBehaviour:
   drawPileSprite: {fileID: 21300000, guid: c4523116aa3bf0e4186b6ed189980d8d, type: 3}
   discardPileSprite: {fileID: 21300000, guid: 7f9c9f8c13e299e4d8ea1ac573f0140a, type: 3}
   runDeckSprite: {fileID: 0}
+  cardRemoveSprite: {fileID: 21300000, guid: 1363191f8b194613a2242472abe22cdd, type: 3}
   defaultFrameSprite: {fileID: 0}
   columns: 5
   columnSpacing: 400

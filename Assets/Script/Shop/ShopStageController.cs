@@ -56,6 +56,16 @@ public class ShopStageController : MonoBehaviour
     [SerializeField] private Button removeCardButton; // 카드 제거 버튼
     [SerializeField] private TextMeshProUGUI removeCardCostText; // 카드 제거 비용 텍스트
     [SerializeField] private int removeCardCost = 120; // 카드 제거 비용
+    [Tooltip("removeCardButton 미연결 시 shopCanvas2 아래에서 이 이름의 오브젝트를 찾아 버튼으로 사용(Button 없으면 자동 추가).")]
+    [SerializeField] private string removeCardButtonName = "CardDeleteButton"; // 카드 제거 버튼 자동 탐색 이름
+    [Tooltip("카드 목록 패널(덱/묘지 보기와 같은 PileViewerPanel 프리팹 인스턴스).")]
+    [SerializeField] private PileViewerPanel removeCardPanel; // 카드 제거 목록 패널
+    [Tooltip("카드 클릭 시 뜨는 '제거 하시겠습니까?' 확인 팝업.")]
+    [SerializeField] private CardRemoveConfirmPopup removeCardConfirmPopup; // 제거 확인 팝업
+    [Tooltip("목록·팝업에 쓸 카드 프리팹. 비우면 CardHandHUD의 카드 프리팹을 사용.")]
+    [SerializeField] private NewCardView removeCardViewPrefab; // 카드 뷰 프리팹
+    [Tooltip("ON이면 상점 방문당 1회만 제거 가능.")]
+    [SerializeField] private bool removeCardOncePerShop = true; // 방문당 1회 제한
 
     [Header("표시 개수")]
     [SerializeField] private int cardOfferCount = 5; // 카드 상품 개수
@@ -117,6 +127,8 @@ public class ShopStageController : MonoBehaviour
     private bool bound; // 런타임 바인딩 완료 여부
     private Coroutine bubbleTypingRoutine; // 말풍선 타이핑 코루틴
     private bool isBubbleTyping; // 말풍선 타이핑 진행 중 여부
+    private bool removeCardUsed; // 이번 방문에서 카드 제거를 사용했는지
+    private readonly List<CardData> removeCandidates = new List<CardData>(); // 제거 목록에 표시 중인 카드
 
     // 카드 상품 한 건의 데이터
     class CardOffer
@@ -201,6 +213,7 @@ public class ShopStageController : MonoBehaviour
             leaveShopButton.onClick.AddListener(ReturnToMapFromShop);
         }
 
+        ResolveRemoveCardButton();
         if (removeCardButton != null)
         {
             removeCardButton.onClick.RemoveListener(OnRemoveCardButtonClicked);
@@ -213,6 +226,8 @@ public class ShopStageController : MonoBehaviour
     // 상점 진입: 입구 화면 표시 및 버튼 텍스트 갱신
     void EnterShopStage()
     {
+        removeCardUsed = false; // 방문마다 제거 1회 초기화
+        CloseRemoveCardUI();
         ShowCanvas1();
         UpdateRemoveCardButtonText();
     }
@@ -642,10 +657,125 @@ public class ShopStageController : MonoBehaviour
         RefreshOfferViews();
     }
 
-    // 카드 제거 버튼 클릭(현재 준비 중)
+    // ───────── 카드 제거 ─────────
+
+    // 할인 유물 반영 카드 제거 비용
+    int CurrentRemoveCardCost => ApplyRelicShopDiscount(removeCardCost);
+
+    bool CanUseRemoveCard => !(removeCardOncePerShop && removeCardUsed);
+
+    // 씬에 버튼 참조가 없으면 이름으로 찾아 Button을 붙인다(이미지뿐인 CardDeleteButton 대응)
+    void ResolveRemoveCardButton()
+    {
+        if (removeCardButton != null || string.IsNullOrWhiteSpace(removeCardButtonName)) return;
+        Transform root = shopCanvas2 != null ? shopCanvas2.transform : transform;
+        Transform found = FindChildRecursiveByName(root, removeCardButtonName);
+        if (found == null) return;
+
+        removeCardButton = found.GetComponent<Button>();
+        if (removeCardButton == null)
+        {
+            removeCardButton = found.gameObject.AddComponent<Button>();
+            removeCardButton.targetGraphic = found.GetComponent<Graphic>();
+        }
+    }
+
+    // 목록·팝업용 카드 프리팹(미지정 시 전투 HUD의 카드 프리팹)
+    NewCardView ResolveRemoveCardPrefab()
+    {
+        if (removeCardViewPrefab != null) return removeCardViewPrefab;
+        var hud = FindFirstObjectByType<CardHandHUD>(FindObjectsInactive.Include);
+        if (hud != null) removeCardViewPrefab = hud.CardPrefab;
+        return removeCardViewPrefab;
+    }
+
+    // 카드 제거 버튼 클릭 — 보유 덱 목록 패널을 연다
     void OnRemoveCardButtonClicked()
     {
-        Debug.Log($"[ShopStageController] 카드 제거 기능은 아직 준비 중입니다. (예정 비용: {removeCardCost})");
+        if (!CanUseRemoveCard)
+        {
+            Debug.Log("[ShopStageController] 이번 상점에서는 이미 카드를 제거했습니다.");
+            return;
+        }
+
+        int cost = CurrentRemoveCardCost;
+        if (MoneyManager.Instance != null && MoneyManager.Instance.CurrentMoney < cost)
+        {
+            Debug.Log($"[ShopStageController] 카드 제거 골드 부족 - 필요:{cost}, 보유:{MoneyManager.Instance.CurrentMoney}");
+            return;
+        }
+
+        if (removeCardPanel == null)
+        {
+            Debug.LogWarning("[ShopStageController] removeCardPanel(PileViewerPanel) 미연결 — 카드 제거 목록을 열 수 없습니다.");
+            return;
+        }
+
+        NewCardView prefab = ResolveRemoveCardPrefab();
+        if (prefab == null)
+        {
+            Debug.LogWarning("[ShopStageController] 카드 프리팹을 찾지 못해 카드 제거 목록을 열 수 없습니다.");
+            return;
+        }
+
+        // 보유 덱을 획득 순서대로, 장수만큼 펼쳐서 표시
+        removeCandidates.Clear();
+        RunDeckState state = RunDeckState.EnsureExists();
+        state.EnsureSeeded();
+        foreach (var entry in state.RunDeck)
+        {
+            if (entry.count <= 0) continue;
+            CardData data = CardDatabase.GetById(entry.cardId);
+            if (data == null) continue;
+            for (int i = 0; i < entry.count; i++) removeCandidates.Add(data);
+        }
+
+        removeCardPanel.ShowSelectable(PileViewerKind.CardRemove, "부적 제거", removeCandidates,
+            prefab, OnRemoveCandidateClicked, CloseRemoveCardUI);
+    }
+
+    // 목록에서 카드 클릭 — 확인 팝업
+    void OnRemoveCandidateClicked(int index)
+    {
+        if (index < 0 || index >= removeCandidates.Count) return;
+        CardData card = removeCandidates[index];
+
+        if (removeCardConfirmPopup == null)
+        {
+            Debug.LogWarning("[ShopStageController] removeCardConfirmPopup 미연결 — 확인 없이 바로 제거합니다.");
+            ConfirmRemoveCard(card);
+            return;
+        }
+
+        removeCardConfirmPopup.Show(card, ResolveRemoveCardPrefab(), () => ConfirmRemoveCard(card), null);
+    }
+
+    // 제거 확정 — 골드 차감 후 런 덱에서 1장 제거
+    void ConfirmRemoveCard(CardData card)
+    {
+        if (card == null || !CanUseRemoveCard) return;
+
+        int cost = CurrentRemoveCardCost;
+        if (!TrySpendMoney(cost)) return;
+
+        if (!RunDeckState.EnsureExists().TryRemoveCard(card.id))
+        {
+            if (MoneyManager.Instance != null) MoneyManager.Instance.AddMoney(cost); // 제거 실패 시 환불
+            Debug.LogWarning($"[ShopStageController] 카드 제거 실패 — 환불: {card.displayName}");
+            return;
+        }
+
+        removeCardUsed = true;
+        CloseRemoveCardUI();
+        UpdateRemoveCardButtonText();
+    }
+
+    // 목록 패널·확인 팝업 닫기
+    void CloseRemoveCardUI()
+    {
+        if (removeCardConfirmPopup != null && removeCardConfirmPopup.IsOpen) removeCardConfirmPopup.Hide();
+        if (removeCardPanel != null && removeCardPanel.IsOpen) removeCardPanel.Hide();
+        removeCandidates.Clear();
     }
 
     // 골드 차감 시도 후 성공 여부 반환
@@ -665,11 +795,13 @@ public class ShopStageController : MonoBehaviour
         return spent;
     }
 
-    // 카드 제거 버튼 텍스트 갱신
+    // 카드 제거 버튼 상태·비용 텍스트 갱신
     void UpdateRemoveCardButtonText()
     {
+        if (removeCardButton != null)
+            removeCardButton.interactable = CanUseRemoveCard;
         if (removeCardCostText != null)
-            removeCardCostText.text = "카드 제거 (준비중)";
+            removeCardCostText.text = CanUseRemoveCard ? CurrentRemoveCardCost.ToString() : "제거 완료";
     }
 
     // 4속성(불/물/바람/땅) 카드인지 판정
@@ -1222,6 +1354,7 @@ public class ShopStageController : MonoBehaviour
     // 상점에서 맵으로 복귀(노드 클리어 처리)
     public void ReturnToMapFromShop()
     {
+        CloseRemoveCardUI();
         if (roundManager != null)
         {
             roundManager.ReturnToMap();

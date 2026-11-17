@@ -10,13 +10,17 @@ namespace Battle.UI
     // 더미 보기 종류
     public enum PileViewerKind
     {
-        Draw,     // 뽑을 더미
-        Discard,  // 버린 더미(묘지)
-        RunDeck,  // 런 덱 전체(menubar 덱 버튼)
+        Draw,       // 뽑을 더미
+        Discard,    // 버린 더미(묘지)
+        RunDeck,    // 런 덱 전체(menubar 덱 버튼)
+        CardRemove, // 상점 카드 제거(카드 클릭으로 선택)
     }
 
-    // 덱/묘지/런 덱 보기 패널 — 프리팹에서 배치·스킨을 잡고, CardHandHUD는 데이터만 넘긴다.
+    // 덱/묘지/런 덱 보기 패널 — 프리팹에서 배치·스킨을 잡고, 호출 측은 데이터만 넘긴다.
     // 카드 선택(픽커) 모드와는 독립(픽커는 CardHandHUD 런타임 생성 그대로).
+    // 표시 방식 두 가지:
+    //   Show           — 전투 더미 보기(CardInstance + CardHandHUD 바인딩, 호버/클릭은 HUD가 처리)
+    //   ShowSelectable — HUD 없는 화면(상점 카드 제거 등). CardData를 셀 래퍼에 깔고 클릭 콜백으로 선택받음
     public class PileViewerPanel : MonoBehaviour
     {
         [Header("구성 요소")]
@@ -41,6 +45,8 @@ namespace Battle.UI
         [SerializeField] private Sprite discardPileSprite;
         [Tooltip("비우면 defaultFrameSprite + titleText 사용.")]
         [SerializeField] private Sprite runDeckSprite;
+        [Tooltip("상점 '부적 제거' 프레임.")]
+        [SerializeField] private Sprite cardRemoveSprite;
         [Tooltip("종류별 스프라이트가 없을 때 쓰는 프레임(제목 미포함 가정 → titleText 표시).")]
         [SerializeField] private Sprite defaultFrameSprite;
 
@@ -58,7 +64,14 @@ namespace Battle.UI
         [Tooltip("그리드 전체 크기 배율(content 스케일). 간격도 함께 배율 적용됨.")]
         [SerializeField] private float cardScale = 1f;
 
-        readonly List<NewCardView> _views = new List<NewCardView>();
+        [Header("선택 모드(ShowSelectable) 호버")]
+        [Tooltip("마우스 오버 시 카드가 제자리에서 커지는 배율(인벤토리와 동일 방식).")]
+        [SerializeField] private float selectableHoverScale = 1.1f;
+        [Tooltip("호버 카드가 이웃 위로 그려질 정렬 순서. 확인 팝업보다 낮아야 함.")]
+        [SerializeField] private int selectableHoverSortingOrder = 200;
+
+        readonly List<NewCardView> _views = new List<NewCardView>();   // Show 모드 카드
+        readonly List<GameObject> _cells = new List<GameObject>();     // ShowSelectable 모드 셀 래퍼
         System.Action _onCloseRequested;
         bool _wired;
 
@@ -97,10 +110,98 @@ namespace Battle.UI
             else Hide();
         }
 
-        // 패널을 열고 카드를 그리드로 깐다.
+        // 패널을 열고 카드를 그리드로 깐다(전투 더미 보기).
         // hud: 카드 뷰 호버/클릭 처리를 위해 바인딩(슬롯 -1 = 그리드 카드)
         public void Show(PileViewerKind kind, string title, IList<CardInstance> cards,
             NewCardView cardPrefab, CardHandHUD hud, System.Action onCloseRequested)
+        {
+            int count = cards != null ? cards.Count : 0;
+            Open(kind, title, onCloseRequested);
+
+            if (count > 0 && cardPrefab != null && PrepareContent(count))
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    var view = Instantiate(cardPrefab, content);
+                    view.Bind(hud, -1); // 슬롯 -1 = 그리드 카드(제자리 호버)
+                    var vrect = (RectTransform)view.transform;
+                    PlaceInGrid(vrect, i, count);
+                    vrect.localRotation = Quaternion.identity;
+                    view.SetCard(cards[i]);
+                    view.CaptureHome();
+                    _views.Add(view);
+                }
+            }
+            else ResetContentSize(); // 빈 더미 — 이전 더미의 콘텐츠 높이가 남지 않게
+
+            FinishOpen(count);
+        }
+
+        // HUD 없이 카드 목록을 깔고, 카드 클릭 시 onCardClicked(목록 인덱스)를 호출한다(상점 카드 제거 등).
+        public void ShowSelectable(PileViewerKind kind, string title, IList<CardData> cards,
+            NewCardView cardPrefab, System.Action<int> onCardClicked, System.Action onCloseRequested)
+        {
+            int count = cards != null ? cards.Count : 0;
+            Open(kind, title, onCloseRequested);
+
+            if (count > 0 && cardPrefab != null && PrepareContent(count))
+            {
+                RectTransform clip = scrollRect != null ? scrollRect.viewport : null;
+                for (int i = 0; i < count; i++)
+                    _cells.Add(CreateSelectableCell(cards[i], i, count, cardPrefab, clip, onCardClicked));
+            }
+            else ResetContentSize();
+
+            FinishOpen(count);
+        }
+
+        // 셀 래퍼(투명 raycast 이미지 + Button) 안에 카드를 미리보기로 깐다.
+        // 카드 자체는 raycast를 막아(CanvasGroup) 클릭이 래퍼 Button으로 가게 한다
+        // — NewCardView는 HUD가 없으면 클릭을 무시하고 이벤트도 부모로 넘기지 않기 때문.
+        GameObject CreateSelectableCell(CardData data, int index, int total, NewCardView cardPrefab,
+            RectTransform clip, System.Action<int> onCardClicked)
+        {
+            var cellGo = new GameObject("CardCell", typeof(RectTransform), typeof(Image), typeof(Button));
+            var cellRt = (RectTransform)cellGo.transform;
+            cellRt.SetParent(content, false);
+
+            var cellImg = cellGo.GetComponent<Image>();
+            cellImg.color = new Color(0f, 0f, 0f, 0f); // 완전 투명
+            cellImg.raycastTarget = true;
+
+            var btn = cellGo.GetComponent<Button>();
+            btn.transition = Selectable.Transition.None;
+            int captured = index;
+            btn.onClick.AddListener(() => onCardClicked?.Invoke(captured));
+
+            NewCardView view = Instantiate(cardPrefab, cellRt);
+            view.ApplyShopPreview(data);
+            var cg = view.GetComponent<CanvasGroup>();
+            if (cg == null) cg = view.gameObject.AddComponent<CanvasGroup>();
+            cg.blocksRaycasts = false; // interactable은 건드리지 않음 — 카드 안 Button이 비활성 색(어둡게)으로 바뀜
+
+            // 셀 크기 = 카드 표시 크기, 카드는 셀 중앙
+            var cardRt = (RectTransform)view.transform;
+            Vector2 native = cardRt.sizeDelta;
+            if (native.x < 1f || native.y < 1f) native = new Vector2(300f, 400f);
+            Vector3 cardScaleVec = cardRt.localScale;
+            cellRt.sizeDelta = new Vector2(native.x * Mathf.Abs(cardScaleVec.x), native.y * Mathf.Abs(cardScaleVec.y));
+            cardRt.anchorMin = cardRt.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRt.pivot = new Vector2(0.5f, 0.5f);
+            cardRt.anchoredPosition = Vector2.zero;
+            cardRt.localRotation = Quaternion.identity;
+
+            PlaceInGrid(cellRt, index, total);
+
+            // 호버 제자리 확대(인벤토리 방식 — 마우스 위치 직접 판정)
+            var slot = cellGo.AddComponent<InventoryCardSlot>();
+            slot.Configure(selectableHoverScale > 0f ? selectableHoverScale : 1f, selectableHoverSortingOrder, clip);
+
+            return cellGo;
+        }
+
+        // 공통 열기: 활성화·스킨·기존 카드 정리
+        void Open(PileViewerKind kind, string title, System.Action onCloseRequested)
         {
             WireEvents();
             _onCloseRequested = onCloseRequested;
@@ -108,15 +209,15 @@ namespace Battle.UI
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
 
-            int count = cards != null ? cards.Count : 0;
             ApplySkin(kind, title);
-
             ClearViews();
-            if (count > 0 && cardPrefab != null) BuildCards(cards, cardPrefab, hud);
-            else ResetContentSize(); // 빈 더미 — 이전 더미의 콘텐츠 높이가 남지 않게
+        }
+
+        // 공통 마무리: 빈 안내·스크롤 맨 위
+        void FinishOpen(int count)
+        {
             if (emptyLabel != null) emptyLabel.SetActive(count == 0);
 
-            // 스크롤은 맨 위에서 시작
             if (scrollRect != null)
             {
                 Canvas.ForceUpdateCanvases(); // content 크기 반영 후 스크롤바/위치 계산
@@ -141,6 +242,7 @@ namespace Battle.UI
                 PileViewerKind.Draw => drawPileSprite,
                 PileViewerKind.Discard => discardPileSprite,
                 PileViewerKind.RunDeck => runDeckSprite,
+                PileViewerKind.CardRemove => cardRemoveSprite,
                 _ => null,
             };
 
@@ -160,17 +262,16 @@ namespace Battle.UI
             }
         }
 
-        // 카드 목록을 가운데 정렬 그리드로 배치(호버 시 형제 순서가 바뀌므로 LayoutGroup 대신 수동 배치)
-        void BuildCards(IList<CardInstance> cards, NewCardView cardPrefab, CardHandHUD hud)
+        // 카드 수에 맞춰 content 높이·스케일 설정(호버 시 형제 순서가 바뀌므로 LayoutGroup 대신 수동 배치)
+        bool PrepareContent(int total)
         {
             if (content == null)
             {
                 Debug.LogWarning("[PileViewerPanel] content 미설정 — 카드를 표시할 수 없습니다.");
-                return;
+                return false;
             }
 
             int maxPerRow = Mathf.Max(1, columns);
-            int total = cards.Count;
             int rows = Mathf.CeilToInt(total / (float)maxPerRow);
 
             float contentHeight = rows * rowSpacing + contentPadding.y;
@@ -181,30 +282,27 @@ namespace Battle.UI
             content.anchoredPosition = Vector2.zero;
             // 카드 개별 스케일은 호버 시 베이스로 리셋되므로 컨테이너 전체를 스케일
             content.localScale = Vector3.one * Mathf.Max(0.01f, cardScale);
+            return true;
+        }
 
-            for (int i = 0; i < total; i++)
-            {
-                int row = i / maxPerRow;
-                int col = i % maxPerRow;
-                // 좌측 정렬: 모든 행을 꽉 찬 행 기준으로 배치(그리드 블록은 가운데, 마지막 행은 왼쪽부터 채움)
-                int cardsInRow = alignLeft ? maxPerRow
-                    : (row == rows - 1) ? (total - row * maxPerRow) : maxPerRow;
-                float rowWidth = columnSpacing * (cardsInRow - 1);
-                float x = -rowWidth * 0.5f + col * columnSpacing;
-                float y = -(contentPadding.y * 0.5f) - (row * rowSpacing) - (rowSpacing * 0.5f);
+        // i번째 카드를 그리드 위치에 배치
+        void PlaceInGrid(RectTransform rt, int i, int total)
+        {
+            int maxPerRow = Mathf.Max(1, columns);
+            int rows = Mathf.CeilToInt(total / (float)maxPerRow);
+            int row = i / maxPerRow;
+            int col = i % maxPerRow;
+            // 좌측 정렬: 모든 행을 꽉 찬 행 기준으로 배치(그리드 블록은 가운데, 마지막 행은 왼쪽부터 채움)
+            int cardsInRow = alignLeft ? maxPerRow
+                : (row == rows - 1) ? (total - row * maxPerRow) : maxPerRow;
+            float rowWidth = columnSpacing * (cardsInRow - 1);
+            float x = -rowWidth * 0.5f + col * columnSpacing;
+            float y = -(contentPadding.y * 0.5f) - (row * rowSpacing) - (rowSpacing * 0.5f);
 
-                var view = Instantiate(cardPrefab, content);
-                view.Bind(hud, -1); // 슬롯 -1 = 그리드 카드(제자리 호버, 클릭 시 HUD가 보기 닫기)
-                var vrect = (RectTransform)view.transform;
-                vrect.anchorMin = new Vector2(0.5f, 1f);
-                vrect.anchorMax = new Vector2(0.5f, 1f);
-                vrect.pivot = new Vector2(0.5f, 0.5f);
-                vrect.anchoredPosition = new Vector2(x, y);
-                vrect.localRotation = Quaternion.identity;
-                view.SetCard(cards[i]);
-                view.CaptureHome();
-                _views.Add(view);
-            }
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(x, y);
         }
 
         void ResetContentSize()
@@ -219,6 +317,9 @@ namespace Battle.UI
             for (int i = 0; i < _views.Count; i++)
                 if (_views[i] != null) Destroy(_views[i].gameObject);
             _views.Clear();
+            for (int i = 0; i < _cells.Count; i++)
+                if (_cells[i] != null) Destroy(_cells[i]);
+            _cells.Clear();
         }
 
         void OnDestroy()

@@ -800,6 +800,35 @@ namespace Battle.UI
             ApplyBurnProgress(to, cardFace);
         }
 
+        // 카드 면이 불타 사라지는 단독 연출(각성 부적 전환과 같은 셰이더). 끝나면 카드는 보이지 않는 상태로 남는다.
+        // 셰이더가 없거나 비활성 상태면 즉시 숨기고 false 반환(onComplete는 항상 호출).
+        public bool PlayBurnAway(float duration, System.Action onComplete = null)
+        {
+            if (_burnCo != null) { StopCoroutine(_burnCo); _burnCo = null; EndBurnMaterials(); }
+
+            if (!isActiveAndEnabled || ResolveBurnShader() == null)
+            {
+                SetCardFaceAlpha(0f);
+                onComplete?.Invoke();
+                return false;
+            }
+            _burnCo = StartCoroutine(BurnAwayRoutine(duration, onComplete));
+            return true;
+        }
+
+        System.Collections.IEnumerator BurnAwayRoutine(float duration, System.Action onComplete)
+        {
+            EnsureBurnMaterial().SetFloat("_NoiseSeed", Random.Range(0f, 100f));
+            BeginBurnOn(_talismanShown);
+            yield return BurnTween(0f, 1f, duration, !_talismanShown);
+
+            EndBurnMaterials();
+            SetCardFaceAlpha(0f);
+            if (_talismanFace != null) _talismanFace.enabled = false;
+            _burnCo = null;
+            onComplete?.Invoke();
+        }
+
         // 전환 연출을 즉시 끝내고 목표 상태로 정착
         void FinishBurnImmediately()
         {
