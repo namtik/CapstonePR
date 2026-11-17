@@ -116,8 +116,15 @@ public class EnemyStat : MonoBehaviour
     public void Heal(float amount)
     {
         if (!IsAlive || amount <= 0f) return;
+        float before = currentHp;
         currentHp = Mathf.Min(maxHp, currentHp + amount);
         NormalizeHp();
+        int healed = Mathf.RoundToInt(currentHp - before);
+        if (healed > 0)
+        {
+            EnemyController enemy = GetComponent<EnemyController>();
+            Battle.UI.BattleLog.NoteEnemy(enemy, Battle.UI.BattleLog.CombatKind.Heal, healed, true);
+        }
         OnHpChanged?.Invoke(currentHp, maxHp);
     }
 

@@ -383,6 +383,14 @@ public class Player : MonoBehaviour, IBattleUnit
         if (cardtype == "enemy_attack")
             Debug.Log($"[적 공격→플레이어] 실피해 {finalDamage} (원피해 {incomingDamage:0.#}, 방어도 흡수 {(guardBefore - guard):0.#}) HP {hpBefore:0} → {currentHp:0}/{maxHp:0}");
 
+        int guardLost = Mathf.Max(0, Mathf.RoundToInt(guardBefore - guard));
+        if (guardLost > 0)
+            Battle.UI.BattleLog.NotePlayer(Battle.UI.BattleLog.CombatKind.Guard, guardLost, false);
+        if (finalDamage > 0)
+            Battle.UI.BattleLog.NotePlayer(Battle.UI.BattleLog.CombatKind.Damage, finalDamage, false);
+        else if (cardtype == "enemy_attack" && incomingDamage > 0f)
+            Battle.UI.BattleLog.NotePlayer(Battle.UI.BattleLog.CombatKind.Damage, 0, false);
+
         if (cardtype != "self_loss")
         {
             OnPlayerHit?.Invoke();
@@ -414,6 +422,8 @@ public class Player : MonoBehaviour, IBattleUnit
         }
         statusEffects[type] = Mathf.Clamp(statusEffects[type] + amount, 0, 999);
         OnStatusChanged?.Invoke(type, statusEffects[type]);
+        if (type == "launcher" && amount != 0)
+            Battle.UI.BattleLog.NotePlayer(Battle.UI.BattleLog.CombatKind.Launcher, Mathf.Abs(amount), amount > 0);
     }
 
     // 지정한 상태이상의 현재 수치를 반환한다
@@ -448,7 +458,13 @@ public class Player : MonoBehaviour, IBattleUnit
         guard = Mathf.Clamp(guard + amount, 0f, 999f);
         OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
         int gained = Mathf.RoundToInt(guard - before);
-        if (gained > 0) Battle.UI.BattleLog.RecordGuard(gained);
+        if (gained > 0)
+        {
+            Battle.UI.BattleLog.RecordGuard(gained);
+            Battle.UI.BattleLog.NotePlayer(Battle.UI.BattleLog.CombatKind.Guard, gained, true);
+        }
+        else if (gained < 0)
+            Battle.UI.BattleLog.NotePlayer(Battle.UI.BattleLog.CombatKind.Guard, -gained, false);
     }
 
     // 사망 처리 — 게임오버 연출을 재생한다
@@ -473,7 +489,10 @@ public class Player : MonoBehaviour, IBattleUnit
         currentHp = Mathf.Min(currentHp + amount, maxHp);
         SyncAllInstancesFrom(this);
         if (currentHp > before)
+        {
             SfxManager.Instance?.PlayHeal();
+            Battle.UI.BattleLog.NotePlayer(Battle.UI.BattleLog.CombatKind.Heal, Mathf.RoundToInt(currentHp - before), true);
+        }
     }
 
     // 외부에서 호출해 체력 UI를 강제 동기화한다

@@ -1391,7 +1391,8 @@ namespace Battle.Deck
                 Ctx.enemy.TakeDamage(Ctx.burnOnByCardAmount);
                 SfxManager.Instance?.PlayBurn();
                 Sprite burnPortrait = Ctx.enemyStat != null && Ctx.enemyStat.Data != null ? Ctx.enemyStat.Data.enemySprite : null;
-                Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, Ctx.burnOnByCardAmount);
+                string burnName = Ctx.enemyStat != null && Ctx.enemyStat.Data != null ? Ctx.enemyStat.Data.enemyName : null;
+                Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, Ctx.burnOnByCardAmount, burnName);
             }
 
             if (isCardEffect && key == "frost" && Ctx.frostOnFrostByCardActive
