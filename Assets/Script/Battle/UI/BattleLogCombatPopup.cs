@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Battle.Card;
 
 namespace Battle.UI
 {
@@ -12,6 +13,13 @@ namespace Battle.UI
         const float ColStep = 168f;
         const float IconSize = 52f;
         const float NumberDrop = 14f;
+        const int ComboBooksPerRow = 5;
+        const int ComboBookMax = 20;
+        const string ComboBookPrefabPath = "Assets/Prefab/ComboBook.prefab";
+        const string ChosunFontPath = "Assets/Fonts/ChosunCentennial_otf.otf";
+        static readonly Color ComboOverflowColor = new Color(244f / 255f, 206f / 255f, 141f / 255f, 1f);
+        static float _overflowOutlineWidth = 0.2f;
+        static Color _overflowOutlineColor = Color.black;
 
         static readonly Color Loss = new Color(1f, 0f, 0f, 1f);
         static readonly Color Gain = new Color(0f, 0.863f, 0.129f, 1f);
@@ -27,11 +35,39 @@ namespace Battle.UI
         Sprite _shield;
         Sprite _launcher;
         Sprite _heal;
+        GameObject _comboBookPrefab;
+        TMP_FontAsset _chosunFont;
+
+        const int MaxComboPreviewId = -3;
+        const int OverflowComboPreviewId = -4;
+
+        public static bool IsMaxComboPreviewOpen => _instance != null && _instance._openId == MaxComboPreviewId;
+        public static bool IsOverflowComboPreviewOpen => _instance != null && _instance._openId == OverflowComboPreviewId;
+
+        public static void ShowMaxComboPreview(Component anchor)
+        {
+            Ensure(anchor).OpenMaxComboPreview();
+        }
+
+        public static void HideMaxComboPreview()
+        {
+            Hide(MaxComboPreviewId);
+        }
+
+        public static void ShowOverflowComboPreview(Component anchor)
+        {
+            Ensure(anchor).OpenOverflowComboPreview();
+        }
+
+        public static void HideOverflowComboPreview()
+        {
+            Hide(OverflowComboPreviewId);
+        }
 
         public static void Show(int entryId, Component anchor)
         {
             BattleLog.Entry entry = BattleLog.Find(entryId);
-            if (entry == null || !entry.HasCombat)
+            if (entry == null || (!entry.HasCombat && entry.DisruptionIndex < 0 && entry.Category != BattleLog.Kind.Awaken))
             {
                 Hide(entryId);
                 return;
@@ -48,10 +84,16 @@ namespace Battle.UI
 
         static BattleLogCombatPopup Ensure(Component anchor)
         {
-            if (_instance != null) return _instance;
             Canvas canvas = anchor != null ? anchor.GetComponentInParent<Canvas>() : null;
             if (canvas != null) canvas = canvas.rootCanvas;
             if (canvas == null) canvas = Object.FindFirstObjectByType<Canvas>();
+            if (canvas != null)
+            {
+                canvas.additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1
+                    | AdditionalCanvasShaderChannels.Normal
+                    | AdditionalCanvasShaderChannels.Tangent;
+            }
+            if (_instance != null) return _instance;
             var go = new GameObject("LogCombatPopup");
             if (canvas != null) go.transform.SetParent(canvas.transform, false);
             _instance = go.AddComponent<BattleLogCombatPopup>();
@@ -111,6 +153,7 @@ namespace Battle.UI
             }
 
             RectTransform parent = _panel.parent as RectTransform;
+            Canvas.ForceUpdateCanvases();
             float width = parent != null && parent.rect.width > 10f ? parent.rect.width : 1920f;
             float height = parent != null && parent.rect.height > 10f ? parent.rect.height : 1080f;
             Vector2 hpOrigin;
@@ -124,6 +167,329 @@ namespace Battle.UI
 
             foreach (var pair in enemies)
                 PlaceEnemy(pair.Key, pair.Value);
+            PlaceAwakenCombos(entry);
+        }
+
+        void PlaceAwakenCombos(BattleLog.Entry entry)
+        {
+            if (entry.Category != BattleLog.Kind.Awaken || entry.AwakenCombos == null || entry.AwakenCombos.Count == 0)
+                return;
+            GameObject prefab;
+            float nativeWidth;
+            float nativeHeight;
+            if (!TryComboBook(out prefab, out nativeWidth, out nativeHeight)) return;
+            Vector2 origin;
+            Vector2 area;
+            MeasureComboArea(out origin, out area);
+            float width;
+            float height;
+            int columns;
+            int rows;
+            FitComboBooks(nativeWidth, nativeHeight, area, out width, out height, out columns, out rows);
+            int total = entry.AwakenCombos.Count;
+            int capacity = Mathf.Min(ComboBookMax, columns * rows);
+            int count = Mathf.Min(total, capacity);
+            var shown = new List<Battle.ComboSkillDef>(count);
+            for (int i = 0; i < count; i++) shown.Add(entry.AwakenCombos[i]);
+            bool overflow = total > ComboBookMax;
+            PlaceComboBooks(shown, origin, columns, width, height, nativeWidth, prefab, overflow);
+            if (overflow) PlaceComboOverflow(total, origin, columns, width, height, count);
+        }
+
+        void OpenMaxComboPreview()
+        {
+            _openId = MaxComboPreviewId;
+            LoadArt();
+            transform.SetAsLastSibling();
+            gameObject.SetActive(true);
+            for (int i = transform.childCount - 1; i >= 0; i--)
+                DestroyImmediate(transform.GetChild(i).gameObject);
+            Dim();
+
+            GameObject prefab;
+            float nativeWidth;
+            float nativeHeight;
+            if (!TryComboBook(out prefab, out nativeWidth, out nativeHeight)) return;
+            Vector2 origin;
+            Vector2 area;
+            MeasureComboArea(out origin, out area);
+            float width;
+            float height;
+            int columns;
+            int rows;
+            FitComboBooks(nativeWidth, nativeHeight, area, out width, out height, out columns, out rows);
+            int count = columns * rows;
+            var owned = Battle.NewBattleController.Instance != null
+                ? Battle.NewBattleController.Instance.OwnedComboSkills
+                : null;
+            var shown = new List<Battle.ComboSkillDef>(count);
+            for (int i = 0; i < count; i++)
+            {
+                Battle.ComboSkillDef skill = owned != null && owned.Count > 0 ? owned[i % owned.Count] : null;
+                shown.Add(skill ?? PreviewCombo(i));
+            }
+            PlaceComboBooks(shown, origin, columns, width, height, nativeWidth, prefab, false);
+        }
+
+        void OpenOverflowComboPreview()
+        {
+            _openId = OverflowComboPreviewId;
+            LoadArt();
+            transform.SetAsLastSibling();
+            gameObject.SetActive(true);
+            for (int i = transform.childCount - 1; i >= 0; i--)
+                DestroyImmediate(transform.GetChild(i).gameObject);
+            Dim();
+
+            GameObject prefab;
+            float nativeWidth;
+            float nativeHeight;
+            if (!TryComboBook(out prefab, out nativeWidth, out nativeHeight)) return;
+            Vector2 origin;
+            Vector2 area;
+            MeasureComboArea(out origin, out area);
+            float width;
+            float height;
+            int columns;
+            int rows;
+            FitComboBooks(nativeWidth, nativeHeight, area, out width, out height, out columns, out rows);
+            int count = Mathf.Min(ComboBookMax, columns * rows);
+            var owned = Battle.NewBattleController.Instance != null
+                ? Battle.NewBattleController.Instance.OwnedComboSkills
+                : null;
+            var shown = new List<Battle.ComboSkillDef>(count);
+            for (int i = 0; i < count; i++)
+            {
+                Battle.ComboSkillDef skill = owned != null && owned.Count > 0 ? owned[i % owned.Count] : null;
+                shown.Add(skill ?? PreviewCombo(i));
+            }
+            PlaceComboBooks(shown, origin, columns, width, height, nativeWidth, prefab, true);
+            PlaceComboOverflow(ComboBookMax + 1, origin, columns, width, height, count);
+        }
+
+        static Battle.ComboSkillDef PreviewCombo(int index)
+        {
+            CardElement[] elements =
+            {
+                CardElement.Fire,
+                CardElement.Water,
+                CardElement.Wind,
+                CardElement.Earth
+            };
+            return new Battle.ComboSkillDef
+            {
+                displayName = "콤보 " + (index + 1),
+                slot1 = elements[index % elements.Length],
+                slot2 = elements[(index + 1) % elements.Length],
+                slot3 = elements[(index + 2) % elements.Length]
+            };
+        }
+
+        void MeasureComboArea(out Vector2 origin, out Vector2 area)
+        {
+            origin = new Vector2(-960f, 540f);
+            area = new Vector2(1499f, 804f);
+            BattleTabPanel panel = Object.FindFirstObjectByType<BattleTabPanel>(FindObjectsInactive.Include);
+            if (panel == null || !panel.TryGetFrameRect(out RectTransform frame)) return;
+            Vector3[] corners = new Vector3[4];
+            frame.GetWorldCorners(corners);
+            Vector2 topLeft;
+            Vector2 topRight;
+            Vector2 bottomLeft;
+            if (!WorldPoint(corners[1], out topLeft) || !WorldPoint(corners[2], out topRight) || !WorldPoint(corners[0], out bottomLeft))
+                return;
+            origin = topLeft;
+            area = new Vector2(Mathf.Abs(topRight.x - topLeft.x), Mathf.Abs(topLeft.y - bottomLeft.y));
+        }
+
+        bool TryComboBook(out GameObject prefab, out float width, out float height)
+        {
+            prefab = _comboBookPrefab;
+            if (prefab == null)
+            {
+#if UNITY_EDITOR
+                prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(ComboBookPrefabPath);
+#endif
+                _comboBookPrefab = prefab;
+            }
+
+            width = 600f;
+            height = 400f;
+            if (prefab == null)
+            {
+                Debug.LogWarning("[BattleLogCombatPopup] ComboBook 프리팹을 찾지 못했습니다.");
+                return false;
+            }
+
+            RectTransform rect = prefab.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                if (rect.sizeDelta.x > 1f) width = rect.sizeDelta.x;
+                if (rect.sizeDelta.y > 1f) height = rect.sizeDelta.y;
+            }
+            return true;
+        }
+
+        static void FitComboBooks(float nativeWidth, float nativeHeight, Vector2 area, out float width, out float height, out int columns, out int rows)
+        {
+            columns = ComboBooksPerRow;
+            float scale = 1f;
+            if (nativeWidth > 1f && area.x > 1f)
+                scale = area.x / (nativeWidth * columns);
+            width = nativeWidth * scale;
+            height = nativeHeight * scale;
+            rows = height > 1f ? Mathf.Max(1, Mathf.FloorToInt((area.y + 0.5f) / height)) : 1;
+        }
+
+        void PlaceComboBooks(List<Battle.ComboSkillDef> skills, Vector2 origin, int columns, float width, float height, float nativeWidth, GameObject prefab, bool darken)
+        {
+            if (skills == null || prefab == null) return;
+            if (columns < 1) columns = 1;
+            float scale = nativeWidth > 1f ? width / nativeWidth : 1f;
+            NewCardView card = Object.FindFirstObjectByType<NewCardView>(FindObjectsInactive.Include);
+            for (int i = 0; i < skills.Count; i++)
+            {
+                int col = i % columns;
+                int row = i / columns;
+                PlaceComboBook(skills[i], origin + new Vector2(col * width, -row * height), scale, prefab, card, darken);
+            }
+        }
+
+        void PlaceComboOverflow(int total, Vector2 origin, int columns, float width, float height, int shown)
+        {
+            if (transform.Find("Dim") == null) Dim();
+            int shownRows = columns > 0 ? Mathf.CeilToInt(shown / (float)columns) : 1;
+            Vector2 center = origin + new Vector2(columns * width * 0.5f, -shownRows * height * 0.5f);
+
+            var go = new GameObject("ComboOverflow", typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+            RectTransform rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(900f, 180f);
+            rect.anchoredPosition = center;
+
+            TextMeshProUGUI label = go.AddComponent<TextMeshProUGUI>();
+            label.text = "+" + total;
+            TMP_FontAsset font = ChosunFont();
+            if (font != null) label.font = font;
+            label.fontSize = 128f;
+            label.color = ComboOverflowColor;
+            label.alignment = TextAlignmentOptions.Center;
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.raycastTarget = false;
+            ApplyOverflowOutline(label);
+        }
+
+        public static void SetOverflowOutline(float width, Color color)
+        {
+            _overflowOutlineWidth = Mathf.Clamp01(width);
+            _overflowOutlineColor = color;
+            if (_instance == null) return;
+            Transform found = _instance.transform.Find("ComboOverflow");
+            if (found == null) return;
+            TextMeshProUGUI label = found.GetComponent<TextMeshProUGUI>();
+            if (label == null) return;
+            ApplyOverflowOutline(label);
+        }
+
+        static void ApplyOverflowOutline(TextMeshProUGUI label)
+        {
+            if (label == null) return;
+            float outline = Mathf.Clamp01(_overflowOutlineWidth);
+            label.extraPadding = true;
+            ShaderUtilities.GetShaderPropertyIDs();
+
+            Material material = label.font != null ? label.font.material : label.fontSharedMaterial;
+            WriteOutline(material, outline);
+            if (material != null) label.fontSharedMaterial = material;
+
+            label.outlineWidth = outline;
+            label.outlineColor = _overflowOutlineColor;
+            WriteOutline(label.fontMaterial, outline);
+            label.ForceMeshUpdate();
+        }
+
+        static void WriteOutline(Material material, float outline)
+        {
+            if (material == null) return;
+            material.SetFloat(ShaderUtilities.ID_OutlineWidth, outline);
+            material.SetColor(ShaderUtilities.ID_OutlineColor, _overflowOutlineColor);
+            ShaderUtilities.UpdateShaderRatios(material);
+        }
+
+        TMP_FontAsset ChosunFont()
+        {
+            if (_chosunFont != null) return _chosunFont;
+#if UNITY_EDITOR
+            Font source = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>(ChosunFontPath);
+            if (source != null)
+            {
+                _chosunFont = TMP_FontAsset.CreateFontAsset(
+                    source, 72, 24, UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 1024, 1024, AtlasPopulationMode.Dynamic, true);
+                if (_chosunFont != null)
+                {
+                    _chosunFont.TryAddCharacters("+0123456789");
+                    ShaderUtilities.GetShaderPropertyIDs();
+                    TMP_FontAsset reference = UnityEditor.AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/NYJUnheo SDF.asset");
+                    if (reference != null && reference.material != null && reference.material.shader != null && _chosunFont.material != null)
+                        _chosunFont.material.shader = reference.material.shader;
+                    if (_chosunFont.material != null)
+                        _chosunFont.material.SetFloat(ShaderUtilities.ID_GradientScale, _chosunFont.atlasPadding + 1f);
+                }
+            }
+#endif
+            if (_chosunFont == null) _chosunFont = _font;
+            return _chosunFont;
+        }
+
+        static void PlaceComboBook(Battle.ComboSkillDef skill, Vector2 topLeft, float scale, GameObject prefab, NewCardView card, bool darken)
+        {
+            if (skill == null) return;
+            GameObject root = Object.Instantiate(prefab, _instance.transform, false);
+            root.name = "ComboBook";
+            RectTransform rect = root.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0f, 1f);
+                rect.localScale = new Vector3(scale, scale, 1f);
+                rect.anchoredPosition = topLeft;
+            }
+
+            BookRewardItemUI item = root.GetComponent<BookRewardItemUI>();
+            if (item != null)
+            {
+                if (card != null)
+                {
+                    item.SetElementSprites(
+                        card.GetElementSprite(CardElement.Fire),
+                        card.GetElementSprite(CardElement.Water),
+                        card.GetElementSprite(CardElement.Wind),
+                        card.GetElementSprite(CardElement.Earth));
+                }
+                item.Bind(skill, null);
+            }
+
+            Button button = root.GetComponent<Button>();
+            if (button != null) button.enabled = false;
+            ButtonHoverScale hover = root.GetComponent<ButtonHoverScale>();
+            if (hover != null) hover.enabled = false;
+            if (!darken || rect == null) return;
+
+            var shadeGo = new GameObject("Shade", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            shadeGo.transform.SetParent(rect, false);
+            RectTransform shade = shadeGo.GetComponent<RectTransform>();
+            shade.anchorMin = Vector2.zero;
+            shade.anchorMax = Vector2.one;
+            shade.offsetMin = Vector2.zero;
+            shade.offsetMax = Vector2.zero;
+            Image shadeImage = shadeGo.GetComponent<Image>();
+            shadeImage.color = new Color(0f, 0f, 0f, 0.55f);
+            shadeImage.raycastTarget = false;
         }
 
         void PlaceEnemy(int slot, List<BattleLog.CombatNote> notes)
@@ -165,16 +531,42 @@ namespace Battle.UI
         bool TryPlayerHpOrigin(out Vector2 origin)
         {
             origin = Vector2.zero;
-            Player player = Player.Resolve();
-            Slider bar = player != null ? player.hpBar : null;
-            RectTransform rect = bar != null ? bar.transform as RectTransform : null;
+            RectTransform rect = FindCombatHpBar();
             if (rect == null) return false;
             Vector3[] corners = new Vector3[4];
             rect.GetWorldCorners(corners);
             Vector2 topRight;
             if (!WorldPoint(corners[2], out topRight)) return false;
-            origin = new Vector2(topRight.x - IconSize, topRight.y + IconSize * 0.5f + 6f);
+            // 막대 오른쪽 끝 바로 위. 막대가 화면 꼭대기라 밖으로 나가면 화면 안에 붙인다.
+            float x = topRight.x - IconSize;
+            float y = topRight.y + IconSize * 0.5f + 6f;
+            Rect area = _panel != null ? _panel.rect : new Rect(-960f, -540f, 1920f, 1080f);
+            float half = IconSize * 0.5f;
+            x = Mathf.Clamp(x, area.xMin + 8f, area.xMax - IconSize - 8f);
+            y = Mathf.Clamp(y, area.yMin + half + NumberDrop, area.yMax - half - 4f);
+            origin = new Vector2(x, y);
             return true;
+        }
+
+        static RectTransform FindCombatHpBar()
+        {
+            GameObject stage = GameObject.Find("CombatStage");
+            if (stage != null)
+            {
+                Slider[] sliders = stage.GetComponentsInChildren<Slider>(true);
+                for (int i = 0; i < sliders.Length; i++)
+                {
+                    Slider slider = sliders[i];
+                    if (slider == null || slider.gameObject.name != "PlayerHpBar") continue;
+                    if (!slider.gameObject.activeInHierarchy) continue;
+                    return slider.transform as RectTransform;
+                }
+            }
+
+            Player player = Player.Resolve();
+            if (player != null && player.hpBar != null && player.hpBar.gameObject.activeInHierarchy)
+                return player.hpBar.transform as RectTransform;
+            return null;
         }
 
         bool TryPlayerStackOrigin(out Vector2 origin)

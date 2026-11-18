@@ -54,6 +54,10 @@ namespace Battle.UI
             public readonly string Caption;
             public readonly List<CardMove> Moves;
             public readonly List<CombatNote> Combat;
+            public readonly List<Battle.ComboSkillDef> AwakenCombos = new List<Battle.ComboSkillDef>();
+            public int EnemyAliveIndex = -1;
+            public int AttackIndex = -1;
+            public int DisruptionIndex = -1;
             public bool HasCaption => HasNumber || !string.IsNullOrEmpty(Caption);
             public bool HasMoves => Moves != null && Moves.Count > 0;
             public bool HasCombat => Combat != null && Combat.Count > 0;
@@ -114,6 +118,7 @@ namespace Battle.UI
         static int _combatTargetId = -1;
         static bool _capturingMoves;
         static bool _capturingCombat;
+        static int _awakenEntryId = -1;
         static bool _logDraws = true;
         static bool _logGuard = true;
 
@@ -140,17 +145,25 @@ namespace Battle.UI
             _capturingCombat = false;
             _moveTargetId = -1;
             _combatTargetId = -1;
+            _awakenEntryId = -1;
             if (_entries.Count == 0) return;
             _entries.Clear();
             Changed?.Invoke();
         }
 
-        public static int RecordEnemyAttack(Sprite portrait, int damage, int monsterIndex, string enemyName)
+        public static int RecordEnemyAttack(Sprite portrait, int damage, int monsterIndex, string enemyName, int attackIndex = -1)
         {
             if (!InBattle) return -1;
             Sprite attack = Load("UI/Tab/UI_Icon_Attack");
             if (portrait == null) portrait = attack;
-            return Push(Kind.Enemy, portrait, attack, true, damage, enemyName, MonsterMark(monsterIndex), null, TakeCombat());
+            int id = Push(Kind.Enemy, portrait, attack, true, damage, enemyName, MonsterMark(monsterIndex), null, TakeCombat());
+            Entry entry = Find(id);
+            if (entry != null)
+            {
+                entry.EnemyAliveIndex = monsterIndex;
+                entry.AttackIndex = attackIndex;
+            }
+            return id;
         }
 
         public static void RecordDisruption(int action, Sprite portrait, int monsterIndex, string enemyName)
@@ -158,7 +171,11 @@ namespace Battle.UI
             if (!InBattle) return;
             Sprite icon = Load("UI/Tab/UI_Icon_Interference");
             if (portrait == null) portrait = icon;
-            Push(Kind.Enemy, portrait, icon, false, 0, enemyName, MonsterMark(monsterIndex));
+            int id = Push(Kind.Enemy, portrait, icon, false, 0, enemyName, MonsterMark(monsterIndex));
+            Entry entry = Find(id);
+            if (entry == null) return;
+            entry.EnemyAliveIndex = monsterIndex;
+            entry.DisruptionIndex = action;
         }
 
         public static int RecordEnemyBurn(Sprite portrait, int damage, string enemyName)
@@ -371,7 +388,15 @@ namespace Battle.UI
             if (!InBattle) return;
             if (icon == null) icon = Load("UI/Tab/각성");
             if (icon == null) icon = Load("UI/AwakenGauge/awaken_icon");
-            Push(Kind.Awaken, icon, null, false, 0, "각성", null);
+            _awakenEntryId = Push(Kind.Awaken, icon, null, false, 0, "각성", null);
+        }
+
+        public static void NoteAwakenCombo(Battle.ComboSkillDef skill)
+        {
+            if (skill == null) return;
+            Entry entry = Find(_awakenEntryId);
+            if (entry == null) return;
+            entry.AwakenCombos.Add(skill);
         }
 
         public static void RecordRelic(Sprite icon, string relicName)

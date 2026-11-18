@@ -30221,6 +30221,14 @@ MonoBehaviour:
   patternBarSize: {x: 271.3, y: 48.7}
   patternTextPosition: {x: 72.7, y: -22}
   patternTextSize: {x: 198.6, y: 48.7}
+  disruptionFont: {fileID: 11400000, guid: 6e8a3b84979cd7947b757bfd089bba8b, type: 2}
+  disruptionFontSize: 36
+  disruptionColor: {r: 0.95686275, g: 0.80784315, b: 0.5529412, a: 1}
+  disruptionAlignment: 513
+  disruptionOffset: {x: 31.4, y: 18.3}
+  disruptionLabelSize: {x: 120, y: 40}
+  disruptionOutlineWidth: 0.369
+  disruptionOutlineColor: {r: 0, g: 0, b: 0, a: 1}
 --- !u!1 &1097681548
 GameObject:
   m_ObjectHideFlags: 0
@@ -35633,6 +35641,8 @@ MonoBehaviour:
   gap: 10
   slideSeconds: 0.32
   popupLayoutPreview: 0
+  comboOverflowOutlineWidth: 0.061
+  comboOverflowOutlineColor: {r: 0, g: 0, b: 0, a: 1}
   deckCardOffset: {x: 0, y: -181.9}
   drawCardOffset: {x: -457.3, y: -92.8}
   handCardOffset: {x: 0, y: 145.5}

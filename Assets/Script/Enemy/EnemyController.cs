@@ -476,13 +476,15 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         int hitCount;
 
         int[] atkSeq = EffectiveAttackSequence();
+        int attackIndex = -1;
         if (Battle.NewBattleController.Instance != null && atkSeq != null && atkSeq.Length > 0)
         {
             // 엑셀 1차/2차/3차 공격을 순차 반복(비어 있으면 인스펙터 폴백 시퀀스)
-            damagePerHit = atkSeq[_newSystemAttackIndex % atkSeq.Length];
+            attackIndex = _newSystemAttackIndex % atkSeq.Length;
+            damagePerHit = atkSeq[attackIndex];
             hitCount = 1;
             _newSystemAttackIndex++;
-            Debug.Log($"[적 공격] 시퀀스 인덱스={_newSystemAttackIndex - 1}, 피해={damagePerHit}");
+            Debug.Log($"[적 공격] 시퀀스 인덱스={attackIndex}, 피해={damagePerHit}");
         }
         else
         {
@@ -514,7 +516,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
         if (player != null)
         {
-            StartCoroutine(ExecuteMultiHit(hitCount, damagePerHit));
+            StartCoroutine(ExecuteMultiHit(hitCount, damagePerHit, attackIndex));
         }
         else
         {
@@ -584,7 +586,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         return true;
     }
     // 공격 모션과 함께 지정 횟수만큼 연타 피해를 가한다
-    IEnumerator ExecuteMultiHit(int count, int damage)
+    IEnumerator ExecuteMultiHit(int count, int damage, int attackIndex)
     {
         // 공격 모션이 있으면 임팩트(타격 프레임) 순간까지 기다렸다가 피해를 넣는다 —
         // 3D 뷰는 이 순간 히트스톱(정지 후 재개)을 걸므로, 피해 숫자/화면 플래시가 '멈춘 프레임'에 맞춰 터진다.
@@ -615,7 +617,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             player.TakeDamage(damage, "enemy_attack");
             Sprite portrait = stat != null && stat.Data != null ? stat.Data.enemySprite : null;
             string enemyName = stat != null && stat.Data != null ? stat.Data.enemyName : null;
-            _lastAttackLogId = Battle.UI.BattleLog.RecordEnemyAttack(portrait, damage, EnemyCombatParty.AliveIndexOf(this), enemyName);
+            _lastAttackLogId = Battle.UI.BattleLog.RecordEnemyAttack(portrait, damage, EnemyCombatParty.AliveIndexOf(this), enemyName, attackIndex);
             // 공격 모션이 있으면 마지막(임팩트) 프레임에서만 이펙트(이벤트로 처리). 모션이 없을 때만 시작 시 폴백 재생.
             if (view == null || !view.HasAttackMotion) PlayAttackVfx();
 

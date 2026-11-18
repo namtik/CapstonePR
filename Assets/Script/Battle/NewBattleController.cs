@@ -1786,6 +1786,7 @@ namespace Battle
                 if (skill.Matches(_comboInput))
                 {
                     _queuedComboSkills.Add(skill);
+                    Battle.UI.BattleLog.NoteAwakenCombo(skill);
                     if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_SECONDS;
                     Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 {COMBO_REUSE_SECONDS:0}초)");
                     return true;

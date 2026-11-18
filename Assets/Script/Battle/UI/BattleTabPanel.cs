@@ -155,11 +155,36 @@ namespace Battle.UI
         [SerializeField] private Vector2 patternTextPosition = new Vector2(72.7f, 0f);
         [SerializeField] private Vector2 patternTextSize = new Vector2(198.6f, 48.7f);
 
+        [Header("방해 기록")]
+        [Tooltip("방해행동 기록에 커서를 올렸을 때, 적 번호 자리에 뜨는 글꼴. 비우면 이름 글꼴을 사용합니다.")]
+        [SerializeField] private TMP_FontAsset disruptionFont;
+        [Tooltip("방해 기록 글자 크기.")]
+        [SerializeField] private float disruptionFontSize = 24f;
+        [Tooltip("방해 기록 글자 색.")]
+        [SerializeField] private Color disruptionColor = new Color(0.96f, 0.94f, 0.9f, 1f);
+        [Tooltip("방해 기록 글자 정렬.")]
+        [SerializeField] private TextAlignmentOptions disruptionAlignment = TextAlignmentOptions.Center;
+        [Tooltip("적 번호 자리 가운데에서 얼마나 옮길지. X는 오른쪽, Y는 위입니다.")]
+        [SerializeField] private Vector2 disruptionOffset = Vector2.zero;
+        [Tooltip("방해 기록 글자 칸 크기.")]
+        [SerializeField] private Vector2 disruptionLabelSize = new Vector2(120f, 40f);
+        [Tooltip("방해 기록 외곽선 두께. 0이면 외곽선이 없습니다.")]
+        [Range(0f, 1f)]
+        [SerializeField] private float disruptionOutlineWidth = 0f;
+        [Tooltip("방해 기록 외곽선 색.")]
+        [SerializeField] private Color disruptionOutlineColor = Color.black;
+
         readonly List<EnemyController> _alive = new List<EnemyController>();
         readonly StringBuilder _label = new StringBuilder();
         Sprite _portraitFrame;
         Sprite _logBarSprite;
         Sprite _powerBarSprite;
+        Sprite _attackRing;
+        Sprite _attackBright;
+        int _highlightAlive = -1;
+        int _highlightAttack = -1;
+        int _disruptionAlive = -1;
+        int _disruptionAction = -1;
 
         public bool IsVisible => panelRoot != null && panelRoot.activeSelf;
 
@@ -259,9 +284,10 @@ namespace Battle.UI
             }
 
             ApplySlotNumber(column);
+            ApplyDisruptionLabel(column, enemyIndex);
             ApplyName(column, show ? data.enemyName : string.Empty, show);
             ApplyHp(column, stat, show);
-            ApplyAttack(column, data, show);
+            ApplyAttack(column, data, show, enemyIndex);
             ApplyStatStyle(column.absorbText, false);
             ApplyStatStyle(column.interferenceText, true);
             SetText(column.absorbText, show ? data.흡수수치.ToString() : string.Empty);
@@ -562,12 +588,17 @@ namespace Battle.UI
             text.sizeDelta = size;
         }
 
-        void ApplyAttack(MonsterInfoColumn column, EnemyData data, bool show)
+        void ApplyAttack(MonsterInfoColumn column, EnemyData data, bool show, int enemyIndex)
         {
             TMP_Text[] slots = EnsureAttackSlots(column);
             int[] sequence = show ? data.attackSequence : null;
             int count = sequence != null ? sequence.Length : 0;
             if (slots == null) return;
+
+            int selected = -1;
+            if (show && enemyIndex >= 0 && enemyIndex == _highlightAlive && _highlightAttack >= 0 && count > 0)
+                selected = _highlightAttack < 2 || count <= 3 ? _highlightAttack % count : 2;
+            if (selected >= slots.Length) selected = slots.Length - 1;
 
             for (int i = 0; i < slots.Length; i++)
             {
@@ -581,10 +612,145 @@ namespace Battle.UI
                     : JoinTail(sequence, i);
                 if (slot.text != value) slot.text = value;
                 ApplyStatStyle(slot, false);
+                SetSlotAboveDim(slot, selected == i);
             }
 
             if (column.attackText != null && column.attackText.gameObject.activeSelf)
                 column.attackText.gameObject.SetActive(false);
+
+            TMP_Text ringTarget = selected >= 0 && selected < slots.Length ? slots[selected] : null;
+            if (ringTarget != null && !ringTarget.gameObject.activeSelf) ringTarget = null;
+            PlaceAttackRing(slots, ringTarget);
+        }
+
+        static void SetSlotAboveDim(TMP_Text slot, bool above)
+        {
+            if (slot == null) return;
+            Canvas canvas = slot.GetComponent<Canvas>();
+            if (!above)
+            {
+                if (canvas != null) canvas.overrideSorting = false;
+                return;
+            }
+
+            Canvas root = slot.canvas != null ? slot.canvas.rootCanvas : null;
+            if (canvas == null) canvas = slot.gameObject.AddComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = (root != null ? root.sortingOrder : 0) + 50;
+            canvas.additionalShaderChannels |=
+                AdditionalCanvasShaderChannels.TexCoord1
+                | AdditionalCanvasShaderChannels.Normal
+                | AdditionalCanvasShaderChannels.Tangent;
+        }
+
+        void PlaceAttackRing(TMP_Text[] slots, TMP_Text slot)
+        {
+            if (slots == null) return;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] == null || slots[i] == slot) continue;
+                HideMark(slots[i].transform, "AttackRing");
+                HideMark(slots[i].transform, "AttackBright");
+            }
+            if (slot == null) return;
+
+            float diameter = Mathf.Max(slot.rectTransform.sizeDelta.y, 36f) * 1.15f;
+            PlaceMark(slot, "AttackRing", _attackRing != null ? _attackRing : (_attackRing = Resources.Load<Sprite>("UI/Tab/AttackRing")), diameter, Color.white, false);
+            PlaceMark(slot, "AttackBright", BrightCircle(), diameter * 0.72f, new Color(1f, 0.96f, 0.88f, 0.72f), true);
+        }
+
+        static void HideMark(Transform parent, string markName)
+        {
+            Transform mark = parent.Find(markName);
+            if (mark != null) mark.gameObject.SetActive(false);
+        }
+
+        void PlaceMark(TMP_Text slot, string markName, Sprite sprite, float diameter, Color color, bool behindText)
+        {
+            Transform found = slot.transform.Find(markName);
+            Image image;
+            RectTransform rect;
+            if (found == null)
+            {
+                var go = new GameObject(markName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.layer = slot.gameObject.layer;
+                go.transform.SetParent(slot.transform, false);
+                image = go.GetComponent<Image>();
+                image.raycastTarget = false;
+                rect = go.GetComponent<RectTransform>();
+            }
+            else
+            {
+                found.gameObject.SetActive(true);
+                image = found.GetComponent<Image>();
+                rect = found as RectTransform;
+            }
+
+            if (image != null)
+            {
+                image.sprite = sprite;
+                image.color = color;
+                image.preserveAspect = true;
+                image.raycastTarget = false;
+            }
+            if (rect == null) return;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(diameter, diameter);
+            rect.anchoredPosition = Vector2.zero;
+            rect.localScale = Vector3.one;
+
+            Canvas canvas = rect.GetComponent<Canvas>();
+            if (behindText)
+            {
+                if (canvas == null) canvas = rect.gameObject.AddComponent<Canvas>();
+                Canvas root = slot.canvas != null ? slot.canvas.rootCanvas : null;
+                canvas.overrideSorting = true;
+                canvas.sortingOrder = (root != null ? root.sortingOrder : 0) + 40;
+            }
+            else if (canvas != null)
+            {
+                canvas.overrideSorting = false;
+            }
+            rect.SetAsLastSibling();
+        }
+
+        Sprite BrightCircle()
+        {
+            if (_attackBright != null) return _attackBright;
+            const int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            float radius = size * 0.5f - 0.5f;
+            var center = new Vector2(radius, radius);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float edge = Vector2.Distance(new Vector2(x, y), center) / radius;
+                    float alpha = Mathf.Clamp01(1f - Mathf.InverseLerp(0.72f, 1f, edge));
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply();
+            _attackBright = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), 100f);
+            return _attackBright;
+        }
+
+        public void HighlightEnemyAttack(int aliveIndex, int attackIndex)
+        {
+            _highlightAlive = aliveIndex;
+            _highlightAttack = attackIndex;
+            RefreshEnemyPortraits();
+        }
+
+        public void ClearAttackHighlight()
+        {
+            if (_highlightAlive < 0 && _highlightAttack < 0) return;
+            _highlightAlive = -1;
+            _highlightAttack = -1;
+            RefreshEnemyPortraits();
         }
 
         static string JoinTail(int[] sequence, int start)
@@ -782,6 +948,85 @@ namespace Battle.UI
             if (number != null) number.gameObject.SetActive(false);
         }
 
+        public void ShowDisruptionLabel(int aliveIndex, int action)
+        {
+            _disruptionAlive = aliveIndex;
+            _disruptionAction = action;
+            RefreshEnemyPortraits();
+        }
+
+        public void ClearDisruptionLabel()
+        {
+            if (_disruptionAlive < 0 && _disruptionAction < 0) return;
+            _disruptionAlive = -1;
+            _disruptionAction = -1;
+            RefreshEnemyPortraits();
+        }
+
+        void ApplyDisruptionLabel(MonsterInfoColumn column, int enemyIndex)
+        {
+            bool show = enemyIndex >= 0 && enemyIndex == _disruptionAlive && _disruptionAction >= 0;
+            TMP_Text label = EnsureDisruptionLabel(column);
+            if (label == null) return;
+            label.gameObject.SetActive(show);
+            SetSlotAboveDim(label, show);
+            if (!show) return;
+
+            string value = DisruptionName(_disruptionAction);
+            if (label.text != value) label.text = value;
+            TMP_FontAsset font = disruptionFont != null ? disruptionFont : nameFont != null ? nameFont : statFont;
+            if (font != null && label.font != font) label.font = font;
+            label.fontSize = Mathf.Max(8f, disruptionFontSize);
+            label.color = disruptionColor;
+            label.alignment = disruptionAlignment;
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.raycastTarget = false;
+            ApplyOutline(label, disruptionOutlineWidth, disruptionOutlineColor);
+
+            RectTransform number = column.slotNumber != null ? column.slotNumber.rectTransform : null;
+            RectTransform rect = label.rectTransform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            Vector2 corner = number != null ? number.anchoredPosition : new Vector2(14.4f, -10f);
+            Vector2 size = number != null ? number.sizeDelta : new Vector2(44f, 61f);
+            rect.sizeDelta = new Vector2(Mathf.Max(8f, disruptionLabelSize.x), Mathf.Max(8f, disruptionLabelSize.y));
+            rect.anchoredPosition = corner + new Vector2(size.x * 0.5f, -size.y * 0.5f) + disruptionOffset;
+            rect.SetAsLastSibling();
+        }
+
+        TMP_Text EnsureDisruptionLabel(MonsterInfoColumn column)
+        {
+            if (column.enemyImage == null && column.slotNumber == null) return null;
+            Transform parent = column.slotNumber != null
+                ? column.slotNumber.transform.parent
+                : column.enemyImage.transform.parent;
+            if (parent == null) return null;
+            Transform found = parent.Find("DisruptionLabel");
+            if (found != null) return found.GetComponent<TMP_Text>();
+            GameObject go = new GameObject("DisruptionLabel", typeof(RectTransform));
+            go.layer = parent.gameObject.layer;
+            go.transform.SetParent(parent, false);
+            TMP_Text label = go.AddComponent<TextMeshProUGUI>();
+            label.raycastTarget = false;
+            return label;
+        }
+
+        static string DisruptionName(int action)
+        {
+            switch (action)
+            {
+                case 0: return "저주";
+                case 1: return "탈진";
+                case 2: return "흡수";
+                case 3: return "강화";
+                case 4: return "회복";
+                case 5: return "버리기";
+                default: return string.Empty;
+            }
+        }
+
         static void ApplyOutline(TMP_Text label, float width, Color color)
         {
             float outline = Mathf.Clamp01(width);
@@ -897,6 +1142,12 @@ namespace Battle.UI
                 if (column == slot) return i;
             }
             return -1;
+        }
+
+        public bool TryGetFrameRect(out RectTransform frame)
+        {
+            frame = panelRoot != null ? panelRoot.transform as RectTransform : null;
+            return frame != null && frame.gameObject.activeInHierarchy;
         }
 
         public bool TryGetEnemyPortrait(int aliveIndex, out RectTransform portrait)

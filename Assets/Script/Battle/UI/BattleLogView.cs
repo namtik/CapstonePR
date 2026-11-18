@@ -57,6 +57,13 @@ namespace Battle.UI
         [Tooltip("켜 두면 플레이 중에 화살표 6개와 구역마다 카드 5장이 계속 떠 있습니다. 위치 맞춘 뒤 끄면 됩니다.")]
         [SerializeField] bool popupLayoutPreview = true;
 
+        [Header("콤보 20개 초과")]
+        [Tooltip("초과 개수 외곽선 두께. 0이면 외곽선이 없습니다.")]
+        [Range(0f, 1f)]
+        [SerializeField] float comboOverflowOutlineWidth = 0.2f;
+        [Tooltip("초과 개수 외곽선 색.")]
+        [SerializeField] Color comboOverflowOutlineColor = Color.black;
+
         [Header("팝업 카드 위치")]
         [Tooltip("기본 위치에서 더하는 값입니다. X 양수는 오른쪽, Y 양수는 위입니다.")]
         [SerializeField] Vector2 deckCardOffset;
@@ -119,6 +126,8 @@ namespace Battle.UI
         TextAlignmentOptions _appliedLabelAlignment;
         float _appliedLabelOutlineWidth;
         Color _appliedLabelOutlineColor;
+        float _appliedComboOverflowOutlineWidth = -1f;
+        Color _appliedComboOverflowOutlineColor;
 
         RectTransform _rect;
         readonly Dictionary<int, Widget> _widgets = new Dictionary<int, Widget>();
@@ -162,6 +171,7 @@ namespace Battle.UI
 
         void Update()
         {
+            ApplyComboOverflowOutline();
             if (SettingsDrifted())
             {
                 DestroyAllWidgets();
@@ -174,6 +184,21 @@ namespace Battle.UI
             float t = 1f - (1f - _anim) * (1f - _anim);
             Apply(t);
             if (_anim >= 1f) DestroyDying();
+        }
+
+        void ApplyComboOverflowOutline()
+        {
+            if (Mathf.Approximately(_appliedComboOverflowOutlineWidth, comboOverflowOutlineWidth)
+                && _appliedComboOverflowOutlineColor == comboOverflowOutlineColor)
+                return;
+            PushComboOverflowOutline();
+        }
+
+        void PushComboOverflowOutline()
+        {
+            _appliedComboOverflowOutlineWidth = comboOverflowOutlineWidth;
+            _appliedComboOverflowOutlineColor = comboOverflowOutlineColor;
+            BattleLogCombatPopup.SetOverflowOutline(comboOverflowOutlineWidth, comboOverflowOutlineColor);
         }
 
         void HandleChanged()
@@ -386,12 +411,65 @@ namespace Battle.UI
             BattleLogMovePopup.ShowPreview(this, tune);
         }
 
+        public void ToggleMaxComboPreview()
+        {
+            if (BattleLogCombatPopup.IsMaxComboPreviewOpen)
+            {
+                BattleLogCombatPopup.HideMaxComboPreview();
+                return;
+            }
+
+            BattleTabPanel panel = GetComponentInParent<BattleTabPanel>();
+            if (panel != null) panel.Show();
+            BattleLogCombatPopup.ShowMaxComboPreview(this);
+        }
+
+        public void ToggleOverflowComboPreview()
+        {
+            if (BattleLogCombatPopup.IsOverflowComboPreviewOpen)
+            {
+                BattleLogCombatPopup.HideOverflowComboPreview();
+                return;
+            }
+
+            BattleTabPanel panel = GetComponentInParent<BattleTabPanel>();
+            if (panel != null) panel.Show();
+            PushComboOverflowOutline();
+            BattleLogCombatPopup.ShowOverflowComboPreview(this);
+        }
+
         void ShowMoves(int entryId)
         {
             if (popupLayoutPreview) return;
             TMP_FontAsset used = labelFont != null ? labelFont : font;
             BattleLogMovePopup.Show(entryId, used, this, CurrentTune());
             BattleLogCombatPopup.Show(entryId, this);
+            ShowAttackHighlight(entryId);
+        }
+
+        void ShowAttackHighlight(int entryId)
+        {
+            BattleTabPanel panel = GetComponentInParent<BattleTabPanel>();
+            if (panel == null) return;
+            BattleLog.Entry entry = BattleLog.Find(entryId);
+            if (entry != null && entry.AttackIndex >= 0)
+                panel.HighlightEnemyAttack(entry.EnemyAliveIndex, entry.AttackIndex);
+            else
+                panel.ClearAttackHighlight();
+            if (entry != null && entry.DisruptionIndex >= 0)
+                panel.ShowDisruptionLabel(entry.EnemyAliveIndex, entry.DisruptionIndex);
+            else
+                panel.ClearDisruptionLabel();
+        }
+
+        void ClearAttackHighlight()
+        {
+            BattleTabPanel panel = GetComponentInParent<BattleTabPanel>();
+            if (panel != null)
+            {
+                panel.ClearAttackHighlight();
+                panel.ClearDisruptionLabel();
+            }
         }
 
         BattleLogMovePopup.Tune CurrentTune()
@@ -454,12 +532,14 @@ namespace Battle.UI
             {
                 BattleLogMovePopup.Hide(EntryId);
                 BattleLogCombatPopup.Hide(EntryId);
+                if (View != null) View.ClearAttackHighlight();
             }
 
             void OnDisable()
             {
                 BattleLogMovePopup.Hide(EntryId);
                 BattleLogCombatPopup.Hide(EntryId);
+                if (View != null) View.ClearAttackHighlight();
             }
         }
 
