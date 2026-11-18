@@ -1025,6 +1025,10 @@ namespace Battle.UI
 
         static void ApplyOutline(TMP_Text label, float width, Color color)
         {
+            // 막 만든 글자는 재질과 캔버스 렌더러가 아직 없다. 그때 외곽선을 넣으면 예외가 난다.
+            if (label == null || label.font == null || label.fontSharedMaterial == null || label.canvasRenderer == null)
+                return;
+
             float outline = Mathf.Clamp01(width);
             if (!Mathf.Approximately(label.outlineWidth, outline)) label.outlineWidth = outline;
             Color32 outlineColor = color;
