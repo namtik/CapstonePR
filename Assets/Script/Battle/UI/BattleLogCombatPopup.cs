@@ -67,12 +67,20 @@ namespace Battle.UI
         public static void Show(int entryId, Component anchor)
         {
             BattleLog.Entry entry = BattleLog.Find(entryId);
-            if (entry == null || (!entry.HasCombat && entry.DisruptionIndex < 0 && entry.Category != BattleLog.Kind.Awaken))
+            if (entry == null || !ShouldOpen(entry))
             {
                 Hide(entryId);
                 return;
             }
             Ensure(anchor).Open(entry);
+        }
+
+        // 효과 없는 카드 기록도 커서를 올리면 같은 어두운 화면을 띄운다.
+        static bool ShouldOpen(BattleLog.Entry entry)
+        {
+            if (entry.HasCombat || entry.DisruptionIndex >= 0 || entry.Category == BattleLog.Kind.Awaken)
+                return true;
+            return entry.Category == BattleLog.Kind.Card && !entry.HasMoves;
         }
 
         public static void Hide(int entryId)
@@ -521,7 +529,7 @@ namespace Battle.UI
 
         static Vector2 Zone(BattleLog.CombatKind kind, Vector2 center, Vector2 size)
         {
-            float foot = center.y - size.y * 0.5f + 24f;
+            float foot = center.y - size.y * 0.5f + 78f;
             if (kind == BattleLog.CombatKind.Heal) return new Vector2(center.x - size.x * 0.16f, foot);
             if (kind == BattleLog.CombatKind.Freeze) return new Vector2(center.x - size.x * 0.34f, foot);
             if (kind == BattleLog.CombatKind.Burn) return new Vector2(center.x + size.x * 0.34f, foot);
@@ -751,7 +759,7 @@ namespace Battle.UI
 #endif
             }
             if (_attack == null) _attack = Resources.Load<Sprite>("UI/Tab/EnemyAttackIcon");
-            if (_burn == null) _burn = Resources.Load<Sprite>("UI/Tab/UI_Icon_Burn");
+            if (_burn == null) _burn = StatusIconDatabase.LoadIcon("burn");
             if (_freeze == null) _freeze = Resources.Load<Sprite>("VFX/Cartoon Coffee/2D Deluxe VFX/Textures/Snowflake_001");
             if (_shield == null) _shield = Resources.Load<Sprite>("UI/Tab/Shield");
             if (_launcher == null) _launcher = Resources.Load<Sprite>("UI/Tab/Launcher");

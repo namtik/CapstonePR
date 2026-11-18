@@ -341,12 +341,18 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     // 상태이상 스택을 지정 값으로 설정한다
     public void SetStatus(string type, int amount)
     {
+        SetStatus(type, amount, true);
+    }
+
+    // log가 꺼지면 값은 바꾸되 전투 기록에는 남기지 않는다.
+    public void SetStatus(string type, int amount, bool log)
+    {
         if (stat.statusEffects.ContainsKey(type))
         {
             int before = stat.statusEffects[type];
             int v = Mathf.Clamp(amount, 0, 999);
             stat.statusEffects[type] = v;
-            NoteStackChange(type, v - before);
+            if (log) NoteStackChange(type, v - before);
             OnStatusChanged?.Invoke(type, v);
         }
     }
@@ -428,8 +434,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     {
         _nextAttackBuffed = true;
         UpdateAttackPreviewForNewSystem(); // 강화 발동 즉시 공격 예고에 +50% 반영
+        RefreshPowerUpIcon();
     }
     public bool IsNextAttackBuffed => _nextAttackBuffed; // 다음 공격 강화 적용 여부
+
+    void RefreshPowerUpIcon()
+    {
+        EnemyPowerUpMark.Apply(view != null ? view.HpBarRect : null, _nextAttackBuffed);
+    }
 
     // 방해행동 발동 시 몬스터 동작 애니메이션을 재생한다(강화·회복=버프 / 저주·탈진·흡수=디버프)
     public void PlayDisruptionMotion(bool isBuff)
@@ -506,6 +518,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         {
             damagePerHit = Mathf.CeilToInt(damagePerHit * 1.5f);
             _nextAttackBuffed = false;
+            RefreshPowerUpIcon();
             view?.ShowMidPatternNotice("강화!");
             Debug.Log($"[적 강화] 다음 공격 +50% → {damagePerHit}");
         }
@@ -560,8 +573,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         string burnName = stat.Data != null ? stat.Data.enemyName : null;
         int slot = EnemyCombatParty.AliveIndexOf(this);
         int burnLog = Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, burn, burnName);
-        Battle.UI.BattleLog.AppendCombat(_lastAttackLogId, false, slot, Battle.UI.BattleLog.CombatKind.Damage, burn, false);
-        Battle.UI.BattleLog.AppendCombat(burnLog, false, slot, Battle.UI.BattleLog.CombatKind.Damage, burn, false);
+        Battle.UI.BattleLog.AppendCombat(_lastAttackLogId, false, slot, Battle.UI.BattleLog.CombatKind.Burn, burn, false);
+        Battle.UI.BattleLog.AppendCombat(burnLog, false, slot, Battle.UI.BattleLog.CombatKind.Burn, burn, false);
 
         // 데미지 숫자(화상 색) + 화상 알림 텍스트
         if (view != null)

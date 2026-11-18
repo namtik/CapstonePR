@@ -14,4 +14,35 @@ public class StatusIconInfo
 public class StatusIconDatabase : ScriptableObject
 {
     public List<StatusIconInfo> icons = new List<StatusIconInfo>();   // 상태이상 아이콘 목록
+
+    public Sprite GetIcon(string key)
+    {
+        if (icons == null || string.IsNullOrEmpty(key)) return null;
+        for (int i = 0; i < icons.Count; i++)
+        {
+            StatusIconInfo info = icons[i];
+            if (info == null || info.iconSprite == null) continue;
+            if (string.Equals(info.statusKey, key, System.StringComparison.OrdinalIgnoreCase))
+                return info.iconSprite;
+        }
+        return null;
+    }
+
+    // 씬에 연결된 데이터베이스의 아이콘. burn은 Sprite/UI/Burn이다.
+    public static Sprite LoadIcon(string key)
+    {
+        StatusIconDatabase[] all = Resources.FindObjectsOfTypeAll<StatusIconDatabase>();
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] == null) continue;
+            Sprite sprite = all[i].GetIcon(key);
+            if (sprite != null) return sprite;
+        }
+#if UNITY_EDITOR
+        StatusIconDatabase asset = UnityEditor.AssetDatabase.LoadAssetAtPath<StatusIconDatabase>(
+            "Assets/Script/UI/StatusIconDatabase.asset");
+        if (asset != null) return asset.GetIcon(key);
+#endif
+        return null;
+    }
 }

@@ -845,6 +845,7 @@ namespace Battle.UI
         public void OnBeginDrag(PointerEventData eventData)
         {
             if (Card == null || Hud == null) return;
+            if (Hud.IsHandBlocked) return;
             CancelDrawIntro(); // 등장 연출 중이면 즉시 홈으로 정착
 
             // hover 상태였으면 오프셋/형제 순서를 먼저 복원
@@ -961,6 +962,7 @@ namespace Battle.UI
         public void OnPointerEnter(PointerEventData eventData)
         {
             if (Hud == null) return;
+            if (Hud.IsHandBlocked) return;
             if (Card == null || _isDragging) return;
 
             _isHovering = true;
@@ -1012,9 +1014,24 @@ namespace Battle.UI
         }
 
         // 클릭 처리(선택/픽커는 단일 클릭, 일반은 더블클릭 사용)
+        public void ReleasePointer()
+        {
+            if (Hud == null) return;
+            if (_isDragging)
+            {
+                _isDragging = false;
+                _targetingArmed = false;
+                if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
+                Hud.HideEnemyTargeting();
+                ReturnHome();
+            }
+            if (_isHovering) OnPointerExit(null);
+        }
+
         public void OnPointerClick(PointerEventData eventData)
         {
             if (Card == null || Hud == null) return;
+            if (Hud.IsHandBlocked) return;
             if (_isDragging) return; // 드래그 중 클릭 무시
 
             // 선택/픽커 모드는 단일 클릭으로 선택

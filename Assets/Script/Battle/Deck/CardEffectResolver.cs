@@ -119,6 +119,7 @@ namespace Battle.Deck
 
         bool _triggeringOtherCards; // 다른 카드 효과 발동 재귀 가드
         bool _inLifecycleTrigger;   // 생애주기 트리거 재귀 가드
+        readonly HashSet<CardInstance> _selfLogCards = new HashSet<CardInstance>();
 
         // 효과 컨텍스트 바인딩
         public void Bind(CardEffectContext ctx)
@@ -252,24 +253,65 @@ namespace Battle.Deck
 
             if (card == null) return;
             Ctx.exhaustedCardCount++;
-            var effects = CardDatabase.GetEffects(card.Id);
-            if (effects == null) return;
-            for (int i = 0; i < effects.Count; i++)
-            {
-                var eff = effects[i];
-                string when = (eff.when ?? "").Trim().ToUpperInvariant();
-                if (when != "ON_SELF_EXHAUST") continue;
-                var dummyResult = new ResolveResult();
-                if (!EvaluateCondition(eff.ifCond, card, ref dummyResult)) continue;
-                ApplyAction(eff, card, ref dummyResult);
-            }
+            RunLoggedSelfTrigger(card, "ON_SELF_EXHAUST");
         }
 
         // 패에서 버려질 때 생애주기 트리거 처리
         public void NotifyCardDiscardedFromHand(CardInstance card)
         {
-            RunWhenTriggers(card, "ON_SELF_DISCARDED");
+            RunLoggedSelfTrigger(card, "ON_SELF_DISCARDED");
             RunWhenTriggers(card, "ON_CARD_MOVED_TO_DISCARD");
+        }
+
+        // 이 카드 자신의 소멸·버림 효과는 사용한 카드와 따로 기록한다.
+        void RunLoggedSelfTrigger(CardInstance card, string whenKey)
+        {
+            if (card == null || card.data == null || Ctx == null) return;
+            if (!HasSelfTrigger(card, whenKey)) return;
+            if (!_selfLogCards.Add(card)) return;
+
+            var scope = Battle.UI.BattleLog.SuspendCapture();
+            bool logGuard = Battle.UI.BattleLog.GuardLoggingEnabled;
+            Battle.UI.BattleLog.SetGuardLogging(false);
+            int before = Ctx.player != null ? Mathf.RoundToInt(Ctx.player.guard) : 0;
+            Battle.UI.BattleLog.PushGuardFrame();
+            var dummy = new ResolveResult();
+            try
+            {
+                var effects = CardDatabase.GetEffects(card.Id);
+                if (effects != null)
+                {
+                    for (int i = 0; i < effects.Count; i++)
+                    {
+                        var eff = effects[i];
+                        if ((eff.when ?? "").Trim().ToUpperInvariant() != whenKey) continue;
+                        if (!EvaluateCondition(eff.ifCond, card, ref dummy)) continue;
+                        ApplyAction(eff, card, ref dummy);
+                    }
+                }
+            }
+            finally
+            {
+                int after = Ctx.player != null ? Mathf.RoundToInt(Ctx.player.guard) : before;
+                int raw = Mathf.Max(0, after - before);
+                int nested = Battle.UI.BattleLog.PopGuardFrame();
+                int mine = Mathf.Max(0, raw - nested);
+                Battle.UI.BattleLog.AddGuardFrame(raw);
+                Battle.UI.BattleLog.SetGuardLogging(logGuard);
+                Battle.UI.BattleLog.CommitTriggered(card.data, dummy.totalDamage, mine, scope);
+                _selfLogCards.Remove(card);
+            }
+        }
+
+        bool HasSelfTrigger(CardInstance card, string whenKey)
+        {
+            var effects = CardDatabase.GetEffects(card.Id);
+            if (effects == null) return false;
+            for (int i = 0; i < effects.Count; i++)
+            {
+                if ((effects[i].when ?? "").Trim().ToUpperInvariant() == whenKey) return true;
+            }
+            return false;
         }
 
         // 사용 후 버린 더미로 이동할 때 생애주기 트리거 처리

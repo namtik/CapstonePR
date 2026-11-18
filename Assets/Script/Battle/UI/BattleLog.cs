@@ -111,6 +111,8 @@ namespace Battle.UI
         static readonly List<CardData> _deferredDraws = new List<CardData>();
         static readonly List<CardMove> _moveBuffer = new List<CardMove>();
         static readonly List<CombatNote> _combatBuffer = new List<CombatNote>();
+        static readonly List<PendingPlay> _pendingPlays = new List<PendingPlay>();
+        static readonly Stack<int> _guardFrames = new Stack<int>();
         static int _nextId;
         static int _drawDeferDepth;
         static int _suppressDepth;
@@ -121,6 +123,27 @@ namespace Battle.UI
         static int _awakenEntryId = -1;
         static bool _logDraws = true;
         static bool _logGuard = true;
+
+        // 사용 중인 카드의 기록을 잠깐 치워 두고, 소멸·버림으로 발동한 카드의 효과를 따로 모은다.
+        public struct CaptureScope
+        {
+            public bool Defer;
+            public bool CapturingMoves;
+            public bool CapturingCombat;
+            public int MoveTargetId;
+            public int CombatTargetId;
+            public List<CardMove> Moves;
+            public List<CombatNote> Combat;
+        }
+
+        sealed class PendingPlay
+        {
+            public CardData Data;
+            public int Damage;
+            public int Guard;
+            public List<CardMove> Moves;
+            public List<CombatNote> Combat;
+        }
 
         public static IReadOnlyList<Entry> Entries => _entries;
         public static event Action Changed;
@@ -139,6 +162,8 @@ namespace Battle.UI
             _deferredDraws.Clear();
             _moveBuffer.Clear();
             _combatBuffer.Clear();
+            _pendingPlays.Clear();
+            _guardFrames.Clear();
             _drawDeferDepth = 0;
             _suppressDepth = 0;
             _capturingMoves = false;
@@ -181,7 +206,7 @@ namespace Battle.UI
         public static int RecordEnemyBurn(Sprite portrait, int damage, string enemyName)
         {
             if (!InBattle || damage <= 0) return -1;
-            Sprite burn = Load("UI/Tab/UI_Icon_Burn");
+            Sprite burn = StatusIconDatabase.LoadIcon("burn");
             if (portrait == null) portrait = burn;
             int id = Push(Kind.Enemy, portrait, burn, true, damage, enemyName, null);
             return id;
@@ -193,6 +218,107 @@ namespace Battle.UI
         {
             List<CardMove> moves = TakeMoves();
             List<CombatNote> combat = TakeCombat();
+            int id = Publish(data, damage, guardGained, moves, combat);
+            FlushTriggered();
+            return id;
+        }
+
+        public static bool GuardLoggingEnabled => _logGuard;
+
+        // 발동한 카드가 얻은 방어도를, 그 카드를 일으킨 사용 기록에서 빼기 위해 겹쳐 센다.
+        public static void PushGuardFrame()
+        {
+            _guardFrames.Push(0);
+        }
+
+        public static void AddGuardFrame(int amount)
+        {
+            if (_guardFrames.Count == 0 || amount <= 0) return;
+            int current = _guardFrames.Pop();
+            _guardFrames.Push(current + amount);
+        }
+
+        public static int PopGuardFrame()
+        {
+            if (_guardFrames.Count == 0) return 0;
+            return _guardFrames.Pop();
+        }
+
+        public static CaptureScope SuspendCapture()
+        {
+            var scope = new CaptureScope
+            {
+                Defer = _capturingMoves || _capturingCombat,
+                CapturingMoves = _capturingMoves,
+                CapturingCombat = _capturingCombat,
+                MoveTargetId = _moveTargetId,
+                CombatTargetId = _combatTargetId,
+                Moves = new List<CardMove>(_moveBuffer),
+                Combat = new List<CombatNote>(_combatBuffer)
+            };
+            _moveBuffer.Clear();
+            _combatBuffer.Clear();
+            _capturingMoves = true;
+            _capturingCombat = true;
+            _moveTargetId = -1;
+            _combatTargetId = -1;
+            return scope;
+        }
+
+        // 소멸·버림 효과가 실제로 뭔가 했을 때만 그 카드 기록을 만든다.
+        public static void CommitTriggered(CardData data, int damage, int guard, CaptureScope scope)
+        {
+            bool any = data != null && _suppressDepth == 0
+                && (damage > 0 || guard > 0 || _moveBuffer.Count > 0 || _combatBuffer.Count > 0);
+            if (any)
+            {
+                var moves = new List<CardMove>(_moveBuffer);
+                var combat = new List<CombatNote>(_combatBuffer);
+                if (scope.Defer)
+                    _pendingPlays.Add(new PendingPlay { Data = data, Damage = damage, Guard = guard, Moves = moves, Combat = combat });
+                else
+                {
+                    Publish(data, damage, guard, moves, combat);
+                    FlushTriggered();
+                }
+            }
+            RestoreCapture(scope);
+        }
+
+        static void FlushTriggered()
+        {
+            if (_pendingPlays.Count == 0) return;
+            var batch = new List<PendingPlay>(_pendingPlays);
+            _pendingPlays.Clear();
+            int move = _moveTargetId;
+            int combat = _combatTargetId;
+            bool capMoves = _capturingMoves;
+            bool capCombat = _capturingCombat;
+            for (int i = 0; i < batch.Count; i++)
+            {
+                PendingPlay play = batch[i];
+                Publish(play.Data, play.Damage, play.Guard, play.Moves, play.Combat);
+            }
+            _moveTargetId = move;
+            _combatTargetId = combat;
+            _capturingMoves = capMoves;
+            _capturingCombat = capCombat;
+        }
+
+        static void RestoreCapture(CaptureScope scope)
+        {
+            _moveBuffer.Clear();
+            _combatBuffer.Clear();
+            if (scope.Moves != null) _moveBuffer.AddRange(scope.Moves);
+            if (scope.Combat != null) _combatBuffer.AddRange(scope.Combat);
+            _capturingMoves = scope.CapturingMoves;
+            _capturingCombat = scope.CapturingCombat;
+            _moveTargetId = scope.MoveTargetId;
+            _combatTargetId = scope.CombatTargetId;
+        }
+
+        static int Publish(CardData data, int damage, int guardGained, List<CardMove> moves, List<CombatNote> combat)
+        {
             if (!InBattle || data == null || _suppressDepth > 0) return -1;
             Sprite card = LoadCard(data);
             string cardName = data.displayName;

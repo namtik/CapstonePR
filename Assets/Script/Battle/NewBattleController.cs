@@ -1142,7 +1142,9 @@ namespace Battle
             BattleLog.SetGuardLogging(false);
             BattleLog.BeginDeferDraws();
             BattleLog.BeginMoveCapture();
+            BattleLog.PushGuardFrame();
             CardEffectResolver.ResolveResult result;
+            int triggeredGuard = 0;
             try
             {
                 result = _resolver.Resolve(card);
@@ -1151,9 +1153,12 @@ namespace Battle
             {
                 BattleLog.SetGuardLogging(true);
                 BattleLog.EndDeferDraws();
+                triggeredGuard = BattleLog.PopGuardFrame();
             }
 
             int gained = _player != null ? Mathf.Max(0, Mathf.RoundToInt(_player.guard) - before) : 0;
+            // 소멸·버림으로 발동한 카드가 얻은 방어도는 그 카드 기록에만 남긴다.
+            gained = Mathf.Max(0, gained - triggeredGuard);
             BattleLog.RecordCardPlay(card != null ? card.data : null, result.totalDamage, gained);
             BattleLog.FlushDeferredDraws();
             return result;
@@ -1346,7 +1351,8 @@ namespace Battle
             if (frostAddedByCard > 0 && _enemyStat != null)
             {
                 int frostRemaining = _enemyStat.statusEffects.TryGetValue("frost", out int fr) ? fr : 0;
-                _enemy?.SetStatus("frost", frostRemaining + frostAddedByCard);
+                // 부여 시점에 이미 기록했다. 게이지 계산용으로 되돌린 값을 복원할 때는 다시 남기지 않는다.
+                _enemy?.SetStatus("frost", frostRemaining + frostAddedByCard, false);
             }
 
             if (result.skipNextGaugeCost) _skipNextGaugeCount++;

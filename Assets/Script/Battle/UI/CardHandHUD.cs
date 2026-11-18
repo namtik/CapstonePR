@@ -1709,6 +1709,7 @@ namespace Battle.UI
         public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
         {
             if (view.Card == null) return false;
+            if (TabPanelOpen) return false;
             // 선택/픽커/더미보기 중에는 사용 금지
             if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
@@ -1796,6 +1797,7 @@ namespace Battle.UI
         public bool TryUseFromClick(NewCardView view)
         {
             if (view == null || view.Card == null) return false;
+            if (TabPanelOpen) return false;
             if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
             if (ShouldUseEnemyTargeting(view.Card)) return false;
@@ -2574,9 +2576,38 @@ namespace Battle.UI
             }
         }
 
+        public bool IsHandBlocked => TabPanelOpen;
+
+        bool TabPanelOpen
+        {
+            get
+            {
+                if (_tabPanel == null) _tabPanel = FindFirstObjectByType<BattleTabPanel>(FindObjectsInactive.Include);
+                return _tabPanel != null && _tabPanel.IsVisible;
+            }
+        }
+
+        // 탭 창이 열려 있으면 손패를 누르거나 드래그하지 못하게 한다.
+        void ApplyTabHandBlock()
+        {
+            if (handRoot == null) return;
+            bool open = TabPanelOpen;
+            CanvasGroup group = handRoot.GetComponent<CanvasGroup>();
+            if (group == null) group = handRoot.gameObject.AddComponent<CanvasGroup>();
+            if (group.blocksRaycasts == !open) return;
+            group.blocksRaycasts = !open;
+            if (!open) return;
+            ClearHoverSpread();
+            for (int i = 0; i < _cardViews.Count; i++)
+            {
+                if (_cardViews[i] != null) _cardViews[i].ReleasePointer();
+            }
+        }
+
         // 밀림 값을 목표로 부드럽게 보간하고 슬롯 위치에 반영
         void Update()
         {
+            ApplyTabHandBlock();
             if (_awakenDimActive)
                 ApplyAwakenDimGradient();
 

@@ -23,15 +23,15 @@ namespace Battle.UI
         [Tooltip("초상화 아래 이름 글꼴.")]
         [SerializeField] private TMP_FontAsset nameFont;
         [Tooltip("이름 글자 크기.")]
-        [SerializeField] private float nameFontSize = 30f;
+        [SerializeField] private float nameFontSize = 43.2f;
         [Tooltip("이름 색.")]
         [SerializeField] private Color nameColor = new Color(0.78f, 0.09f, 0.1f, 1f);
         [Tooltip("이름 정렬.")]
         [SerializeField] private TextAlignmentOptions nameAlignment = TextAlignmentOptions.Center;
         [Tooltip("초상화 아래쪽 기준 위치. X는 좌우, Y는 위로 겹치는 정도.")]
-        [SerializeField] private Vector2 nameOffset = new Vector2(0f, -10f);
+        [SerializeField] private Vector2 nameOffset = new Vector2(0f, 31.38f);
         [Tooltip("이름 칸 너비.")]
-        [SerializeField] private float nameWidth = 320f;
+        [SerializeField] private float nameWidth = 384f;
         [Tooltip("이름 외곽선 두께. 0이면 외곽선이 없습니다.")]
         [Range(0f, 1f)]
         [SerializeField] private float nameOutlineWidth = 0f;
@@ -42,9 +42,9 @@ namespace Battle.UI
         [Tooltip("체력 글꼴. 비우면 이름 글꼴을 사용합니다.")]
         [SerializeField] private TMP_FontAsset hpFont;
         [Tooltip("체력 글자 크기.")]
-        [SerializeField] private float hpFontSize = 22f;
+        [SerializeField] private float hpFontSize = 36f;
         [Tooltip("체력 숫자 위치. 초상화 아래쪽 가운데가 기준이고, X는 숫자 가운데입니다.")]
-        [SerializeField] private Vector2 hpNumberOffset = new Vector2(28f, -48f);
+        [SerializeField] private Vector2 hpNumberOffset = new Vector2(27.36f, -29.88f);
         [Tooltip("체력 숫자 색.")]
         [SerializeField] private Color hpNumberColor = new Color(0.96f, 0.94f, 0.9f, 1f);
         [Tooltip("체력 숫자 외곽선 두께. 0이면 외곽선이 없습니다.")]
@@ -55,7 +55,7 @@ namespace Battle.UI
         [FormerlySerializedAs("hpOutlineColor")]
         [SerializeField] private Color hpNumberOutlineColor = Color.black;
         [Tooltip("체력 글자 위치. 초상화 아래쪽 가운데가 기준이고, X는 글자 가운데입니다.")]
-        [SerializeField] private Vector2 hpLabelOffset = new Vector2(-58f, -48f);
+        [SerializeField] private Vector2 hpLabelOffset = new Vector2(-91.32f, -29.88f);
         [Tooltip("체력 라벨 색.")]
         [SerializeField] private Color hpLabelColor = new Color(0.91f, 0.82f, 0.63f, 1f);
         [Tooltip("체력 글자 외곽선 두께. 0이면 외곽선이 없습니다.")]
@@ -70,9 +70,9 @@ namespace Battle.UI
         [Tooltip("공격, 흡수, 방해에 공통으로 쓸 글꼴. 비우면 각 텍스트에 이미 지정된 글꼴을 유지합니다.")]
         [SerializeField] private TMP_FontAsset statFont;
         [Tooltip("공격 수치와 흡수 수치 크기.")]
-        [SerializeField] private float attackFontSize = 26f;
+        [SerializeField] private float attackFontSize = 43.2f;
         [Tooltip("방해 문구 크기.")]
-        [SerializeField] private float patternFontSize = 22f;
+        [SerializeField] private float patternFontSize = 26.4f;
         [Tooltip("양피지 위 글자 색.")]
         [SerializeField] private Color statColor = new Color(0.1f, 0.06f, 0.04f, 1f);
         [Tooltip("공격 수치와 흡수 수치 정렬.")]
@@ -92,82 +92,82 @@ namespace Battle.UI
         [SerializeField] private Vector2 frameSize = new Vector2(1499f, 804f);
 
         [Header("전투 기록 바")]
-        [Tooltip("탭 프레임 왼쪽 위 기준 위치.")]
-        [SerializeField] private Vector2 logBarPosition = new Vector2(54f, -651f);
+        [Tooltip("탭 프레임 왼쪽 위 기준 위치. 합쳐진 그림의 아래 기록 띠 위.")]
+        [SerializeField] private Vector2 logBarPosition = new Vector2(87.5f, -842.6f);
         [Tooltip("기록 바 크기.")]
-        [SerializeField] private Vector2 logBarSize = new Vector2(1385f, 112f);
+        [SerializeField] private Vector2 logBarSize = new Vector2(1448.4f, 120f);
         [Tooltip("기록 글자 오른쪽에서 로그가 시작되는 거리.")]
-        [SerializeField] private float logContentInset = 36f;
+        [SerializeField] private float logContentInset = 12.8f;
 
         [Header("파워 바")]
-        [Tooltip("탭 프레임 왼쪽 위 기준 위치.")]
-        [SerializeField] private Vector2 powerBarPosition = new Vector2(54f, -16f);
+        [Tooltip("탭 프레임 왼쪽 위 기준 위치. 합쳐진 그림의 위 파워 띠 위.")]
+        [SerializeField] private Vector2 powerBarPosition = new Vector2(82f, -2f);
         [Tooltip("파워 바 크기.")]
-        [SerializeField] private Vector2 powerBarSize = new Vector2(1385f, 112f);
+        [SerializeField] private Vector2 powerBarSize = new Vector2(1357f, 99f);
         [Tooltip("파워 글자 오른쪽에서 첫 카드가 시작되는 거리.")]
-        [SerializeField] private float powerCardInset = 36f;
+        [SerializeField] private float powerCardInset = 12f;
         [Tooltip("파워 카드 사이 간격.")]
         [SerializeField] private float powerCardGap = 10f;
 
         [Header("정보 카드")]
         [Tooltip("요괴 정보 카드 크기. 세 장에 같이 적용됩니다.")]
-        [SerializeField] private Vector2 cardSize = new Vector2(341f, 538f);
+        [SerializeField] private Vector2 cardSize = new Vector2(409.2f, 645.6f);
         [Tooltip("왼쪽 카드 위치.")]
-        [SerializeField] private Vector2 leftColumnPosition = new Vector2(170.5f, -269f);
+        [SerializeField] private Vector2 leftColumnPosition = new Vector2(204.6f, -322.8f);
         [Tooltip("가운데 카드 위치.")]
-        [SerializeField] private Vector2 centerColumnPosition = new Vector2(611.5f, -269f);
+        [SerializeField] private Vector2 centerColumnPosition = new Vector2(685.8f, -322.8f);
         [Tooltip("오른쪽 카드 위치.")]
-        [SerializeField] private Vector2 rightColumnPosition = new Vector2(1052.5f, -269f);
+        [SerializeField] private Vector2 rightColumnPosition = new Vector2(1167f, -322.8f);
 
         [Header("초상화")]
         [Tooltip("카드 위쪽 가운데 기준 위치.")]
-        [SerializeField] private Vector2 portraitPosition = new Vector2(0f, -12f);
+        [SerializeField] private Vector2 portraitPosition = new Vector2(0f, -14.4f);
         [Tooltip("초상화 칸 크기. 빨간 테두리와 검은 배경이 이 칸을 채웁니다.")]
-        [SerializeField] private Vector2 portraitSize = new Vector2(308f, 207f);
+        [SerializeField] private Vector2 portraitSize = new Vector2(369.6f, 248.4f);
         [Tooltip("적 그림이 빨간 테두리를 가리지 않도록 안쪽으로 들이는 정도.")]
-        [SerializeField] private float portraitInset = 4f;
+        [SerializeField] private float portraitInset = 4.8f;
 
         [Header("공격 줄")]
         [Tooltip("카드 왼쪽 위 기준 위치.")]
-        [SerializeField] private Vector2 attackBarPosition = new Vector2(34.5f, -315.5f);
+        [SerializeField] private Vector2 attackBarPosition = new Vector2(41.4f, -378.6f);
         [Tooltip("공격 줄 크기.")]
-        [SerializeField] private Vector2 attackBarSize = new Vector2(271.3f, 48.7f);
-        [SerializeField] private Vector2 attackSlot0Position = new Vector2(72.7f, 0f);
-        [SerializeField] private Vector2 attackSlot0Size = new Vector2(67.5f, 48.7f);
-        [SerializeField] private Vector2 attackSlot1Position = new Vector2(140.2f, 0f);
-        [SerializeField] private Vector2 attackSlot1Size = new Vector2(68.2f, 48.7f);
-        [SerializeField] private Vector2 attackSlot2Position = new Vector2(208.4f, 0f);
-        [SerializeField] private Vector2 attackSlot2Size = new Vector2(63f, 48.7f);
+        [SerializeField] private Vector2 attackBarSize = new Vector2(325.56f, 58.44f);
+        [SerializeField] private Vector2 attackSlot0Position = new Vector2(87.24f, -20.4f);
+        [SerializeField] private Vector2 attackSlot0Size = new Vector2(81f, 58.44f);
+        [SerializeField] private Vector2 attackSlot1Position = new Vector2(168.24f, -20.4f);
+        [SerializeField] private Vector2 attackSlot1Size = new Vector2(81.84f, 58.44f);
+        [SerializeField] private Vector2 attackSlot2Position = new Vector2(250.08f, -20.4f);
+        [SerializeField] private Vector2 attackSlot2Size = new Vector2(75.6f, 58.44f);
 
         [Header("흡수 줄")]
         [Tooltip("카드 왼쪽 위 기준 위치.")]
-        [SerializeField] private Vector2 absorbBarPosition = new Vector2(34.5f, -374.7f);
-        [SerializeField] private Vector2 absorbBarSize = new Vector2(271.3f, 48.7f);
+        [SerializeField] private Vector2 absorbBarPosition = new Vector2(41.4f, -449.64f);
+        [SerializeField] private Vector2 absorbBarSize = new Vector2(325.56f, 58.44f);
         [Tooltip("흡수 줄 안에서의 글자 위치.")]
-        [SerializeField] private Vector2 absorbTextPosition = new Vector2(72.7f, 0f);
-        [SerializeField] private Vector2 absorbTextSize = new Vector2(198.6f, 48.7f);
+        [SerializeField] private Vector2 absorbTextPosition = new Vector2(87.24f, -24f);
+        [SerializeField] private Vector2 absorbTextSize = new Vector2(238.32f, 58.44f);
 
         [Header("방해 줄")]
         [Tooltip("카드 왼쪽 위 기준 위치.")]
-        [SerializeField] private Vector2 patternBarPosition = new Vector2(34.5f, -433.9f);
-        [SerializeField] private Vector2 patternBarSize = new Vector2(271.3f, 48.7f);
+        [SerializeField] private Vector2 patternBarPosition = new Vector2(41.4f, -520.68f);
+        [SerializeField] private Vector2 patternBarSize = new Vector2(325.56f, 58.44f);
         [Tooltip("방해 줄 안에서의 글자 위치.")]
-        [SerializeField] private Vector2 patternTextPosition = new Vector2(72.7f, 0f);
-        [SerializeField] private Vector2 patternTextSize = new Vector2(198.6f, 48.7f);
+        [SerializeField] private Vector2 patternTextPosition = new Vector2(87.24f, -26.4f);
+        [SerializeField] private Vector2 patternTextSize = new Vector2(238.32f, 58.44f);
 
         [Header("방해 기록")]
         [Tooltip("방해행동 기록에 커서를 올렸을 때, 적 번호 자리에 뜨는 글꼴. 비우면 이름 글꼴을 사용합니다.")]
         [SerializeField] private TMP_FontAsset disruptionFont;
         [Tooltip("방해 기록 글자 크기.")]
-        [SerializeField] private float disruptionFontSize = 24f;
+        [SerializeField] private float disruptionFontSize = 43.2f;
         [Tooltip("방해 기록 글자 색.")]
         [SerializeField] private Color disruptionColor = new Color(0.96f, 0.94f, 0.9f, 1f);
         [Tooltip("방해 기록 글자 정렬.")]
         [SerializeField] private TextAlignmentOptions disruptionAlignment = TextAlignmentOptions.Center;
         [Tooltip("적 번호 자리 가운데에서 얼마나 옮길지. X는 오른쪽, Y는 위입니다.")]
-        [SerializeField] private Vector2 disruptionOffset = Vector2.zero;
+        [SerializeField] private Vector2 disruptionOffset = new Vector2(37.68f, 21.96f);
         [Tooltip("방해 기록 글자 칸 크기.")]
-        [SerializeField] private Vector2 disruptionLabelSize = new Vector2(120f, 40f);
+        [SerializeField] private Vector2 disruptionLabelSize = new Vector2(144f, 48f);
         [Tooltip("방해 기록 외곽선 두께. 0이면 외곽선이 없습니다.")]
         [Range(0f, 1f)]
         [SerializeField] private float disruptionOutlineWidth = 0f;
@@ -177,8 +177,6 @@ namespace Battle.UI
         readonly List<EnemyController> _alive = new List<EnemyController>();
         readonly StringBuilder _label = new StringBuilder();
         Sprite _portraitFrame;
-        Sprite _logBarSprite;
-        Sprite _powerBarSprite;
         Sprite _attackRing;
         Sprite _attackBright;
         int _highlightAlive = -1;
@@ -314,9 +312,8 @@ namespace Battle.UI
             Image image = bar.GetComponent<Image>();
             if (image != null)
             {
-                if (_logBarSprite == null) _logBarSprite = Resources.Load<Sprite>("UI/Tab/UI_Tab_LogBar");
-                if (_logBarSprite != null) image.sprite = _logBarSprite;
-                image.color = Color.white;
+                image.sprite = null;
+                image.color = new Color(1f, 1f, 1f, 0f);
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
             }
@@ -338,11 +335,10 @@ namespace Battle.UI
 
             SetBarRect(bar, powerBarPosition, powerBarSize);
             Image image = bar.GetComponent<Image>();
-            if (_powerBarSprite == null) _powerBarSprite = Resources.Load<Sprite>("UI/Tab/UI_Tab_PowerBar");
             if (image != null)
             {
-                image.sprite = _powerBarSprite;
-                image.color = Color.white;
+                image.sprite = null;
+                image.color = new Color(1f, 1f, 1f, 0f);
                 image.type = Image.Type.Simple;
                 image.preserveAspect = false;
                 image.raycastTarget = false;
@@ -375,7 +371,7 @@ namespace Battle.UI
             if (_cardLogPanel == null) _cardLogPanel = Resources.Load<Sprite>("UI/Tab/카드 기록 패널");
 
             int slot = 0;
-            for (int i = 0; i < count; i++)
+            for (int i = count - 1; i >= 0; i--)
             {
                 CardInstance card = powers[i];
                 if (card == null || card.data == null) continue;

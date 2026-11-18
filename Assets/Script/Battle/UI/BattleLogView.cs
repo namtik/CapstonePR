@@ -233,7 +233,7 @@ namespace Battle.UI
                     if (image == null) image = found.gameObject.AddComponent<Image>();
                 }
 
-                Place(slot, _contentInset + i * (_slotWidth + _gap), _slotWidth, _slotHeight);
+                PlaceEntry(slot, _contentInset + i * (_slotWidth + _gap), _slotWidth, _slotHeight);
                 slot.gameObject.layer = gameObject.layer;
                 image.sprite = infoSprite;
                 image.color = Color.white;
@@ -251,7 +251,8 @@ namespace Battle.UI
             var keep = new HashSet<int>();
             int cursor = 0;
 
-            for (int i = 0; i < entries.Count; i++)
+            // 가장 최근 기록이 맨 왼쪽. 새 기록은 왼쪽에서 들어오고 이전 기록은 오른쪽으로 밀린다.
+            for (int i = entries.Count - 1; i >= 0; i--)
             {
                 BattleLog.Entry entry = entries[i];
                 keep.Add(entry.Id);
@@ -259,13 +260,14 @@ namespace Battle.UI
                 float target = _contentInset + cursor * (_slotWidth + _gap);
                 widget.ToX = target;
                 if (!animate) widget.FromX = target;
-                else if (widget.Fresh) widget.FromX = _rect.rect.width;
+                else if (widget.Fresh) widget.FromX = -widget.Width - _gap;
                 else widget.FromX = widget.Rect.anchoredPosition.x;
                 widget.Fresh = false;
                 widget.Dying = false;
                 cursor += entry.Slots;
             }
 
+            float exitRight = _rect != null ? _rect.rect.width : _contentInset + cursor * (_slotWidth + _gap);
             _scratch.Clear();
             foreach (KeyValuePair<int, Widget> pair in _widgets)
             {
@@ -273,7 +275,7 @@ namespace Battle.UI
                 Widget widget = pair.Value;
                 widget.Dying = true;
                 widget.FromX = widget.Rect.anchoredPosition.x;
-                widget.ToX = -widget.Width - _gap;
+                widget.ToX = exitRight;
                 if (!animate) _scratch.Add(pair.Key);
             }
 
@@ -303,7 +305,7 @@ namespace Battle.UI
             root.layer = gameObject.layer;
             root.transform.SetParent(transform, false);
             RectTransform rect = root.GetComponent<RectTransform>();
-            Place(rect, _rect.rect.width, width, _slotHeight);
+            PlaceEntry(rect, _rect.rect.width, width, _slotHeight);
 
             Image plate = root.GetComponent<Image>();
             plate.sprite = null;
@@ -751,6 +753,7 @@ namespace Battle.UI
                 if (widget.Rect == null) continue;
                 Vector2 pos = widget.Rect.anchoredPosition;
                 pos.x = Mathf.Lerp(widget.FromX, widget.ToX, t);
+                pos.y = EntryTop();
                 widget.Rect.anchoredPosition = pos;
             }
         }
@@ -808,6 +811,22 @@ namespace Battle.UI
             DestroyAllWidgets();
             Measure();
             Sync(false);
+        }
+
+        void PlaceEntry(RectTransform rect, float x, float width, float height)
+        {
+            Place(rect, x, width, height);
+            Vector2 pos = rect.anchoredPosition;
+            pos.y = EntryTop();
+            rect.anchoredPosition = pos;
+        }
+
+        // 기록 띠가 카드보다 높으면 띠 한가운데에 둔다. 짧으면 위쪽에 붙여 둔다.
+        float EntryTop()
+        {
+            float height = _rect != null ? _rect.rect.height : 0f;
+            if (height <= _slotHeight) return 0f;
+            return -(height - _slotHeight) * 0.5f;
         }
 
         static void Place(RectTransform rect, float x, float width, float height)
