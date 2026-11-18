@@ -656,6 +656,13 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         Destroy(gameObject);
     }
 
+    // 이 적의 조준 중심 화면 좌표(카드 이펙트를 대상 위치에 재생할 때 사용)
+    public bool TryGetAimScreen(out Vector2 screen)
+    {
+        screen = default;
+        return view != null && view.TryGetAimScreen(out screen, out _);
+    }
+
     public bool IsAlive => stat != null && stat.IsAlive && !isDead; // 생존 여부(지정 가능)
 
     // 카드 지정 화살표용 화면 조준점

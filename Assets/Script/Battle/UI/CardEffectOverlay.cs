@@ -16,6 +16,10 @@ namespace Battle.UI
         [SerializeField] private Vector2 playerAnchoredPos = new Vector2(0f, 100f); // 플레이어 대상 효과 위치
         [Tooltip("Earth_ATK 전용 위치 — 땅 공격은 좀 더 아래쪽에서 표시.")]
         [SerializeField] private Vector2 earthAtkAnchoredPos = new Vector2(0f, 100f); // Earth_ATK 전용 위치
+        [Tooltip("ON이면 적 대상 효과(*_ATK, Burn, Chain)를 카드의 대상 몬스터 화면 위치에서 재생. 위치 값들은 enemyAnchoredPos 대비 오프셋으로 적용된다.")]
+        [SerializeField] private bool followTargetEnemy = true; // 대상 몬스터 위치 추적
+        [Tooltip("대상 몬스터 조준 중심에서 추가로 옮길 오프셋(px).")]
+        [SerializeField] private Vector2 targetEnemyOffset = Vector2.zero; // 대상 위치 추가 오프셋
         [Tooltip("효과 이미지 기본 크기.")]
         [SerializeField] private Vector2 effectSize = new Vector2(1024f, 1024f); // 효과 기본 크기
         [Tooltip("Heal_EFF 전용 — 화면 하단 풀폭 띠 모드. 가로는 자동 stretch, Y만 사용(높이).")]
@@ -148,7 +152,45 @@ namespace Battle.UI
             PlayByName(card.effectName);
         }
 
+        // 카드 효과를 재생 — 적 대상 효과면 target 몬스터의 화면 위치에서(없으면 기본 위치)
+        public void Play(CardData card, EnemyController target)
+        {
+            if (card == null || string.IsNullOrEmpty(card.effectName)) return;
+            string effectName = card.effectName;
+
+            if (followTargetEnemy && target != null && IsEnemyTargetEffect(effectName)
+                && target.TryGetAimScreen(out Vector2 screen) && TryScreenToAnchored(screen, out Vector2 at))
+            {
+                // 기존 위치 설정(Earth_ATK 전용·개별 오버라이드)은 기본 적 위치 대비 차이만큼 유지
+                Vector2 delta = ResolvePositionFor(effectName) - enemyAnchoredPos;
+                PlayAtCore(effectName, at + delta + targetEnemyOffset);
+                return;
+            }
+            PlayByName(effectName);
+        }
+
+        // 이름 규칙상 적에게 재생되는 효과인지(공격·화상·연쇄)
+        static bool IsEnemyTargetEffect(string effectName)
+        {
+            string up = effectName.ToUpperInvariant();
+            return up.EndsWith("_ATK") || up.StartsWith("BURN") || up.StartsWith("CHAIN");
+        }
+
+        // 스크린 좌표 → 이 오버레이의 중앙 기준 anchored 좌표
+        bool TryScreenToAnchored(Vector2 screen, out Vector2 anchored)
+        {
+            anchored = default;
+            Canvas canvas = GetComponentInParent<Canvas>();
+            Canvas root = canvas != null ? canvas.rootCanvas : null;
+            Camera cam = (root == null || root.renderMode == RenderMode.ScreenSpaceOverlay) ? null : root.worldCamera;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, screen, cam, out Vector2 local))
+                return false;
+            anchored = local - Rect.rect.center; // 자식은 부모 중앙 앵커 기준
+            return true;
+        }
+
         // 임의 effectName을 기본 위치에 직접 재생
+
         public void PlayByName(string effectName)
         {
             PlayByNameAtOffset(effectName, Vector2.zero);

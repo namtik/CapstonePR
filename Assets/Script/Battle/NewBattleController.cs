@@ -1197,6 +1197,7 @@ namespace Battle
                 _enemyStat?.FillGaugeToFull();
             }
 
+            EnemyController fxTarget = _enemy; // 효과로 대상이 바뀌거나 죽기 전에 이펙트 대상 확보
             int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
 
             var result = ResolveLoggedCard(card);
@@ -1225,7 +1226,7 @@ namespace Battle
                     _resolver.NotifyCardMovedToDiscard(card);
             }
 
-            if (effectOverlay != null) effectOverlay.Play(card.data);
+            if (effectOverlay != null) effectOverlay.Play(card.data, fxTarget);
 
             if (result.exile) _resolver.NotifyExile(card);
 
