@@ -51,6 +51,9 @@ MonoBehaviour:
   handAnchoredPos: {x: 0, y: 220}
   handCardScale: 1
   useThresholdY: 360
+  enemyTargetingEnabled: 1
+  targetingArrowSprite: {fileID: 0}
+  targetingBracketSprite: {fileID: 0}
   fanLayout: 1
   fanRadius: 2200
   fanArcAngle: 16
@@ -60,19 +63,35 @@ MonoBehaviour:
   hoverSpreadRange: 2
   hoverSpreadLerpSpeed: 14
   drawIntroStagger: 0.05
+  talismanBurnStagger: 0.06
   comboSlotPanel: {fileID: 0}
   comboSkillPanel: {fileID: 0}
   comboSlotImages:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  comboSlotFrameSprite: {fileID: 0}
+  comboSlotBgSprite: {fileID: 0}
+  comboSlotFireSprite: {fileID: 0}
+  comboSlotWaterSprite: {fileID: 0}
+  comboSlotWindSprite: {fileID: 0}
+  comboSlotEarthSprite: {fileID: 0}
   emptyComboSlotColor: {r: 0.25, g: 0.25, b: 0.25, a: 0.4}
   comboSlotPopEnabled: 1
   comboSlotPopScale: 1.5
   comboSlotPopDuration: 0.28
   comboSlotFlashEnabled: 1
+  comboSlotElementVfxEnabled: 1
   comboSkillItemPrefab: {fileID: 3856369562249949566, guid: 9064903e50b48d74a8c5312089e6fada, type: 3}
   comboSkillItemContainer: {fileID: 0}
+  comboSkillNameFont: {fileID: 0}
+  comboSkillNameFontSize: 24
+  comboSkillNameColor: {r: 1, g: 1, b: 1, a: 1}
+  comboSkillNameFontStyle: 1
+  comboSkillNameAlignment: 4097
+  comboSkillCooldownFontSize: 32
+  comboSkillCooldownColor: {r: 0.808, g: 0.682, b: 0.404, a: 1}
+  comboSkillCooldownFontStyle: 1
   drawCountText: {fileID: 0}
   discardCountText: {fileID: 0}
   awakenCountText: {fileID: 0}
@@ -97,6 +116,7 @@ MonoBehaviour:
   awakenFillSprite: {fileID: 21300000, guid: 9b74311b94ffe0f41b6f0afb0c599714, type: 3}
   awakenEmptySprite: {fileID: 21300000, guid: 38e0ada3de5823d488a283da072bf5c1, type: 3}
   awakenFrameSprite: {fileID: 21300000, guid: a2b2ca7fc3bab6c4fbf7784b02e6c8a0, type: 3}
+  awakenTimerSprite: {fileID: 0}
   awakenHistoryEnabled: 1
   awakenHistoryContainer: {fileID: 0}
   awakenHistoryItemSize: {x: 60, y: 60}
@@ -105,10 +125,13 @@ MonoBehaviour:
   awakenHistoryColumnSpacing: 8
   awakenHistoryAnchoredPos: {x: 80, y: 0}
   awakenHistoryMaxItems: 20
+  selectOverlayPrefab: {fileID: 685757314511067623, guid: f67342232434c884ca85a3776c61226a, type: 3}
   selectionPromptText: {fileID: 0}
   dimOverlay: {fileID: 0}
   dimColor: {r: 0, g: 0, b: 0, a: 0.6}
   awakenDimColor: {r: 0.02, g: 0, b: 0.08, a: 0.8666667}
+  awakenDimBrightRadius: 0.18
+  awakenDimFadeEnd: 1
   viewerCloseButton: {fileID: 0}
   viewerCloseButtonLabel: "\uB2EB\uAE30"
   viewerCloseButtonSize: {x: 200, y: 56}
@@ -119,6 +142,7 @@ MonoBehaviour:
   viewerCloseButtonFontSize: 24
   viewerCloseButtonFontStyle: 1
   viewerCloseButtonFontColor: {r: 1, g: 1, b: 1, a: 1}
+  pileViewerPanel: {fileID: 0}
   cardUsePresentEnabled: 1
   awakenCardUsePresentEnabled: 1
   cardUsePresentPos: {x: 0, y: 60}

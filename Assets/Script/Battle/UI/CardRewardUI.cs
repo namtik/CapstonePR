@@ -285,6 +285,7 @@ namespace Battle.UI
             // 선택하지 않기 버튼 생성
             if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
             skipButtonStyle.Build(prt, Skip);
+            InventoryOpenButton.BringMenubarsToFront(); // 상단 바는 보상창 위에
         }
 
         // 프리팹 보상창을 띄우고 슬롯마다 카드를 깐다
@@ -358,6 +359,7 @@ namespace Battle.UI
                 if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
                 skipButtonStyle.Build(prt, Skip);
             }
+            InventoryOpenButton.BringMenubarsToFront(); // 상단 바는 보상창 위에
         }
 
         // 카드를 선택해 보상을 종료

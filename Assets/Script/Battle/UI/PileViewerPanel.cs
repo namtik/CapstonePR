@@ -77,6 +77,15 @@ namespace Battle.UI
 
         public bool IsOpen => gameObject.activeSelf;
 
+        // Show 모드로 깐 카드 뷰인지(카드 선택 픽커가 클릭 판정에 사용)
+        public bool ContainsView(NewCardView view) => view != null && _views.Contains(view);
+
+        // 닫기(X) 버튼 표시 — 카드 선택 중에는 숨긴다(열 때마다 다시 표시됨)
+        public void SetCloseButtonVisible(bool visible)
+        {
+            if (closeButton != null) closeButton.gameObject.SetActive(visible);
+        }
+
         void Awake()
         {
             WireEvents();
@@ -211,6 +220,7 @@ namespace Battle.UI
 
             ApplySkin(kind, title);
             ClearViews();
+            SetCloseButtonVisible(true);
         }
 
         // 공통 마무리: 빈 안내·스크롤 맨 위

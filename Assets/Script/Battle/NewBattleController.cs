@@ -858,6 +858,9 @@ namespace Battle
             public System.Action<CardInstance> callback;         // 선택 결과 콜백
             public System.Func<CardInstance, bool> filter;       // 손패 선택 필터(null=아무 카드)
             public System.Func<IList<CardInstance>> pickerCards; // 픽커 후보(진입 시점에 생성)
+            public Battle.UI.PileViewerKind? pileKind;           // 덱/묘지 후보면 더미 패널로 표시(null=가로 배치)
+            public int count = 1;                                // 손패에서 고를 장수(빈 칸 수)
+            public System.Action<IList<CardInstance>> multiCallback; // 여러 장 선택 결과 콜백(있으면 callback 대신 사용)
         }
         private readonly Queue<SelectionRequest> _selectionQueue = new Queue<SelectionRequest>();
         private bool _selectionActive;          // 대기열이 연 선택창이 아직 열려 있음
@@ -876,11 +879,23 @@ namespace Battle
             StartSelectionQueue();
         }
 
+        // 손패 count장 선택 요청(빈 칸 count개, 모두 채우고 확인)
+        void EnqueueHandMultiSelection(string prompt, int count, System.Action<IList<CardInstance>> callback,
+            System.Func<CardInstance, bool> filter)
+        {
+            _selectionQueue.Enqueue(new SelectionRequest
+            {
+                picker = false, prompt = prompt, filter = filter,
+                count = Mathf.Max(1, count), multiCallback = callback,
+            });
+            StartSelectionQueue();
+        }
+
         // 카드 픽커 요청을 대기열에 넣는다(후보 목록은 실제로 열 때 만든다)
         void EnqueuePicker(string prompt, System.Func<IList<CardInstance>> cards,
-            System.Action<CardInstance> callback)
+            System.Action<CardInstance> callback, Battle.UI.PileViewerKind? pileKind = null)
         {
-            _selectionQueue.Enqueue(new SelectionRequest { picker = true, prompt = prompt, callback = callback, pickerCards = cards });
+            _selectionQueue.Enqueue(new SelectionRequest { picker = true, prompt = prompt, callback = callback, pickerCards = cards, pileKind = pileKind });
             StartSelectionQueue();
         }
 
@@ -923,7 +938,14 @@ namespace Battle
                     closed = true;
                     req.callback?.Invoke(c);
                 };
-                if (req.picker) handHud.EnterCardPickerMode(req.prompt, cards, wrapped);
+                System.Action<IList<CardInstance>> wrappedMulti = list =>
+                {
+                    _selectionActive = false;
+                    closed = true;
+                    req.multiCallback?.Invoke(list);
+                };
+                if (req.picker) handHud.EnterCardPickerMode(req.prompt, cards, wrapped, req.pileKind);
+                else if (req.multiCallback != null) handHud.EnterMultiSelectionMode(req.prompt, req.count, wrappedMulti, req.filter);
                 else handHud.EnterSelectionMode(req.prompt, wrapped, filter: req.filter);
 
                 while (!closed)
@@ -1270,7 +1292,8 @@ namespace Battle
             {
                 EnqueuePicker("뽑을 더미에서 카드를 선택하세요",
                     () => new List<CardInstance>(_deck.DrawPile),
-                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); });
+                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); },
+                    Battle.UI.PileViewerKind.Draw);
             }
 
             // 버린 더미에서 카드 선택 → toZone에 따라 패 또는 뽑을 더미 맨 위 (역류203/물213)
@@ -1290,7 +1313,8 @@ namespace Battle
                                 : _deck.MoveFromDiscardToDrawPileTop(picked);
                             if (!ok && toHand)
                                 Log("[효과] 패가 가득 차 버린 더미 카드를 패로 가져올 수 없습니다.");
-                        });
+                        },
+                        Battle.UI.PileViewerKind.Discard);
                 }
                 else Log("[효과] 버린 더미에 카드 없음 — 건너뜀");
             }
@@ -2046,14 +2070,14 @@ namespace Battle
         void EnqueueEnemyForcedDiscard(int count)
         {
             if (handHud == null) return;
-            for (int i = 0; i < count; i++)
+            // 빈 칸 count개를 한 번에 채워 확정(패가 count장보다 적으면 그 수만큼)
+            EnqueueHandMultiSelection($"버릴 카드를 선택하세요 ({count}장)", count, cards =>
             {
-                int idx = i + 1;
-                EnqueueHandSelection($"버릴 카드를 선택하세요 ({idx}/{count})", card =>
-                {
+                if (cards == null) return;
+                foreach (var card in cards)
                     if (card != null) _deck.DiscardCardFromHand(card);
-                }, null);
-            }
+            }, null);
+
         }
 
         // 지연형(저주/탈진/강화) 추적 시작 (직전 미발현 추적은 먼저 마감)
