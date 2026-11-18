@@ -51897,36 +51897,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f54753f6f9d38e4e92f4fe6d08a7099, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.DeckDebugTool
-  deckEntries:
-  - cardId: 105
-    count: 1
-  - cardId: 116
-    count: 2
-  - cardId: 104
-    count: 2
-  - cardId: 313
-    count: 1
-  - cardId: 315
-    count: 2
-  - cardId: 415
-    count: 2
-  - cardId: 406
-    count: 1
-  - cardId: 215
-    count: 1
-  - cardId: 100
-    count: 1
-  - cardId: 219
-    count: 1
-  - cardId: 203
-    count: 1
-  - cardId: 224
-    count: 1
-  - cardId: 114
-    count: 2
-  - cardId: 114
-    count: 2
-  useAsStartingDeck: 1
+  deckEntries: []
+  useAsStartingDeck: 0
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:

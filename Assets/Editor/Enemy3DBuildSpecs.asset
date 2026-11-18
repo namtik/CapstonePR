@@ -148,3 +148,51 @@ MonoBehaviour:
     modelRotation: {x: 0, y: 0, z: 0}
     modelScale: {x: 1, y: 1, z: 1}
     hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyCorruptedFire
+    modelName: "\uC624\uC5FC\uB41C \uBD88"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 1917834886042570531, guid: bf76847cc44c4defb5efe9beed001210, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: d2869fed57d93fd43848144bba34336d, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyCorruptedEarth
+    modelName: "\uC624\uC5FC\uB41C \uB545"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 1271683392580905606, guid: 810ddbed6a7f4f62a6316462f5759253, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: 0bd6ab355ea9fbd41954b3c77ca74ba4, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyCorruptedWater
+    modelName: "\uC624\uC5FC\uB41C \uBB3C"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 1441626022970438647, guid: 71bfbf814f4546d3bd8f9517ab3d057f, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: ed3b4b562013d73438ac92e57012c590, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyCorruptedWind
+    modelName: "\uC624\uC5FC\uB41C \uBC14\uB78C"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 2269784722074754982, guid: 023bfb19f20340c09aa22992b437485c, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: 70e9d3c146314f9479732aba789ada8d, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
