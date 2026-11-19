@@ -60,7 +60,7 @@ namespace Battle.UI
         [Header("적 지정 — 드래그 화살표")]
         [Tooltip("ON이면 target=ENEMY 카드를 드래그할 때 화살표로 적을 조준해야 사용된다.")]
         [SerializeField] private bool enemyTargetingEnabled = true; // 적 지정 사용 여부
-        [Tooltip("화살표 체브론/화살촉. 비우면 기본 삼각형. 팁이 위쪽이면 방향이 맞는다. 스프라이트 원본 색을 그대로 쓴다.")]
+        [Tooltip("화살표 체브론/화살촉. 비우면 화살표를 그리지 않고 록온 브래킷만 남긴다. 팁이 위쪽이면 방향이 맞는다.")]
         [SerializeField] private Sprite targetingArrowSprite; // 화살표 이미지
         [Tooltip("록온 코너(ㄴ자) 한 장. 비우면 기본 브래킷. 좌하단 ㄴ, 피벗은 바깥 꼭짓점.")]
         [SerializeField] private Sprite targetingBracketSprite; // 록온 브래킷 이미지
@@ -1760,6 +1760,7 @@ namespace Battle.UI
         public bool TryUseFromDrag(NewCardView view, PointerEventData ev)
         {
             if (view.Card == null) return false;
+            if (TabPanelOpen) return false;
             // 선택/픽커/더미보기 중에는 사용 금지
             if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
@@ -1847,6 +1848,7 @@ namespace Battle.UI
         public bool TryUseFromClick(NewCardView view)
         {
             if (view == null || view.Card == null) return false;
+            if (TabPanelOpen) return false;
             if (IsSelectionMode || IsPickerMode || IsViewerMode) return false;
             if (UseCardCallback == null) return false;
             if (ShouldUseEnemyTargeting(view.Card)) return false;
@@ -2929,9 +2931,38 @@ namespace Battle.UI
             }
         }
 
+        public bool IsHandBlocked => TabPanelOpen;
+
+        bool TabPanelOpen
+        {
+            get
+            {
+                if (_tabPanel == null) _tabPanel = FindFirstObjectByType<BattleTabPanel>(FindObjectsInactive.Include);
+                return _tabPanel != null && _tabPanel.IsVisible;
+            }
+        }
+
+        // 탭 창이 열려 있으면 손패를 누르거나 드래그하지 못하게 한다.
+        void ApplyTabHandBlock()
+        {
+            if (handRoot == null) return;
+            bool open = TabPanelOpen;
+            CanvasGroup group = handRoot.GetComponent<CanvasGroup>();
+            if (group == null) group = handRoot.gameObject.AddComponent<CanvasGroup>();
+            if (group.blocksRaycasts == !open) return;
+            group.blocksRaycasts = !open;
+            if (!open) return;
+            ClearHoverSpread();
+            for (int i = 0; i < _cardViews.Count; i++)
+            {
+                if (_cardViews[i] != null) _cardViews[i].ReleasePointer();
+            }
+        }
+
         // 밀림 값을 목표로 부드럽게 보간하고 슬롯 위치에 반영
         void Update()
         {
+            ApplyTabHandBlock();
             if (_awakenDimActive)
                 ApplyAwakenDimGradient();
 

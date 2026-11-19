@@ -20,26 +20,32 @@ namespace Battle.UI
         private Image _head; // 화살촉
         private RectTransform _lockOnRoot; // 록온 프레임 루트
         private Image[] _lockOnCorners; // 네 코너 L자 브래킷
-        private static Sprite _triangleSprite; // 삼각형 스프라이트(런타임 생성)
         private static Sprite _bracketSprite; // L자 브래킷 스프라이트(런타임 생성)
         private Sprite _arrowOverride; // HUD에서 넣은 화살표 이미지
         private Sprite _bracketOverride; // HUD에서 넣은 브래킷 이미지
         private bool _built; // 자식 생성 여부
 
-        // CardHandHUD에서 커스텀 아트를 넣는다. 비우면 기본 도형을 쓴다.
+        // CardHandHUD에서 커스텀 아트를 넣는다. 화살표가 비면 곡선을 그리지 않는다.
         public void SetCustomSprites(Sprite arrow, Sprite bracket)
         {
             _arrowOverride = arrow;
             _bracketOverride = bracket;
             if (!_built) return;
-            Sprite arrowSp = ResolveArrowSprite();
             Sprite bracketSp = ResolveBracketSprite();
             if (_chevrons != null)
             {
                 for (int i = 0; i < _chevrons.Length; i++)
-                    ApplySprite(_chevrons[i], arrowSp);
+                {
+                    if (_chevrons[i] == null) continue;
+                    if (arrow == null) _chevrons[i].gameObject.SetActive(false);
+                    else ApplySprite(_chevrons[i], arrow);
+                }
             }
-            ApplySprite(_head, arrowSp);
+            if (_head != null)
+            {
+                if (arrow == null) _head.gameObject.SetActive(false);
+                else ApplySprite(_head, arrow);
+            }
             if (_lockOnCorners != null)
             {
                 Vector2 pivot = BracketPivot(bracketSp);
@@ -105,7 +111,7 @@ namespace Battle.UI
                 return;
 
             float dist = Vector2.Distance(start, end);
-            bool draw = dist >= minDrawDistance;
+            bool drawArrow = _arrowOverride != null && dist >= minDrawDistance;
             Vector2 control = ComputeControl(start, end);
 
             int n = _chevrons != null ? _chevrons.Length : 0;
@@ -113,7 +119,7 @@ namespace Battle.UI
             {
                 var img = _chevrons[i];
                 if (img == null) continue;
-                if (!draw)
+                if (!drawArrow)
                 {
                     img.gameObject.SetActive(false);
                     continue;
@@ -135,7 +141,7 @@ namespace Battle.UI
 
             if (_head != null)
             {
-                if (!draw) _head.gameObject.SetActive(false);
+                if (!drawArrow) _head.gameObject.SetActive(false);
                 else
                 {
                     Vector2 d = BezierDeriv(start, control, end, 0.98f);
@@ -227,14 +233,18 @@ namespace Battle.UI
             if (_root == null) _root = transform as RectTransform;
             EnsureSprites();
 
-            Sprite arrowSp = ResolveArrowSprite();
+            Sprite arrowSp = _arrowOverride;
             int n = Mathf.Max(4, chevronCount);
             _chevrons = new Image[n];
             for (int i = 0; i < n; i++)
+            {
                 _chevrons[i] = CreateImage("Chevron_" + i, arrowSp, chevronSize);
+                if (arrowSp == null) _chevrons[i].gameObject.SetActive(false);
+            }
 
             _head = CreateImage("ArrowHead", arrowSp, headSize);
             _head.transform.SetAsLastSibling();
+            if (arrowSp == null) _head.gameObject.SetActive(false);
 
             BuildLockOnFrame();
             _built = true;
@@ -281,13 +291,10 @@ namespace Battle.UI
 
         void EnsureSprites()
         {
-            if (_arrowOverride == null && _triangleSprite == null)
-                _triangleSprite = CreateTriangleSprite();
             if (_bracketOverride == null && _bracketSprite == null)
                 _bracketSprite = CreateBracketSprite();
         }
 
-        Sprite ResolveArrowSprite() => _arrowOverride != null ? _arrowOverride : _triangleSprite;
         Sprite ResolveBracketSprite() => _bracketOverride != null ? _bracketOverride : _bracketSprite;
 
         // ㄴ(└) 스프라이트의 바깥 꼭짓점. 커스텀 아트는 스프라이트 피벗을 쓴다.
@@ -304,32 +311,6 @@ namespace Battle.UI
             img.sprite = sprite;
             img.color = Color.white;
             img.useSpriteMesh = true;
-        }
-
-        // 위로 향한 삼각형(밑면이 아래, 꼭짓점이 위 → 카드에서 적 방향으로 회전)
-        static Sprite CreateTriangleSprite()
-        {
-            const int s = 48;
-            var tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
-            tex.name = "TargetArrowTriangle";
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Bilinear;
-            var px = new Color32[s * s];
-            for (int y = 0; y < s; y++)
-            {
-                float ny = y / (float)(s - 1); // 0=텍스처 아래, 1=위
-                float half = (1f - ny) * 0.5f; // 아래가 넓고 위로 갈수록 뾰족
-                for (int x = 0; x < s; x++)
-                {
-                    float nx = x / (float)(s - 1);
-                    bool inside = ny < 0.96f && Mathf.Abs(nx - 0.5f) <= half * 0.92f;
-                    px[y * s + x] = inside ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 0);
-                }
-            }
-            tex.SetPixels32(px);
-            tex.Apply(false, false);
-            tex.alphaIsTransparency = true;
-            return Sprite.Create(tex, new Rect(0f, 0f, s, s), new Vector2(0.5f, 0.2f), s, 0, SpriteMeshType.Tight);
         }
 
         // 좌하단 ㄴ자 — 아래쪽 가로 + 왼쪽 세로. 피벗 (0,0)=바깥 꼭짓점. 시계방향 90°로 좌상에 둔다.

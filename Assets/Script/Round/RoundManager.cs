@@ -84,6 +84,11 @@ public class RoundManager : MonoBehaviour
     public Color EnemyAttackOutlineColor => enemyAttackOutlineColor;
     public Vector2 EnemyAttackNumberPosition => enemyAttackNumberPosition;
 
+    [Header("적 강화")]
+    [InspectorName("아이콘")]
+    [SerializeField] private Sprite enemyPowerUpIcon;
+    public Sprite EnemyPowerUpIcon => enemyPowerUpIcon;
+
     [Header("보상 UI")]
     [SerializeField] private RewardHubUIController rewardHubUIController; // 보상 허브 UI 컨트롤러
 

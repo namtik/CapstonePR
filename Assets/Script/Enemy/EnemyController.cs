@@ -30,6 +30,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [Tooltip("EnemyData.attackSequence(엑셀 1차/2차/3차 공격)가 비어 있을 때만 사용하는 폴백 시퀀스.")]
     [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 }; // 새 시스템 공격 피해 시퀀스(폴백)
     private int _newSystemAttackIndex = 0; // 현재 공격 시퀀스 인덱스
+    int _lastAttackLogId = -1;
 
     // 실제 사용할 공격 시퀀스: EnemyData.attackSequence 우선, 비어 있으면 인스펙터 폴백
     int[] EffectiveAttackSequence()
@@ -285,10 +286,17 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
             if (player != null && player.GetStatus("launcher") > 0)
             {
-                stat.TakeDamage(player.attackDamage / 10f);
-                view.PlayHitEffect("L");
+                int bonus = Mathf.Max(0, Mathf.RoundToInt(player.attackDamage / 10f));
+                if (bonus > 0)
+                {
+                    Battle.UI.BattleLog.NoteEnemy(this, Battle.UI.BattleLog.CombatKind.Damage, bonus, false);
+                    stat.TakeDamage(bonus);
+                    view.PlayHitEffect("L");
+                }
                 player.AddStatus("launcher", -1);
             }
+            if (damage > 0f)
+                Battle.UI.BattleLog.NoteEnemy(this, Battle.UI.BattleLog.CombatKind.Damage, Mathf.Max(0, Mathf.RoundToInt(damage)), false);
             stat.TakeDamage(damage);
             view.ShowDamage(damage);
             view.PlayHitEffect(cardtype);
@@ -302,7 +310,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     }
 
     public event Action<string, int> OnStatusChanged; // 상태이상 변경 이벤트
-    public event Action<string, int> OnStatusApplied; // 상태이상 '부여'(양수 증가) 이벤트 — 연출용
+    public event Action<EnemyController, string, int> OnStatusApplied; // 상태이상 '부여'(양수 증가) 이벤트 — 연출용
     // 상태이상 스택을 더하고 변경 신호를 보낸다
     public void AddStatus(string type, int amount)
     {
@@ -313,13 +321,15 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
 
         // 기획서 0.6v: 스택형 키워드 최대 999
-        stat.statusEffects[type] = Mathf.Clamp(stat.statusEffects[type] + amount, 0, 999);
+        int before = stat.statusEffects[type];
+        stat.statusEffects[type] = Mathf.Clamp(before + amount, 0, 999);
+        NoteStackChange(type, stat.statusEffects[type] - before);
 
         // 일반적인 상태이상 추가 시 갱신 신호 발송
         OnStatusChanged?.Invoke(type, stat.statusEffects[type]);
 
         // 양수 부여일 때만 '부여' 신호(빙결 등 연출 트리거용)
-        if (amount > 0) OnStatusApplied?.Invoke(type, amount);
+        if (amount > 0) OnStatusApplied?.Invoke(this, type, amount);
     }
 
     // 상태이상 스택 값을 조회한다
@@ -331,13 +341,31 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     // 상태이상 스택을 지정 값으로 설정한다
     public void SetStatus(string type, int amount)
     {
+        SetStatus(type, amount, true);
+    }
+
+    // log가 꺼지면 값은 바꾸되 전투 기록에는 남기지 않는다.
+    public void SetStatus(string type, int amount, bool log)
+    {
         if (stat.statusEffects.ContainsKey(type))
         {
-            int v = Mathf.Clamp(amount, 0, 999); // 기획서 0.6v: 스택 최대 999
+            int before = stat.statusEffects[type];
+            int v = Mathf.Clamp(amount, 0, 999);
             stat.statusEffects[type] = v;
+            if (log) NoteStackChange(type, v - before);
             OnStatusChanged?.Invoke(type, v);
         }
     }
+    void NoteStackChange(string type, int delta)
+    {
+        if (delta == 0) return;
+        Battle.UI.BattleLog.CombatKind kind;
+        if (type == "burn") kind = Battle.UI.BattleLog.CombatKind.Burn;
+        else if (type == "frost" || type == "freeze") kind = Battle.UI.BattleLog.CombatKind.Freeze;
+        else return;
+        Battle.UI.BattleLog.NoteEnemy(this, kind, Mathf.Abs(delta), delta > 0);
+    }
+
     // 적 공격력을 반환한다(다음 공격 시퀀스 값 기준, 없으면 폴백 상수)
     public float GetAttackDamage()
     {
@@ -406,8 +434,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     {
         _nextAttackBuffed = true;
         UpdateAttackPreviewForNewSystem(); // 강화 발동 즉시 공격 예고에 +50% 반영
+        RefreshPowerUpIcon();
     }
     public bool IsNextAttackBuffed => _nextAttackBuffed; // 다음 공격 강화 적용 여부
+
+    void RefreshPowerUpIcon()
+    {
+        EnemyPowerUpMark.Apply(view != null ? view.HpBarRect : null, _nextAttackBuffed);
+    }
 
     // 방해행동 발동 시 몬스터 동작 애니메이션을 재생한다(강화·회복=버프 / 저주·탈진·흡수=디버프)
     public void PlayDisruptionMotion(bool isBuff)
@@ -454,13 +488,15 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         int hitCount;
 
         int[] atkSeq = EffectiveAttackSequence();
+        int attackIndex = -1;
         if (Battle.NewBattleController.Instance != null && atkSeq != null && atkSeq.Length > 0)
         {
             // 엑셀 1차/2차/3차 공격을 순차 반복(비어 있으면 인스펙터 폴백 시퀀스)
-            damagePerHit = atkSeq[_newSystemAttackIndex % atkSeq.Length];
+            attackIndex = _newSystemAttackIndex % atkSeq.Length;
+            damagePerHit = atkSeq[attackIndex];
             hitCount = 1;
             _newSystemAttackIndex++;
-            Debug.Log($"[적 공격] 시퀀스 인덱스={_newSystemAttackIndex - 1}, 피해={damagePerHit}");
+            Debug.Log($"[적 공격] 시퀀스 인덱스={attackIndex}, 피해={damagePerHit}");
         }
         else
         {
@@ -482,6 +518,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         {
             damagePerHit = Mathf.CeilToInt(damagePerHit * 1.5f);
             _nextAttackBuffed = false;
+            RefreshPowerUpIcon();
             view?.ShowMidPatternNotice("강화!");
             Debug.Log($"[적 강화] 다음 공격 +50% → {damagePerHit}");
         }
@@ -492,7 +529,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
         if (player != null)
         {
-            StartCoroutine(ExecuteMultiHit(hitCount, damagePerHit));
+            StartCoroutine(ExecuteMultiHit(hitCount, damagePerHit, attackIndex));
         }
         else
         {
@@ -530,10 +567,15 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (!stat.statusEffects.TryGetValue("burn", out int burn)) return false;
         if (burn <= 0) return false;
 
-        stat.TakeDamage(burn);
+        // 체력이 깎이기 전에 소리를 건다. 클립 로드가 한 박자 밀려도 숫자보다 늦게 나지 않게.
         SfxManager.Instance?.PlayBurn();
+        stat.TakeDamage(burn);
         Sprite burnPortrait = stat.Data != null ? stat.Data.enemySprite : null;
-        Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, burn);
+        string burnName = stat.Data != null ? stat.Data.enemyName : null;
+        int slot = EnemyCombatParty.AliveIndexOf(this);
+        int burnLog = Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, burn, burnName);
+        Battle.UI.BattleLog.AppendCombat(_lastAttackLogId, false, slot, Battle.UI.BattleLog.CombatKind.Burn, burn, false);
+        Battle.UI.BattleLog.AppendCombat(burnLog, false, slot, Battle.UI.BattleLog.CombatKind.Burn, burn, false);
 
         // 데미지 숫자(화상 색) + 화상 알림 텍스트
         if (view != null)
@@ -548,11 +590,17 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         int after = burnPersists ? burn : burn / 2;
         stat.statusEffects["burn"] = after;
         OnStatusChanged?.Invoke("burn", after);
+        int consumed = burn - after;
+        if (consumed > 0)
+        {
+            Battle.UI.BattleLog.AppendCombat(_lastAttackLogId, false, slot, Battle.UI.BattleLog.CombatKind.Burn, consumed, false);
+            Battle.UI.BattleLog.AppendCombat(burnLog, false, slot, Battle.UI.BattleLog.CombatKind.Burn, consumed, false);
+        }
         Debug.Log($"[화상] 적 {burn} 고정피해, 잔여 화상={after}{(burnPersists ? " (유지)" : "")}");
         return true;
     }
     // 공격 모션과 함께 지정 횟수만큼 연타 피해를 가한다
-    IEnumerator ExecuteMultiHit(int count, int damage)
+    IEnumerator ExecuteMultiHit(int count, int damage, int attackIndex)
     {
         // 공격 모션이 있으면 임팩트(타격 프레임) 순간까지 기다렸다가 피해를 넣는다 —
         // 3D 뷰는 이 순간 히트스톱(정지 후 재개)을 걸므로, 피해 숫자/화면 플래시가 '멈춘 프레임'에 맞춰 터진다.
@@ -579,9 +627,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
         for (int i = 0; i < count; i++)
         {
+            Battle.UI.BattleLog.BeginCombatCapture();
             player.TakeDamage(damage, "enemy_attack");
             Sprite portrait = stat != null && stat.Data != null ? stat.Data.enemySprite : null;
-            Battle.UI.BattleLog.RecordEnemyAttack(portrait, damage, EnemyCombatParty.AliveIndexOf(this));
+            string enemyName = stat != null && stat.Data != null ? stat.Data.enemyName : null;
+            _lastAttackLogId = Battle.UI.BattleLog.RecordEnemyAttack(portrait, damage, EnemyCombatParty.AliveIndexOf(this), enemyName, attackIndex);
             // 공격 모션이 있으면 마지막(임팩트) 프레임에서만 이펙트(이벤트로 처리). 모션이 없을 때만 시작 시 폴백 재생.
             if (view == null || !view.HasAttackMotion) PlayAttackVfx();
 

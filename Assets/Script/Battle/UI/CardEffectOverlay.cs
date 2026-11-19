@@ -206,14 +206,39 @@ namespace Battle.UI
         // 절대 anchored 위치에 효과를 재생(각성 표식 폭발 등 위치 직접 지정용)
         public void PlayByNameAtPosition(string effectName, Vector2 anchoredPos)
         {
+            PlayByNameAtPosition(effectName, anchoredPos, true);
+        }
+
+        // playSfx가 꺼지면 같은 프레임에 이미 난 효과음은 다시 내지 않고 그림만 재생한다
+        public void PlayByNameAtPosition(string effectName, Vector2 anchoredPos, bool playSfx)
+        {
             if (string.IsNullOrEmpty(effectName)) return;
-            PlayAtCore(effectName, anchoredPos);
+            PlayAtCore(effectName, anchoredPos, playSfx);
+        }
+
+        // 화면 좌표를 이 오버레이의 anchored 좌표로 바꾼다
+        public bool TryAnchoredFromScreen(Vector2 screen, out Vector2 anchored)
+        {
+            Canvas canvas = GetComponentInParent<Canvas>();
+            Camera cam = null;
+            if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                cam = canvas.worldCamera != null ? canvas.worldCamera : Camera.main;
+            anchored = default;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, screen, cam, out Vector2 local))
+                return false;
+            // 이펙트는 부모 중앙 앵커 기준으로 놓인다. local은 피벗 기준이라 중앙으로 맞춘다.
+            Vector2 center = new Vector2(
+                (0.5f - Rect.pivot.x) * Rect.rect.width,
+                (0.5f - Rect.pivot.y) * Rect.rect.height);
+            anchored = local - center;
+            return true;
         }
 
         // 지정된 anchored 위치에서 프리팹/시트 효과를 재생(공통 코어)
-        void PlayAtCore(string effectName, Vector2 pos)
+        void PlayAtCore(string effectName, Vector2 pos, bool playSfx = true)
         {
-            SfxManager.Instance?.PlayEffect(effectName);
+            if (playSfx)
+                SfxManager.Instance?.PlayEffect(effectName);
 
             // 1순위로 파티클 프리팹이 있으면 사용
             if (preferParticlePrefab)

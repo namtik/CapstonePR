@@ -532,6 +532,28 @@ public class SettingPanel : MonoBehaviour
             menuHovers.Add(sources[i].GetComponent<ButtonHoverScale>());
         }
 
+        // 위에서 아래 순으로 펼친다. 필드 순서는 맨 아래 버튼이 먼저라 위 세 개가 따로 보였다.
+        for (int i = 0; i < menuButtons.Count; i++)
+        {
+            for (int j = i + 1; j < menuButtons.Count; j++)
+            {
+                if (menuButtons[j].GetSiblingIndex() >= menuButtons[i].GetSiblingIndex())
+                    continue;
+
+                RectTransform swapRt = menuButtons[i];
+                menuButtons[i] = menuButtons[j];
+                menuButtons[j] = swapRt;
+
+                CanvasGroup swapGroup = menuButtonGroups[i];
+                menuButtonGroups[i] = menuButtonGroups[j];
+                menuButtonGroups[j] = swapGroup;
+
+                ButtonHoverScale swapHover = menuHovers[i];
+                menuHovers[i] = menuHovers[j];
+                menuHovers[j] = swapHover;
+            }
+        }
+
         if (group != null)
             menuLayout = group.GetComponent<VerticalLayoutGroup>();
     }

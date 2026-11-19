@@ -457,6 +457,7 @@ public class EnemyOverlayHUD : MonoBehaviour
             if (badge != null) badge.HideBubble();
             var intent = GetComponent<EnemyAttackIntent>();
             if (intent != null) intent.Hide();
+            EnemyPowerUpMark.Apply(HpBarRect, false);
         }
         if (damageTextTemplate != null)
         {

@@ -16,11 +16,13 @@ namespace Battle.Deck
         private readonly List<CardInstance> _hand = new List<CardInstance>();        // 패
         private readonly List<CardInstance> _discardPile = new List<CardInstance>(); // 버린 더미
         private readonly List<CardInstance> _exilePile = new List<CardInstance>();   // 소멸 더미
+        private readonly List<CardInstance> _powerField = new List<CardInstance>();  // 필드에 남은 파워 카드
 
         public IReadOnlyList<CardInstance> Hand => _hand;               // 패 읽기 전용 뷰
         public IReadOnlyList<CardInstance> DrawPile => _drawPile;       // 뽑을 더미 읽기 전용 뷰
         public IReadOnlyList<CardInstance> DiscardPile => _discardPile; // 버린 더미 읽기 전용 뷰
         public IReadOnlyList<CardInstance> ExilePile => _exilePile;     // 소멸 더미 읽기 전용 뷰
+        public IReadOnlyList<CardInstance> PowerField => _powerField;   // 필드에 남은 파워 카드
 
         public int HandCount => _hand.Count;                   // 패 장수
         public int DrawCount => _drawPile.Count;               // 뽑을 더미 장수
@@ -56,6 +58,7 @@ namespace Battle.Deck
             _hand.Clear();
             _discardPile.Clear();
             _exilePile.Clear();
+            _powerField.Clear();
             ResetHandLimit();
 
             foreach (var card in startingDeck) _drawPile.Add(card);
@@ -70,17 +73,18 @@ namespace Battle.Deck
             _drawPile.Clear();
             _discardPile.Clear();
             _exilePile.Clear();
+            _powerField.Clear();
             OnPileChanged?.Invoke();
         }
 
         // 패 한도까지 또는 카드 고갈까지 드로우
-        public int Draw(int count)
+        public int Draw(int count, bool playerCommand = false)
         {
             int drawn = 0;
             for (int i = 0; i < count; i++)
             {
                 if (_hand.Count >= HandLimit) break;
-                if (!TryDrawOne()) break;
+                if (!TryDrawOne(playerCommand)) break;
                 drawn++;
             }
             if (drawn > 0)
@@ -100,7 +104,7 @@ namespace Battle.Deck
         }
 
         // 카드 1장 드로우 시도(더미 비면 리셔플)
-        public bool TryDrawOne()
+        public bool TryDrawOne(bool playerCommand = false)
         {
             if (_drawPile.Count == 0) ReshuffleDiscardIntoDraw();
             if (_drawPile.Count == 0) return false;
@@ -109,7 +113,8 @@ namespace Battle.Deck
             _drawPile.RemoveAt(_drawPile.Count - 1);
             _hand.Add(card);
             OnCardDrawn?.Invoke(card);
-            Battle.UI.BattleLog.RecordDraw(card.data);
+            Battle.UI.BattleLog.RecordDraw(card.data, playerCommand);
+            Track(Battle.UI.BattleLog.MoveZone.Draw, card);
             return true;
         }
 
@@ -125,6 +130,7 @@ namespace Battle.Deck
             OnCardDrawn?.Invoke(card);
             OnPileChanged?.Invoke();
             Battle.UI.BattleLog.RecordDraw(card.data);
+            Track(Battle.UI.BattleLog.MoveZone.Hand, card);
             return true;
         }
 
@@ -136,6 +142,7 @@ namespace Battle.Deck
             _hand.Add(card);
             OnCardDrawn?.Invoke(card);
             OnPileChanged?.Invoke();
+            Track(Battle.UI.BattleLog.MoveZone.Hand, card);
             return true;
         }
 
@@ -150,6 +157,7 @@ namespace Battle.Deck
             _hand.Add(card);
             OnCardDrawn?.Invoke(card);
             OnPileChanged?.Invoke();
+            Track(Battle.UI.BattleLog.MoveZone.Hand, card);
             return true;
         }
 
@@ -162,6 +170,7 @@ namespace Battle.Deck
             _discardPile.RemoveAt(idx);
             _drawPile.Add(card);
             OnPileChanged?.Invoke();
+            Track(Battle.UI.BattleLog.MoveZone.Deck, card);
             return true;
         }
 
@@ -186,6 +195,7 @@ namespace Battle.Deck
             _discardPile.Add(card);
             OnPileChanged?.Invoke();
             OnCardDiscarded?.Invoke(card);
+            Track(Battle.UI.BattleLog.MoveZone.Discard, card);
         }
 
         // 카드 인스턴스를 패에서 버린 더미로 이동
@@ -196,6 +206,7 @@ namespace Battle.Deck
                 _discardPile.Add(card);
                 OnPileChanged?.Invoke();
                 OnCardDiscarded?.Invoke(card);
+                Track(Battle.UI.BattleLog.MoveZone.Discard, card);
                 return true;
             }
             return false;
@@ -212,6 +223,7 @@ namespace Battle.Deck
                 _hand.RemoveAt(idx);
                 _discardPile.Add(card);
                 OnCardDiscarded?.Invoke(card);
+                Track(Battle.UI.BattleLog.MoveZone.Discard, card);
             }
             if (n > 0) OnPileChanged?.Invoke();
             return n;
@@ -222,7 +234,11 @@ namespace Battle.Deck
         {
             int count = _hand.Count;
             var discarded = count > 0 ? new List<CardInstance>(_hand) : null;
-            for (int i = 0; i < _hand.Count; i++) _discardPile.Add(_hand[i]);
+            for (int i = 0; i < _hand.Count; i++)
+            {
+                _discardPile.Add(_hand[i]);
+                Track(Battle.UI.BattleLog.MoveZone.Discard, _hand[i]);
+            }
             _hand.Clear();
             if (count > 0) OnPileChanged?.Invoke();
             if (discarded != null)
@@ -257,6 +273,7 @@ namespace Battle.Deck
             {
                 _exilePile.Add(card);
                 OnPileChanged?.Invoke();
+                Track(Battle.UI.BattleLog.MoveZone.Exile, card);
             }
         }
 
@@ -271,7 +288,12 @@ namespace Battle.Deck
         // 임시로 꺼낸 카드를 적절한 더미에 재배치
         public void PlaceCardAfterUse(CardInstance card, bool exile, bool poweredField)
         {
-            if (poweredField || exile) _exilePile.Add(card);
+            if (poweredField)
+            {
+                if (!_powerField.Contains(card)) _powerField.Add(card);
+                _exilePile.Add(card);
+            }
+            else if (exile) _exilePile.Add(card);
             else _discardPile.Add(card);
             OnPileChanged?.Invoke();
         }
@@ -279,6 +301,7 @@ namespace Battle.Deck
         // 소멸 더미에서 카드 제거
         public void RemoveFromExile(CardInstance card)
         {
+            _powerField.Remove(card);
             if (_exilePile.Remove(card)) OnPileChanged?.Invoke();
         }
 
@@ -288,6 +311,7 @@ namespace Battle.Deck
             int idx = Random.Range(0, _drawPile.Count + 1);
             _drawPile.Insert(idx, card);
             OnPileChanged?.Invoke();
+            Track(Battle.UI.BattleLog.MoveZone.Deck, card);
         }
 
         // 카드를 버린 더미에 추가
@@ -295,6 +319,7 @@ namespace Battle.Deck
         {
             _discardPile.Add(card);
             OnPileChanged?.Invoke();
+            Track(Battle.UI.BattleLog.MoveZone.Graveyard, card);
         }
 
         // 패/뽑을 더미/버린 더미를 스냅샷 내용으로 교체(상태 복원)
@@ -313,6 +338,7 @@ namespace Battle.Deck
         public int ExileWholeDrawPile()
         {
             int n = _drawPile.Count;
+            for (int i = 0; i < n; i++) Track(Battle.UI.BattleLog.MoveZone.Exile, _drawPile[i]);
             if (n > 0) { _exilePile.AddRange(_drawPile); _drawPile.Clear(); OnPileChanged?.Invoke(); }
             return n;
         }
@@ -331,6 +357,7 @@ namespace Battle.Deck
                 _discardPile.RemoveAt(idx);
                 _exilePile.Add(card);
                 exiled.Add(card);
+                Track(Battle.UI.BattleLog.MoveZone.Exile, card);
             }
             OnPileChanged?.Invoke();
             return exiled;
@@ -340,6 +367,7 @@ namespace Battle.Deck
         public int ExileWholeDiscardPile()
         {
             int n = _discardPile.Count;
+            for (int i = 0; i < n; i++) Track(Battle.UI.BattleLog.MoveZone.Exile, _discardPile[i]);
             if (n > 0) { _exilePile.AddRange(_discardPile); _discardPile.Clear(); OnPileChanged?.Invoke(); }
             return n;
         }
@@ -350,6 +378,7 @@ namespace Battle.Deck
             if (card == null || !_drawPile.Remove(card)) return false;
             _discardPile.Add(card);
             OnPileChanged?.Invoke();
+            Track(Battle.UI.BattleLog.MoveZone.Graveyard, card);
             return true;
         }
 
@@ -409,10 +438,18 @@ namespace Battle.Deck
                 var card = _hand[_hand.Count - 1];
                 _hand.RemoveAt(_hand.Count - 1);
                 _discardPile.Add(card);
+                Track(Battle.UI.BattleLog.MoveZone.Discard, card);
                 trimmed++;
             }
             if (trimmed > 0) OnPileChanged?.Invoke();
             return trimmed;
+        }
+
+        // 효과 기록에 이 카드의 이동을 남긴다. 캡처 중이 아니면 무시된다.
+        void Track(Battle.UI.BattleLog.MoveZone zone, CardInstance card)
+        {
+            if (card == null) return;
+            Battle.UI.BattleLog.NoteMove(zone, card);
         }
 
         // 더미 변경 이벤트를 외부에서 강제 발행

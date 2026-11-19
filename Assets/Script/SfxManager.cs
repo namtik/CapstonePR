@@ -57,6 +57,8 @@ public class SfxManager : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float healVolume = 1f; // 회복 볼륨
     [Range(0f, 1f)] [SerializeField] private float burnVolume = 1f; // 화상 피해 볼륨
 
+    int _burnPlayedFrame = -1; // 같은 프레임에 화상음이 여러 번 겹쳐 늦게 들리지 않게
+
     // 싱글톤 등록 및 오디오 소스 초기화
     void Awake()
     {
@@ -64,6 +66,7 @@ public class SfxManager : MonoBehaviour
         Instance = this;
         if (source == null) source = GetComponent<AudioSource>();
         if (source != null) source.playOnAwake = false;
+        PrepareClip(burnClip);
     }
 
     // 파괴 시 싱글톤 참조를 해제한다
@@ -99,8 +102,21 @@ public class SfxManager : MonoBehaviour
     // 플레이어 회복 효과음을 재생한다
     public void PlayHeal() => Play(healClip, healVolume);
 
-    // 화상 피해 효과음을 재생한다
-    public void PlayBurn() => Play(burnClip, burnVolume);
+    // 화상 피해 효과음을 재생한다. 같은 프레임의 중복 호출은 한 번만 낸다.
+    public void PlayBurn()
+    {
+        if (Time.frameCount == _burnPlayedFrame) return;
+        _burnPlayedFrame = Time.frameCount;
+        PrepareClip(burnClip);
+        Play(burnClip, burnVolume);
+    }
+
+    // 재생 직전에 디코딩이 밀리지 않도록 클립 데이터를 미리 올려 둔다
+    static void PrepareClip(AudioClip clip)
+    {
+        if (clip != null && clip.loadState != AudioDataLoadState.Loaded)
+            clip.LoadAudioData();
+    }
 
     // 이펙트 이름에 맞는 클립을 찾고 없으면 기본 클립을 반환한다
     AudioClip ResolveEffectClip(string effectName)

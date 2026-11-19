@@ -155,6 +155,10 @@ namespace Battle
         private EnemyStat _enemyStat;            // 현재 효과 대상 적 스탯
         private readonly List<EnemyController> _boundEnemies = new List<EnemyController>();
         private readonly List<EnemyController> _aliveBuf = new List<EnemyController>();
+        private readonly Dictionary<EnemyController, int> _frostAtCardStart = new Dictionary<EnemyController, int>();
+        private readonly List<EnemyController> _frostHoldEnemies = new List<EnemyController>();
+        private readonly List<int> _frostHoldAdded = new List<int>();
+        int _frostFxSfxFrame = -1; // 같은 프레임의 빙결 연출은 효과음을 한 번만
         // 적 행동(공격/방해행동) 대기열 — 한 번에 하나씩, 이전 행동과 카드 연출이 완전히 끝난 뒤 진행
         private struct EnemyAction
         {
@@ -504,12 +508,20 @@ namespace Battle
             RelicManager.Instance?.NotifyBattleStart(this);
         }
 
-        // 적에게 상태이상이 '부여'될 때 — 빙결이면 적 위치에서 연출 재생
-        void OnEnemyStatusAppliedHandler(string type, int amount)
+        // 적에게 상태이상이 '부여'될 때 — 빙결이면 그 적 위치에서 연출 재생
+        void OnEnemyStatusAppliedHandler(EnemyController enemy, string type, int amount)
         {
             if (amount <= 0 || type != "frost") return;
             if (effectOverlay == null || string.IsNullOrEmpty(frostAppliedEffectName)) return;
-            effectOverlay.PlayByNameAtPosition(frostAppliedEffectName, effectOverlay.EnemyAnchoredPos);
+
+            Vector2 pos = effectOverlay.EnemyAnchoredPos;
+            if (enemy != null && enemy.TryGetAimScreen(out Vector2 screen, out _)
+                && effectOverlay.TryAnchoredFromScreen(screen, out Vector2 local))
+                pos = local;
+
+            bool playSfx = _frostFxSfxFrame != Time.frameCount;
+            if (playSfx) _frostFxSfxFrame = Time.frameCount;
+            effectOverlay.PlayByNameAtPosition(frostAppliedEffectName, pos, playSfx);
         }
 
         // 전투 종료 — 추적/큐 마감·덱 종료·UI/이펙트 정리
@@ -957,6 +969,7 @@ namespace Battle
                 _selectionActive = false;
             }
             _selectionRoutine = null;
+            BattleLog.CloseMoveTarget();
             // 선택이 모두 끝났으면 보류 중이던 각성을 발동
             TryActivatePendingAwaken();
         }
@@ -1052,7 +1065,7 @@ namespace Battle
             if (RelicManager.Instance != null && RelicManager.Instance.HasDDrawOverride())
             {
                 int discarded = _deck.DiscardAllFromHand();
-                int redrawn = _deck.Draw(5);
+                int redrawn = _deck.Draw(5, true);
                 if (redrawn > 0) AccrueEnemyGauge(1);
                 handHud?.Refresh();
                 Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우");
@@ -1064,7 +1077,7 @@ namespace Battle
                 Log("D 드로우 불가 — 손패 가득 참");
                 return;
             }
-            int drawn = _deck.Draw(1);
+            int drawn = _deck.Draw(1, true);
             if (drawn > 0)
             {
                 AccrueEnemyGauge(1);
@@ -1165,7 +1178,10 @@ namespace Battle
             int before = _player != null ? Mathf.RoundToInt(_player.guard) : 0;
             BattleLog.SetGuardLogging(false);
             BattleLog.BeginDeferDraws();
+            BattleLog.BeginMoveCapture();
+            BattleLog.PushGuardFrame();
             CardEffectResolver.ResolveResult result;
+            int triggeredGuard = 0;
             try
             {
                 result = _resolver.Resolve(card);
@@ -1174,9 +1190,12 @@ namespace Battle
             {
                 BattleLog.SetGuardLogging(true);
                 BattleLog.EndDeferDraws();
+                triggeredGuard = BattleLog.PopGuardFrame();
             }
 
             int gained = _player != null ? Mathf.Max(0, Mathf.RoundToInt(_player.guard) - before) : 0;
+            // 소멸·버림으로 발동한 카드가 얻은 방어도는 그 카드 기록에만 남긴다.
+            gained = Mathf.Max(0, gained - triggeredGuard);
             BattleLog.RecordCardPlay(card != null ? card.data : null, result.totalDamage, gained);
             BattleLog.FlushDeferredDraws();
             return result;
@@ -1198,9 +1217,10 @@ namespace Battle
             }
 
             EnemyController fxTarget = _enemy; // 효과로 대상이 바뀌거나 죽기 전에 이펙트 대상 확보
-            int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
+            CapturePartyFrost();
 
             var result = ResolveLoggedCard(card);
+            int effectLog = BattleLog.MoveTargetId;
 
             card.selfUseCount++;
 
@@ -1209,6 +1229,7 @@ namespace Battle
             {
                 _relicFirstCardRecastPending = false;
                 ResolveLoggedCard(card);
+                BattleLog.SetMoveTarget(effectLog);
                 Log("[유물] 복사경 — 첫 카드 효과 재발동");
             }
 
@@ -1226,6 +1247,8 @@ namespace Battle
                     _resolver.NotifyCardMovedToDiscard(card);
             }
 
+            if (result.exile) BattleLog.NoteMove(BattleLog.MoveZone.Exile, card);
+
             if (effectOverlay != null) effectOverlay.Play(card.data, fxTarget);
 
             if (result.exile) _resolver.NotifyExile(card);
@@ -1235,6 +1258,7 @@ namespace Battle
             {
                 Log($"[재사용] {_lastResolvedCard.data.displayName} 효과 한 번 더");
                 ResolveLoggedCard(_lastResolvedCard);
+                BattleLog.SetMoveTarget(effectLog);
             }
 
             // 패에서 카드 선택 → 소멸 (불4/103, 불13/112, 물10/209)
@@ -1354,21 +1378,10 @@ namespace Battle
             if (_ctx.firstCardAfterAttackFreeActive && _ctx.firstCardAfterEnemyAttack)
                 gaugeCost = 0;
 
-            // 빙결 순서: 이 카드가 부여한 빙결은 게이지 처리 동안만 사용 전 빙결량으로 되돌렸다가 복원
-            int frostAddedByCard = 0;
-            if (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int frostAfterCard))
-            {
-                frostAddedByCard = Mathf.Max(0, frostAfterCard - frostBeforeCard);
-                if (frostAddedByCard > 0) _enemyStat.statusEffects["frost"] = frostBeforeCard;
-            }
-
+            // 이번 카드가 붙인 빙결은 이 카드의 게이지를 막지 않는다. 맞은 적이 여러 명이어도 같이 미룬다.
+            HoldFrostAddedThisCard();
             AccrueEnemyGauge(gaugeCost);
-
-            if (frostAddedByCard > 0 && _enemyStat != null)
-            {
-                int frostRemaining = _enemyStat.statusEffects.TryGetValue("frost", out int fr) ? fr : 0;
-                _enemy?.SetStatus("frost", frostRemaining + frostAddedByCard);
-            }
+            ReleaseHeldFrost();
 
             if (result.skipNextGaugeCost) _skipNextGaugeCount++;
 
@@ -1394,6 +1407,50 @@ namespace Battle
             if (card != null) card.justDrawn = false;
 
             Log($"{card.data.displayName} 사용 — 게이지+{gaugeCost}, 연쇄={_ctx.chainCount}");
+            if (!HasPendingSelection) BattleLog.CloseMoveTarget();
+        }
+
+        // 카드 효과 전에 살아 있는 적들의 빙결 스택을 적어 둔다
+        void CapturePartyFrost()
+        {
+            _frostAtCardStart.Clear();
+            EnemyCombatParty.CollectAlive(_aliveBuf);
+            for (int i = 0; i < _aliveBuf.Count; i++)
+            {
+                EnemyController enemy = _aliveBuf[i];
+                if (enemy == null) continue;
+                _frostAtCardStart[enemy] = enemy.GetStatus("frost");
+            }
+        }
+
+        // 이번 카드로 늘어난 빙결만 게이지 계산에서 빼 둔다. 원래 있던 빙결은 그대로 소모된다.
+        void HoldFrostAddedThisCard()
+        {
+            _frostHoldEnemies.Clear();
+            _frostHoldAdded.Clear();
+            foreach (var pair in _frostAtCardStart)
+            {
+                EnemyController enemy = pair.Key;
+                if (enemy == null || !enemy.IsAlive) continue;
+                int added = Mathf.Max(0, enemy.GetStatus("frost") - pair.Value);
+                if (added <= 0) continue;
+                EnemyStat stat = enemy.GetComponent<EnemyStat>();
+                if (stat == null || !stat.statusEffects.ContainsKey("frost")) continue;
+                stat.statusEffects["frost"] = pair.Value;
+                _frostHoldEnemies.Add(enemy);
+                _frostHoldAdded.Add(added);
+            }
+        }
+
+        // 게이지를 처리한 뒤, 빼 두었던 이번 카드의 빙결을 도로 붙인다
+        void ReleaseHeldFrost()
+        {
+            for (int i = 0; i < _frostHoldEnemies.Count; i++)
+            {
+                EnemyController enemy = _frostHoldEnemies[i];
+                if (enemy == null || !enemy.IsAlive) continue;
+                enemy.SetStatus("frost", enemy.GetStatus("frost") + _frostHoldAdded[i], false);
+            }
         }
 
         // 적 게이지 누적 (각성 중·바람14 스킵 처리 포함)
@@ -1446,53 +1503,64 @@ namespace Battle
         // 각성 발동 — 지속시간 계산·스냅샷·무속성 격리·콤보 UI 활성화
         void ActivateAwaken()
         {
+            bool awakenStarting = !_awakenActive;
             _awakenActive = true;
-            RunDeckState.Instance?.RecordAwakenActivation();
-            _elementInputCount = 0;
-            int ownedComboCount = ownedComboSkills != null ? ownedComboSkills.Count : 0;
-            float awakenDuration = AWAKEN_DURATION_SECONDS + ownedComboCount * AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS;
-            // 유물(각성 지속시간 증가류)이 있으면 합산
-            if (RelicManager.Instance != null) awakenDuration += RelicManager.Instance.GetAwakenDurationBonus();
-            _awakenTimeRemaining = awakenDuration;
-            _awakenMaxTime = awakenDuration;
-
-            // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 그대로 복원
-            _awakenSnapshotHand = new List<CardInstance>(_deck.Hand);
-            _awakenSnapshotDraw = new List<CardInstance>(_deck.DrawPile);
-            _awakenSnapshotDiscard = new List<CardInstance>(_deck.DiscardPile);
-
-            // 무속성 카드 임시 격리 (각성 중 속성 카드만 순환)
-            _awakenStoredNeutralCards = _deck.ExtractAllNeutralCards();
-
-            // 격리된 카드 중 파편 수 기록
-            _awakenFragmentExhausted = 0;
-            foreach (var c in _awakenStoredNeutralCards)
-                if (c != null && c.Element == CardElement.Fragment) _awakenFragmentExhausted++;
-            _comboSelfUseCount.Clear();
-
-            _deck.Draw(_deck.HandLimit);
-
-            _comboInput.Clear();
-            _comboCooldown = new float[ownedComboSkills != null ? ownedComboSkills.Count : 0];
-            _queuedComboSkills.Clear();
-            _awakenInputHistory.Clear();
-            _awakenMarkerPositions.Clear();
-            _awakenMarkerHandles.Clear();
-
-            if (handHud != null)
+            if (awakenStarting) BattleLog.RecordAwaken(null);
+            // 진입 때 패를 다시 채우며 생기는 카드·드로우 기록은 남기지 않는다.
+            BattleLog.BeginSuppress();
+            try
             {
-                handHud.SetAwakenMode(true);
-                handHud.UpdateComboSlot(_comboInput);
-                PushComboCooldownUi();
-                handHud.UpdateAwakenInputHistory(_awakenInputHistory);
+                RunDeckState.Instance?.RecordAwakenActivation();
+                _elementInputCount = 0;
+                int ownedComboCount = ownedComboSkills != null ? ownedComboSkills.Count : 0;
+                float awakenDuration = AWAKEN_DURATION_SECONDS + ownedComboCount * AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS;
+                // 유물(각성 지속시간 증가류)이 있으면 합산
+                if (RelicManager.Instance != null) awakenDuration += RelicManager.Instance.GetAwakenDurationBonus();
+                _awakenTimeRemaining = awakenDuration;
+                _awakenMaxTime = awakenDuration;
+
+                // 각성 직전 패/뽑을 더미/버린 더미 스냅샷 — 각성 종료 시 그대로 복원
+                _awakenSnapshotHand = new List<CardInstance>(_deck.Hand);
+                _awakenSnapshotDraw = new List<CardInstance>(_deck.DrawPile);
+                _awakenSnapshotDiscard = new List<CardInstance>(_deck.DiscardPile);
+
+                // 무속성 카드 임시 격리 (각성 중 속성 카드만 순환)
+                _awakenStoredNeutralCards = _deck.ExtractAllNeutralCards();
+
+                // 격리된 카드 중 파편 수 기록
+                _awakenFragmentExhausted = 0;
+                foreach (var c in _awakenStoredNeutralCards)
+                    if (c != null && c.Element == CardElement.Fragment) _awakenFragmentExhausted++;
+                _comboSelfUseCount.Clear();
+
+                _deck.Draw(_deck.HandLimit);
+
+                _comboInput.Clear();
+                _comboCooldown = new float[ownedComboSkills != null ? ownedComboSkills.Count : 0];
+                _queuedComboSkills.Clear();
+                _awakenInputHistory.Clear();
+                _awakenMarkerPositions.Clear();
+                _awakenMarkerHandles.Clear();
+
+                if (handHud != null)
+                {
+                    handHud.SetAwakenMode(true);
+                    handHud.UpdateComboSlot(_comboInput);
+                    PushComboCooldownUi();
+                    handHud.UpdateAwakenInputHistory(_awakenInputHistory);
+                }
+
+                if (awakenTimerGauge != null) awakenTimerGauge.Hide();
+
+                _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
+                SfxManager.Instance?.PlayAwakenStart();
+
+                Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
             }
-
-            if (awakenTimerGauge != null) awakenTimerGauge.Hide();
-
-            _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
-            SfxManager.Instance?.PlayAwakenStart();
-
-            Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
+            finally
+            {
+                BattleLog.EndSuppress();
+            }
         }
 
         // 각성 화면 이펙트를 3D 스테이지 카메라 앞에 붙여 시야만 덮는다(UI 위가 아님).
@@ -1795,6 +1863,7 @@ namespace Battle
                 if (skill.Matches(_comboInput))
                 {
                     _queuedComboSkills.Add(skill);
+                    Battle.UI.BattleLog.NoteAwakenCombo(skill);
                     if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_SECONDS;
                     Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 {COMBO_REUSE_SECONDS:0}초)");
                     return true;
@@ -1903,7 +1972,8 @@ namespace Battle
         void LogEnemyDisruption(int action)
         {
             Sprite portrait = _enemyStat != null && _enemyStat.Data != null ? _enemyStat.Data.enemySprite : null;
-            BattleLog.RecordDisruption(action, portrait, EnemyCombatParty.AliveIndexOf(_enemy));
+            string enemyName = _enemyStat != null && _enemyStat.Data != null ? _enemyStat.Data.enemyName : null;
+            BattleLog.RecordDisruption(action, portrait, EnemyCombatParty.AliveIndexOf(_enemy), enemyName);
         }
 
         // 적 방해행동 발동 — AI(또는 랜덤)로 1개 선택 후 분기 실행, 보상 추적 시작
@@ -2607,7 +2677,7 @@ namespace Battle
         {
             if (turnOrderTimeline == null) turnOrderTimeline = ResolveOrCreateTurnOrderTimeline();
             turnOrderTimeline?.ShowRelicTrigger(relic); // 행동 순서 바 현재 칸에도 발동 표시
-            if (relic != null) BattleLog.RecordRelic(relic.icon);
+            if (relic != null) BattleLog.RecordRelic(relic.icon, relic.DisplayLabel);
             if (RelicHUD.Instance != null && relic != null)
                 RelicHUD.Instance.PulseRelicIcon(relic, label, onShown);
             else
