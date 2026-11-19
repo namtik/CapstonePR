@@ -338,20 +338,11 @@ public class Player : MonoBehaviour, IBattleUnit
         float guardBefore = guard;
         float hpBefore = currentHp;
         bool blockConsumed = false;
-        bool disposableGuard = cardtype == "enemy_attack";
         if (guard > 0)
         {
             blockConsumed = true;
-            if (disposableGuard)
-            {
-                // 몬스터 공격: 방어도는 1회 맞으면 전량 소멸(남은 방어도 이월 없음)
-                if (guard >= damage)
-                    damage = 0;
-                else
-                    damage -= guard;
-                guard = 0;
-            }
-            else if (guard >= damage)
+            // 방어도는 받은 피해만큼만 깎이고 남은 양은 유지(적 공격 포함)
+            if (guard >= damage)
             {
                 guard -= damage;
                 damage = 0;

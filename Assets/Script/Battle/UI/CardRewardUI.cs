@@ -13,7 +13,11 @@ namespace Battle.UI
 
         const int CHOICE_COUNT = 4; // 제시 카드 수
 
-        [Header("상단 문구")]
+        [Header("보상창 프리팹")]
+        [Tooltip("배경·슬롯·스킵 버튼이 배치된 보상창 프리팹. 비우면 기존 런타임 생성 UI(딤+제목 텍스트)로 폴백.")]
+        [SerializeField] private CardRewardPanelView panelPrefab; // 보상창 프리팹
+
+        [Header("상단 문구 (프리팹 미사용 시)")]
         [SerializeField] private Font titleFont; // 타이틀 폰트
         [SerializeField, Range(12, 96)] private int titleFontSize = 40; // 타이틀 글자 크기
         [SerializeField] private Color titleColor = Color.white; // 타이틀 색
@@ -48,6 +52,12 @@ namespace Battle.UI
             titleFontSize = Mathf.Clamp(fontSize, 12, 96);
             titleColor = color;
             titlePosition = position;
+        }
+
+        // 보상창 프리팹을 외부에서 주입(null이면 런타임 생성 UI)
+        public void SetPanelPrefab(CardRewardPanelView prefab)
+        {
+            if (prefab != null) panelPrefab = prefab;
         }
 
         // 스킵 버튼 스타일을 외부에서 주입
@@ -100,7 +110,10 @@ namespace Battle.UI
                 return;
             }
 
-            List<CardData> choices = RollChoices(CHOICE_COUNT);
+            // 프리팹이면 슬롯 수만큼 제시
+            int choiceCount = CHOICE_COUNT;
+            if (panelPrefab != null && panelPrefab.CardSlots.Count > 0) choiceCount = panelPrefab.CardSlots.Count;
+            List<CardData> choices = RollChoices(choiceCount);
             if (choices.Count == 0)
             {
                 Debug.LogWarning("[CardReward] 보상 카드 풀이 비어 보상 생략.");
@@ -188,6 +201,12 @@ namespace Battle.UI
                 return;
             }
 
+            if (panelPrefab != null)
+            {
+                BuildFromPrefab(canvas, cardPrefab, choices);
+                return;
+            }
+
             _panel = new GameObject("CardRewardPanel", typeof(RectTransform));
             var prt = (RectTransform)_panel.transform;
             prt.SetParent(canvas.transform, false);
@@ -266,6 +285,81 @@ namespace Battle.UI
             // 선택하지 않기 버튼 생성
             if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
             skipButtonStyle.Build(prt, Skip);
+            InventoryOpenButton.BringMenubarsToFront(); // 상단 바는 보상창 위에
+        }
+
+        // 프리팹 보상창을 띄우고 슬롯마다 카드를 깐다
+        void BuildFromPrefab(Canvas canvas, NewCardView cardPrefab, List<CardData> choices)
+        {
+            var view = Instantiate(panelPrefab, canvas.transform, false);
+            _panel = view.gameObject;
+            _panel.SetActive(true);
+            var prt = (RectTransform)_panel.transform;
+            StretchFull(prt);
+            prt.SetAsLastSibling();
+
+            var slots = view.CardSlots;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                RectTransform slot = slots[i];
+                if (slot == null) continue;
+                bool used = i < choices.Count;
+                slot.gameObject.SetActive(used);
+                if (!used) continue;
+
+                CardData data = choices[i];
+
+                // 카드 프리팹을 슬롯 크기에 맞춰 비율 유지로 배치
+                var cardView = Instantiate(cardPrefab, slot);
+                var vrt = cardView.GetComponent<RectTransform>();
+                if (vrt != null)
+                {
+                    Vector2 native = vrt.sizeDelta;
+                    if (native.x < 1f || native.y < 1f) native = new Vector2(300f, 400f);
+                    Vector2 area = slot.rect.size;
+                    float fit = (area.x > 1f && area.y > 1f) ? Mathf.Min(area.x / native.x, area.y / native.y) : 1f;
+                    CenterAnchor(vrt);
+                    vrt.anchoredPosition = Vector2.zero;
+                    vrt.localRotation = Quaternion.identity;
+                    vrt.localScale = Vector3.one * fit;
+                }
+                cardView.SetCard(new CardInstance(data));
+                cardView.Refresh();
+                cardView.enabled = false; // 드래그/호버 핸들러 비활성
+                foreach (var g in cardView.GetComponentsInChildren<Graphic>(true))
+                    g.raycastTarget = false;
+
+                // 슬롯 전체를 덮는 투명 클릭 버튼
+                var btnRt = NewRect("ClickCatcher", slot);
+                StretchFull(btnRt);
+                btnRt.SetAsLastSibling();
+                var btnImg = btnRt.gameObject.AddComponent<Image>();
+                btnImg.color = new Color(1f, 1f, 1f, 0f); // 투명하되 raycast 수신
+                btnImg.raycastTarget = true;
+                var btn = btnRt.gameObject.AddComponent<Button>();
+                btn.transition = Selectable.Transition.None;
+                int cardId = data.id;
+                btn.onClick.AddListener(() => Pick(cardId));
+
+                if (enableHoverScale && slot.GetComponent<ButtonHoverScale>() == null)
+                {
+                    var hover = slot.gameObject.AddComponent<ButtonHoverScale>();
+                    hover.Configure(hoverScale, hoverScale, hoverLerpSpeed);
+                }
+            }
+
+            if (view.SkipButton != null)
+            {
+                view.SkipButton.onClick.RemoveAllListeners();
+                view.SkipButton.onClick.AddListener(Skip);
+            }
+            else
+            {
+                Debug.LogWarning("[CardReward] 보상창 프리팹에 SkipButton이 없습니다 — 스타일 버튼으로 대체.");
+                if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
+                skipButtonStyle.Build(prt, Skip);
+            }
+            InventoryOpenButton.BringMenubarsToFront(); // 상단 바는 보상창 위에
         }
 
         // 카드를 선택해 보상을 종료

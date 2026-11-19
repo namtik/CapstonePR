@@ -125,6 +125,9 @@ namespace Battle
         [Header("적 행동 카메라 포커스")]
         [Tooltip("적이 공격/방해행동을 하는 동안 스테이지 카메라를 그 적 쪽으로 당기고 줌인해 누가 행동하는지 강조한다.")]
         [SerializeField] private EnemyActionFocusCamera.Settings enemyActionFocus = EnemyActionFocusCamera.Settings.Default;
+        [Tooltip("적 행동 포커스(카메라 줌인) 동안 손패·덱·묘지·몬스터 체력 바를 잠시 숨김.")]
+        [SerializeField] private EnemyActionHudFader.Settings enemyActionHudHide = EnemyActionHudFader.Settings.Default;
+        private readonly List<GameObject> _hudHideTargets = new List<GameObject>(); // 숨김 대상 재사용 버퍼
         [SerializeField] private bool logVerbose = true;             // 상세 로그 출력 여부
 
         [Header("적 AI (방해행동 선택)")]
@@ -855,6 +858,9 @@ namespace Battle
             public System.Action<CardInstance> callback;         // 선택 결과 콜백
             public System.Func<CardInstance, bool> filter;       // 손패 선택 필터(null=아무 카드)
             public System.Func<IList<CardInstance>> pickerCards; // 픽커 후보(진입 시점에 생성)
+            public Battle.UI.PileViewerKind? pileKind;           // 덱/묘지 후보면 더미 패널로 표시(null=가로 배치)
+            public int count = 1;                                // 손패에서 고를 장수(빈 칸 수)
+            public System.Action<IList<CardInstance>> multiCallback; // 여러 장 선택 결과 콜백(있으면 callback 대신 사용)
         }
         private readonly Queue<SelectionRequest> _selectionQueue = new Queue<SelectionRequest>();
         private bool _selectionActive;          // 대기열이 연 선택창이 아직 열려 있음
@@ -873,11 +879,23 @@ namespace Battle
             StartSelectionQueue();
         }
 
+        // 손패 count장 선택 요청(빈 칸 count개, 모두 채우고 확인)
+        void EnqueueHandMultiSelection(string prompt, int count, System.Action<IList<CardInstance>> callback,
+            System.Func<CardInstance, bool> filter)
+        {
+            _selectionQueue.Enqueue(new SelectionRequest
+            {
+                picker = false, prompt = prompt, filter = filter,
+                count = Mathf.Max(1, count), multiCallback = callback,
+            });
+            StartSelectionQueue();
+        }
+
         // 카드 픽커 요청을 대기열에 넣는다(후보 목록은 실제로 열 때 만든다)
         void EnqueuePicker(string prompt, System.Func<IList<CardInstance>> cards,
-            System.Action<CardInstance> callback)
+            System.Action<CardInstance> callback, Battle.UI.PileViewerKind? pileKind = null)
         {
-            _selectionQueue.Enqueue(new SelectionRequest { picker = true, prompt = prompt, callback = callback, pickerCards = cards });
+            _selectionQueue.Enqueue(new SelectionRequest { picker = true, prompt = prompt, callback = callback, pickerCards = cards, pileKind = pileKind });
             StartSelectionQueue();
         }
 
@@ -920,7 +938,14 @@ namespace Battle
                     closed = true;
                     req.callback?.Invoke(c);
                 };
-                if (req.picker) handHud.EnterCardPickerMode(req.prompt, cards, wrapped);
+                System.Action<IList<CardInstance>> wrappedMulti = list =>
+                {
+                    _selectionActive = false;
+                    closed = true;
+                    req.multiCallback?.Invoke(list);
+                };
+                if (req.picker) handHud.EnterCardPickerMode(req.prompt, cards, wrapped, req.pileKind);
+                else if (req.multiCallback != null) handHud.EnterMultiSelectionMode(req.prompt, req.count, wrappedMulti, req.filter);
                 else handHud.EnterSelectionMode(req.prompt, wrapped, filter: req.filter);
 
                 while (!closed)
@@ -1172,6 +1197,7 @@ namespace Battle
                 _enemyStat?.FillGaugeToFull();
             }
 
+            EnemyController fxTarget = _enemy; // 효과로 대상이 바뀌거나 죽기 전에 이펙트 대상 확보
             int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
 
             var result = ResolveLoggedCard(card);
@@ -1200,7 +1226,7 @@ namespace Battle
                     _resolver.NotifyCardMovedToDiscard(card);
             }
 
-            if (effectOverlay != null) effectOverlay.Play(card.data);
+            if (effectOverlay != null) effectOverlay.Play(card.data, fxTarget);
 
             if (result.exile) _resolver.NotifyExile(card);
 
@@ -1267,7 +1293,8 @@ namespace Battle
             {
                 EnqueuePicker("뽑을 더미에서 카드를 선택하세요",
                     () => new List<CardInstance>(_deck.DrawPile),
-                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); });
+                    (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); },
+                    Battle.UI.PileViewerKind.Draw);
             }
 
             // 버린 더미에서 카드 선택 → toZone에 따라 패 또는 뽑을 더미 맨 위 (역류203/물213)
@@ -1287,7 +1314,8 @@ namespace Battle
                                 : _deck.MoveFromDiscardToDrawPileTop(picked);
                             if (!ok && toHand)
                                 Log("[효과] 패가 가득 차 버린 더미 카드를 패로 가져올 수 없습니다.");
-                        });
+                        },
+                        Battle.UI.PileViewerKind.Discard);
                 }
                 else Log("[효과] 버린 더미에 카드 없음 — 건너뜀");
             }
@@ -2043,14 +2071,14 @@ namespace Battle
         void EnqueueEnemyForcedDiscard(int count)
         {
             if (handHud == null) return;
-            for (int i = 0; i < count; i++)
+            // 빈 칸 count개를 한 번에 채워 확정(패가 count장보다 적으면 그 수만큼)
+            EnqueueHandMultiSelection($"버릴 카드를 선택하세요 ({count}장)", count, cards =>
             {
-                int idx = i + 1;
-                EnqueueHandSelection($"버릴 카드를 선택하세요 ({idx}/{count})", card =>
-                {
+                if (cards == null) return;
+                foreach (var card in cards)
                     if (card != null) _deck.DiscardCardFromHand(card);
-                }, null);
-            }
+            }, null);
+
         }
 
         // 지연형(저주/탈진/강화) 추적 시작 (직전 미발현 추적은 먼저 마감)
@@ -2709,6 +2737,7 @@ namespace Battle
                 BindEnemy(e);
                 // 행동하는 적 쪽으로 카메라를 당겨 누가 행동하는지 강조(행동 시작 대기 동안 들어감)
                 EnemyActionFocusCamera.Focus(e.transform, enemyActionFocus);
+                HideHudForEnemyAction();
 
                 // 행동 순서 바에서 행동자가 '현재' 칸으로 올라오는 걸 보여준 뒤 행동 시작
                 if (enemyTurnStartDelay > 0f) yield return new WaitForSeconds(enemyTurnStartDelay);
@@ -2742,6 +2771,30 @@ namespace Battle
             _attackStartRoutine = null;
             // 대기열이 모두 끝나면 원래 시점으로(연속 행동 사이에는 돌아가지 않고 다음 적으로 옮겨 감)
             EnemyActionFocusCamera.Release();
+            EnemyActionHudFader.Show();
+        }
+
+        // 적 행동 동안 손패·덱·묘지·몬스터 HP 바를 숨긴다(카드 선택이 필요하면 그동안은 보임)
+        void HideHudForEnemyAction()
+        {
+            if (!enemyActionHudHide.enabled) return;
+            // 카메라 포커스가 실제로 걸리는 경우에만(2D 폴백·단일 적 생략 설정과 맞춤)
+            if (!enemyActionFocus.enabled) return;
+            if (enemyActionFocus.onlyWhenMultiple && !EnemyCombatParty.IsMulti) return;
+            if (BattleStageController.Current == null || BattleStageController.Current.StageCamera == null) return;
+
+            _hudHideTargets.Clear();
+            if (enemyActionHudHide.hideHand && handHud != null && handHud.HandRoot != null)
+                _hudHideTargets.Add(handHud.HandRoot.gameObject);
+            if (enemyActionHudHide.hidePiles && handHud != null)
+                handHud.CollectPileRoots(_hudHideTargets);
+            if (enemyActionHudHide.hideEnemyHp)
+                EnemyOverlayHUD.CollectHpBars(_hudHideTargets);
+            if (enemyActionHudHide.extraTargets != null)
+                foreach (var go in enemyActionHudHide.extraTargets)
+                    if (go != null && !_hudHideTargets.Contains(go)) _hudHideTargets.Add(go);
+
+            EnemyActionHudFader.Hide(_hudHideTargets, enemyActionHudHide, () => HasPendingSelection);
         }
 
         // 플레이어 카드 사용 연출(등장부터 퇴장까지), 유물(아이템) 발동 연출, 대상 적의 피격 반응이 모두 끝날 때까지 대기
@@ -2775,6 +2828,7 @@ namespace Battle
             _attackQueue.Clear();
             _deferredHpLost.Clear();
             EnemyActionFocusCamera.Release(immediate: true); // 전투 시작/종료 — 카메라 오프셋 즉시 원복
+            EnemyActionHudFader.Show(immediate: true);
             _actingEnemy = null;
             _actingIsDisruption = false;
             _enemyActionLockUntil = 0f;
@@ -2788,6 +2842,21 @@ namespace Battle
 
             Canvas combatCanvas = ResolveCombatCanvas();
             if (combatCanvas == null) return null;
+
+            // 프리팹(Resources/UI/TurnOrder/TurnOrderTimeline)이 있으면 그 설정·행 프리팹으로 생성
+            var prefab = Resources.Load<TurnOrderTimeline>("UI/TurnOrder/TurnOrderTimeline");
+            if (prefab != null)
+            {
+                var inst = Instantiate(prefab, combatCanvas.transform, false);
+                inst.name = "TurnOrderTimeline";
+                var irt = (RectTransform)inst.transform;
+                irt.anchorMin = Vector2.zero;
+                irt.anchorMax = Vector2.one;
+                irt.offsetMin = Vector2.zero;
+                irt.offsetMax = Vector2.zero;
+                return inst;
+            }
+
             var go = new GameObject("TurnOrderTimeline", typeof(RectTransform));
             go.transform.SetParent(combatCanvas.transform, false);
             var rect = (RectTransform)go.transform;

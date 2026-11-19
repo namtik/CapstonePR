@@ -800,6 +800,35 @@ namespace Battle.UI
             ApplyBurnProgress(to, cardFace);
         }
 
+        // 카드 면이 불타 사라지는 단독 연출(각성 부적 전환과 같은 셰이더). 끝나면 카드는 보이지 않는 상태로 남는다.
+        // 셰이더가 없거나 비활성 상태면 즉시 숨기고 false 반환(onComplete는 항상 호출).
+        public bool PlayBurnAway(float duration, System.Action onComplete = null)
+        {
+            if (_burnCo != null) { StopCoroutine(_burnCo); _burnCo = null; EndBurnMaterials(); }
+
+            if (!isActiveAndEnabled || ResolveBurnShader() == null)
+            {
+                SetCardFaceAlpha(0f);
+                onComplete?.Invoke();
+                return false;
+            }
+            _burnCo = StartCoroutine(BurnAwayRoutine(duration, onComplete));
+            return true;
+        }
+
+        System.Collections.IEnumerator BurnAwayRoutine(float duration, System.Action onComplete)
+        {
+            EnsureBurnMaterial().SetFloat("_NoiseSeed", Random.Range(0f, 100f));
+            BeginBurnOn(_talismanShown);
+            yield return BurnTween(0f, 1f, duration, !_talismanShown);
+
+            EndBurnMaterials();
+            SetCardFaceAlpha(0f);
+            if (_talismanFace != null) _talismanFace.enabled = false;
+            _burnCo = null;
+            onComplete?.Invoke();
+        }
+
         // 전환 연출을 즉시 끝내고 목표 상태로 정착
         void FinishBurnImmediately()
         {
@@ -841,9 +870,19 @@ namespace Battle.UI
             _ => Color.white
         };
 
+        // 그리드 카드의 드래그 이벤트를 부모(ScrollRect 등)에 전달 — 카드는 제자리, 목록은 스크롤
+        void ForwardDragToParent<T>(PointerEventData eventData, ExecuteEvents.EventFunction<T> fn)
+            where T : IEventSystemHandler
+        {
+            Transform parent = transform.parent;
+            if (parent != null) ExecuteEvents.ExecuteHierarchy(parent.gameObject, eventData, fn);
+        }
+
         // 드래그 시작 시 홈 캡처·드래그 레이어 이동·확대를 처리
         public void OnBeginDrag(PointerEventData eventData)
         {
+            // 덱/묘지 보기·픽커 그리드 카드(슬롯 -1)는 잡아 옮기지 않음 — 드래그는 부모 스크롤로 넘김
+            if (SlotIndex < 0) { ForwardDragToParent(eventData, ExecuteEvents.beginDragHandler); return; }
             if (Card == null || Hud == null) return;
             CancelDrawIntro(); // 등장 연출 중이면 즉시 홈으로 정착
 
@@ -881,6 +920,7 @@ namespace Battle.UI
         // 드래그 이동량을 스케일 보정해 위치에 누적
         public void OnDrag(PointerEventData eventData)
         {
+            if (SlotIndex < 0) { ForwardDragToParent(eventData, ExecuteEvents.dragHandler); return; }
             if (Card == null || Hud == null) return;
 
             // delta를 캔버스 스케일로 보정해 누적
@@ -912,6 +952,7 @@ namespace Battle.UI
         // 드래그 종료 시 사용 시도, 실패하면 홈으로 복귀
         public void OnEndDrag(PointerEventData eventData)
         {
+            if (SlotIndex < 0) { ForwardDragToParent(eventData, ExecuteEvents.endDragHandler); return; }
             if (Card == null || Hud == null) return;
             _canvasGroup.blocksRaycasts = true;
             _isDragging = false;

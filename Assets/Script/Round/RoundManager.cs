@@ -88,6 +88,8 @@ public class RoundManager : MonoBehaviour
     [SerializeField] private RewardHubUIController rewardHubUIController; // 보상 허브 UI 컨트롤러
 
     [Header("보상 상단 문구 - 카드")]
+    [Tooltip("부적 보상창 프리팹(배경·카드 슬롯·스킵 버튼). 비우면 런타임 생성 UI 사용.")]
+    [SerializeField] private Battle.UI.CardRewardPanelView cardRewardPanelPrefab; // 부적 보상창 프리팹
     [SerializeField] private Font cardRewardTitleFont; // 카드 보상 제목 폰트
     [SerializeField, Range(12, 96)] private int cardRewardTitleFontSize = 40; // 카드 보상 제목 폰트 크기
     [SerializeField] private Color cardRewardTitleColor = Color.white; // 카드 보상 제목 색상
@@ -557,6 +559,7 @@ public class RoundManager : MonoBehaviour
 
         var rewardUI = Battle.UI.CardRewardUI.EnsureExists();
         rewardUI.SetTitleStyle(cardRewardTitleFont, cardRewardTitleFontSize, cardRewardTitleColor, cardRewardTitlePosition);
+        rewardUI.SetPanelPrefab(cardRewardPanelPrefab);
         rewardUI.SetSkipButtonStyle(cardRewardSkipButtonStyle);
         rewardUI.SetCardLayout(cardRewardCardScale, cardRewardCardSpacing);
         rewardUI.Present(cardPrefab, pickedCardId =>

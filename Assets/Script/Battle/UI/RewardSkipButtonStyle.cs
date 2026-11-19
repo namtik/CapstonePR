@@ -9,6 +9,8 @@ namespace Battle.UI
     public class RewardSkipButtonStyle
     {
         [Header("라벨 (글자)")]
+        [Tooltip("끄면 라벨 글자를 만들지 않는다(버튼 이미지에 글자가 그려져 있을 때).")]
+        public bool showLabel = true; // 라벨 표시 여부
         public string label = "선택하지 않기"; // 버튼 라벨
         public Font font; // 라벨 폰트
         [Range(8, 96)] public int fontSize = 28; // 라벨 글자 크기
@@ -62,22 +64,26 @@ namespace Battle.UI
             if (onClick != null)
                 btn.onClick.AddListener(() => onClick());
 
-            var labelGo = new GameObject("Label", typeof(RectTransform));
-            var lrt = (RectTransform)labelGo.transform;
-            lrt.SetParent(rt, false);
-            lrt.anchorMin = Vector2.zero;
-            lrt.anchorMax = Vector2.one;
-            lrt.offsetMin = Vector2.zero;
-            lrt.offsetMax = Vector2.zero;
-            lrt.localScale = Vector3.one;
+            Text text = null;
+            if (showLabel)
+            {
+                var labelGo = new GameObject("Label", typeof(RectTransform));
+                var lrt = (RectTransform)labelGo.transform;
+                lrt.SetParent(rt, false);
+                lrt.anchorMin = Vector2.zero;
+                lrt.anchorMax = Vector2.one;
+                lrt.offsetMin = Vector2.zero;
+                lrt.offsetMax = Vector2.zero;
+                lrt.localScale = Vector3.one;
 
-            var text = labelGo.AddComponent<Text>();
-            text.font = font != null ? font : BuiltinFont();
-            text.fontSize = fontSize;
-            text.color = textColor;
-            text.alignment = TextAnchor.MiddleCenter;
-            text.text = label;
-            text.raycastTarget = false;
+                text = labelGo.AddComponent<Text>();
+                text.font = font != null ? font : BuiltinFont();
+                text.fontSize = fontSize;
+                text.color = textColor;
+                text.alignment = TextAnchor.MiddleCenter;
+                text.text = label;
+                text.raycastTarget = false;
+            }
 
             var hoverFx = go.AddComponent<RewardSkipButtonHoverFx>();
             hoverFx.Initialize(img, text, this);

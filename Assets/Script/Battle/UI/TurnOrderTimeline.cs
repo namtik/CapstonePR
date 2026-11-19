@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,124 +6,115 @@ using Battle.Relic;
 
 namespace Battle.UI
 {
-    // 적 행동 종류 — 새 행동(방해행동 세부 종류 등)은 여기에 추가하고 actionIcons에 아이콘을 등록한다
-    public enum EnemyActionKind { Attack = 0, Disrupt = 1 }
-
-    // 행동 종류별 아이콘·색 — 인스펙터에서 언제든 추가/교체
-    [Serializable]
-    public class EnemyActionIcon
-    {
-        public EnemyActionKind kind;
-        public Sprite icon;                   // 비우면 fallbackText 글자 표시
-        public Color color = Color.white;     // 칸 테두리·배지 색
-        public string fallbackText = "?";     // 아이콘 없을 때 글자
-    }
-
-    // 행동 순서 바 — 화면 좌측.
-    // 맨 위 '현재' 칸 = 지금 행동하는 쪽(내 턴 / 행동 중인 적), 그 아래 = 몬스터별 행(초상화 + 다음 행동 칸들).
-    // 행 순서는 전투 등록 순서로 고정, 가장 먼저 올 행동 칸은 빛나는 테두리로 강조한다.
-    // 적 행동 시점은 행동 게이지(플레이어 행동마다 1단계)로 시뮬레이션해 예측한다(빙결 스택 반영).
+    // 턴 예고 바 — 화면 좌측 가장자리에 몬스터별 행을 세로로 쌓는다.
+    //   [패널: 몬스터 초상화 | 칼 아이콘 + 공격까지 남은 턴(또는 예상 피해)]  [방해 아이콘 + 방해까지 남은 턴]
+    // 행 순서는 전투 등록 순서로 고정. 적 행동 시점은 행동 게이지(플레이어 행동마다 1단계)를 시뮬레이션해 예측한다(빙결 스택 반영).
+    // 아래에는 전투형 유물 칸을 표시하고, 유물 발동 시 해당 칸을 순서대로 펄스한다.
     public class TurnOrderTimeline : MonoBehaviour
     {
+        // 칼 아이콘 아래 숫자 의미
+        public enum AttackNumber { TurnsLeft, Damage }
+
+        [Header("행 프리팹")]
+        [Tooltip("몬스터 한 행 프리팹(TurnOrderRowView). 비우면 아래 '행 내부' 값으로 코드에서 만든다.")]
+        [SerializeField] private TurnOrderRowView rowPrefab;
+        [Tooltip("행 안 글자에 쓸 TMP 머티리얼(외곽선 포함, 예: NYJUnheo SDF 2). 지정하면 아래 코드 외곽선 대신 이 머티리얼을 쓴다.")]
+        [SerializeField] private Material textMaterial;
+        [Tooltip("textMaterial이 없을 때 숫자 텍스트에 코드로 어두운 외곽선 적용")]
+        [SerializeField] private bool numberOutline = true;
+        [Tooltip("2순위(다음) 행동 묶음 투명도")]
+        [SerializeField, Range(0f, 1f)] private float disruptAlpha = 0.6f;
+
         [Header("배치 (좌상단 기준)")]
-        [SerializeField] private Vector2 anchoredOffset = new Vector2(24f, -150f); // 바 시작 위치
-        [SerializeField] private float currentSize = 96f;   // '현재' 칸 크기
-        [Tooltip("현재 칸 오른쪽 이름 라벨 폭")]
-        [SerializeField] private float labelWidth = 90f;    // 이름 라벨 폭
-        [SerializeField] private float actionSize = 80f;    // 행동 칸 크기(몬스터 초상화 + 모서리 정보)
-        [SerializeField] private float rowSpacing = 10f;    // 행 간격
-        [SerializeField] private float cellSpacing = 10f;   // 행동 칸 간격
-        [SerializeField] private int actionsPerRow = 2;     // 몬스터별 표시할 다음 행동 수
-        [Tooltip("몬스터 수가 적어도 이 행 수만큼 패널 높이를 고정(더 많으면 늘어남)")]
-        [SerializeField] private int reservedRows = 3;      // 고정 몬스터 행 수
-        [Tooltip("방해행동(게이지 절반)도 행동 칸에 표시")]
-        [SerializeField] private bool showDisruptions = true;
+        [Tooltip("첫 행의 좌상단 위치. x=0이면 화면 왼쪽 가장자리에 붙는다.")]
+        [SerializeField] private Vector2 anchoredOffset = new Vector2(0f, -170f);
+        [Tooltip("행 크기(px) — 행 프리팹을 쓰면 프리팹 루트 크기를 따른다")]
+        [SerializeField] private Vector2 rowPanelSize = new Vector2(220f, 122f);
+        [SerializeField] private float rowSpacing = 14f;    // 행 간격
         [SerializeField] private float slideSpeed = 12f;    // 위치 보간 속도
-        [Tooltip("누르면 턴 순서 바를 숨기거나 다시 표시")]
-        [SerializeField] private KeyCode hideToggleKey = KeyCode.Z; // 표시 토글 키
-        private bool _hiddenByUser;                         // 키로 숨김 상태
+        [Tooltip("누르면 턴 예고 바를 숨기거나 다시 표시")]
+        [SerializeField] private KeyCode hideToggleKey = KeyCode.Z;
+        private bool _hiddenByUser;
 
-        [Header("행동 아이콘 (종류별)")]
-        [SerializeField] private List<EnemyActionIcon> actionIcons = new List<EnemyActionIcon>
-        {
-            new EnemyActionIcon { kind = EnemyActionKind.Attack,  color = new Color(0.95f, 0.34f, 0.30f), fallbackText = "공" },
-            new EnemyActionIcon { kind = EnemyActionKind.Disrupt, color = new Color(0.70f, 0.45f, 0.98f), fallbackText = "?" },
-        };
-        [Tooltip("공격 칸에 예상 피해 표시")]
-        [SerializeField] private bool showDamage = true;
+        [Header("행 내부 — 프리팹 미사용 시 (패널 기준 px)")]
+        [Tooltip("왼쪽 초상화 영역 폭(패널 왼쪽부터)")]
+        [SerializeField] private float portraitWidth = 132f;
+        [Tooltip("초상화 영역 위아래·왼쪽 안쪽 여백")]
+        [SerializeField] private float portraitInset = 9f;
+        [SerializeField] private Color portraitBgColor = new Color(0.13f, 0.10f, 0.08f, 0.95f);
+        [SerializeField] private Color dividerColor = new Color(0.86f, 0.66f, 0.36f, 1f);
+        [SerializeField] private float iconSize = 46f;      // 칼·방해 아이콘 크기
+        [SerializeField] private float iconY = -36f;        // 아이콘 중심 y(행 위쪽 기준)
+        [SerializeField] private float numberY = -86f;      // 숫자 중심 y
+        [SerializeField] private float numberFontSize = 40f;
 
-        [Header("다음 행동 강조")]
-        [SerializeField] private Color nextGlowColor = new Color(1f, 0.80f, 0.38f); // 테두리 빛 색
-        [Tooltip("가장 먼저 올 행동 칸 모서리에 붙일 표식(비우면 빛나는 테두리만).")]
-        [SerializeField] private Sprite nextMarker;
-        [SerializeField] private float glowPulseSpeed = 3f; // 빛 깜빡임 속도
+        [Header("공격 (칼)")]
+        [Tooltip("비우면 Resources/UI/TurnOrder/TurnOrder_AttackIcon")]
+        [SerializeField] private Sprite attackIcon;
+        [Tooltip("칼 아래 숫자: 공격까지 남은 턴 / 예상 피해")]
+        [SerializeField] private AttackNumber attackNumber = AttackNumber.TurnsLeft;
+        [SerializeField] private Color attackNumberColor = Color.white;
 
-        [Header("아이템(유물)")]
-        [SerializeField] private bool showItems = true;     // 몬스터 행 아래 유물 칸 표시
-        [Tooltip("전투형 유물만 표시(비전투형 — 상점 할인·최대 체력 등은 제외)")]
-        [SerializeField] private bool combatItemsOnly = true;
-        [SerializeField] private float itemSize = 56f;      // 아이템 칸 크기
-        [SerializeField] private float itemSpacing = 8f;    // 아이템 칸 간격
-        [SerializeField] private int itemsPerRow = 4;       // 한 줄 아이템 수
-        [Tooltip("유물 발동 시 현재 칸에 표시되는 시간(초) — 여러 개 동시 발동 시 순서대로")]
-        [SerializeField] private float itemShowSeconds = 0.9f;
-        [SerializeField] private Color itemColor = new Color(0.85f, 0.72f, 0.40f); // 아이템 테두리·발동 색
+        [Header("방해 행동")]
+        [SerializeField] private bool showDisruptions = true;
+        [Tooltip("방해 행동 아이콘. 비우면 '방해' 글자")]
+        [SerializeField] private Sprite disruptIcon;
+        [Tooltip("패널 오른쪽 끝에서 방해 묶음 중심까지 거리")]
+        [SerializeField] private float disruptOffsetX = 36f;
+        [SerializeField] private Color disruptNumberColor = new Color(0.82f, 0.80f, 0.74f, 1f);
 
-        [Header("행 상태")]
+        [Header("패널")]
+        [Tooltip("비우면 Resources/UI/TurnOrder/TurnOrder_RowPanel")]
+        [SerializeField] private Sprite rowPanelSprite;
+
+        [Header("강조")]
+        [Tooltip("가장 먼저 공격할 몬스터의 칼·숫자 색")]
+        [SerializeField] private Color nextColor = new Color(1f, 0.80f, 0.38f);
+        [SerializeField] private float glowPulseSpeed = 3f;
+        [Tooltip("행동 중인 몬스터 패널 색(곱)")]
+        [SerializeField] private Color actingTint = new Color(1f, 0.72f, 0.62f, 1f);
         [Tooltip("다른 적이 행동 중일 때 나머지 행 투명도")]
         [SerializeField, Range(0f, 1f)] private float idleRowAlpha = 0.55f;
+
+        [Header("아이템(유물)")]
+        [SerializeField] private bool showItems = true;
+        [Tooltip("전투형 유물만 표시(비전투형 — 상점 할인·최대 체력 등은 제외)")]
+        [SerializeField] private bool combatItemsOnly = true;
+        [SerializeField] private float itemsX = 24f;        // 아이템 구역 x
+        [SerializeField] private float itemsGap = 20f;      // 행과 아이템 사이
+        [SerializeField] private float itemSize = 56f;
+        [SerializeField] private float itemSpacing = 8f;
+        [SerializeField] private int itemsPerRow = 4;
+        [Tooltip("유물 발동 표시 간격(초) — 여러 개 동시 발동 시 순서대로. 이 동안 적 행동이 대기한다")]
+        [SerializeField] private float itemShowSeconds = 0.9f;
+        [SerializeField] private Color itemColor = new Color(0.85f, 0.72f, 0.40f);
 
         [Header("스타일")]
         [Tooltip("비우면 씬의 다른 TMP 텍스트 폰트를 사용(한글 폰트 확보용).")]
         [SerializeField] private TMP_FontAsset font;
-        [SerializeField] private Sprite playerPortrait;     // 내 턴 초상화(비우면 '나' 글자)
-        [SerializeField] private Color playerColor = new Color(0.33f, 0.70f, 1f);
-        [SerializeField] private Color attackColor = new Color(0.95f, 0.34f, 0.30f); // '적 턴' 헤더 색
-        [SerializeField] private Color panelColor = new Color(0f, 0f, 0f, 0.35f);
 
         const int MaxSimSteps = 400; // 예측 시뮬레이션 상한(빙결 스택이 매우 클 때 무한 루프 방지)
-        const float HeaderH = 34f;
+        const string ResDir = "UI/TurnOrder/";
 
-        // 예측된 행동 하나
-        struct Prediction
+        // 몬스터 한 행의 예측
+        struct Forecast
         {
-            public EnemyActionKind kind;
-            public int steps;      // 몇 단계(플레이어 행동) 후 발동하는지, -1=대기 중(곧 행동)
-            public int damage;     // 공격 예상 피해(-1=표시 안 함)
+            public int attackSteps;   // 공격까지 남은 플레이어 행동 수(-1=게이지 가득, 곧 공격 / int.MaxValue=예측 불가)
+            public int attackDamage;  // 다음 공격 예상 피해
+            public int disruptSteps;  // 방해까지 남은 수(int.MaxValue=없음)
         }
 
-        // 행동 칸 화면 오브젝트
-        class CellView
-        {
-            public RectTransform rect;
-            public Image glow;
-            public Image frame;
-            public Image portrait;            // 몬스터 초상화(칸 배경)
-            public TextMeshProUGUI initial;   // 초상화 없을 때 이름 첫 글자
-            public Image typeBg;              // 좌하단 행동 유형 배지
-            public Image icon;
-            public TextMeshProUGUI fallback;
-            public Image badgeBg;             // 우하단 남은 턴 배지
-            public TextMeshProUGUI badgeText;
-            public RectTransform dmgPill;     // 좌상단 공격력
-            public TextMeshProUGUI dmgText;
-            public Image marker;
-        }
-
-        // 몬스터 행 화면 오브젝트
         class RowView
         {
             public int id;
             public EnemyController enemy;
             public RectTransform rect;
             public CanvasGroup group;
-            public Image highlight;
-            public CellView[] cells;
-            public readonly List<Prediction> preds = new List<Prediction>();
+            public TurnOrderRowView view;
+            public Forecast forecast;
             public bool used;
         }
 
-        // 아이템(유물) 칸 화면 오브젝트
         class ItemView
         {
             public RelicSO relic;
@@ -138,30 +128,14 @@ namespace Battle.UI
         }
 
         RectTransform _root;
-        RectTransform _rows;   // 행 컨테이너
-        RectTransform _items;  // 아이템 컨테이너
-        RectTransform _itemDivider;
+        RectTransform _rows;
+        RectTransform _items;
+        TextMeshProUGUI _lockHint;
         readonly List<ItemView> _itemViews = new List<ItemView>();
         readonly List<RelicSO> _itemBuf = new List<RelicSO>();
-        readonly Queue<RelicSO> _triggerQueue = new Queue<RelicSO>(); // 현재 칸에 띄울 발동 유물 대기열
+        readonly Queue<RelicSO> _triggerQueue = new Queue<RelicSO>(); // 발동 표시 대기열
         RelicSO _showingRelic;
         float _showingUntil;
-        Image _panel;
-        TextMeshProUGUI _header;
-        TextMeshProUGUI _lockHint;
-        RectTransform _divider;
-
-        // 현재 칸
-        RectTransform _current;
-        Image _curFrame;
-        Image _curPortrait;
-        TextMeshProUGUI _curInitial;
-        Image _curBadgeBg;
-        Image _curBadgeIcon;
-        TextMeshProUGUI _curBadgeText;
-        TextMeshProUGUI _curLabel;
-        int _curId = int.MinValue;
-        float _curPulse;
 
         readonly Dictionary<int, RowView> _views = new Dictionary<int, RowView>();
         readonly List<RowView> _order = new List<RowView>(); // 고정 행 순서(살아있는 행)
@@ -170,8 +144,6 @@ namespace Battle.UI
         readonly HashSet<EnemyController> _pending = new HashSet<EnemyController>();
         readonly List<int> _removeBuf = new List<int>();
         bool _built;
-        bool _wasEnemyTurn;
-        float _headerPulse;
         float _lockFlash;
 
         static Sprite _roundedSprite;
@@ -179,7 +151,7 @@ namespace Battle.UI
 
         void Awake() => Build();
 
-        // 적 턴에 카드를 쓰려 할 때 '적 턴' 표시를 깜빡여 잠금을 알린다
+        // 적 턴에 카드를 쓰려 할 때 잠금 안내를 깜빡인다
         public void FlashLocked() => _lockFlash = 1f;
 
         // 유물 발동 표시가 진행 중이거나 대기 중인지 — 적 행동은 이게 끝난 뒤 시작한다
@@ -187,13 +159,11 @@ namespace Battle.UI
             isActiveAndEnabled && showItems
             && (_triggerQueue.Count > 0 || (_showingRelic != null && Time.unscaledTime < _showingUntil));
 
-        // 유물 발동 — 현재 칸에 순서대로 띄우고 해당 아이템 칸을 펄스
+        // 유물 발동 — 순서대로 해당 아이템 칸을 펄스
         public void ShowRelicTrigger(RelicSO relic)
         {
             if (relic == null || !showItems) return;
             _triggerQueue.Enqueue(relic);
-            for (int i = 0; i < _itemViews.Count; i++)
-                if (_itemViews[i].relic == relic) _itemViews[i].flash = 1f;
         }
 
         // ── 매 프레임: 예측 → 배치 ─────────────────────────────
@@ -206,77 +176,31 @@ namespace Battle.UI
             if (_root.gameObject.activeSelf != show) _root.gameObject.SetActive(show);
             if (!show) return;
 
-            UpdateHeader(nbc);
-            UpdateCurrent(nbc);
+            UpdateRelicTrigger();
+            UpdateLockHint();
             SyncRows();
-            BuildPredictions(nbc);
+            BuildForecasts(nbc);
             SyncItems(nbc);
             ApplyLayout(nbc);
         }
 
-        // ── 현재 칸 ─────────────────────────────────────────────
-        void UpdateCurrent(NewBattleController nbc)
+        // 발동 대기열 — itemShowSeconds 간격으로 하나씩 꺼내 아이템 칸을 펄스
+        void UpdateRelicTrigger()
         {
-            // 유물 발동 표시가 대기 중이면 현재 칸을 잠시 그 유물로 바꾼다(여러 개면 순서대로)
             if (_showingRelic != null && Time.unscaledTime >= _showingUntil) _showingRelic = null;
-            if (_showingRelic == null && _triggerQueue.Count > 0)
-            {
-                _showingRelic = _triggerQueue.Dequeue();
-                _showingUntil = Time.unscaledTime + itemShowSeconds;
-            }
+            if (_showingRelic != null || _triggerQueue.Count == 0) return;
+            _showingRelic = _triggerQueue.Dequeue();
+            _showingUntil = Time.unscaledTime + itemShowSeconds;
+            for (int i = 0; i < _itemViews.Count; i++)
+                if (_itemViews[i].relic == _showingRelic) _itemViews[i].flash = 1f;
+        }
 
-            EnemyController acting = nbc.ActingEnemy;
-            bool enemyActing = acting != null && acting.IsAlive;
-            int id = _showingRelic != null ? _showingRelic.GetInstanceID()
-                   : enemyActing ? acting.GetInstanceID() * 2 + (nbc.ActingIsDisruption ? 1 : 0) : int.MinValue + 1;
-            if (id != _curId) { _curId = id; _curPulse = 1f; }
-            _curPulse = Mathf.MoveTowards(_curPulse, 0f, Time.deltaTime * 3f);
-
-            Sprite portrait;
-            string name;
-            Color c;
-            if (_showingRelic != null)
-            {
-                portrait = _showingRelic.icon;
-                name = _showingRelic.DisplayLabel;
-                c = itemColor;
-                _curLabel.text = $"<b>{name}</b>\n<size=70%>발동</size>";
-                _curBadgeBg.gameObject.SetActive(false);
-            }
-            else if (enemyActing)
-            {
-                EnemyActionKind kind = nbc.ActingIsDisruption ? EnemyActionKind.Disrupt : EnemyActionKind.Attack;
-                EnemyActionIcon entry = FindIcon(kind);
-                c = KindColor(kind);
-                GetEnemyInfo(acting, out portrait, out name);
-                _curLabel.text = $"<b>{name}</b>";
-
-                // 행동 종류 배지(아이콘)
-                _curBadgeBg.gameObject.SetActive(true);
-                _curBadgeBg.color = c;
-                bool hasIcon = entry != null && entry.icon != null;
-                _curBadgeIcon.enabled = hasIcon;
-                if (hasIcon) _curBadgeIcon.sprite = entry.icon;
-                _curBadgeText.gameObject.SetActive(!hasIcon);
-                if (!hasIcon) _curBadgeText.text = entry != null ? entry.fallbackText : "!";
-            }
-            else
-            {
-                portrait = playerPortrait;
-                name = "나";
-                c = playerColor;
-                _curLabel.text = "<b>내 턴</b>";
-                _curBadgeBg.gameObject.SetActive(false);
-            }
-
-            _curFrame.color = c;
-            _curPortrait.enabled = portrait != null;
-            if (portrait != null && _curPortrait.sprite != portrait) _curPortrait.sprite = portrait;
-            _curInitial.gameObject.SetActive(portrait == null);
-            if (portrait == null) _curInitial.text = string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1);
-
-            float s = 1f + _curPulse * 0.12f;
-            _current.localScale = new Vector3(s, s, 1f);
+        void UpdateLockHint()
+        {
+            _lockFlash = Mathf.MoveTowards(_lockFlash, 0f, Time.deltaTime * 2f);
+            bool on = _lockFlash > 0.01f;
+            if (_lockHint.gameObject.activeSelf != on) _lockHint.gameObject.SetActive(on);
+            if (on) _lockHint.color = new Color(1f, 1f, 1f, _lockFlash);
         }
 
         // ── 몬스터 행: 등록 순서 고정, 새 적은 뒤에 추가, 사라진 적은 페이드 아웃 ──
@@ -309,51 +233,55 @@ namespace Battle.UI
             }
         }
 
-        // 각 몬스터의 다음 행동들을 게이지 시뮬레이션으로 예측
-        void BuildPredictions(NewBattleController nbc)
+        // 각 몬스터의 다음 공격·다음 방해를 게이지 시뮬레이션으로 예측
+        void BuildForecasts(NewBattleController nbc)
         {
             _pending.Clear();
             foreach (EnemyController e in nbc.PendingAttackers)
                 if (e != null) _pending.Add(e);
 
-            int want = Mathf.Max(1, actionsPerRow);
             for (int r = 0; r < _order.Count; r++)
             {
                 RowView row = _order[r];
-                row.preds.Clear();
                 EnemyController e = row.enemy;
-                if (e == null) continue;
-                int attacksAhead = 0;
-
-                // 이미 게이지가 차서 공격 대기 중
-                if (_pending.Contains(e))
-                    row.preds.Add(new Prediction { kind = EnemyActionKind.Attack, steps = -1, damage = e.GetPredictedAttackDamage(attacksAhead++) });
-
-                EnemyStat st = e.GetComponent<EnemyStat>();
-                if (st == null) continue;
-                int step = st.GaugeStep;
-                int max = Mathf.Max(1, st.GaugeMaxSteps);
-                bool mid = st.MidPatternTriggered;
-                int frost = st.statusEffects != null && st.statusEffects.TryGetValue("frost", out int f) ? f : 0;
-
-                // 플레이어 행동 1회마다 게이지 +1(빙결 스택이 있으면 스택만 1 소모)
-                for (int k = 1; k <= MaxSimSteps && row.preds.Count < want; k++)
+                var f = new Forecast { attackSteps = int.MaxValue, attackDamage = -1, disruptSteps = int.MaxValue };
+                if (e != null)
                 {
-                    if (frost > 0) { frost--; continue; }
-                    step++;
-                    if (step == max / 2 && !mid)
+                    f.attackDamage = e.GetPredictedAttackDamage(0);
+                    if (_pending.Contains(e)) f.attackSteps = -1; // 이미 게이지가 차서 공격 대기 중
+
+                    EnemyStat st = e.GetComponent<EnemyStat>();
+                    if (st != null)
                     {
-                        mid = true;
-                        if (showDisruptions)
-                            row.preds.Add(new Prediction { kind = EnemyActionKind.Disrupt, steps = k, damage = -1 });
-                    }
-                    if (step >= max && row.preds.Count < want)
-                    {
-                        row.preds.Add(new Prediction { kind = EnemyActionKind.Attack, steps = k, damage = e.GetPredictedAttackDamage(attacksAhead++) });
-                        step = 0;
-                        mid = false;
+                        int step = st.GaugeStep;
+                        int max = Mathf.Max(1, st.GaugeMaxSteps);
+                        bool mid = st.MidPatternTriggered;
+                        int frost = st.statusEffects != null && st.statusEffects.TryGetValue("frost", out int fr) ? fr : 0;
+
+                        // 플레이어 행동 1회마다 게이지 +1(빙결 스택이 있으면 스택만 1 소모)
+                        for (int k = 1; k <= MaxSimSteps; k++)
+                        {
+                            bool needAttack = f.attackSteps == int.MaxValue;
+                            bool needDisrupt = showDisruptions && f.disruptSteps == int.MaxValue;
+                            if (!needAttack && !needDisrupt) break;
+
+                            if (frost > 0) { frost--; continue; }
+                            step++;
+                            if (step == max / 2 && !mid)
+                            {
+                                mid = true;
+                                if (needDisrupt) f.disruptSteps = k;
+                            }
+                            if (step >= max)
+                            {
+                                if (needAttack) f.attackSteps = k;
+                                step = 0;
+                                mid = false;
+                            }
+                        }
                     }
                 }
+                row.forecast = f;
             }
         }
 
@@ -405,48 +333,21 @@ namespace Battle.UI
             }
         }
 
-        // 상단 '내 턴 / 적 턴' 표시 — 턴이 바뀌는 순간 펄스
-        void UpdateHeader(NewBattleController nbc)
-        {
-            bool enemyTurn = nbc.IsEnemyTurn && !nbc.IsAwakenActive;
-            if (enemyTurn != _wasEnemyTurn) { _headerPulse = 1f; _wasEnemyTurn = enemyTurn; }
-            _headerPulse = Mathf.MoveTowards(_headerPulse, 0f, Time.deltaTime * 2.5f);
-            _lockFlash = Mathf.MoveTowards(_lockFlash, 0f, Time.deltaTime * 2f);
-
-            if (nbc.IsAwakenActive)
-            {
-                _header.text = "각성";
-                _header.color = new Color(1f, 0.85f, 0.3f);
-            }
-            else
-            {
-                _header.text = enemyTurn ? "적 턴" : "내 턴";
-                _header.color = Color.Lerp(enemyTurn ? attackColor : playerColor, Color.white, _lockFlash * 0.8f);
-            }
-            float s = 1f + _headerPulse * 0.25f + _lockFlash * 0.12f;
-            _header.rectTransform.localScale = new Vector3(s, s, 1f);
-
-            _lockHint.gameObject.SetActive(_lockFlash > 0.01f);
-            if (_lockHint.gameObject.activeSelf)
-                _lockHint.color = new Color(1f, 1f, 1f, _lockFlash);
-        }
-
-        // 행 배치·내용 갱신, 사라지는 행 처리, 패널 크기 맞춤
+        // 행 배치·내용 갱신, 사라지는 행 처리, 아이템 위치
         void ApplyLayout(NewBattleController nbc)
         {
             float dt = Time.deltaTime;
             float t = 1f - Mathf.Exp(-slideSpeed * dt);
             EnemyController acting = nbc.ActingEnemy;
 
-            // 가장 먼저 올 행동 = 남은 단계가 가장 적은 칸(동률이면 위 행 우선)
-            int nextRow = -1, nextCell = -1, best = int.MaxValue;
+            // 전체에서 가장 먼저 올 행동이 있는 행(동률이면 위 행 우선) — 그 행의 1순위 칸을 강조
+            int nextRow = -1, best = int.MaxValue;
             for (int r = 0; r < _order.Count; r++)
             {
-                var preds = _order[r].preds;
-                for (int c = 0; c < preds.Count; c++)
-                    if (preds[c].steps < best) { best = preds[c].steps; nextRow = r; nextCell = c; }
+                int first = FirstSteps(_order[r].forecast);
+                if (first < best) { best = first; nextRow = r; }
             }
-            float glow = 0.55f + 0.45f * Mathf.Sin(Time.time * glowPulseSpeed);
+            float glow = 0.5f + 0.5f * Mathf.Sin(Time.time * glowPulseSpeed);
 
             float y = 0f;
             for (int r = 0; r < _order.Count; r++)
@@ -455,13 +356,13 @@ namespace Battle.UI
                 bool isActing = acting != null && row.enemy == acting;
 
                 Vector2 target = new Vector2(0f, y);
-                if (row.group.alpha <= 0f) row.rect.anchoredPosition = target - new Vector2(0f, 20f); // 새 행은 아래에서 등장
+                if (row.group.alpha <= 0f) row.rect.anchoredPosition = target - new Vector2(40f, 0f); // 새 행은 왼쪽에서 등장
                 row.rect.anchoredPosition = Vector2.Lerp(row.rect.anchoredPosition, target, t);
                 float targetAlpha = acting != null && !isActing ? idleRowAlpha : 1f;
                 row.group.alpha = Mathf.MoveTowards(row.group.alpha, targetAlpha, dt * 5f);
-                FillRow(row, isActing, nbc.ActingIsDisruption, r == nextRow ? nextCell : -1, glow);
+                FillRow(row, isActing, r == nextRow, glow);
 
-                y -= actionSize + rowSpacing;
+                y -= RowHeight + rowSpacing;
             }
 
             // 죽은 적의 행 — 왼쪽으로 빠지며 사라지고, 아래 행들이 위로 당겨진다
@@ -469,7 +370,7 @@ namespace Battle.UI
             {
                 RowView v = _dying[i];
                 v.group.alpha = Mathf.MoveTowards(v.group.alpha, 0f, dt * 3f);
-                v.rect.anchoredPosition += new Vector2(-220f * dt, 0f);
+                v.rect.anchoredPosition += new Vector2(-260f * dt, 0f);
                 if (v.group.alpha <= 0f)
                 {
                     Destroy(v.rect.gameObject);
@@ -477,106 +378,102 @@ namespace Battle.UI
                 }
             }
 
-            float rowsTop = HeaderH + currentSize + rowSpacing * 2f;
-            // 몬스터 수와 관계없이 최대 행 수만큼 자리를 잡아 패널 크기·아이템 위치를 고정
-            int rowSlots = Mathf.Max(_order.Count, reservedRows);
-            float rowsH = rowSlots > 0 ? rowSlots * (actionSize + rowSpacing) - rowSpacing : 0f;
-            float targetH = rowsTop + rowsH + 10f;
-
-            // 아이템 구역 — 몬스터 행 아래 구분선 다음, 행이 줄면 함께 위로 당겨진다
+            // 아이템 구역 — 마지막 행 아래, 행이 줄면 함께 위로 당겨진다
             bool hasItems = _itemViews.Count > 0;
             if (_items.gameObject.activeSelf != hasItems) _items.gameObject.SetActive(hasItems);
-            _itemDivider.gameObject.SetActive(hasItems);
             if (hasItems)
             {
-                int cols = Mathf.Max(1, itemsPerRow);
-                int lines = (_itemViews.Count + cols - 1) / cols;
-                float itemsTop = rowsTop + rowsH + rowSpacing * 2f;
-                Vector2 ip = new Vector2(0f, -itemsTop);
+                float rowsH = _order.Count > 0 ? _order.Count * (RowHeight + rowSpacing) - rowSpacing : 0f;
+                Vector2 ip = new Vector2(itemsX, -(rowsH + itemsGap));
                 _items.anchoredPosition = _items.anchoredPosition == Vector2.zero ? ip : Vector2.Lerp(_items.anchoredPosition, ip, t);
-                _itemDivider.anchoredPosition = new Vector2(0f, _items.anchoredPosition.y + rowSpacing);
-                targetH = itemsTop + lines * (itemSize + itemSpacing) - itemSpacing + 10f;
             }
-
-            float w = Mathf.Max(currentSize + labelWidth, RowWidth());
-            if (hasItems) w = Mathf.Max(w, Mathf.Max(1, itemsPerRow) * (itemSize + itemSpacing) - itemSpacing);
-            w += 22f;
-            _divider.sizeDelta = new Vector2(w - 22f, 2f);
-            _itemDivider.sizeDelta = _divider.sizeDelta;
-            Vector2 size = _panel.rectTransform.sizeDelta;
-            _panel.rectTransform.sizeDelta = new Vector2(w, size.y <= 0f ? targetH : Mathf.Lerp(size.y, targetH, t));
         }
 
-        // 한 행의 행동 칸 채우기
-        void FillRow(RowView row, bool isActing, bool actingDisrupt, int nextCell, float glow)
+        // 행 높이(프리팹이면 프리팹 루트 높이)
+        float RowHeight => rowPrefab != null ? ((RectTransform)rowPrefab.transform).sizeDelta.y : rowPanelSize.y;
+
+        // 한 행 채우기(프리팹에 없는 요소는 건너뜀)
+        void FillRow(RowView row, bool isActing, bool isNext, float glow)
         {
+            TurnOrderRowView v = row.view;
             GetEnemyInfo(row.enemy, out Sprite portrait, out string name);
-
-            // 행동 중인 행 — 배경 강조
-            Color actColor = KindColor(actingDisrupt ? EnemyActionKind.Disrupt : EnemyActionKind.Attack);
-            Color hl = isActing ? new Color(actColor.r, actColor.g, actColor.b, 0.35f) : new Color(1f, 1f, 1f, 0f);
-            row.highlight.color = Color.Lerp(row.highlight.color, hl, 0.25f);
-
-            for (int c = 0; c < row.cells.Length; c++)
+            if (v.portrait != null)
             {
-                CellView cell = row.cells[c];
-                bool has = c < row.preds.Count;
-                if (cell.rect.gameObject.activeSelf != has) cell.rect.gameObject.SetActive(has);
-                if (!has) continue;
-                FillCell(cell, row.preds[c], portrait, name, c == nextCell, glow);
+                v.portrait.enabled = portrait != null;
+                if (portrait != null && v.portrait.sprite != portrait) v.portrait.sprite = portrait;
             }
+            if (v.initial != null)
+            {
+                v.initial.gameObject.SetActive(portrait == null);
+                if (portrait == null) v.initial.text = string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1);
+            }
+
+            // 행동 중 — 패널 색 + 살짝 커짐
+            if (v.panel != null) v.panel.color = Color.Lerp(v.panel.color, isActing ? actingTint : Color.white, 0.25f);
+            float s = isActing ? 1.04f : 1f;
+            row.rect.localScale = Vector3.Lerp(row.rect.localScale, new Vector3(s, s, 1f), 0.25f);
+
+            // 행동 두 개를 가까운 순서로 — 1순위(초상화 옆), 2순위(패널 밖)
+            Forecast f = row.forecast;
+            bool hasAttack = f.attackSteps != int.MaxValue;
+            bool hasDisrupt = showDisruptions && f.disruptSteps != int.MaxValue;
+            bool attackFirst = hasAttack && (!hasDisrupt || f.attackSteps <= f.disruptSteps);
+
+            bool hasPrimary = hasAttack || hasDisrupt;
+            bool primaryIsAttack = attackFirst || !hasDisrupt;
+            bool hasSecondary = hasAttack && hasDisrupt;
+
+            SetSlotVisible(v.primaryIcon, v.primaryNumber, v.primaryFallback, hasPrimary);
+            if (hasPrimary)
+                FillSlot(v.primaryIcon, v.primaryNumber, v.primaryFallback, primaryIsAttack, f, isNext, glow);
+
+            if (v.secondaryGroup != null && v.secondaryGroup.activeSelf != hasSecondary) v.secondaryGroup.SetActive(hasSecondary);
+            if (hasSecondary)
+                FillSlot(v.secondaryIcon, v.secondaryNumber, v.secondaryFallback, !primaryIsAttack, f, false, glow);
         }
 
-        void FillCell(CellView cell, Prediction p, Sprite portrait, string name, bool isNext, float glow)
+        // 가장 먼저 올 행동까지 남은 수(공격 대기 중이면 -1)
+        int FirstSteps(Forecast f)
         {
-            EnemyActionIcon entry = FindIcon(p.kind);
-            Color c = KindColor(p.kind);
-            cell.frame.color = c;
-
-            // 칸 배경 = 몬스터 초상화
-            cell.portrait.enabled = portrait != null;
-            if (portrait != null && cell.portrait.sprite != portrait) cell.portrait.sprite = portrait;
-            cell.initial.gameObject.SetActive(portrait == null);
-            if (portrait == null) cell.initial.text = string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1);
-
-            // 좌하단 행동 유형
-            cell.typeBg.color = c;
-            bool hasIcon = entry != null && entry.icon != null;
-            cell.icon.enabled = hasIcon;
-            if (hasIcon && cell.icon.sprite != entry.icon) cell.icon.sprite = entry.icon;
-            cell.fallback.gameObject.SetActive(!hasIcon);
-            if (!hasIcon) cell.fallback.text = entry != null ? entry.fallbackText : "?";
-
-            // 우하단 남은 턴
-            cell.badgeBg.color = c;
-            cell.badgeText.text = p.steps < 0 ? "!" : p.steps.ToString();
-
-            bool dmg = showDamage && p.damage >= 0;
-            if (cell.dmgPill.gameObject.activeSelf != dmg) cell.dmgPill.gameObject.SetActive(dmg);
-            if (dmg) cell.dmgText.text = p.damage.ToString();
-
-            // 다음 행동 강조 — 빛나는 테두리 + (선택) 표식
-            cell.glow.gameObject.SetActive(isNext);
-            if (isNext) cell.glow.color = new Color(nextGlowColor.r, nextGlowColor.g, nextGlowColor.b, glow);
-            bool mark = isNext && nextMarker != null;
-            cell.marker.gameObject.SetActive(mark);
-            if (mark && cell.marker.sprite != nextMarker) cell.marker.sprite = nextMarker;
-            float s = isNext ? 1f + 0.04f * glow : 1f;
-            cell.rect.localScale = new Vector3(s, s, 1f);
+            int d = showDisruptions ? f.disruptSteps : int.MaxValue;
+            return Mathf.Min(f.attackSteps, d);
         }
 
-        EnemyActionIcon FindIcon(EnemyActionKind kind)
+        static void SetSlotVisible(Image icon, TMP_Text number, TMP_Text fallback, bool on)
         {
-            if (actionIcons == null) return null;
-            for (int i = 0; i < actionIcons.Count; i++)
-                if (actionIcons[i] != null && actionIcons[i].kind == kind) return actionIcons[i];
-            return null;
+            if (icon != null && icon.gameObject.activeSelf != on) icon.gameObject.SetActive(on);
+            if (number != null && number.gameObject.activeSelf != on) number.gameObject.SetActive(on);
+            if (!on && fallback != null) fallback.gameObject.SetActive(false);
         }
 
-        Color KindColor(EnemyActionKind kind)
+        // 행동 칸 하나 채우기 — 종류에 맞는 아이콘·숫자·색
+        void FillSlot(Image icon, TMP_Text number, TMP_Text fallback, bool isAttack, Forecast f, bool highlight, float glow)
         {
-            EnemyActionIcon e = FindIcon(kind);
-            return e != null ? e.color : Color.white;
+            Sprite sprite = isAttack ? attackIcon : disruptIcon;
+            bool hasIcon = sprite != null;
+            if (icon != null)
+            {
+                icon.enabled = hasIcon;
+                if (hasIcon && icon.sprite != sprite) icon.sprite = sprite;
+                icon.color = highlight ? Color.Lerp(Color.white, nextColor, 0.5f * glow) : Color.white;
+                float ss = highlight ? 1f + 0.08f * glow : 1f;
+                icon.rectTransform.localScale = new Vector3(ss, ss, 1f);
+            }
+            if (fallback != null)
+            {
+                fallback.gameObject.SetActive(!hasIcon);
+                if (!hasIcon) fallback.text = isAttack ? "공격" : "방해";
+            }
+
+            if (number != null)
+            {
+                int steps = isAttack ? f.attackSteps : f.disruptSteps;
+                string text = steps < 0 ? "!" : steps.ToString();
+                if (isAttack && attackNumber == AttackNumber.Damage) text = f.attackDamage >= 0 ? f.attackDamage.ToString() : "-";
+                number.text = text;
+                Color baseColor = isAttack ? attackNumberColor : disruptNumberColor;
+                number.color = highlight ? Color.Lerp(baseColor, nextColor, 0.6f + 0.4f * glow) : baseColor;
+            }
         }
 
         static void GetEnemyInfo(EnemyController e, out Sprite portrait, out string name)
@@ -608,55 +505,37 @@ namespace Battle.UI
                 var anyText = FindFirstObjectByType<TMP_Text>(FindObjectsInactive.Include);
                 if (anyText != null) font = anyText.font;
             }
+            // 행 프리팹 아이콘에 넣어 둔 스프라이트를 행동 종류별 아이콘으로 사용(인스펙터 값 우선)
+            if (rowPrefab != null)
+            {
+                if (attackIcon == null && rowPrefab.primaryIcon != null) attackIcon = rowPrefab.primaryIcon.sprite;
+                if (disruptIcon == null && rowPrefab.secondaryIcon != null) disruptIcon = rowPrefab.secondaryIcon.sprite;
+            }
+            if (rowPanelSprite == null) rowPanelSprite = Resources.Load<Sprite>(ResDir + "TurnOrder_RowPanel");
+
+            if (attackIcon == null) attackIcon = Resources.Load<Sprite>(ResDir + "TurnOrder_AttackIcon");
 
             var rootGo = new GameObject("TurnOrderBar", typeof(RectTransform));
             _root = (RectTransform)rootGo.transform;
             _root.SetParent(transform, false);
             TopLeft(_root);
             _root.anchoredPosition = anchoredOffset;
-            _root.sizeDelta = new Vector2(currentSize, 10f);
+            _root.sizeDelta = Vector2.zero;
 
-            // 반투명 배경 패널 — 행 수에 맞춰 높이가 줄고 늘어난다
-            _panel = NewImage("Panel", _root, RoundedSprite(), panelColor);
-            TopLeft(_panel.rectTransform);
-            _panel.rectTransform.anchoredPosition = new Vector2(-10f, 8f);
-
-            _header = NewText("Header", _root, 26f, TextAlignmentOptions.Left);
-            var hr = _header.rectTransform;
-            TopLeft(hr);
-            hr.anchoredPosition = Vector2.zero;
-            hr.sizeDelta = new Vector2(160f, 30f);
-            _header.fontStyle = FontStyles.Bold;
-
-            _lockHint = NewText("LockHint", _root, 16f, TextAlignmentOptions.Left);
+            _lockHint = NewText("LockHint", _root, 18f, TextAlignmentOptions.Left);
             var lr = _lockHint.rectTransform;
             TopLeft(lr);
-            lr.anchoredPosition = new Vector2(84f, -6f);
-            lr.sizeDelta = new Vector2(180f, 24f);
+            lr.anchoredPosition = new Vector2(itemsX, 30f);
+            lr.sizeDelta = new Vector2(260f, 26f);
             _lockHint.text = "적 행동 중에는 사용 불가";
             _lockHint.gameObject.SetActive(false);
-
-            BuildCurrent();
-
-            var div = NewImage("Divider", _root, null, new Color(1f, 1f, 1f, 0.35f));
-            _divider = div.rectTransform;
-            TopLeft(_divider);
-            _divider.pivot = new Vector2(0f, 0.5f);
-            _divider.anchoredPosition = new Vector2(0f, -(HeaderH + currentSize + rowSpacing));
-            _divider.sizeDelta = new Vector2(Mathf.Max(currentSize + labelWidth, RowWidth()), 2f);
 
             var rowsGo = new GameObject("Rows", typeof(RectTransform));
             _rows = (RectTransform)rowsGo.transform;
             _rows.SetParent(_root, false);
             TopLeft(_rows);
-            _rows.anchoredPosition = new Vector2(0f, -(HeaderH + currentSize + rowSpacing * 2f));
+            _rows.anchoredPosition = Vector2.zero;
             _rows.sizeDelta = Vector2.zero;
-
-            var idiv = NewImage("ItemDivider", _root, null, new Color(1f, 1f, 1f, 0.35f));
-            _itemDivider = idiv.rectTransform;
-            TopLeft(_itemDivider);
-            _itemDivider.pivot = new Vector2(0f, 0.5f);
-            _itemDivider.gameObject.SetActive(false);
 
             var itemsGo = new GameObject("Items", typeof(RectTransform));
             _items = (RectTransform)itemsGo.transform;
@@ -664,6 +543,133 @@ namespace Battle.UI
             TopLeft(_items);
             _items.sizeDelta = Vector2.zero;
             itemsGo.SetActive(false);
+        }
+
+        RowView CreateRow(int id, EnemyController enemy)
+        {
+            var row = new RowView { id = id, enemy = enemy };
+            row.view = rowPrefab != null ? Instantiate(rowPrefab, _rows, false) : BuildRowView();
+            row.rect = (RectTransform)row.view.transform;
+            TopLeft(row.rect);
+            row.rect.localScale = Vector3.one;
+            row.group = row.view.GetComponent<CanvasGroup>();
+            row.group.alpha = 0f;
+            row.group.blocksRaycasts = false;
+            row.group.interactable = false;
+            // 글자 머티리얼(외곽선) — 지정 시 행 안 모든 TMP에 적용, 없으면 숫자만 코드 외곽선
+            if (textMaterial != null)
+            {
+                foreach (var t in row.view.GetComponentsInChildren<TMP_Text>(true))
+                    t.fontSharedMaterial = textMaterial;
+            }
+            else if (numberOutline)
+            {
+                ApplyOutline(row.view.primaryNumber);
+                ApplyOutline(row.view.secondaryNumber);
+            }
+
+            // 방해(다음 행동) 묶음은 살짝 투명하게
+            if (row.view.secondaryGroup != null)
+            {
+                var dcg = row.view.secondaryGroup.GetComponent<CanvasGroup>();
+                if (dcg == null) dcg = row.view.secondaryGroup.AddComponent<CanvasGroup>();
+                dcg.alpha = disruptAlpha;
+                dcg.blocksRaycasts = false;
+                dcg.interactable = false;
+            }
+            return row;
+        }
+
+        static void ApplyOutline(TMP_Text t)
+        {
+            if (t == null) return;
+            t.outlineWidth = 0.18f;
+            t.outlineColor = new Color32(30, 18, 8, 255);
+        }
+
+        // 행 프리팹이 없을 때 — 같은 구성의 행을 코드로 만든다
+        TurnOrderRowView BuildRowView()
+        {
+            var go = new GameObject("Row", typeof(RectTransform), typeof(CanvasGroup));
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(_rows, false);
+            TopLeft(rect);
+            rect.sizeDelta = rowPanelSize;
+            var v = go.AddComponent<TurnOrderRowView>();
+            BuildRowContents(v, rect);
+            return v;
+        }
+
+        void BuildRowContents(TurnOrderRowView v, RectTransform root)
+        {
+            // 패널(이미지 없으면 둥근 사각)
+            v.panel = NewImage("Panel", root, rowPanelSprite != null ? rowPanelSprite : RoundedSprite(),
+                rowPanelSprite != null ? Color.white : new Color(0.25f, 0.18f, 0.12f, 0.95f));
+            Stretch(v.panel.rectTransform, 0f);
+
+            // 왼쪽 초상화 영역(어두운 배경 + 마스크 초상화)
+            float h = rowPanelSize.y;
+            var bg = NewImage("PortraitBg", root, null, portraitBgColor);
+            var bgr = bg.rectTransform;
+            TopLeft(bgr);
+            bgr.anchoredPosition = new Vector2(0f, -portraitInset);
+            bgr.sizeDelta = new Vector2(portraitWidth, h - portraitInset * 2f);
+            bg.gameObject.AddComponent<RectMask2D>();
+
+            v.portrait = NewImage("Portrait", bgr, null, Color.white);
+            v.portrait.preserveAspect = true;
+            Stretch(v.portrait.rectTransform, 4f);
+            v.initial = NewText("Initial", bgr, 40f, TextAlignmentOptions.Center);
+            Stretch(v.initial.rectTransform, 0f);
+            v.initial.fontStyle = FontStyles.Bold;
+
+            // 세로 구분선
+            var div = NewImage("Divider", root, null, dividerColor);
+            var dr = div.rectTransform;
+            TopLeft(dr);
+            dr.anchoredPosition = new Vector2(portraitWidth, -portraitInset);
+            dr.sizeDelta = new Vector2(3f, h - portraitInset * 2f);
+
+            // 1순위 행동(패널 오른쪽 영역 가운데) — 아이콘·글자·숫자
+            float rightCenter = portraitWidth + (rowPanelSize.x - portraitWidth) * 0.5f;
+            v.primaryIcon = NewImage("PrimaryIcon", root, attackIcon, Color.white);
+            v.primaryIcon.preserveAspect = true;
+            PlaceCenter(v.primaryIcon.rectTransform, new Vector2(rightCenter, iconY), new Vector2(iconSize, iconSize));
+            v.primaryIcon.enabled = attackIcon != null;
+            v.primaryFallback = NewText("PrimaryLabel", root, 18f, TextAlignmentOptions.Center);
+            PlaceCenter(v.primaryFallback.rectTransform, new Vector2(rightCenter, iconY), new Vector2(iconSize + 20f, iconSize));
+            v.primaryFallback.gameObject.SetActive(false);
+
+            v.primaryNumber = NewNumber("PrimaryNumber", root, new Vector2(rightCenter, numberY), attackNumberColor);
+
+            // 2순위 행동 묶음(패널 바깥 오른쪽)
+            var dg = new GameObject("Secondary", typeof(RectTransform));
+            var dgr = (RectTransform)dg.transform;
+            dgr.SetParent(root, false);
+            TopLeft(dgr);
+            dgr.anchoredPosition = new Vector2(rowPanelSize.x + disruptOffsetX, 0f);
+            dgr.sizeDelta = Vector2.zero;
+            v.secondaryGroup = dg;
+
+            v.secondaryIcon = NewImage("SecondaryIcon", dgr, disruptIcon, Color.white);
+            v.secondaryIcon.preserveAspect = true;
+            PlaceCenter(v.secondaryIcon.rectTransform, new Vector2(0f, iconY), new Vector2(iconSize, iconSize));
+            v.secondaryFallback = NewText("SecondaryLabel", dgr, 18f, TextAlignmentOptions.Center);
+            PlaceCenter(v.secondaryFallback.rectTransform, new Vector2(0f, iconY), new Vector2(iconSize + 20f, iconSize));
+            v.secondaryFallback.text = "방해";
+            v.secondaryFallback.color = disruptNumberColor;
+            v.secondaryNumber = NewNumber("SecondaryNumber", dgr, new Vector2(0f, numberY), disruptNumberColor);
+        }
+
+        // 숫자 텍스트(외곽선으로 배경 위에서도 읽히게)
+        TextMeshProUGUI NewNumber(string name, Transform parent, Vector2 center, Color color)
+        {
+            var t = NewText(name, parent, numberFontSize, TextAlignmentOptions.Center);
+            PlaceCenter(t.rectTransform, center, new Vector2(80f, numberFontSize + 8f));
+            t.fontStyle = FontStyles.Bold;
+            t.color = color;
+            return t;
+
         }
 
         // 아이템(유물) 칸 — 아이콘 + 우하단 카운터 배지
@@ -707,158 +713,19 @@ namespace Battle.UI
             return v;
         }
 
-        // 맨 위 '현재' 칸(지금 행동하는 쪽)
-        void BuildCurrent()
-        {
-            var go = new GameObject("Current", typeof(RectTransform));
-            _current = (RectTransform)go.transform;
-            _current.SetParent(_root, false);
-            TopLeft(_current);
-            _current.pivot = new Vector2(0.5f, 0.5f);
-            _current.sizeDelta = new Vector2(currentSize, currentSize);
-            _current.anchoredPosition = new Vector2(currentSize * 0.5f, -HeaderH - currentSize * 0.5f);
-
-            BuildPortrait(_current, 40f, out _curFrame, out _curPortrait, out _curInitial);
-
-            _curBadgeBg = NewImage("Badge", _current, CircleSprite(), Color.white);
-            var b = _curBadgeBg.rectTransform;
-            b.anchorMin = b.anchorMax = new Vector2(1f, 0f);
-            b.anchoredPosition = new Vector2(-6f, 6f);
-            b.sizeDelta = new Vector2(34f, 34f);
-            _curBadgeIcon = NewImage("Icon", b, null, Color.white);
-            _curBadgeIcon.preserveAspect = true;
-            Stretch(_curBadgeIcon.rectTransform, 5f);
-            _curBadgeText = NewText("Text", b, 18f, TextAlignmentOptions.Center);
-            Stretch(_curBadgeText.rectTransform, 0f);
-            _curBadgeText.fontStyle = FontStyles.Bold;
-
-            _curLabel = NewText("Label", _current, 22f, TextAlignmentOptions.MidlineLeft);
-            var lr = _curLabel.rectTransform;
-            lr.anchorMin = new Vector2(1f, 0f);
-            lr.anchorMax = new Vector2(1f, 1f);
-            lr.pivot = new Vector2(0f, 0.5f);
-            lr.anchoredPosition = new Vector2(10f, 0f);
-            lr.sizeDelta = new Vector2(labelWidth, 0f);
-            _curLabel.textWrappingMode = TextWrappingModes.NoWrap;
-            _curLabel.overflowMode = TextOverflowModes.Overflow;
-        }
-
-        RowView CreateRow(int id, EnemyController enemy)
-        {
-            var v = new RowView { id = id, enemy = enemy };
-            var go = new GameObject("Row", typeof(RectTransform), typeof(CanvasGroup));
-            v.rect = (RectTransform)go.transform;
-            v.rect.SetParent(_rows, false);
-            TopLeft(v.rect);
-            v.rect.sizeDelta = new Vector2(RowWidth(), actionSize);
-            v.group = go.GetComponent<CanvasGroup>();
-            v.group.alpha = 0f;
-            v.group.blocksRaycasts = false;
-            v.group.interactable = false;
-
-            // 행동 중 배경 강조
-            v.highlight = NewImage("Highlight", v.rect, RoundedSprite(), new Color(1f, 1f, 1f, 0f));
-            Stretch(v.highlight.rectTransform, -5f);
-
-            int n = Mathf.Max(1, actionsPerRow);
-            v.cells = new CellView[n];
-            for (int i = 0; i < n; i++)
-            {
-                float x = i * (actionSize + cellSpacing);
-                v.cells[i] = CreateCell(v.rect, new Vector2(x + actionSize * 0.5f, -actionSize * 0.5f));
-            }
-            return v;
-        }
-
-        // 몬스터 행 폭(행동 칸 N개)
-        float RowWidth() => Mathf.Max(1, actionsPerRow) * (actionSize + cellSpacing) - cellSpacing;
-
-        CellView CreateCell(RectTransform parent, Vector2 center)
-        {
-            var c = new CellView();
-            var go = new GameObject("Action", typeof(RectTransform));
-            c.rect = (RectTransform)go.transform;
-            c.rect.SetParent(parent, false);
-            TopLeft(c.rect);
-            c.rect.pivot = new Vector2(0.5f, 0.5f);
-            c.rect.sizeDelta = new Vector2(actionSize, actionSize);
-            c.rect.anchoredPosition = center;
-
-            // 다음 행동 강조 빛(칸보다 살짝 크게)
-            c.glow = NewImage("Glow", c.rect, RoundedSprite(), nextGlowColor);
-            Stretch(c.glow.rectTransform, -5f);
-            c.glow.gameObject.SetActive(false);
-
-            // 테두리(행동 종류 색) + 몬스터 초상화
-            BuildPortrait(c.rect, actionSize * 0.4f, out c.frame, out c.portrait, out c.initial);
-
-            // 행동 유형 배지(좌하단 원)
-            c.typeBg = NewImage("Type", c.rect, CircleSprite(), Color.white);
-            var tb = c.typeBg.rectTransform;
-            tb.anchorMin = tb.anchorMax = new Vector2(0f, 0f);
-            tb.anchoredPosition = new Vector2(2f, 2f);
-            tb.sizeDelta = new Vector2(28f, 28f);
-            c.icon = NewImage("Icon", tb, null, Color.white);
-            c.icon.preserveAspect = true;
-            Stretch(c.icon.rectTransform, 4f);
-            c.fallback = NewText("Fallback", tb, 16f, TextAlignmentOptions.Center);
-            Stretch(c.fallback.rectTransform, 0f);
-            c.fallback.fontStyle = FontStyles.Bold;
-
-            // 남은 단계 배지(우하단 원)
-            c.badgeBg = NewImage("Badge", c.rect, CircleSprite(), Color.white);
-            var b = c.badgeBg.rectTransform;
-            b.anchorMin = b.anchorMax = new Vector2(1f, 0f);
-            b.anchoredPosition = new Vector2(-2f, 2f);
-            b.sizeDelta = new Vector2(26f, 26f);
-            c.badgeText = NewText("Steps", b, 17f, TextAlignmentOptions.Center);
-            Stretch(c.badgeText.rectTransform, 0f);
-            c.badgeText.fontStyle = FontStyles.Bold;
-
-            // 예상 피해(좌상단 알약)
-            var pill = NewImage("Damage", c.rect, CircleSprite(), new Color(0f, 0f, 0f, 0.75f));
-            c.dmgPill = pill.rectTransform;
-            c.dmgPill.anchorMin = c.dmgPill.anchorMax = new Vector2(0f, 1f);
-            c.dmgPill.anchoredPosition = new Vector2(4f, -4f);
-            c.dmgPill.sizeDelta = new Vector2(30f, 20f);
-            c.dmgText = NewText("Value", c.dmgPill, 14f, TextAlignmentOptions.Center);
-            Stretch(c.dmgText.rectTransform, 0f);
-            c.dmgText.fontStyle = FontStyles.Bold;
-
-            // 다음 행동 표식(우상단, 스프라이트 지정 시)
-            c.marker = NewImage("Marker", c.rect, null, Color.white);
-            c.marker.preserveAspect = true;
-            var m = c.marker.rectTransform;
-            m.anchorMin = m.anchorMax = new Vector2(1f, 1f);
-            m.anchoredPosition = new Vector2(-2f, -2f);
-            m.sizeDelta = new Vector2(24f, 24f);
-            c.marker.gameObject.SetActive(false);
-            return c;
-        }
-
-        // 테두리 + 둥근 마스크 초상화 + 이니셜(초상화 없을 때)
-        void BuildPortrait(RectTransform parent, float initialSize, out Image frame, out Image portrait, out TextMeshProUGUI initial)
-        {
-            frame = NewImage("Frame", parent, RoundedSprite(), Color.white);
-            Stretch(frame.rectTransform, 0f);
-
-            var maskImg = NewImage("Mask", parent, RoundedSprite(), new Color(0.12f, 0.12f, 0.16f, 1f));
-            Stretch(maskImg.rectTransform, 4f);
-            maskImg.gameObject.AddComponent<Mask>().showMaskGraphic = true;
-
-            portrait = NewImage("Portrait", maskImg.rectTransform, null, Color.white);
-            portrait.preserveAspect = true;
-            Stretch(portrait.rectTransform, 0f);
-
-            initial = NewText("Initial", maskImg.rectTransform, initialSize, TextAlignmentOptions.Center);
-            Stretch(initial.rectTransform, 0f);
-            initial.fontStyle = FontStyles.Bold;
-        }
-
         static void TopLeft(RectTransform r)
         {
             r.anchorMin = r.anchorMax = new Vector2(0f, 1f);
             r.pivot = new Vector2(0f, 1f);
+        }
+
+        // 좌상단 앵커 기준으로 중심 좌표·크기 지정
+        static void PlaceCenter(RectTransform r, Vector2 center, Vector2 size)
+        {
+            r.anchorMin = r.anchorMax = new Vector2(0f, 1f);
+            r.pivot = new Vector2(0.5f, 0.5f);
+            r.anchoredPosition = center;
+            r.sizeDelta = size;
         }
 
         static Image NewImage(string name, Transform parent, Sprite sprite, Color color)
@@ -884,6 +751,8 @@ namespace Battle.UI
             t.color = Color.white;
             t.raycastTarget = false;
             t.richText = true;
+            t.textWrappingMode = TextWrappingModes.NoWrap;
+            t.overflowMode = TextOverflowModes.Overflow;
             return t;
         }
 

@@ -13,6 +13,25 @@ public class EnemyOverlayHUD : MonoBehaviour
 
     public RectTransform HpBarRect => hpBar != null ? hpBar.transform as RectTransform : null;
 
+    // 활성 HUD 전체(적마다 복제본 포함) — 적 행동 중 HP 바 일괄 숨김용
+    static readonly System.Collections.Generic.List<EnemyOverlayHUD> _all = new System.Collections.Generic.List<EnemyOverlayHUD>();
+    public static void CollectHpBars(System.Collections.Generic.List<GameObject> into)
+    {
+        for (int i = 0; i < _all.Count; i++)
+        {
+            var h = _all[i];
+            if (h == null || h.hpBar == null) continue;
+            if (!into.Contains(h.hpBar.gameObject)) into.Add(h.hpBar.gameObject);
+            // 게이지가 HP 바 밖에 따로 있으면 함께
+            if (h.actionGaugeBar != null && !h.actionGaugeBar.transform.IsChildOf(h.hpBar.transform)
+                && !into.Contains(h.actionGaugeBar.gameObject))
+                into.Add(h.actionGaugeBar.gameObject);
+        }
+    }
+
+    void OnEnable() { if (!_all.Contains(this)) _all.Add(this); }
+    void OnDisable() { _all.Remove(this); }
+
     public void SetSpecialNote(string note)
     {
         var badge = GetComponent<EnemyNoteBadge>();

@@ -25,6 +25,8 @@ namespace Battle.UI
         [SerializeField] private bool pauseTimeWhenOpen = true; // 열릴 때 시간 정지 여부
 
         [Header("선택하지 않고 나가기 버튼")]
+        [Tooltip("프리팹에 배치한 스킵 버튼. 연결하면 아래 스타일로 생성하지 않고 이 버튼을 쓴다.")]
+        [SerializeField] private Button skipButton; // 프리팹 스킵 버튼
         [SerializeField] private RewardSkipButtonStyle skipButtonStyle = new RewardSkipButtonStyle { label = "선택하지 않고 나가기" }; // 스킵 버튼 스타일
 
         [Header("상단 문구 위치 (선택)")]
@@ -114,6 +116,14 @@ namespace Battle.UI
         // 스킵 버튼을 스타일대로 재생성
         void EnsureSkipButton()
         {
+            if (skipButton != null)
+            {
+                skipButton.onClick.RemoveListener(Skip);
+                skipButton.onClick.AddListener(Skip);
+                skipButton.gameObject.SetActive(true);
+                return;
+            }
+
             if (_skipButton != null) Destroy(_skipButton.gameObject);
             if (skipButtonStyle == null) skipButtonStyle = new RewardSkipButtonStyle();
             _skipButton = skipButtonStyle.Build(transform, Skip);
