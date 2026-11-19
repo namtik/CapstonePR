@@ -2842,6 +2842,21 @@ namespace Battle
 
             Canvas combatCanvas = ResolveCombatCanvas();
             if (combatCanvas == null) return null;
+
+            // 프리팹(Resources/UI/TurnOrder/TurnOrderTimeline)이 있으면 그 설정·행 프리팹으로 생성
+            var prefab = Resources.Load<TurnOrderTimeline>("UI/TurnOrder/TurnOrderTimeline");
+            if (prefab != null)
+            {
+                var inst = Instantiate(prefab, combatCanvas.transform, false);
+                inst.name = "TurnOrderTimeline";
+                var irt = (RectTransform)inst.transform;
+                irt.anchorMin = Vector2.zero;
+                irt.anchorMax = Vector2.one;
+                irt.offsetMin = Vector2.zero;
+                irt.offsetMax = Vector2.zero;
+                return inst;
+            }
+
             var go = new GameObject("TurnOrderTimeline", typeof(RectTransform));
             go.transform.SetParent(combatCanvas.transform, false);
             var rect = (RectTransform)go.transform;

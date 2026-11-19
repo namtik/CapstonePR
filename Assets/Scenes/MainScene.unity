@@ -8608,7 +8608,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &360203540
 RectTransform:
   m_ObjectHideFlags: 0
@@ -21627,6 +21627,8 @@ MonoBehaviour:
   enemyAnchoredPos: {x: 0, y: 300}
   playerAnchoredPos: {x: 0, y: 100}
   earthAtkAnchoredPos: {x: 0, y: 100}
+  followTargetEnemy: 1
+  targetEnemyOffset: {x: 0, y: 0}
   effectSize: {x: 1024, y: 1024}
   healEffSize: {x: 16000, y: 1024}
   healEffBottomY: 0
