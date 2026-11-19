@@ -90,11 +90,11 @@ namespace Battle
                 case "DAMAGE":
                 {
                     bool burnDamage = (eff.formula ?? "").IndexOf("BURN", StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (burnDamage && amount > 0)
+                        SfxManager.Instance?.PlayBurn();
                     ForEachComboTarget(eff, ctx, e =>
                     {
                         for (int h = 0; h < hits; h++) e.TakeDamage(amount);
-                        if (burnDamage && amount > 0)
-                            SfxManager.Instance?.PlayBurn();
                     });
                     break;
                 }

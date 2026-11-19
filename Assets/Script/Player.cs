@@ -366,12 +366,12 @@ public class Player : MonoBehaviour, IBattleUnit
         int finalDamage = Mathf.RoundToInt(damage);
         if (finalDamage > 0)
         {
+            if (cardtype == "burn")
+                SfxManager.Instance?.PlayBurn();
             currentHp -= finalDamage;
             SyncAllInstancesFrom(this);
             OnHpDecreased?.Invoke(finalDamage);
-            if (cardtype == "burn")
-                SfxManager.Instance?.PlayBurn();
-            else if (cardtype != "self_loss")
+            if (cardtype != "burn" && cardtype != "self_loss")
                 SfxManager.Instance?.PlayPlayerHit();
 
             if (currentHp <= 0)

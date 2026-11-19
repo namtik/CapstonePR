@@ -152,6 +152,10 @@ namespace Battle
         private EnemyStat _enemyStat;            // 현재 효과 대상 적 스탯
         private readonly List<EnemyController> _boundEnemies = new List<EnemyController>();
         private readonly List<EnemyController> _aliveBuf = new List<EnemyController>();
+        private readonly Dictionary<EnemyController, int> _frostAtCardStart = new Dictionary<EnemyController, int>();
+        private readonly List<EnemyController> _frostHoldEnemies = new List<EnemyController>();
+        private readonly List<int> _frostHoldAdded = new List<int>();
+        int _frostFxSfxFrame = -1; // 같은 프레임의 빙결 연출은 효과음을 한 번만
         // 적 행동(공격/방해행동) 대기열 — 한 번에 하나씩, 이전 행동과 카드 연출이 완전히 끝난 뒤 진행
         private struct EnemyAction
         {
@@ -501,12 +505,20 @@ namespace Battle
             RelicManager.Instance?.NotifyBattleStart(this);
         }
 
-        // 적에게 상태이상이 '부여'될 때 — 빙결이면 적 위치에서 연출 재생
-        void OnEnemyStatusAppliedHandler(string type, int amount)
+        // 적에게 상태이상이 '부여'될 때 — 빙결이면 그 적 위치에서 연출 재생
+        void OnEnemyStatusAppliedHandler(EnemyController enemy, string type, int amount)
         {
             if (amount <= 0 || type != "frost") return;
             if (effectOverlay == null || string.IsNullOrEmpty(frostAppliedEffectName)) return;
-            effectOverlay.PlayByNameAtPosition(frostAppliedEffectName, effectOverlay.EnemyAnchoredPos);
+
+            Vector2 pos = effectOverlay.EnemyAnchoredPos;
+            if (enemy != null && enemy.TryGetAimScreen(out Vector2 screen, out _)
+                && effectOverlay.TryAnchoredFromScreen(screen, out Vector2 local))
+                pos = local;
+
+            bool playSfx = _frostFxSfxFrame != Time.frameCount;
+            if (playSfx) _frostFxSfxFrame = Time.frameCount;
+            effectOverlay.PlayByNameAtPosition(frostAppliedEffectName, pos, playSfx);
         }
 
         // 전투 종료 — 추적/큐 마감·덱 종료·UI/이펙트 정리
@@ -1179,7 +1191,7 @@ namespace Battle
                 _enemyStat?.FillGaugeToFull();
             }
 
-            int frostBeforeCard = (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int _fb0)) ? _fb0 : 0;
+            CapturePartyFrost();
 
             var result = ResolveLoggedCard(card);
             int effectLog = BattleLog.MoveTargetId;
@@ -1338,22 +1350,10 @@ namespace Battle
             if (_ctx.firstCardAfterAttackFreeActive && _ctx.firstCardAfterEnemyAttack)
                 gaugeCost = 0;
 
-            // 빙결 순서: 이 카드가 부여한 빙결은 게이지 처리 동안만 사용 전 빙결량으로 되돌렸다가 복원
-            int frostAddedByCard = 0;
-            if (_enemyStat != null && _enemyStat.statusEffects.TryGetValue("frost", out int frostAfterCard))
-            {
-                frostAddedByCard = Mathf.Max(0, frostAfterCard - frostBeforeCard);
-                if (frostAddedByCard > 0) _enemyStat.statusEffects["frost"] = frostBeforeCard;
-            }
-
+            // 이번 카드가 붙인 빙결은 이 카드의 게이지를 막지 않는다. 맞은 적이 여러 명이어도 같이 미룬다.
+            HoldFrostAddedThisCard();
             AccrueEnemyGauge(gaugeCost);
-
-            if (frostAddedByCard > 0 && _enemyStat != null)
-            {
-                int frostRemaining = _enemyStat.statusEffects.TryGetValue("frost", out int fr) ? fr : 0;
-                // 부여 시점에 이미 기록했다. 게이지 계산용으로 되돌린 값을 복원할 때는 다시 남기지 않는다.
-                _enemy?.SetStatus("frost", frostRemaining + frostAddedByCard, false);
-            }
+            ReleaseHeldFrost();
 
             if (result.skipNextGaugeCost) _skipNextGaugeCount++;
 
@@ -1380,6 +1380,49 @@ namespace Battle
 
             Log($"{card.data.displayName} 사용 — 게이지+{gaugeCost}, 연쇄={_ctx.chainCount}");
             if (!HasPendingSelection) BattleLog.CloseMoveTarget();
+        }
+
+        // 카드 효과 전에 살아 있는 적들의 빙결 스택을 적어 둔다
+        void CapturePartyFrost()
+        {
+            _frostAtCardStart.Clear();
+            EnemyCombatParty.CollectAlive(_aliveBuf);
+            for (int i = 0; i < _aliveBuf.Count; i++)
+            {
+                EnemyController enemy = _aliveBuf[i];
+                if (enemy == null) continue;
+                _frostAtCardStart[enemy] = enemy.GetStatus("frost");
+            }
+        }
+
+        // 이번 카드로 늘어난 빙결만 게이지 계산에서 빼 둔다. 원래 있던 빙결은 그대로 소모된다.
+        void HoldFrostAddedThisCard()
+        {
+            _frostHoldEnemies.Clear();
+            _frostHoldAdded.Clear();
+            foreach (var pair in _frostAtCardStart)
+            {
+                EnemyController enemy = pair.Key;
+                if (enemy == null || !enemy.IsAlive) continue;
+                int added = Mathf.Max(0, enemy.GetStatus("frost") - pair.Value);
+                if (added <= 0) continue;
+                EnemyStat stat = enemy.GetComponent<EnemyStat>();
+                if (stat == null || !stat.statusEffects.ContainsKey("frost")) continue;
+                stat.statusEffects["frost"] = pair.Value;
+                _frostHoldEnemies.Add(enemy);
+                _frostHoldAdded.Add(added);
+            }
+        }
+
+        // 게이지를 처리한 뒤, 빼 두었던 이번 카드의 빙결을 도로 붙인다
+        void ReleaseHeldFrost()
+        {
+            for (int i = 0; i < _frostHoldEnemies.Count; i++)
+            {
+                EnemyController enemy = _frostHoldEnemies[i];
+                if (enemy == null || !enemy.IsAlive) continue;
+                enemy.SetStatus("frost", enemy.GetStatus("frost") + _frostHoldAdded[i], false);
+            }
         }
 
         // 적 게이지 누적 (각성 중·바람14 스킵 처리 포함)

@@ -310,7 +310,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     }
 
     public event Action<string, int> OnStatusChanged; // 상태이상 변경 이벤트
-    public event Action<string, int> OnStatusApplied; // 상태이상 '부여'(양수 증가) 이벤트 — 연출용
+    public event Action<EnemyController, string, int> OnStatusApplied; // 상태이상 '부여'(양수 증가) 이벤트 — 연출용
     // 상태이상 스택을 더하고 변경 신호를 보낸다
     public void AddStatus(string type, int amount)
     {
@@ -329,7 +329,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         OnStatusChanged?.Invoke(type, stat.statusEffects[type]);
 
         // 양수 부여일 때만 '부여' 신호(빙결 등 연출 트리거용)
-        if (amount > 0) OnStatusApplied?.Invoke(type, amount);
+        if (amount > 0) OnStatusApplied?.Invoke(this, type, amount);
     }
 
     // 상태이상 스택 값을 조회한다
@@ -567,8 +567,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (!stat.statusEffects.TryGetValue("burn", out int burn)) return false;
         if (burn <= 0) return false;
 
-        stat.TakeDamage(burn);
+        // 체력이 깎이기 전에 소리를 건다. 클립 로드가 한 박자 밀려도 숫자보다 늦게 나지 않게.
         SfxManager.Instance?.PlayBurn();
+        stat.TakeDamage(burn);
         Sprite burnPortrait = stat.Data != null ? stat.Data.enemySprite : null;
         string burnName = stat.Data != null ? stat.Data.enemyName : null;
         int slot = EnemyCombatParty.AliveIndexOf(this);
