@@ -64,7 +64,12 @@ public class ShopStageController : MonoBehaviour
     [SerializeField] private CardRemoveConfirmPopup removeCardConfirmPopup; // 제거 확인 팝업
     [Tooltip("목록·팝업에 쓸 카드 프리팹. 비우면 CardHandHUD의 카드 프리팹을 사용.")]
     [SerializeField] private NewCardView removeCardViewPrefab; // 카드 뷰 프리팹
+    [Tooltip("골드가 부족할 때 가격 글자 색.")]
+    [SerializeField] private Color removeCardCostUnaffordableColor = new Color(0.9f, 0.16f, 0.16f, 1f); // 골드 부족 가격 색(상품 가격과 동일)
+    private Color removeCardCostBaseColor = Color.white; // 가격 텍스트 원래 색
+    private bool removeCardCostColorCaptured;
     [Tooltip("ON이면 상점 방문당 1회만 제거 가능.")]
+
     [SerializeField] private bool removeCardOncePerShop = true; // 방문당 1회 제한
 
     [Header("표시 개수")]
@@ -169,8 +174,28 @@ public class ShopStageController : MonoBehaviour
     void OnEnable()
     {
         BindRuntime();
+        SubscribeMoney();
         EnterShopStage();
     }
+
+    // 골드가 바뀔 때마다 제거 가격 색 갱신(다른 상품 가격과 같은 시점)
+    MoneyManager _moneySub;
+    void SubscribeMoney()
+    {
+        var mm = MoneyManager.Instance;
+        if (mm == _moneySub) return;
+        if (_moneySub != null) _moneySub.OnMoneyChanged -= HandleMoneyChanged;
+        _moneySub = mm;
+        if (_moneySub != null) _moneySub.OnMoneyChanged += HandleMoneyChanged;
+    }
+
+    void UnsubscribeMoney()
+    {
+        if (_moneySub != null) _moneySub.OnMoneyChanged -= HandleMoneyChanged;
+        _moneySub = null;
+    }
+
+    void HandleMoneyChanged(int _) => UpdateRemoveCardButtonText();
 
     // 인스펙터 값 변경 시 범위 클램프
     void OnValidate()
@@ -279,6 +304,7 @@ public class ShopStageController : MonoBehaviour
     void OnDisable()
     {
         StopShopBubbleTyping();
+        UnsubscribeMoney();
     }
 
     // 빈 문구일 때 현재 텍스트를 폴백 문구로 캡처
@@ -667,16 +693,33 @@ public class ShopStageController : MonoBehaviour
     // 씬에 버튼 참조가 없으면 이름으로 찾아 Button을 붙인다(이미지뿐인 CardDeleteButton 대응)
     void ResolveRemoveCardButton()
     {
-        if (removeCardButton != null || string.IsNullOrWhiteSpace(removeCardButtonName)) return;
-        Transform root = shopCanvas2 != null ? shopCanvas2.transform : transform;
-        Transform found = FindChildRecursiveByName(root, removeCardButtonName);
-        if (found == null) return;
-
-        removeCardButton = found.GetComponent<Button>();
-        if (removeCardButton == null)
+        if (removeCardButton == null && !string.IsNullOrWhiteSpace(removeCardButtonName))
         {
-            removeCardButton = found.gameObject.AddComponent<Button>();
-            removeCardButton.targetGraphic = found.GetComponent<Graphic>();
+            Transform root = shopCanvas2 != null ? shopCanvas2.transform : transform;
+            Transform found = FindChildRecursiveByName(root, removeCardButtonName);
+            if (found != null)
+            {
+                removeCardButton = found.GetComponent<Button>();
+                if (removeCardButton == null)
+                {
+                    removeCardButton = found.gameObject.AddComponent<Button>();
+                    removeCardButton.targetGraphic = found.GetComponent<Graphic>();
+                }
+            }
+        }
+
+        // 가격 텍스트 미연결 시 버튼 아래 '{버튼이름}_Price' → 없으면 첫 TMP 텍스트
+        if (removeCardCostText == null && removeCardButton != null)
+        {
+            Transform price = FindChildRecursiveByName(removeCardButton.transform, removeCardButton.name + "_Price");
+            removeCardCostText = price != null
+                ? price.GetComponent<TextMeshProUGUI>()
+                : removeCardButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        }
+        if (removeCardCostText != null && !removeCardCostColorCaptured)
+        {
+            removeCardCostBaseColor = removeCardCostText.color;
+            removeCardCostColorCaptured = true;
         }
     }
 
@@ -798,10 +841,21 @@ public class ShopStageController : MonoBehaviour
     // 카드 제거 버튼 상태·비용 텍스트 갱신
     void UpdateRemoveCardButtonText()
     {
+        SubscribeMoney(); // MoneyManager가 늦게 생겼을 때 대비
+        ResolveRemoveCardButton();
+
+        int cost = CurrentRemoveCardCost;
         if (removeCardButton != null)
             removeCardButton.interactable = CanUseRemoveCard;
         if (removeCardCostText != null)
-            removeCardCostText.text = CanUseRemoveCard ? CurrentRemoveCardCost.ToString() : "제거 완료";
+        {
+            // 가격은 항상 표시(유물 할인 반영). 골드 부족이면 빨간색, 이미 제거했으면 흐리게
+            removeCardCostText.text = cost.ToString();
+            bool affordable = MoneyManager.Instance == null || MoneyManager.Instance.CurrentMoney >= cost;
+            Color c = affordable ? removeCardCostBaseColor : removeCardCostUnaffordableColor;
+            if (!CanUseRemoveCard) c.a *= 0.5f;
+            removeCardCostText.color = c;
+        }
     }
 
     // 4속성(불/물/바람/땅) 카드인지 판정
