@@ -1042,12 +1042,48 @@ public class RoundManager : MonoBehaviour
     // 적 사망 시 재화 연출을 띄우고, 남은 적이 없으면 라운드 종료를 예약한다.
     void OnPartyMemberDied(EnemyStat stat, IEnemyView view)
     {
-        PlayKillReward(stat, view);
+        Vector2 screen = ResolveDeathScreen(stat, view);
+        PlayKillReward(screen);
+        if (IsLastRewardKill())
+            RewardDropFx.Play(screen, ShouldShowComboBookRewardAfterCard());
         HandleEnemyDied();
     }
 
+    // 이번 처치로 전투가 끝나고 카드(와 정예·보스면 콤보) 보상이 열리는지.
+    bool IsLastRewardKill()
+    {
+        if (!IsNewBattleSystemActive()) return false;
+        if (_waitingForRoundEnd) return false;
+        if (EnemyCombatParty.AliveCount > 0) return false;
+        if (!EnemyCombatParty.IsMulti && _injectedEnemies.Count > 0) return false;
+        return currentRoundData is CombatRoundData
+            || currentRoundData is EliteRoundData
+            || currentRoundData is BossRoundData;
+    }
+
+    // 죽은 적의 화면 좌표. 조준점이 없으면 월드 위치를 투영한다.
+    static Vector2 ResolveDeathScreen(EnemyStat stat, IEnemyView view)
+    {
+        if (view != null && view.TryGetAimScreen(out Vector2 aim, out _))
+            return aim;
+
+        if (stat != null)
+        {
+            Camera cam = BattleStageController.Current != null
+                ? BattleStageController.Current.StageCamera
+                : Camera.main;
+            if (cam != null)
+            {
+                Vector3 sp = cam.WorldToScreenPoint(stat.transform.position);
+                if (sp.z > 0f) return new Vector2(sp.x, sp.y);
+            }
+        }
+
+        return new Vector2(Screen.width * 0.5f, Screen.height * 0.55f);
+    }
+
     // 처치 위치에 +N을 띄우고, 영혼이 재화 UI에 닿으면 골드를 넣는다.
-    void PlayKillReward(EnemyStat stat, IEnemyView view)
+    void PlayKillReward(Vector2 screen)
     {
         if (MoneyManager.Instance == null) return;
 
@@ -1066,21 +1102,6 @@ public class RoundManager : MonoBehaviour
 
         if (gold <= 0) return;
         _killGoldPaid += gold;
-
-        Vector2 screen = new Vector2(Screen.width * 0.5f, Screen.height * 0.55f);
-        if (view != null && view.TryGetAimScreen(out Vector2 aim, out _))
-            screen = aim;
-        else if (stat != null)
-        {
-            Camera cam = BattleStageController.Current != null
-                ? BattleStageController.Current.StageCamera
-                : Camera.main;
-            if (cam != null)
-            {
-                Vector3 sp = cam.WorldToScreenPoint(stat.transform.position);
-                if (sp.z > 0f) screen = new Vector2(sp.x, sp.y);
-            }
-        }
 
         int pay = gold;
         KillRewardFx.Play(screen, pay, () =>
