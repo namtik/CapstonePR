@@ -196,3 +196,39 @@ MonoBehaviour:
     modelRotation: {x: 0, y: 0, z: 0}
     modelScale: {x: 1, y: 1, z: 1}
     hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyFireBear
+    modelName: "\uD654\uC6C5"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 5723608741668950768, guid: 527e57d71d3f4af6bcfb176cf165c97d, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: b238274c392b1a242967606b877103b7, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyMikoshiNyudo
+    modelName: "\uBBF8\uCF54\uC2DC\uB274\uB3C4"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 4769958288295737806, guid: 8a6e4f7e2a9145a4bc393c675acc3f85, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: c51bb74876895b847a93fe6d40b4553c, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyKarakasaObake
+    modelName: "\uAC00\uB77C\uCE74\uC0AC\uC624\uBC14\uCF00"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 5651565245280368983, guid: 29e7a692ee9340cd9d6901203f60cf35, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: 36dcf54b928ecf045b2ba6840200d317, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
