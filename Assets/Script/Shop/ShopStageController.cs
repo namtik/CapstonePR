@@ -635,6 +635,7 @@ public class ShopStageController : MonoBehaviour
 
         RunDeckState.EnsureExists().AddCard(offer.card.id);
         offer.purchased = true;
+        SfxManager.Instance?.PlayPurchase();
         RefreshOfferViews();
     }
 
@@ -660,6 +661,7 @@ public class ShopStageController : MonoBehaviour
         }
 
         offer.purchased = true;
+        SfxManager.Instance?.PlayPurchase();
         RefreshOfferViews();
     }
 
@@ -680,6 +682,7 @@ public class ShopStageController : MonoBehaviour
 
         nb.AddOwnedCombo(offer.combo.refComboId);
         offer.purchased = true;
+        SfxManager.Instance?.PlayPurchase();
         RefreshOfferViews();
     }
 

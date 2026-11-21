@@ -31,6 +31,8 @@ public class SfxManager : MonoBehaviour
     [SerializeField] private AudioClip healClip; // 회복 효과음
     [Tooltip("화상 피해로 체력이 깎일 때 재생. 플레이어와 적 모두.")]
     [SerializeField] private AudioClip burnClip; // 화상 피해 효과음
+    [Tooltip("상점에서 카드, 유물, 콤보 구매가 성공했을 때 재생.")]
+    [SerializeField] private AudioClip purchaseClip; // 상점 구매 효과음
 
     // 이펙트 이름과 전용 클립을 묶는 매핑 데이터
     [System.Serializable]
@@ -56,6 +58,7 @@ public class SfxManager : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float awakenSlotInputVolume = 1f; // 콤보 슬롯 입력 볼륨
     [Range(0f, 1f)] [SerializeField] private float healVolume = 1f; // 회복 볼륨
     [Range(0f, 1f)] [SerializeField] private float burnVolume = 1f; // 화상 피해 볼륨
+    [Range(0f, 1f)] [SerializeField] private float purchaseVolume = 1f; // 상점 구매 볼륨
 
     int _burnPlayedFrame = -1; // 같은 프레임에 화상음이 여러 번 겹쳐 늦게 들리지 않게
 
@@ -101,6 +104,9 @@ public class SfxManager : MonoBehaviour
 
     // 플레이어 회복 효과음을 재생한다
     public void PlayHeal() => Play(healClip, healVolume);
+
+    // 상점 구매 성공 효과음을 재생한다
+    public void PlayPurchase() => Play(purchaseClip, purchaseVolume);
 
     // 화상 피해 효과음을 재생한다. 같은 프레임의 중복 호출은 한 번만 낸다.
     public void PlayBurn()
