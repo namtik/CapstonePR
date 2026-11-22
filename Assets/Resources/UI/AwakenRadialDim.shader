@@ -107,7 +107,7 @@ Shader "UI/AwakenRadialDim"
                 float dist = length(p) / 0.5;
                 float start = saturate(_InnerRadius);
                 float end = max(start + 0.001, _Softness);
-                float edge = smoothstep(start, end, dist);
+                float edge = start > 0.0 ? smoothstep(start, end, dist) : 1.0;
 
                 fixed4 color = i.color;
                 color.a *= edge;

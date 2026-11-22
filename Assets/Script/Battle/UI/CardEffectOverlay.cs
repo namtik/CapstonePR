@@ -98,6 +98,9 @@ namespace Battle.UI
         private GuardShieldEffect _guardShield;
         private GuardBreakEffect _guardBreak;
         private GuardBlockSettings _guardBlockSettings;
+        private CanvasGroup _entryVisibility;
+        private float _alphaBeforeEntry;
+        private bool _hiddenDuringEntry;
 
         private RectTransform _selfRect; // 자신의 RectTransform 캐시
         private static int s_runtimeSortingOverride = int.MinValue; // 일시정지 중 전역 정렬 덮어쓰기
@@ -108,6 +111,39 @@ namespace Battle.UI
         void Awake()
         {
             EnsureForegroundCanvas();
+        }
+
+        void LateUpdate()
+        {
+            bool hide = NewBattleController.IsAwakeningEntryPlaying;
+            if (hide == _hiddenDuringEntry) return;
+
+            if (hide)
+            {
+                if (_entryVisibility == null &&
+                    !TryGetComponent(out _entryVisibility))
+                    _entryVisibility = gameObject.AddComponent<CanvasGroup>();
+                _alphaBeforeEntry = _entryVisibility.alpha;
+                _entryVisibility.alpha = 0f;
+                _hiddenDuringEntry = true;
+                GuardBlockRendererFeature.Stop();
+            }
+            else
+            {
+                RestoreEntryVisibility();
+            }
+        }
+
+        void OnDisable()
+        {
+            RestoreEntryVisibility();
+        }
+
+        void RestoreEntryVisibility()
+        {
+            if (!_hiddenDuringEntry) return;
+            if (_entryVisibility != null) _entryVisibility.alpha = _alphaBeforeEntry;
+            _hiddenDuringEntry = false;
         }
 
         // 일시정지 창보다 뒤에 두거나, 기본 전경 정렬로 되돌린다
@@ -202,7 +238,7 @@ namespace Battle.UI
         [ContextMenu("완전 방어 미리보기")]
         public void PlayGuardBlock()
         {
-            if (!Application.isPlaying || !isActiveAndEnabled) return;
+            if (!Application.isPlaying || !isActiveAndEnabled || NewBattleController.IsAwakeningEntryPlaying) return;
 
             if (_guardBlockSettings == null)
                 _guardBlockSettings = Resources.Load<GuardBlockSettings>("VFX/GuardBlockSettings");
@@ -312,6 +348,8 @@ namespace Battle.UI
         {
             if (playSfx)
                 SfxManager.Instance?.PlayEffect(effectName);
+
+            if (NewBattleController.IsAwakeningEntryPlaying) return;
 
             // 방어도 획득 이벤트에서 공통 방패를 재생한다.
             if (IsGuardGainEffect(effectName) && ResolveGuardShieldPrefab() != null)
@@ -532,7 +570,7 @@ namespace Battle.UI
         // 임의 파티클 프리팹을 화면 중앙에 1회 재생
         public void PlayPrefab(GameObject prefab, float scale = 0f, float duration = 0f)
         {
-            if (prefab == null) return;
+            if (prefab == null || NewBattleController.IsAwakeningEntryPlaying) return;
 
             GameObject go = SpawnPrefabFx(prefab, scale, loop: false, out var uip);
             float life = duration > 0f

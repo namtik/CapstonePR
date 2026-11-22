@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using Battle;
 using Coffee.UIExtensions;
 using Battle.Card;
 
@@ -648,9 +649,15 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     }
 
     // 적 공격 파티클을 활성화 보장 후 재생한다
+    void LateUpdate()
+    {
+        if (NewBattleController.IsAwakeningEntryPlaying && hitVFX != null && hitVFX.IsAlive(true))
+            hitVFX.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
     void PlayAttackVfx()
     {
-        if (hitVFX == null) return;
+        if (hitVFX == null || NewBattleController.IsAwakeningEntryPlaying) return;
         // VFX 오브젝트가 비활성 상태면 Play()해도 보이지 않으므로 먼저 활성화 보장(공격 이펙트 누락 방지)
         if (!hitVFX.gameObject.activeSelf) hitVFX.gameObject.SetActive(true);
         if (_hitVfxRuntime) PlaceRuntimeHitVfx();

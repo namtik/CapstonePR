@@ -7,6 +7,7 @@ using Battle.Card;
 using Battle.Deck;
 using Battle.Relic;
 using Battle.UI;
+using Sashindo.VFX;
 
 namespace Battle
 {
@@ -102,6 +103,9 @@ namespace Battle
         [Header("각성 화면 효과")]
         [Tooltip("각성 동안 3D 스테이지 카메라 앞에 유지될 프리팹(Hovl Screen wind 등). UI가 아니라 카메라에 붙여 시야만 덮는다. 비우면 화면 효과 없음.")]
         [SerializeField] private GameObject awakenScreenEffectPrefab; // 각성 화면 효과 프리팹
+        [Tooltip("각성 진입 연출. 비워 두면 씬의 연출 또는 패키지 기본 프리팹을 사용한다.")]
+        [SerializeField] private AwakeningVfx awakenEntryVfx;
+        private bool ownsAwakenEntryVfx;
         [Tooltip("구 UIParticle 스케일. 카메라 부착 방식으로 바꾼 뒤로는 사용하지 않는다.")]
         [FormerlySerializedAs("awakenScreenEffectScale")]
         [SerializeField] private float awakenScreenEffectScale = 100f; // 미사용(호환용)
@@ -268,6 +272,8 @@ namespace Battle
         private bool _relicFirstCardRecastPending; // 유물(복사경 10015): 첫 사용 카드 효과 1회 재발동 예약
 
         public bool IsAwakenActive => _awakenActive;        // 각성 활성 여부 노출
+        public static bool IsAwakeningEntryPlaying =>
+            Instance != null && Instance.awakenEntryVfx != null && Instance.awakenEntryVfx.IsPlaying;
         public EnemyController CurrentEnemy =>
             _enemy != null && _enemy.IsAlive ? _enemy : EnemyCombatParty.FirstAlive();
         public CardDeckSystem Deck => _deck;                // 덱 시스템 노출
@@ -305,6 +311,9 @@ namespace Battle
         // 이벤트 구독 해제 및 싱글톤 정리
         void OnDestroy()
         {
+            if (ownsAwakenEntryVfx && awakenEntryVfx != null)
+                Destroy(awakenEntryVfx.gameObject);
+
             _deck.OnCardDrawn -= OnCardDrawnHandler;
             _deck.OnCardDiscarded -= OnCardDiscardedHandler;
             if (_player != null)
@@ -377,6 +386,8 @@ namespace Battle
                     _awakenTimeRemaining = _awakenMaxTime;
                 return;
             }
+            // 진입 연출이 화면을 다시 열 때까지 각성 시간을 보존한다.
+            if (awakenEntryVfx != null && awakenEntryVfx.IsPlaying) return;
             // 손패가 부적으로 바뀌는 동안은 각성 시간이 흐르지 않음(여유 시간)
             if (pauseAwakenDuringTalismanBurn && handHud != null && handHud.IsTalismanTransitioning) return;
             _awakenTimeRemaining -= Time.deltaTime;
@@ -539,6 +550,7 @@ namespace Battle
         // 전투 종료 — 추적/큐 마감·덱 종료·UI/이펙트 정리
         public void EndBattle()
         {
+            bool wasAwakened = _awakenActive;
             _inBattle = false;
             if (_player != null)
             {
@@ -564,6 +576,7 @@ namespace Battle
                 handHud.ExitSelectionMode();
                 handHud.ExitPickerMode();
                 handHud.CloseViewer();
+                if (wasAwakened) handHud.SetAwakenMode(false);
                 handHud.UseCardCallback = null;
                 handHud.SelectionClosedCallback = null;
                 handHud.SetAwakenGaugeVisible(false);
@@ -1588,6 +1601,7 @@ namespace Battle
 
                 if (awakenTimerGauge != null) awakenTimerGauge.Hide();
 
+                if (awakenStarting) PlayAwakenEntryVfx();
                 _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
                 SfxManager.Instance?.PlayAwakenStart();
 
@@ -1599,10 +1613,43 @@ namespace Battle
             }
         }
 
+        void PlayAwakenEntryVfx()
+        {
+            if (awakenEntryVfx == null)
+            {
+                foreach (var root in gameObject.scene.GetRootGameObjects())
+                {
+                    if (root.name == "Sashindo_AwakeningVFX" && root.TryGetComponent(out awakenEntryVfx))
+                        break;
+                }
+            }
+
+            if (awakenEntryVfx == null)
+            {
+                var preset = Resources.Load<AwakeningBattlePreset>("SashindoAwakening/BattlePreset");
+                if (preset == null || preset.EntryPrefab == null) return;
+                awakenEntryVfx = Instantiate(preset.EntryPrefab);
+                ownsAwakenEntryVfx = true;
+                if (awakenEntryVfx.gameObject.scene != gameObject.scene)
+                    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(awakenEntryVfx.gameObject, gameObject.scene);
+            }
+
+            awakenEntryVfx.Play();
+        }
+
         // 각성 화면 이펙트를 3D 스테이지 카메라 앞에 붙여 시야만 덮는다(UI 위가 아님).
         GameObject SpawnAwakenScreenEffect()
         {
-            if (awakenScreenEffectPrefab == null) return null;
+            var prefab = awakenScreenEffectPrefab;
+            if (prefab == null || prefab.name == "Screen wind")
+            {
+                var packagedFlicker = Resources.Load<GameObject>("VFX/AwakeningDurationFlicker");
+                if (packagedFlicker != null) prefab = packagedFlicker;
+            }
+
+            if (prefab == null) return null;
+            if (prefab.TryGetComponent<AwakeningDurationFlicker>(out _))
+                return Instantiate(prefab);
 
             Camera cam = BattleStageController.Current != null
                 ? BattleStageController.Current.StageCamera
@@ -1610,7 +1657,7 @@ namespace Battle
             if (cam == null) cam = Camera.main;
             if (cam == null) return null;
 
-            GameObject go = Instantiate(awakenScreenEffectPrefab);
+            GameObject go = Instantiate(prefab);
             go.name = "AwakenScreenWind";
 
             // StageCamera는 Stage3D/Enemy3D만 그리므로, 그 마스크에 맞춰 레이어를 올린다.
@@ -1645,6 +1692,9 @@ namespace Battle
         // 각성 화면 이펙트를 정지하고 제거한다
         void StopAwakenScreenEffect()
         {
+            if (awakenEntryVfx != null && awakenEntryVfx.IsPlaying)
+                awakenEntryVfx.Stop();
+
             if (_awakenScreenEffectInstance == null) return;
 
             var systems = _awakenScreenEffectInstance.GetComponentsInChildren<ParticleSystem>(true);

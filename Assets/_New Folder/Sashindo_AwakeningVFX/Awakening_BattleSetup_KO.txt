@@ -1,0 +1,21 @@
+사신도 각성 연출 | CapstonePR 원본 프로젝트
+=========================================
+
+대상은 Documents/GitHub/CapstonePR의 Build0.9_new_Eft (379e75fe)입니다.
+Play 모드를 종료한 뒤 Assets > Import Package > Custom Package에서 모든 항목을
+가져오면 MainScene의 일반 전투에서 각성 연출이 바로 작동합니다.
+원본 씬의 Screen wind 슬롯은 실행 시 새 지속 깜빡임 프리팹으로 대체됩니다.
+씬에 각성 진입 프리팹이 없으면 패키지의 기본 프리팹을 실행 시 불러옵니다.
+
+진입과 지속의 수치는 각각 Sashindo_AwakeningVFX와 AwakeningDurationFlicker
+프리팹의 Inspector에서 조정합니다. 화면 딤은 CardHandHUD 프리팹의
+Awaken Dim Color와 Awaken Dim Bright Radius에서 조정합니다.
+
+진입과 화면 복귀가 재생되는 동안 전투의 방패·완전 방어·카드·적 공격 효과를
+가립니다. 지속 깜빡임은 복귀가 끝난 뒤 시작합니다.
+
+씬에 프리팹을 직접 배치해 개별 설정을 저장하려면 MainScene에서
+Tools > Sashindo > 각성 연출 적용을 실행하고 저장합니다.
+
+이 패키지는 원본 브랜치의 NewBattleController.cs와 CardHandHUD.prefab에
+각성 연출 연결과 딤 기본값을 반영한 버전을 포함합니다.
