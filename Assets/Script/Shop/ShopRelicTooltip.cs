@@ -48,15 +48,21 @@ namespace Battle.UI
                 _instance.ApplyConfiguredStyle();
         }
 
+        // 떠 있는 툴팁만 닫는다. 없으면 새로 만들지 않는다.
+        public static void HideActive()
+        {
+            if (_instance != null) _instance.Hide();
+        }
+
         // 최초 호버 시 상위 캔버스 아래 1회 생성
         public static ShopRelicTooltip Instance
         {
-            get { if (_instance == null) Create(); return _instance; }
+            get { if (_instance == null) Create(null); return _instance; }
         }
 
-        static void Create()
+        static void Create(Transform hoverTarget)
         {
-            Canvas canvas = ResolveTopCanvas();
+            Canvas canvas = FindUsableCanvas(hoverTarget);
             if (canvas == null) return;
 
             var go = new GameObject("ShopRelicTooltip", typeof(RectTransform));
@@ -69,18 +75,44 @@ namespace Battle.UI
             _instance = tip;
         }
 
-        // sortingOrder가 가장 높은 루트 캔버스를 선택
-        static Canvas ResolveTopCanvas()
+        // 스케일이 0인 메뉴 캔버스(SoundMenu 등)는 보이지 않으므로 건너뛴다.
+        static bool Usable(Canvas canvas)
         {
+            if (canvas == null || !canvas.isActiveAndEnabled) return false;
+            if (!canvas.gameObject.activeInHierarchy) return false;
+            return canvas.transform.lossyScale.sqrMagnitude > 0.0001f;
+        }
+
+        // 호버한 유물에서 올라가며, 레이아웃에 끼지 않는 바깥쪽 캔버스를 고른다.
+        static Canvas FindUsableCanvas(Transform hoverTarget)
+        {
+            Canvas found = null;
+            Transform t = hoverTarget;
+            while (t != null)
+            {
+                Canvas canvas = t.GetComponent<Canvas>();
+                if (Usable(canvas)) found = canvas;
+                t = t.parent;
+            }
+            if (found != null) return found;
+
             Canvas best = null;
             int top = int.MinValue;
             var all = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
             foreach (var c in all)
             {
-                if (c == null || !c.isRootCanvas) continue;
+                if (!Usable(c) || !c.isRootCanvas) continue;
                 if (best == null || c.sortingOrder >= top) { top = c.sortingOrder; best = c; }
             }
             return best;
+        }
+
+        void AttachTo(Canvas canvas)
+        {
+            if (canvas == null || _canvas == canvas) return;
+            transform.SetParent(canvas.transform, false);
+            _canvas = canvas;
+            _canvasRect = canvas.transform as RectTransform;
         }
 
         void BuildUI()
@@ -89,6 +121,10 @@ namespace Battle.UI
             _rect.anchorMin = _rect.anchorMax = new Vector2(0.5f, 0.5f);
             _rect.pivot = new Vector2(0f, 1f); // 커서 기준 오른쪽-아래로 펼쳐짐
             _rect.sizeDelta = new Vector2(_style.width, 80f);
+
+            var overlay = gameObject.AddComponent<Canvas>();
+            overlay.overrideSorting = true;
+            overlay.sortingOrder = 80;
 
             var bg = gameObject.AddComponent<Image>();
             bg.color = new Color(0.07f, 0.07f, 0.11f, 0.96f);
@@ -135,8 +171,9 @@ namespace Battle.UI
         }
 
         // 이름/설명을 채우고 크기 맞춘 뒤 커서 옆에 표시
-        public void Show(string title, string description)
+        public void Show(string title, string description, Transform hoverTarget = null)
         {
+            AttachTo(FindUsableCanvas(hoverTarget));
             if (_rect == null) return;
 
             ApplyConfiguredStyle();

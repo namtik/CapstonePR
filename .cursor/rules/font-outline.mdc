@@ -1,0 +1,22 @@
+---
+description: 글꼴 인스펙터 설정을 넣을 때 외곽선 두께와 색을 함께 둔다
+globs: Assets/Script/**/*.cs
+alwaysApply: false
+---
+
+# 글꼴 설정에는 외곽선을 같이 둔다
+
+TMP 글자 크기, 글꼴, 색, 정렬을 인스펙터에 노출할 때 외곽선도 같은 헤더에 넣는다. 글꼴만 추가하지 않는다.
+
+- 두께: `[Range(0f, 1f)] float …OutlineWidth`, 기본값 `0` (0이면 외곽선 없음)
+- 색: `Color …OutlineColor`, 기본값 `Color.black`
+- 적용: `outlineWidth`는 0–1로 클램프하고, 값이 바뀔 때만 `outlineColor`를 쓴다
+- 외곽선 두께로 RectTransform 크기나 위치를 바꾸지 않는다. 칸이 커지면 가운데 정렬 글자가 위아래로 움직인다
+
+```csharp
+[Tooltip("외곽선 두께. 0이면 외곽선이 없습니다.")]
+[Range(0f, 1f)]
+[SerializeField] private float hpOutlineWidth = 0f;
+[Tooltip("외곽선 색.")]
+[SerializeField] private Color hpOutlineColor = Color.black;
+```

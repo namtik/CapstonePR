@@ -376,17 +376,22 @@ public class ShopOfferItemUI : MonoBehaviour
         if (trigger == null) trigger = iconImage.gameObject.AddComponent<EventTrigger>();
 
         var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-        enter.callback.AddListener(_ =>
-        {
-            ShopRelicTooltip.Instance?.Show(offerTitle, offerDescription);
-        });
+        enter.callback.AddListener(_ => ShowRelicTooltip());
         trigger.triggers.Add(enter);
 
         var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-        exit.callback.AddListener(_ => ShopRelicTooltip.Instance?.Hide());
+        exit.callback.AddListener(_ => ShopRelicTooltip.HideActive());
         trigger.triggers.Add(exit);
 
         hoverTooltipWired = true;
+    }
+
+    void ShowRelicTooltip()
+    {
+        Transform hover = iconImage != null ? iconImage.transform : transform;
+        if (ShopRelicTooltip.Instance == null)
+            return;
+        ShopRelicTooltip.Instance.Show(offerTitle, offerDescription, hover);
     }
 
     // 아이콘 클릭만 구매로 처리하고 다른 구매 버튼 비활성화
@@ -666,6 +671,8 @@ public class ShopOfferItemUI : MonoBehaviour
     {
         if (MoneyManager.Instance != null)
             MoneyManager.Instance.OnMoneyChanged -= OnMoneyChanged;
+        if (relicIconOnlyMode)
+            ShopRelicTooltip.HideActive();
     }
 
     // 파괴 시 재화 변동 구독 해제
