@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -5,35 +6,81 @@ using UnityEngine.SceneManagement;
 public sealed class SeaStackBedrockImpact : MonoBehaviour
 {
     private enum Motion { Bedrock, TidalWave, AbyssalPull, AbyssalBreak, HullFist }
+    private enum CameraShot { None, AbyssalDecree, DreadGaze }
 
     private const float HullFistDuration = 2.86f;
     private const float HullFistHit = 1.62f;
     private const float HullFistApproachDistance = 15.55f;
+    private const string AbyssalDecreeClip = "DeepSeaGiant_Attack_AbyssalDecree";
+    private const string DreadGazeClip = "DeepSeaGiant_Curse_DreadGaze";
+    private const float NoDecreeCameraRequest = -1f;
+
+    private static readonly Dictionary<Transform, SeaStackBedrockImpact> MotionOwners = new();
 
     [SerializeField] private Transform stageCamera;
     [SerializeField] private Transform battleBoat;
     [SerializeField] private ParticleSystem spray;
     [SerializeField] private Transform abyssalColumn;
+    [SerializeField, HideInInspector] private float decreeCameraRequest = NoDecreeCameraRequest;
 
     private readonly System.Random random = new System.Random(327);
-    private Pose cameraRest;
+    private readonly List<AnimatorClipInfo> cameraClips = new();
+    private Animator bossAnimator;
+    private Camera decreeCamera;
+    private Renderer decreeCameraWash;
+    private Renderer dreadGazeVeil;
+    private bool cinematicShown;
+    private SeaStackStageCameraLock stageCameraRecovery;
+    private SeaStackStageCameraLock motionCameraRecovery;
+    private int cameraMotionToken;
+    private int cameraMotionLayer = -1;
+    private int cameraMotionState;
+    private float cameraMotionProgress;
+    private Transform motionBoat;
     private Pose boatRest;
     private float impactTime;
     private float nextBindingCheck;
     private bool recoiling;
     private Motion motion;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetMotionOwners()
+    {
+        MotionOwners.Clear();
+    }
+
     public void BindStage(Transform cameraTransform, Transform boatTransform, ParticleSystem impactSpray)
     {
+        SetCameraShot(CameraShot.None);
         RestorePose();
         stageCamera = cameraTransform;
         battleBoat = boatTransform;
         spray = impactSpray;
+        LockStageCamera();
+    }
+
+    private void Awake()
+    {
+        bossAnimator = GetComponent<Animator>();
+        decreeCamera = transform.Find("DeepSeaGiant_AttackFX/AbyssalDecreeCamera")?.GetComponent<Camera>();
+        if (decreeCamera)
+        {
+            decreeCameraWash = decreeCamera.transform.Find("AbyssalDecreeCameraWash")?.GetComponent<Renderer>();
+            dreadGazeVeil = decreeCamera.transform.Find("DreadGazeVeil")?.GetComponent<Renderer>();
+            SetCameraShot(CameraShot.None);
+        }
     }
 
     private void Start()
     {
         ResolveStageBindings();
+    }
+
+    private void LockStageCamera()
+    {
+        stageCameraRecovery = stageCamera
+            ? SeaStackStageCameraLock.Attach(stageCamera, battleBoat ? battleBoat.gameObject.scene : stageCamera.gameObject.scene)
+            : null;
     }
 
     private void ResolveStageBindings()
@@ -68,7 +115,10 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
         }
 
         if (!battleBoat)
+        {
+            LockStageCamera();
             return;
+        }
 
         Scene stageScene = battleBoat.gameObject.scene;
         if (!spray)
@@ -83,6 +133,8 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
             if (!stageCamera)
                 stageCamera = Camera.main?.transform;
         }
+
+        LockStageCamera();
     }
 
     private static T FindUnique<T>(Scene scene, string objectName) where T : Component
@@ -172,11 +224,22 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
         if (!stageCamera || !battleBoat || !spray)
             ResolveStageBindings();
 
+        // A newly spawned boss may share the boat with an attack still in progress.
+        RestorePreviousOwner(battleBoat);
+        motionBoat = battleBoat;
+        boatRest = LocalPose(motionBoat);
+        if (motionBoat)
+            MotionOwners[motionBoat] = this;
+
         motion = next;
-        cameraRest = LocalPose(stageCamera);
-        boatRest = LocalPose(battleBoat);
         impactTime = Time.time;
         recoiling = true;
+        motionCameraRecovery = stageCameraRecovery;
+        if (motionCameraRecovery)
+        {
+            cameraMotionToken = motionCameraRecovery.BeginAttack(MotionDuration(motion));
+            TrackCameraMotionState();
+        }
         ApplyMotion(0f);
 
         if (motion != Motion.AbyssalPull && motion != Motion.HullFist && spray && stageCamera)
@@ -185,6 +248,9 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (decreeCamera)
+            UpdateCameraShot();
+
         if (!recoiling)
         {
             if ((!stageCamera || !battleBoat || !spray) && Time.unscaledTime >= nextBindingCheck)
@@ -193,26 +259,181 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
             return;
         }
 
+        if (motionCameraRecovery && cameraMotionLayer >= 0 && HasCameraMotionStateEnded())
+            EndCameraMotion();
+
         float elapsed = Time.time - impactTime;
-        float duration = motion switch
-        {
-            Motion.AbyssalPull => 2.70f,
-            Motion.AbyssalBreak => 1.34f,
-            Motion.TidalWave => 1.07f,
-            Motion.HullFist => HullFistDuration,
-            _ => 0.76f
-        };
-        if (elapsed >= duration)
+        if (elapsed >= MotionDuration(motion))
             RestorePose();
         else
             ApplyMotion(elapsed);
     }
 
+    private static float MotionDuration(Motion motion) => motion switch
+    {
+        Motion.AbyssalPull => 2.70f,
+        Motion.AbyssalBreak => 1.34f,
+        Motion.TidalWave => 1.07f,
+        Motion.HullFist => HullFistDuration,
+        _ => 0.76f
+    };
+
+    private string CameraMotionClip => motion switch
+    {
+        Motion.HullFist => "DeepSeaGiant_Attack_HullFist",
+        Motion.TidalWave => "DeepSeaGiant_Attack_TidalWave",
+        Motion.AbyssalPull or Motion.AbyssalBreak => "DeepSeaGiant_Attack_AbyssalEye",
+        _ => "DeepSeaGiant_Attack_BedrockThrow"
+    };
+
+    private void TrackCameraMotionState()
+    {
+        cameraMotionLayer = -1;
+        if (!bossAnimator || !bossAnimator.isActiveAndEnabled || !bossAnimator.isInitialized)
+            return;
+
+        for (int layer = 0; layer < bossAnimator.layerCount; layer++)
+        {
+            bool incoming = bossAnimator.IsInTransition(layer);
+            if (!TryGetClipState(layer, incoming, CameraMotionClip, out var state) &&
+                (!incoming || !TryGetClipState(layer, false, CameraMotionClip, out state)))
+                continue;
+
+            cameraMotionLayer = layer;
+            cameraMotionState = state.fullPathHash;
+            cameraMotionProgress = state.normalizedTime;
+            return;
+        }
+    }
+
+    private bool HasCameraMotionStateEnded()
+    {
+        if (!bossAnimator || !bossAnimator.isActiveAndEnabled || !bossAnimator.isInitialized ||
+            cameraMotionLayer >= bossAnimator.layerCount)
+            return true;
+
+        bool incoming = bossAnimator.IsInTransition(cameraMotionLayer);
+        if (!TryGetClipState(cameraMotionLayer, incoming, CameraMotionClip, out var state) ||
+            state.fullPathHash != cameraMotionState ||
+            state.normalizedTime + 0.001f < cameraMotionProgress ||
+            Mathf.Floor(state.normalizedTime) > Mathf.Floor(cameraMotionProgress))
+            return true;
+
+        cameraMotionProgress = state.normalizedTime;
+        return false;
+    }
+
+    private bool TryGetClipState(int layer, bool incoming, string clipName, out AnimatorStateInfo state)
+    {
+        cameraClips.Clear();
+        if (incoming)
+            bossAnimator.GetNextAnimatorClipInfo(layer, cameraClips);
+        else
+            bossAnimator.GetCurrentAnimatorClipInfo(layer, cameraClips);
+
+        foreach (AnimatorClipInfo info in cameraClips)
+        {
+            if (!info.clip || info.clip.name != clipName)
+                continue;
+
+            state = incoming
+                ? bossAnimator.GetNextAnimatorStateInfo(layer)
+                : bossAnimator.GetCurrentAnimatorStateInfo(layer);
+            return true;
+        }
+
+        state = default;
+        return false;
+    }
+
     private void OnDisable()
     {
+        SetCameraShot(CameraShot.None);
+        decreeCameraRequest = NoDecreeCameraRequest;
         RestorePose();
         if (spray)
             spray.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
+    private void UpdateCameraShot()
+    {
+        CameraShot shot = GetCurrentCameraShot();
+        if (shot != CameraShot.AbyssalDecree)
+            decreeCameraRequest = NoDecreeCameraRequest;
+
+        // Dread Gaze and older Decree clips key Camera.enabled on the shared camera.
+        bool requested = shot == CameraShot.AbyssalDecree && decreeCameraRequest != NoDecreeCameraRequest
+            ? decreeCameraRequest > 0.5f
+            : shot != CameraShot.None && decreeCamera.enabled;
+        if (!requested)
+        {
+            SetCameraShot(CameraShot.None);
+            return;
+        }
+
+        if (shot == CameraShot.AbyssalDecree && stageCamera)
+        {
+            Transform cameraTransform = decreeCamera.transform;
+            Vector3 stageHeading = Vector3.ProjectOnPlane(SeaStackStageCameraLock.WorldForward(stageCamera), Vector3.up);
+            Vector3 shotHeading = Vector3.ProjectOnPlane(cameraTransform.forward, Vector3.up);
+            if (stageHeading.sqrMagnitude > 0.0001f && shotHeading.sqrMagnitude > 0.0001f)
+            {
+                float headingCorrection = Vector3.SignedAngle(shotHeading, stageHeading, Vector3.up);
+                cameraTransform.rotation = Quaternion.AngleAxis(headingCorrection, Vector3.up) * cameraTransform.rotation;
+            }
+        }
+
+        SetCameraShot(shot);
+    }
+
+    private void SetCameraShot(CameraShot shot)
+    {
+        bool shown = shot != CameraShot.None;
+        if (decreeCamera && decreeCamera.enabled != shown)
+            decreeCamera.enabled = shown;
+        if (cinematicShown && !shown && stageCameraRecovery)
+            stageCameraRecovery.RequestReturn();
+        cinematicShown = shown;
+
+        SetOverlayVisibility(decreeCameraWash, shot == CameraShot.AbyssalDecree);
+        SetOverlayVisibility(dreadGazeVeil, shot == CameraShot.DreadGaze);
+    }
+
+    private static void SetOverlayVisibility(Renderer overlay, bool shown)
+    {
+        if (overlay && overlay.forceRenderingOff == shown)
+            overlay.forceRenderingOff = !shown;
+    }
+
+    private CameraShot GetCurrentCameraShot()
+    {
+        if (!bossAnimator || !bossAnimator.isActiveAndEnabled || !bossAnimator.isInitialized)
+            return CameraShot.None;
+
+        for (int layer = 0; layer < bossAnimator.layerCount; layer++)
+        {
+            if (layer > 0 && bossAnimator.GetLayerWeight(layer) <= 0f)
+                continue;
+
+            cameraClips.Clear();
+            // Once a transition starts, only the incoming state can retain the camera.
+            if (bossAnimator.IsInTransition(layer))
+                bossAnimator.GetNextAnimatorClipInfo(layer, cameraClips);
+            else
+                bossAnimator.GetCurrentAnimatorClipInfo(layer, cameraClips);
+
+            foreach (AnimatorClipInfo info in cameraClips)
+            {
+                if (info.weight <= 0f || !info.clip)
+                    continue;
+                if (info.clip.name == AbyssalDecreeClip)
+                    return CameraShot.AbyssalDecree;
+                if (info.clip.name == DreadGazeClip)
+                    return CameraShot.DreadGaze;
+            }
+        }
+
+        return CameraShot.None;
     }
 
     private void ApplyMotion(float elapsed)
@@ -220,16 +441,15 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
         if (motion == Motion.HullFist)
         {
             Pose hull = SampleHullFistBoat(elapsed);
-            if (battleBoat)
+            if (motionBoat)
             {
-                battleBoat.SetLocalPositionAndRotation(boatRest.position + boatRest.rotation * hull.position,
+                motionBoat.SetLocalPositionAndRotation(boatRest.position + boatRest.rotation * hull.position,
                     boatRest.rotation * hull.rotation);
             }
-            if (stageCamera)
+            if (motionCameraRecovery)
             {
                 Pose view = SampleHullFistCamera(elapsed, hull);
-                stageCamera.SetLocalPositionAndRotation(cameraRest.position + boatRest.rotation * view.position,
-                    cameraRest.rotation * view.rotation);
+                ApplyCameraOffset(boatRest.rotation * view.position, view.rotation);
             }
             return;
         }
@@ -243,24 +463,24 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
         bool tidalWave = motion != Motion.Bedrock;
         float weight = motion == Motion.AbyssalBreak ? 1.28f : 1f;
         float time = elapsed / weight;
-        float kick = Mathf.Exp(-time * (tidalWave ? 10f : 20f));
-        float ringing = tidalWave
-            ? Mathf.Sin(time * 19f) * Mathf.Exp(-time * 5.8f)
-            : Mathf.Sin(time * 50f) * Mathf.Exp(-time * 11f);
-        if (stageCamera)
+        if (motionCameraRecovery)
         {
+            float kick = Mathf.Exp(-time * (tidalWave ? 10f : 20f));
+            float ringing = tidalWave
+                ? Mathf.Sin(time * 19f) * Mathf.Exp(-time * 5.8f)
+                : Mathf.Sin(time * 50f) * Mathf.Exp(-time * 11f);
             var offset = new Vector3(0.064f * ringing, 0.04f * kick + 0.027f * ringing, -0.115f * kick) * weight;
-            var rotation = Quaternion.Euler(new Vector3(-1.6f * kick + 1.1f * ringing, 0.44f * ringing, -0.64f * ringing) * weight);
-            stageCamera.SetLocalPositionAndRotation(cameraRest.position + cameraRest.rotation * offset, cameraRest.rotation * rotation);
+            var rotation = Quaternion.Euler((-1.6f * kick + 1.1f * ringing) * weight,
+                0.44f * ringing * weight, -0.64f * ringing * weight);
+            ApplyCameraOffset(SeaStackStageCameraLock.StageRotation * offset, rotation);
         }
-
-        if (battleBoat)
+        if (motionBoat)
         {
             float damping = Mathf.Exp(-time * (tidalWave ? 3.4f : 5.4f));
             float rocking = Mathf.Sin(time * (tidalWave ? 9.2f : 12.5f)) * damping * weight;
             float heave = Mathf.Sin(time * (tidalWave ? 6.4f : 9.4f)) * damping * weight;
             var rotation = Quaternion.Euler(-(tidalWave ? 8.5f : 6.8f) * rocking, 0f, (tidalWave ? 2.4f : 1.5f) * rocking);
-            battleBoat.SetLocalPositionAndRotation(
+            motionBoat.SetLocalPositionAndRotation(
                 boatRest.position + Vector3.up * ((tidalWave ? 0.21f : 0.13f) * heave), boatRest.rotation * rotation);
         }
     }
@@ -300,19 +520,25 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
         float load = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / 1.55f));
         float release = Mathf.SmoothStep(1f, 0f, Mathf.InverseLerp(2.05f, 2.70f, elapsed));
         float pull = load * release;
-        if (battleBoat)
+        if (motionBoat)
         {
             var shift = new Vector3(-0.12f, -0.11f, 0.33f) * pull;
             var tilt = Quaternion.Euler(2.9f * pull, -1.7f * pull, 4.5f * pull);
-            battleBoat.SetLocalPositionAndRotation(boatRest.position + shift, boatRest.rotation * tilt);
+            motionBoat.SetLocalPositionAndRotation(boatRest.position + shift, boatRest.rotation * tilt);
         }
 
-        if (stageCamera)
+        if (motionCameraRecovery)
         {
-            var shift = new Vector3(-0.07f, -0.06f, 0.19f) * pull;
-            stageCamera.SetLocalPositionAndRotation(cameraRest.position + shift,
-                cameraRest.rotation * Quaternion.Euler(0.6f * pull, -0.55f * pull, 1.8f * pull));
+            var offset = new Vector3(-0.07f, -0.06f, 0.19f) * pull;
+            ApplyCameraOffset(offset, Quaternion.Euler(0.6f * pull, -0.55f * pull, 1.8f * pull));
         }
+    }
+
+    private void ApplyCameraOffset(Vector3 offset, Quaternion rotation)
+    {
+        motionCameraRecovery.ApplyAttackPose(cameraMotionToken,
+            SeaStackStageCameraLock.StagePosition + offset,
+            SeaStackStageCameraLock.StageRotation * rotation);
     }
 
     private void EmitSpray()
@@ -359,11 +585,34 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
         if (!recoiling)
             return;
 
-        if (stageCamera)
-            stageCamera.SetLocalPositionAndRotation(cameraRest.position, cameraRest.rotation);
-        if (battleBoat)
-            battleBoat.SetLocalPositionAndRotation(boatRest.position, boatRest.rotation);
         recoiling = false;
+        EndCameraMotion();
+        ReleaseTarget(motionBoat, boatRest);
+        motionBoat = null;
+    }
+
+    private void EndCameraMotion()
+    {
+        if (motionCameraRecovery)
+            motionCameraRecovery.EndAttack(cameraMotionToken);
+        motionCameraRecovery = null;
+        cameraMotionLayer = -1;
+    }
+
+    private static void RestorePreviousOwner(Transform target)
+    {
+        if (target && MotionOwners.TryGetValue(target, out var owner))
+            owner.RestorePose();
+    }
+
+    private void ReleaseTarget(Transform target, Pose rest)
+    {
+        if (ReferenceEquals(target, null) || !MotionOwners.TryGetValue(target, out var owner) || owner != this)
+            return;
+
+        MotionOwners.Remove(target);
+        if (target)
+            target.SetLocalPositionAndRotation(rest.position, rest.rotation);
     }
 
     private static Pose LocalPose(Transform target)
