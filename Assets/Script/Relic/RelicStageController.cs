@@ -70,15 +70,22 @@ public class RelicStageController : MonoBehaviour
         public float hoverAmplitude; // 부유 진폭
     }
 
-    [Header("툴팁 팝업 (Optional)")]
-    [SerializeField] private RectTransform tooltipPopupRoot; // 툴팁 팝업 루트
-    [SerializeField] private Image tooltipPopupBackground; // 툴팁 배경 이미지
-    [SerializeField] private TextMeshProUGUI tooltipNameText; // 툴팁 이름 텍스트
-    [SerializeField] private TextMeshProUGUI tooltipDescriptionText; // 툴팁 설명 텍스트
+    [Header("툴팁 팝업")]
+    [Tooltip("호버 팝업 배경. 비우면 아래 배경색 사각형을 쓴다.")]
+    [SerializeField] private Sprite tooltipPopupSprite;
+    [Tooltip("스프라이트가 없을 때 채우는 색.")]
+    [SerializeField] private Color tooltipPopupBackgroundColor = new Color(0f, 0f, 0f, 0.78f);
+    [Tooltip("스프라이트가 있을 때 곱하는 색. 원본 그대로면 흰색.")]
+    [SerializeField] private Color tooltipPopupSpriteColor = Color.white;
+    [SerializeField] private Image.Type tooltipPopupImageType = Image.Type.Sliced;
     [SerializeField] private Vector2 tooltipPopupAnchoredPosition = new Vector2(0f, -60f); // 툴팁 앵커 위치
     [SerializeField] private Vector2 tooltipPopupSize = new Vector2(820f, 220f); // 툴팁 크기
     [SerializeField] private Vector2 tooltipPopupPadding = new Vector2(24f, 18f); // 툴팁 패딩
-    [SerializeField] private Color tooltipPopupBackgroundColor = new Color(0f, 0f, 0f, 0.78f); // 툴팁 배경 색
+
+    RectTransform tooltipPopupRoot; // 런타임에 만든 팝업
+    Image tooltipPopupBackground;
+    TextMeshProUGUI tooltipNameText;
+    TextMeshProUGUI tooltipDescriptionText;
 
     [Header("상자 관련 설정")]
     [SerializeField] private ChestSettings chestSettings; // 상자 연출 설정
@@ -108,19 +115,23 @@ public class RelicStageController : MonoBehaviour
         anchoredPosition = new Vector2(0f, -420f),
     };
 
-    [Header("툴팁 이름 폰트 설정")]
-    [SerializeField] private TMP_FontAsset tooltipNameFontAsset; // 이름 폰트 에셋
-    [SerializeField] private float tooltipNameFontSize = 34f; // 이름 폰트 크기
-    [SerializeField] private FontStyles tooltipNameFontStyle = FontStyles.Bold; // 이름 폰트 스타일
-    [SerializeField] private Color tooltipNameFontColor = Color.white; // 이름 폰트 색
-    [SerializeField] private TextAlignmentOptions tooltipNameAlignment = TextAlignmentOptions.Top; // 이름 정렬
+    [Header("툴팁 제목")]
+    [SerializeField] private TMP_FontAsset tooltipNameFontAsset; // 제목 폰트
+    [Tooltip("TMP 폰트 프리셋(머티리얼). 비우면 폰트 기본값.")]
+    [SerializeField] private Material tooltipNameFontPreset;
+    [SerializeField] private float tooltipNameFontSize = 34f; // 제목 크기
+    [SerializeField] private FontStyles tooltipNameFontStyle = FontStyles.Bold; // 제목 스타일
+    [SerializeField] private Color tooltipNameFontColor = Color.white; // 제목 색
+    [SerializeField] private TextAlignmentOptions tooltipNameAlignment = TextAlignmentOptions.Top; // 제목 정렬
 
-    [Header("툴팁 설명 폰트 설정")]
-    [SerializeField] private TMP_FontAsset tooltipDescriptionFontAsset; // 설명 폰트 에셋
-    [SerializeField] private float tooltipDescriptionFontSize = 28f; // 설명 폰트 크기
-    [SerializeField] private FontStyles tooltipDescriptionFontStyle = FontStyles.Normal; // 설명 폰트 스타일
-    [SerializeField] private Color tooltipDescriptionFontColor = new Color(0.92f, 0.92f, 0.92f, 1f); // 설명 폰트 색
-    [SerializeField] private TextAlignmentOptions tooltipDescriptionAlignment = TextAlignmentOptions.Top; // 설명 정렬
+    [Header("툴팁 내용")]
+    [SerializeField] private TMP_FontAsset tooltipDescriptionFontAsset; // 내용 폰트
+    [Tooltip("TMP 폰트 프리셋(머티리얼). 비우면 폰트 기본값.")]
+    [SerializeField] private Material tooltipDescriptionFontPreset;
+    [SerializeField] private float tooltipDescriptionFontSize = 28f; // 내용 크기
+    [SerializeField] private FontStyles tooltipDescriptionFontStyle = FontStyles.Normal; // 내용 스타일
+    [SerializeField] private Color tooltipDescriptionFontColor = new Color(0.92f, 0.92f, 0.92f, 1f); // 내용 색
+    [SerializeField] private TextAlignmentOptions tooltipDescriptionAlignment = TextAlignmentOptions.Top; // 내용 정렬
 
     private RoundManager roundManager; // 라운드 매니저 참조
     private RelicRoundData currentData; // 현재 라운드 데이터
@@ -924,6 +935,60 @@ public class RelicStageController : MonoBehaviour
         return FindFirstObjectByType<Canvas>();
     }
 
+    public Vector2 StageTooltipAnchoredPosition => tooltipPopupAnchoredPosition;
+    public Vector2 StageTooltipSize => tooltipPopupSize;
+    public Vector2 StageTooltipPadding => tooltipPopupPadding;
+    public float StageItemHoverSpeed => itemSettings.hoverSpeed;
+    public float StageItemHoverAmplitude => itemSettings.hoverAmplitude;
+    public float StageItemHoverScale => itemHoverScaleMultiplier;
+    public float StageItemHoverScaleLerp => itemHoverScaleLerpSpeed;
+
+    // 보스 드랍 툴팁이 유물 스테이지와 같은 스프라이트·글꼴로 보이게 맞춘다.
+    public void ApplyStageTooltipStyle(Image background, TMP_Text nameText, TMP_Text descriptionText)
+    {
+        ApplyPopupBackground(background);
+        ApplyTooltipLabel(nameText, tooltipNameFontAsset, tooltipNameFontPreset, tooltipNameFontSize, tooltipNameFontStyle, tooltipNameFontColor, tooltipNameAlignment);
+        ApplyTooltipLabel(descriptionText, tooltipDescriptionFontAsset, tooltipDescriptionFontPreset, tooltipDescriptionFontSize, tooltipDescriptionFontStyle, tooltipDescriptionFontColor, tooltipDescriptionAlignment);
+    }
+
+    void ApplyPopupBackground(Image background)
+    {
+        if (background == null)
+            return;
+
+        background.sprite = tooltipPopupSprite;
+        background.type = tooltipPopupSprite != null ? tooltipPopupImageType : Image.Type.Simple;
+        background.color = tooltipPopupSprite != null ? tooltipPopupSpriteColor : tooltipPopupBackgroundColor;
+        background.raycastTarget = false;
+        background.preserveAspect = false;
+    }
+
+    static void ApplyTooltipLabel(TMP_Text label, TMP_FontAsset font, Material preset, float size, FontStyles style, Color color, TextAlignmentOptions alignment)
+    {
+        if (label == null)
+            return;
+
+        if (font != null)
+            label.font = font;
+
+        label.fontSize = Mathf.Max(1f, size);
+        label.fontStyle = style;
+        label.color = color;
+        label.alignment = alignment;
+
+        if (preset == null || label.font == null)
+            return;
+
+        try
+        {
+            label.fontSharedMaterial = preset;
+        }
+        catch (System.Exception)
+        {
+            // 폰트와 맞지 않는 프리셋은 기본 머티리얼을 유지한다.
+        }
+    }
+
     // 보상 이름/설명을 툴팁에 반영하고 표시
     void UpdateRewardDescriptionText()
     {
@@ -1036,33 +1101,10 @@ public class RelicStageController : MonoBehaviour
         HideTooltipPopup();
     }
 
-    // 툴팁 텍스트 폰트/색/정렬 등 스타일 적용
+    // 툴팁 스프라이트와 제목·내용 글꼴을 인스펙터 값으로 적용
     void ApplyTooltipTextStyle()
     {
-        if (tooltipPopupBackground != null)
-            tooltipPopupBackground.color = tooltipPopupBackgroundColor;
-
-        if (tooltipNameText != null)
-        {
-            if (tooltipNameFontAsset != null)
-                tooltipNameText.font = tooltipNameFontAsset;
-
-            tooltipNameText.fontSize = Mathf.Max(1f, tooltipNameFontSize);
-            tooltipNameText.fontStyle = tooltipNameFontStyle;
-            tooltipNameText.color = tooltipNameFontColor;
-            tooltipNameText.alignment = tooltipNameAlignment;
-        }
-
-        if (tooltipDescriptionText != null)
-        {
-            if (tooltipDescriptionFontAsset != null)
-                tooltipDescriptionText.font = tooltipDescriptionFontAsset;
-
-            tooltipDescriptionText.fontSize = Mathf.Max(1f, tooltipDescriptionFontSize);
-            tooltipDescriptionText.fontStyle = tooltipDescriptionFontStyle;
-            tooltipDescriptionText.color = tooltipDescriptionFontColor;
-            tooltipDescriptionText.alignment = tooltipDescriptionAlignment;
-        }
+        ApplyStageTooltipStyle(tooltipPopupBackground, tooltipNameText, tooltipDescriptionText);
     }
 
     // 툴팁 팝업을 표시하고 최상단으로 정렬

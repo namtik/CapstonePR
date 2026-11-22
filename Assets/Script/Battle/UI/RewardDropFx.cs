@@ -9,6 +9,7 @@ public class RewardDropFx : MonoBehaviour
 {
     static readonly Color CardLight = new Color(0.78f, 0.94f, 1f, 1f);
     static readonly Color ComboLight = new Color(1f, 0.78f, 0.16f, 1f);
+    static readonly Color RelicLight = new Color(1f, 0.16f, 0.12f, 1f);
 
     const float FallTime = 0.4f;
     const float SparkleTime = 0.42f;
@@ -21,9 +22,9 @@ public class RewardDropFx : MonoBehaviour
 
     RectTransform _root;
 
-    public static void Play(Vector2 screenPos, bool withCombo)
+    public static void Play(Vector2 screenPos, bool withCombo, bool withRelic = false)
     {
-        Instance.Begin(screenPos, withCombo);
+        Instance.Begin(screenPos, withCombo, withRelic);
     }
 
     static RewardDropFx Instance
@@ -63,9 +64,24 @@ public class RewardDropFx : MonoBehaviour
         _root = transform as RectTransform;
     }
 
-    void Begin(Vector2 screenPos, bool withCombo)
+    void Begin(Vector2 screenPos, bool withCombo, bool withRelic)
     {
         if (_root == null) BuildCanvas();
+
+        if (withRelic && withCombo)
+        {
+            StartCoroutine(Drop(screenPos + new Vector2(-130f, 0f), CardLight, 0f));
+            StartCoroutine(Drop(screenPos, ComboLight, 0.07f));
+            StartCoroutine(Drop(screenPos + new Vector2(130f, 0f), RelicLight, 0.14f));
+            return;
+        }
+
+        if (withRelic)
+        {
+            StartCoroutine(Drop(screenPos + new Vector2(-78f, 0f), CardLight, 0f));
+            StartCoroutine(Drop(screenPos + new Vector2(78f, 0f), RelicLight, 0.07f));
+            return;
+        }
 
         if (!withCombo)
         {

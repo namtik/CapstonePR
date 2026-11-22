@@ -638,7 +638,31 @@ public class RoundManager : MonoBehaviour
     // 카드 보상 후 콤보 책 보상 UI를 표시하고 선택한 콤보를 지급한다.
     void ShowComboBookRewardAfterCard()
     {
+        if (ShouldDropStageBossRelic())
+        {
+            ShowComboBookReward(ShowStageBossRelicThenLeave);
+            return;
+        }
+
         ShowComboBookReward(ReturnToMapWithWalk);
+    }
+
+    // 1스테이지 보스만 유물을 떨어뜨린다. 2스테이지 보스는 클리어 화면으로 끝난다.
+    bool ShouldDropStageBossRelic()
+    {
+        if (currentRoundData is not BossRoundData)
+            return false;
+        if (IsFinalClearBoss())
+            return false;
+
+        GameStateController state = GameStateController.Instance;
+        return state == null || state.bossDefeatCount == 0;
+    }
+
+    // 콤보 보상 뒤에 유물을 띄우고, 받으면 맵으로 돌아간다.
+    void ShowStageBossRelicThenLeave()
+    {
+        BossRelicDropUI.Present(ReturnToMapWithWalk);
     }
 
     // 런 시작 직후 맵에서 콤보 3택1을 표시한다.
@@ -1083,7 +1107,7 @@ public class RoundManager : MonoBehaviour
         Vector2 screen = ResolveDeathScreen(stat, view);
         PlayKillReward(screen);
         if (IsLastRewardKill() && !IsFinalClearBoss())
-            RewardDropFx.Play(screen, ShouldShowComboBookRewardAfterCard());
+            RewardDropFx.Play(screen, ShouldShowComboBookRewardAfterCard(), ShouldDropStageBossRelic());
         HandleEnemyDied();
     }
 
