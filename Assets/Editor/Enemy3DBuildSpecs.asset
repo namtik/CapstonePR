@@ -232,3 +232,39 @@ MonoBehaviour:
     modelRotation: {x: 0, y: 0, z: 0}
     modelScale: {x: 1, y: 1, z: 1}
     hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyTsurubebi
+    modelName: "\uCE20\uB8E8\uBCA0\uBE44"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 9101431400359740701, guid: 2bb717d540354cd2a794ebc82d92ba4c, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: feae5f5551f0781419d83839a1d11ec3, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyFallenSamurai
+    modelName: "\uC778\uCC60\uBB34\uC0E4"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 6894730001034864966, guid: 519ca05d4cee4c21871d431db5beb722, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: 8387952e412ab0844a44df6aed940ea4, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
+  - enabled: 1
+    prefabName: EnemyStrawWraith
+    modelName: "\uADF8\uC2A8\uC0C8"
+    fbx: {fileID: 0}
+    sourcePrefab: {fileID: 177208114422011939, guid: de189125622049a1bb541c054ae491f6, type: 3}
+    material: {fileID: 0}
+    enemyData: {fileID: 11400000, guid: f79fc9a0342d4a74e82ddf3182cb7b66, type: 2}
+    replaceExistingLink: 0
+    modelPosition: {x: 0, y: 0, z: 0}
+    modelRotation: {x: 0, y: 0, z: 0}
+    modelScale: {x: 1, y: 1, z: 1}
+    hudAnchorPosition: {x: 0, y: 0, z: 0}
