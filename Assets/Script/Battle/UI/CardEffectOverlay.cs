@@ -16,7 +16,7 @@ namespace Battle.UI
         [Tooltip("플레이어 대상 효과(*_DEF, *_POW, Heal_EFF) 위치 — 화면 하단 쪽.")]
         [SerializeField] private Vector2 playerAnchoredPos = new Vector2(0f, 100f); // 플레이어 대상 효과 위치
         [Tooltip("Earth_ATK 전용 위치 — 땅 공격은 좀 더 아래쪽에서 표시.")]
-        [SerializeField] private Vector2 earthAtkAnchoredPos = new Vector2(0f, 100f); // Earth_ATK 전용 위치
+        [SerializeField] private Vector2 earthAtkAnchoredPos = new Vector2(0f, 200f); // Earth_ATK 전용 위치
         [Tooltip("ON이면 적 대상 효과(*_ATK, Burn, Chain)를 카드의 대상 몬스터 화면 위치에서 재생. 위치 값들은 enemyAnchoredPos 대비 오프셋으로 적용된다.")]
         [SerializeField] private bool followTargetEnemy = true; // 대상 몬스터 위치 추적
         [Tooltip("대상 몬스터 조준 중심에서 추가로 옮길 오프셋(px).")]
