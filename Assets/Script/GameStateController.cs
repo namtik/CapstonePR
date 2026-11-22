@@ -104,6 +104,7 @@ public class GameStateController : MonoBehaviour
     public bool HasEnteredStage => lastVisitedNodeIndex >= 0;
 
     public event System.Action OnRunStageDisplayChanged;
+    StageTwoWalkOverlay openingTransition;
 
     // 초기화: 싱글턴 중복 방지
     void Awake()
@@ -179,6 +180,36 @@ public class GameStateController : MonoBehaviour
     // 메인 화면 [게임 플레이] 버튼: 메인 화면을 닫고 맵으로 진입
     public void StartGame()
     {
+        ShowFirstStageIntro(StartRunFromMenu);
+    }
+
+    // 재시작 시에는 이미 전환된 맵 위에서 제목부터 재생한다.
+    public void RevealFirstStageOnMap() => ShowFirstStageIntro(null);
+
+    void ShowFirstStageIntro(System.Action enterMap)
+    {
+        if (openingTransition != null) return;
+        openingTransition = StageTwoWalkOverlay.Open(transform, bookAcquired: false, stageNumber: 1);
+        if (openingTransition == null)
+        {
+            enterMap?.Invoke();
+            RequestStarterComboPick();
+            return;
+        }
+        openingTransition.StartCoroutine(openingTransition.CoverAndReveal(enterMap,
+            () => roundManager?.ShowStarterComboBookReward(), alreadyCovered: enterMap == null));
+    }
+
+    void CancelOpeningTransition()
+    {
+        if (openingTransition == null) return;
+        openingTransition.gameObject.SetActive(false);
+        Destroy(openingTransition.gameObject);
+        openingTransition = null;
+    }
+
+    void StartRunFromMenu()
+    {
         if (mainMenuStage != null)
             mainMenuStage.SetActive(false);
 
@@ -193,8 +224,6 @@ public class GameStateController : MonoBehaviour
             mapManager.RegenerateMap();
 
         ShowMap();
-
-        RequestStarterComboPick();
     }
 
     // 런 시작 콤보 3택1 표시를 요청한다(맵 표시 후 1프레임 지연)
@@ -458,9 +487,10 @@ public class GameStateController : MonoBehaviour
         RestartRunToMap(showStarterComboPick: true);
     }
 
-    // showStarterComboPick=false면 게임오버 연출 종료 후 RequestStarterComboPick()을 따로 호출
+    // false이면 게임오버 쪽에서 눈꺼풀 연출과 첫 스테이지 공개 시점을 맞춘다.
     public void RestartRunToMap(bool showStarterComboPick)
     {
+        CancelOpeningTransition();
         Time.timeScale = 1f;
 
         // 사망 등으로 중단된 전투의 잔여 적/상태 정리 (살아있는 적이 다음 전투로 이월되는 것 방지)
@@ -494,12 +524,13 @@ public class GameStateController : MonoBehaviour
         ShowMap();
 
         if (showStarterComboPick)
-            RequestStarterComboPick();
+            RevealFirstStageOnMap();
     }
 
     // 진행 중이던 런/전투를 정리하고 메인 메뉴 화면으로 돌아간다
     public void ReturnToMainMenu()
     {
+        CancelOpeningTransition();
         GameAudio.Instance?.ClearOutcomeBgm();
         Time.timeScale = 1f;
 

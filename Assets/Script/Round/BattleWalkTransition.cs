@@ -35,10 +35,16 @@ public class BattleWalkTransition : MonoBehaviour
     public void Play(System.Action onDone)
     {
         if (IsPlaying) return;
-        StartCoroutine(Run(onDone));
+        StartCoroutine(Run(onDone, null));
     }
 
-    IEnumerator Run(System.Action onDone)
+    public void PlayStageTwo(System.Action onDone, bool bookAcquired)
+    {
+        if (IsPlaying) return;
+        StartCoroutine(Run(onDone, StageTwoWalkOverlay.Open(transform, bookAcquired)));
+    }
+
+    IEnumerator Run(System.Action onDone, StageTwoWalkOverlay stageTwo)
     {
         IsPlaying = true;
         _fader = ScreenFader.Instance;
@@ -65,6 +71,7 @@ public class BattleWalkTransition : MonoBehaviour
 
         float duration = Mathf.Max(0.1f, walkDuration);
         float fadeStart = duration - Mathf.Min(fadeToBlackDuration, duration);
+        if (stageTwo != null) stageTwo.BeginWalk();
         for (float t = 0f; t < duration; t += Time.deltaTime)
         {
             float u = t / duration;
@@ -79,7 +86,9 @@ public class BattleWalkTransition : MonoBehaviour
                 camT.position = startPos + forward * travel + Vector3.up * bob;
                 camT.rotation = startRot * Quaternion.Euler(0f, 0f, roll);
             }
-            if (t >= fadeStart && fadeToBlackDuration > 0f)
+            if (stageTwo != null)
+                stageTwo.UpdateWalk(t, duration);
+            else if (t >= fadeStart && fadeToBlackDuration > 0f)
                 _fader.SetAlpha((t - fadeStart) / fadeToBlackDuration);
             yield return null;
         }
@@ -93,17 +102,36 @@ public class BattleWalkTransition : MonoBehaviour
         }
         if (hud != null) hud.alpha = hudAlpha;
 
-        onDone?.Invoke();
-
-        yield return null; // 맵 UI가 한 프레임 그려진 뒤 어둠을 걷음
-        for (float t = 0f; t < fadeFromBlackDuration; t += Time.unscaledDeltaTime)
+        try
         {
-            _fader.SetAlpha(1f - t / fadeFromBlackDuration);
-            yield return null;
+            if (stageTwo != null) stageTwo.UpdateWalk(duration, duration);
+            onDone?.Invoke();
+            if (stageTwo != null)
+            {
+                // 맵은 완전히 덮인 순간에 바꾸고, 새 지도를 여는 동작도 같은 붓질이 맡는다.
+                _fader.SetAlpha(0f);
+                yield return stageTwo.RevealMap();
+            }
+            else
+            {
+                yield return null;
+                for (float t = 0f; t < fadeFromBlackDuration; t += Time.unscaledDeltaTime)
+                {
+                    _fader.SetAlpha(1f - t / fadeFromBlackDuration);
+                    yield return null;
+                }
+            }
         }
-        _fader.SetAlpha(0f);
-        _fader.SetBlocking(false);
-        IsPlaying = false;
+        finally
+        {
+            if (stageTwo != null) Destroy(stageTwo.gameObject);
+            if (_fader != null)
+            {
+                _fader.SetAlpha(0f);
+                _fader.SetBlocking(false);
+            }
+            IsPlaying = false;
+        }
     }
 
     static float EaseInOut(float u) => u * u * (3f - 2f * u);

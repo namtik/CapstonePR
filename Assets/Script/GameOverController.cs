@@ -221,6 +221,7 @@ public class GameOverController : MonoBehaviour
 
         // 눈을 감은 상태에서 맵으로 전환 (HP 복구 포함)
         RestartRun();
+        GameStateController.Instance?.RevealFirstStageOnMap();
 
         // 눈 뜨기 — 맵이 드러남
         float dur = Mathf.Max(0.01f, openDuration);
@@ -241,10 +242,6 @@ public class GameOverController : MonoBehaviour
 
         if (gameOverCanvas != null)
             gameOverCanvas.SetActive(false);
-
-        GameStateController state = GameStateController.Instance;
-        if (state != null)
-            state.RequestStarterComboPick();
 
         animRoutine = null;
         isDead = false;

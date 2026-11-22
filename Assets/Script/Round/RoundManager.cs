@@ -606,18 +606,7 @@ public class RoundManager : MonoBehaviour
     }
 
     // 보상 종료 후 걷기 연출을 거쳐 맵으로 복귀한다(연출 OFF면 즉시 복귀).
-    void ReturnToMapWithWalk()
-    {
-        if (!walkTransitionAfterReward)
-        {
-            ReturnToMap();
-            return;
-        }
-        // 맵 전환 시 전투 스테이지가 비활성화돼도 연출 코루틴이 끊기지 않도록 별도 루트 오브젝트에서 실행
-        var walk = FindFirstObjectByType<BattleWalkTransition>();
-        if (walk == null) walk = new GameObject("BattleWalkTransition").AddComponent<BattleWalkTransition>();
-        walk.Play(ReturnToMap);
-    }
+    void ReturnToMapWithWalk(bool bookAcquired = false) => LeaveRound(walkTransitionAfterReward, bookAcquired);
 
     // 이번 보스 처치로 런이 끝나는지. 보상 UI를 띄우기 전이라 처치 수는 아직 오르지 않았다.
     bool IsFinalClearBoss()
@@ -640,11 +629,11 @@ public class RoundManager : MonoBehaviour
     {
         if (ShouldDropStageBossRelic())
         {
-            ShowComboBookReward(ShowStageBossRelicThenLeave);
+            PresentComboBookReward(acquired => BossRelicDropUI.Present(() => ReturnToMapWithWalk(acquired)));
             return;
         }
 
-        ShowComboBookReward(ReturnToMapWithWalk);
+        PresentComboBookReward(ReturnToMapWithWalk);
     }
 
     // 1스테이지 보스만 유물을 떨어뜨린다. 2스테이지 보스는 클리어 화면으로 끝난다.
@@ -659,12 +648,6 @@ public class RoundManager : MonoBehaviour
         return state == null || state.bossDefeatCount == 0;
     }
 
-    // 콤보 보상 뒤에 유물을 띄우고, 받으면 맵으로 돌아간다.
-    void ShowStageBossRelicThenLeave()
-    {
-        BossRelicDropUI.Present(ReturnToMapWithWalk);
-    }
-
     // 런 시작 직후 맵에서 콤보 3택1을 표시한다.
     public void ShowStarterComboBookReward()
     {
@@ -677,23 +660,28 @@ public class RoundManager : MonoBehaviour
 
     // 콤보 책 보상 UI를 표시하고 선택한 콤보를 지급한다(onComplete가 null이면 맵 복귀 없음).
     public void ShowComboBookReward(System.Action onComplete)
+        => PresentComboBookReward(_ => onComplete?.Invoke());
+
+    void PresentComboBookReward(System.Action<bool> onComplete)
     {
         var panel = FindFirstObjectByType<Battle.UI.ComboBookRewardPanelUI>(FindObjectsInactive.Include);
         if (panel == null)
         {
             Debug.LogWarning("[RoundManager] ComboBookRewardPanelUI를 찾지 못해 콤보 보상을 생략합니다.");
-            onComplete?.Invoke();
+            onComplete?.Invoke(false);
             return;
         }
 
         panel.Present(selected =>
         {
+            bool acquired = false;
             if (selected != null)
             {
                 var nb = Battle.NewBattleController.Instance;
                 if (nb != null)
                 {
                     nb.AddOwnedCombo(selected.refComboId);
+                    acquired = true;
                     Debug.Log($"[RoundManager] 콤보 보상 획득: refComboId={selected.refComboId}, name={selected.displayName}");
                 }
                 else
@@ -702,7 +690,7 @@ public class RoundManager : MonoBehaviour
                 }
             }
 
-            onComplete?.Invoke();
+            onComplete?.Invoke(acquired);
         });
 
         Debug.Log("[RoundManager] 책 UI 콤보 보상 표시");
@@ -747,15 +735,39 @@ public class RoundManager : MonoBehaviour
 
     // 보상 처리 후 노드를 클리어 표시하고 맵으로 복귀한다(최종 보스 클리어 시 게임 클리어 화면).
     // 화면을 어둡게 한 뒤 전환한다. 걷기 연출처럼 이미 화면이 덮여 있으면 즉시 전환.
-    public void ReturnToMap()
+    public void ReturnToMap() => LeaveRound(false, false);
+
+    void LeaveRound(bool withWalk, bool bookAcquired)
     {
         if (_returnToMapPending) return;
         _returnToMapPending = true;
-        ScreenFader.Transition(() =>
+        void Finish()
         {
             _returnToMapPending = false;
             ReturnToMapNow();
-        });
+        }
+
+        bool enteringStageTwo = !DebugRoundActive && currentRoundData is BossRoundData &&
+            GameStateController.Instance != null && GameStateController.Instance.CurrentLap == 1;
+        if (withWalk)
+        {
+            var walk = FindFirstObjectByType<BattleWalkTransition>();
+            if (walk == null) walk = new GameObject("BattleWalkTransition").AddComponent<BattleWalkTransition>();
+            if (walk.IsPlaying)
+            {
+                _returnToMapPending = false;
+                return;
+            }
+            if (enteringStageTwo) walk.PlayStageTwo(Finish, bookAcquired);
+            else walk.Play(Finish);
+        }
+        else if (enteringStageTwo)
+        {
+            var overlay = StageTwoWalkOverlay.Open(GameStateController.Instance.transform, bookAcquired);
+            if (overlay != null) overlay.StartCoroutine(overlay.CoverAndReveal(Finish));
+            else ScreenFader.Transition(Finish);
+        }
+        else ScreenFader.Transition(Finish);
     }
 
     void ReturnToMapNow()

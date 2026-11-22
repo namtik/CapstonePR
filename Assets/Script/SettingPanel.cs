@@ -198,7 +198,7 @@ public class SettingPanel : MonoBehaviour
     // ESC로 설정/사운드 창을 토글한다
     void Update()
     {
-        if (!Input.GetKeyDown(KeyCode.Escape))
+        if (!Input.GetKeyDown(KeyCode.Escape) || FindFirstObjectByType<StageTwoWalkOverlay>() != null)
             return;
 
         if (soundCanvas != null && soundCanvas.activeSelf)
