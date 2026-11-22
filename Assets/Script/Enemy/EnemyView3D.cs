@@ -610,7 +610,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
                 return true;
         }
         if (!TryGetAimScreen(out Vector2 center, out float radius)) return false;
-        return Vector2.Distance(screenPos, center) <= (radius * 1.2f + 40f) * 1.3f;
+        return Vector2.Distance(screenPos, center) <= radius * 1.1f + 20f; // 과대 판정 방지(손패까지 닿지 않게)
     }
 
     Camera ResolveAimCamera()

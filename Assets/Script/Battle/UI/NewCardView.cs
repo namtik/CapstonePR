@@ -122,6 +122,7 @@ namespace Battle.UI
         private bool _isDragging; // 드래그 중 여부
         private bool _isHovering; // 호버 중 여부
         private bool _targetingArmed; // 지정 카드가 임계선을 넘어 화살표 모드인지
+        private bool _dragCancelled; // 우클릭으로 취소된 드래그 — 좌클릭을 뗄 때까지 드래그 이벤트 무시
         private int _hoverSlotOriginalSibling = -1; // 호버 전 형제 인덱스
         private Coroutine _drawIntroCo; // 등장 연출 코루틴
         private bool _playingIntro; // 등장 연출 진행 중 여부
@@ -884,7 +885,9 @@ namespace Battle.UI
             // 덱/묘지 보기·픽커 그리드 카드(슬롯 -1)는 잡아 옮기지 않음 — 드래그는 부모 스크롤로 넘김
             if (SlotIndex < 0) { ForwardDragToParent(eventData, ExecuteEvents.beginDragHandler); return; }
             if (Card == null || Hud == null) return;
+            if (eventData.button != PointerEventData.InputButton.Left) return; // 좌클릭만 드래그
             if (Hud.IsHandBlocked) return;
+            _dragCancelled = false;
             CancelDrawIntro(); // 등장 연출 중이면 즉시 홈으로 정착
 
             // hover 상태였으면 오프셋/형제 순서를 먼저 복원
@@ -923,6 +926,7 @@ namespace Battle.UI
         {
             if (SlotIndex < 0) { ForwardDragToParent(eventData, ExecuteEvents.dragHandler); return; }
             if (Card == null || Hud == null) return;
+            if (!_isDragging) return; // 취소됐거나 좌클릭 드래그가 아님
 
             // delta를 캔버스 스케일로 보정해 누적
             RectTransform parentRect = _rect.parent as RectTransform;
@@ -955,6 +959,8 @@ namespace Battle.UI
         {
             if (SlotIndex < 0) { ForwardDragToParent(eventData, ExecuteEvents.endDragHandler); return; }
             if (Card == null || Hud == null) return;
+            if (_dragCancelled) { _dragCancelled = false; return; } // 우클릭 취소 후 좌클릭 해제
+            if (!_isDragging) return; // 좌클릭 드래그가 아님
             _canvasGroup.blocksRaycasts = true;
             _isDragging = false;
             _targetingArmed = false;
@@ -1052,6 +1058,15 @@ namespace Battle.UI
             }
 
             _rect.anchoredPosition = hovering ? _homeAnchoredPos + hoverPositionOffset : _homeAnchoredPos;
+        }
+
+        // 드래그 중 우클릭 → 사용하지 않고 손패로 되돌림
+        void Update()
+        {
+            if (!_isDragging) return;
+            if (!Input.GetMouseButtonDown(1)) return;
+            _dragCancelled = true;
+            ReleasePointer();
         }
 
         // 클릭 처리(선택/픽커는 단일 클릭, 일반은 더블클릭 사용)
