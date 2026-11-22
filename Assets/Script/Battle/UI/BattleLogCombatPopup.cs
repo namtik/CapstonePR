@@ -770,7 +770,7 @@ namespace Battle.UI
             }
             if (_attack == null) _attack = Resources.Load<Sprite>("UI/Tab/EnemyAttackIcon");
             if (_burn == null) _burn = StatusIconDatabase.LoadIcon("burn");
-            if (_freeze == null) _freeze = Resources.Load<Sprite>("VFX/Cartoon Coffee/2D Deluxe VFX/Textures/Snowflake_001");
+            if (_freeze == null && BuildAssetRefs.Instance != null) _freeze = BuildAssetRefs.Instance.freezeIcon;
             if (_shield == null) _shield = Resources.Load<Sprite>("UI/Tab/Shield");
             if (_launcher == null) _launcher = Resources.Load<Sprite>("UI/Tab/Launcher");
             if (_heal == null) _heal = Resources.Load<Sprite>("UI/Tab/Heal");

@@ -11,6 +11,7 @@ public class BuildAssetRefs : ScriptableObject
     public TMP_FontAsset nyjUnheoFont;          // 전투 로그 기본 TMP 폰트
     public Sprite enemyPowerUpIcon;             // 적 강화 아이콘
     public StatusIconDatabase statusIconDatabase; // 상태이상 아이콘 DB
+    public Sprite freezeIcon;                   // 전투 로그 빙결 아이콘(Cartoon Coffee Snowflake_001)
 
     static BuildAssetRefs _instance;
     static bool _loaded;

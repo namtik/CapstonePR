@@ -17,3 +17,4 @@ MonoBehaviour:
   nyjUnheoFont: {fileID: 11400000, guid: 624ba3875d81cfd41b8f6058c7c3e447, type: 2}
   enemyPowerUpIcon: {fileID: 21300000, guid: af0309d150631c145bbf26d3b582be94, type: 3}
   statusIconDatabase: {fileID: 11400000, guid: b620407d6d749a54c8c245e88ddf4747, type: 2}
+  freezeIcon: {fileID: 21300000, guid: 1521a1cdcbb83d24eace6f6085bbe329, type: 3}
