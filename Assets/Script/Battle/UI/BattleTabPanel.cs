@@ -20,6 +20,8 @@ namespace Battle.UI
         [SerializeField] private MonsterInfoColumn[] columns;
 
         [Header("몬스터 이름")]
+        [Tooltip("이 패널에서 조선100년체를 쓰는 글자에 적용할 머티리얼.")]
+        [SerializeField] private Material chosunMaterial;
         [Tooltip("초상화 아래 이름 글꼴.")]
         [SerializeField] private TMP_FontAsset nameFont;
         [Tooltip("이름 글자 크기.")]
@@ -491,7 +493,7 @@ namespace Battle.UI
             rect.sizeDelta = new Vector2(136f, 20f);
             rect.anchoredPosition = new Vector2(8f, -82f);
             if (label.text != value) label.text = value ?? string.Empty;
-            if (nameFont != null && label.font != nameFont) label.font = nameFont;
+            ApplyChosunFont(label, nameFont);
             label.fontSize = 16f;
             label.color = new Color(0.96f, 0.93f, 0.86f, 1f);
             label.alignment = TextAlignmentOptions.Center;
@@ -785,7 +787,7 @@ namespace Battle.UI
                     go.layer = bar.gameObject.layer;
                     go.transform.SetParent(bar, false);
                     slot = go.AddComponent<TextMeshProUGUI>();
-                    if (column.attackText.font != null) slot.font = column.attackText.font;
+                    ApplyChosunFont(slot, column.attackText.font);
                 }
 
                 column.attackSlots[i] = slot;
@@ -822,8 +824,7 @@ namespace Battle.UI
 
         void ApplyHpPiece(TMP_Text label, string value, Color color, float outlineWidth, Color outlineColor)
         {
-            TMP_FontAsset font = hpFont != null ? hpFont : nameFont;
-            if (font != null && label.font != font) label.font = font;
+            ApplyChosunFont(label, hpFont != null ? hpFont : nameFont);
 
             if (label.text != value) label.text = value;
             label.fontSize = Mathf.Max(8f, hpFontSize);
@@ -920,7 +921,7 @@ namespace Battle.UI
         void ApplyStatStyle(TMP_Text label, bool pattern)
         {
             if (label == null) return;
-            if (statFont != null && label.font != statFont) label.font = statFont;
+            ApplyChosunFont(label, statFont);
             label.color = statColor;
             label.raycastTarget = false;
             label.enableWordWrapping = false;
@@ -971,7 +972,7 @@ namespace Battle.UI
             string value = DisruptionName(_disruptionAction);
             if (label.text != value) label.text = value;
             TMP_FontAsset font = disruptionFont != null ? disruptionFont : nameFont != null ? nameFont : statFont;
-            if (font != null && label.font != font) label.font = font;
+            ApplyChosunFont(label, font);
             label.fontSize = Mathf.Max(8f, disruptionFontSize);
             label.color = disruptionColor;
             label.alignment = disruptionAlignment;
@@ -1023,6 +1024,21 @@ namespace Battle.UI
             }
         }
 
+        // 조선100년체 글꼴을 넣고, 지정된 SDF 머티리얼을 같이 씌운다.
+        void ApplyChosunFont(TMP_Text label, TMP_FontAsset font)
+        {
+            if (label == null || font == null) return;
+            if (label.font != font) label.font = font;
+            if (!UsesChosun(font) || chosunMaterial == null) return;
+            if (label.fontSharedMaterial != chosunMaterial)
+                label.fontSharedMaterial = chosunMaterial;
+        }
+
+        bool UsesChosun(TMP_FontAsset font)
+        {
+            return font != null && (font == nameFont || font == hpFont || font == statFont || font == disruptionFont);
+        }
+
         static void ApplyOutline(TMP_Text label, float width, Color color)
         {
             // 막 만든 글자는 재질과 캔버스 렌더러가 아직 없다. 그때 외곽선을 넣으면 예외가 난다.
@@ -1047,7 +1063,7 @@ namespace Battle.UI
             if (!show) return;
 
             if (label.text != value) label.text = value ?? string.Empty;
-            if (nameFont != null && label.font != nameFont) label.font = nameFont;
+            ApplyChosunFont(label, nameFont);
             label.fontSize = Mathf.Max(8f, nameFontSize);
             label.color = nameColor;
             label.alignment = nameAlignment;

@@ -244,6 +244,7 @@ public class EnemyView : MonoBehaviour, IEnemyView
 
         if (hpValueText != null)
         {
+            EnemyOverlayHUD.AlignHpReadout(hpValueText);
             int current = Mathf.Max(0, Mathf.RoundToInt(currentHp));
             int max = Mathf.Max(0, Mathf.RoundToInt(maxHp));
             hpValueText.text = $"{current}/{max}";

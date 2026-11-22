@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   enemyName: "\uBBF8\uCF54\uC2DC\uB274\uB3C4"
   battlePrefab3D: {fileID: 6466588490745733148, guid: e4d23693a00a94140980b47599c1bbc3, type: 3}
-  enemySprite: {fileID: 21300000, guid: 993dc819ee18dd146b7b36e29e44ecb4, type: 3}
+  enemySprite: {fileID: 21300000, guid: fe7cb6d5e3356e64eadb89696c79fb28, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
   id: 100020

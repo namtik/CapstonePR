@@ -31,15 +31,32 @@ public class StatusIconUI : MonoBehaviour
         countText.alignment = TextAlignmentOptions.Center;
         countText.enableWordWrapping = false;
         countText.overflowMode = TextOverflowModes.Overflow;
-        countText.outlineWidth = Mathf.Clamp01(outlineWidth);
-        _ = countText.outlineColor;
-        countText.outlineColor = outlineColor;
+        ApplyOutline(outlineWidth, outlineColor);
 
         RectTransform rt = countText.rectTransform;
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = offset;
         rt.sizeDelta = new Vector2(80f, 40f);
+    }
+
+    // 재질이 아직 없는 글자에 외곽선을 넣으면 예외가 나고, 그 예외가 카드 사용을 중간에 끊는다.
+    void ApplyOutline(float outlineWidth, Color outlineColor)
+    {
+        if (countText.font == null || countText.fontSharedMaterial == null) return;
+        try
+        {
+            float outline = Mathf.Clamp01(outlineWidth);
+            countText.outlineWidth = outline;
+            countText.outlineColor = outlineColor;
+            // 글꼴 기본 재질의 색이 남아 있어도, 패널에 지정한 색으로 다시 덮는다.
+            if (countText.fontMaterial != null)
+                countText.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, outlineColor);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning("[StatusIconUI] 스택 숫자 외곽선을 건너뜀: " + ex.Message);
+        }
     }
 
     // 스택 수를 갱신하고 0 이하이면 아이콘을 숨긴다

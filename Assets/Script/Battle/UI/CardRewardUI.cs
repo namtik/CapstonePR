@@ -123,6 +123,8 @@ namespace Battle.UI
 
             BuildUI(cardPrefab, choices);
             Time.timeScale = 0f;
+            if (_panel != null)
+                SfxManager.Instance?.PlayGetReward();
             Debug.Log($"[CardReward] 보상 카드 {choices.Count}장 제시");
         }
 

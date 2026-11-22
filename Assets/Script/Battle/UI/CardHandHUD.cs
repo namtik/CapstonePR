@@ -1965,8 +1965,15 @@ namespace Battle.UI
             float hold = Mathf.Max(0f, cardUsePresentHold);
             while (hold > 0f) { hold -= Time.unscaledDeltaTime; yield return null; }
 
-            // 3) 사라지는 순간 효과 발동
-            onDisappear?.Invoke();
+            // 3) 사라지는 순간 효과 발동. 효과 안의 예외가 연출을 끊으면 카드 사용 잠금이 안 풀린다.
+            try
+            {
+                onDisappear?.Invoke();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogException(ex);
+            }
 
             // 4) 퇴장 — 페이드아웃 + 확대
             t = 0f;

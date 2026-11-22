@@ -41,6 +41,12 @@ public class RestEnlightenmentPanel : MonoBehaviour
     [SerializeField] private Vector2 listCellSize = new Vector2(320f, 220f);
     [SerializeField] private float bookFitPadding = 12f;
 
+    [Header("재배열 미리보기")]
+    [Tooltip("씬에 미리 배치한 판. 고른 콤보 책이 이 안에 보인다.")]
+    [SerializeField] private RectTransform previewRoot;
+    [SerializeField] private BookRewardItemUI previewBook;
+    [SerializeField] private float previewBookDim = 0.38f;
+
     public event System.Action OnBackToChoice; // 목록에서 뒤로 — 명상/깨달음 선택으로
     public event System.Action OnConfirmed;    // 순서 확정 — 맵 복귀
 
@@ -81,6 +87,7 @@ public class RestEnlightenmentPanel : MonoBehaviour
         ClearSpawned();
         _editing = null;
         EndSlotDrag();
+        if (previewRoot != null) previewRoot.gameObject.SetActive(false);
         if (listPanel != null) listPanel.SetActive(false);
         if (reorderPanel != null) reorderPanel.SetActive(false);
         gameObject.SetActive(false);
@@ -90,6 +97,7 @@ public class RestEnlightenmentPanel : MonoBehaviour
     {
         if (listPanel != null) listPanel.SetActive(true);
         if (reorderPanel != null) reorderPanel.SetActive(false);
+        if (previewRoot != null) previewRoot.gameObject.SetActive(false);
         _editing = null;
         EndSlotDrag();
         RebuildList();
@@ -213,6 +221,9 @@ public class RestEnlightenmentPanel : MonoBehaviour
             }
         }
 
+        if (listScroll != null && listScroll.horizontalScrollbar != null)
+            listScroll.horizontalScrollbar.gameObject.SetActive(!fits);
+
         LayoutRebuilder.ForceRebuildLayoutImmediate(content);
     }
 
@@ -268,6 +279,7 @@ public class RestEnlightenmentPanel : MonoBehaviour
 
         if (listPanel != null) listPanel.SetActive(false);
         if (reorderPanel != null) reorderPanel.SetActive(true);
+        ShowSkillPreview(picked);
 
         if (reorderNameText != null)
             reorderNameText.text = string.IsNullOrWhiteSpace(picked.displayName) ? "콤보 스킬" : picked.displayName;
@@ -276,6 +288,31 @@ public class RestEnlightenmentPanel : MonoBehaviour
 
         RefreshSlotVisuals();
         RefreshConfirmInteractable();
+    }
+
+    // 씬에 배치해 둔 판 위의 책에 고른 콤보를 채운다. 슬롯 크기와 위치는 바꾸지 않는다.
+    void ShowSkillPreview(ComboSkillDef picked)
+    {
+        if (previewRoot != null)
+        {
+            previewRoot.gameObject.SetActive(true);
+            previewRoot.SetAsFirstSibling();
+        }
+
+        if (previewBook == null)
+            return;
+
+        previewBook.SetElementSprites(fireElementSprite, waterElementSprite, windElementSprite, earthElementSprite);
+        previewBook.Bind(picked, null);
+        previewBook.SetSelected(false);
+
+        var group = previewBook.GetComponent<CanvasGroup>();
+        if (group != null)
+        {
+            group.alpha = Mathf.Clamp(previewBookDim, 0.05f, 1f);
+            group.interactable = false;
+            group.blocksRaycasts = false;
+        }
     }
 
     void OnSlotBeginDrag(int index, PointerEventData eventData)

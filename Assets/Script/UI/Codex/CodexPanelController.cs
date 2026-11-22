@@ -91,6 +91,7 @@ namespace Battle.UI
         // 패널을 열고 기본 탭부터 표시(인벤토리가 열려 있으면 닫음)
         public void Open()
         {
+            bool wasOpen = panelRoot != null && panelRoot.activeInHierarchy;
             if (InventoryPanelController.IsOpen) InventoryPanelController.Instance.Close();
 
             if (panelRoot != null)
@@ -100,6 +101,7 @@ namespace Battle.UI
             }
             EnsureOnTop();
             ShowTab(0);
+            if (!wasOpen) SfxManager.Instance?.PlayInventoryOpen();
         }
 
         // 패널을 닫음

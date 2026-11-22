@@ -45,6 +45,12 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private int _nextAttackPowerMod = 0; // 다음 공격 1회 피해 증감(콤보 공격력 감소 등)
 
     private EnemyStat stat; // 적 스탯 컴포넌트
+
+    // 게임오버 문장에 넣을 이 몬스터의 표시 이름
+    string KillerName()
+    {
+        return stat != null && stat.Data != null ? stat.Data.enemyName : null;
+    }
     private IEnemyView view; // 적 뷰(2D UI 또는 3D 모델)
     private Player player; // 플레이어 참조
     private RoundManager roundManager; // 라운드 매니저 참조
@@ -187,7 +193,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         else if (_ability == EnemySpecialAbility.CycleElementCurse)
         {
             _cycleCurseIndex = UnityEngine.Random.Range(0, CurseCycleElements.Length);
-            nbc.ApplyElementCurse(CurseCycleElements[_cycleCurseIndex], CYCLE_CURSE_USES); // 백족승: 초기 저주
+            nbc.ApplyElementCurse(CurseCycleElements[_cycleCurseIndex], CYCLE_CURSE_USES, KillerName()); // 백족승: 초기 저주
         }
     }
 
@@ -198,7 +204,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (_ability == EnemySpecialAbility.ReflectDamageOnHit)
         {
             if (player == null) player = Player.Resolve(true);
-            player?.TakeDamage(1f, "enemy_reflect");
+            player?.TakeDamage(1f, "enemy_reflect", KillerName());
             return;
         }
 
@@ -261,11 +267,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (nbc == null) return;
         switch (_ability)
         {
-            case EnemySpecialAbility.OnDeathCurseElement: nbc.CurseRandomElement(5); break; // 오염된 불
+            case EnemySpecialAbility.OnDeathCurseElement: nbc.CurseRandomElement(5, KillerName()); break; // 오염된 불
             case EnemySpecialAbility.OnDeathDiscardCards: nbc.ForcePlayerDiscard(2); break;  // 오염된 물
             case EnemySpecialAbility.OnDeathResetAwaken:  nbc.ResetAwakenGauge(); break;     // 오염된 바람
             case EnemySpecialAbility.OnDeathInsertExhaust: nbc.InsertExhaustCards(2); break; // 오염된 땅
-            case EnemySpecialAbility.OnDeathCurseOwnElement: nbc.CurseRandomElement(5); break;
+            case EnemySpecialAbility.OnDeathCurseOwnElement: nbc.CurseRandomElement(5, KillerName()); break;
             case EnemySpecialAbility.OnDeathRandomDiscard: nbc.DiscardRandomFromHand(2); break;
             case EnemySpecialAbility.OnDeathClearAwakenGauge: nbc.ResetAwakenGauge(); break;
             case EnemySpecialAbility.OnDeathShuffleExhaust: nbc.InsertExhaustCards(2); break;
@@ -640,7 +646,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (_ability == EnemySpecialAbility.CycleElementCurse && Battle.NewBattleController.Instance != null)
         {
             _cycleCurseIndex = (_cycleCurseIndex + 1) % CurseCycleElements.Length;
-            Battle.NewBattleController.Instance.ApplyElementCurse(CurseCycleElements[_cycleCurseIndex], CYCLE_CURSE_USES);
+            Battle.NewBattleController.Instance.ApplyElementCurse(CurseCycleElements[_cycleCurseIndex], CYCLE_CURSE_USES, KillerName());
         }
 
         stat.RollNewAttackPlan();
@@ -724,9 +730,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         for (int i = 0; i < count; i++)
         {
             Battle.UI.BattleLog.BeginCombatCapture();
-            player.TakeDamage(damage, "enemy_attack");
+            string enemyName = KillerName();
+            player.TakeDamage(damage, "enemy_attack", enemyName);
             Sprite portrait = stat != null && stat.Data != null ? stat.Data.enemySprite : null;
-            string enemyName = stat != null && stat.Data != null ? stat.Data.enemyName : null;
             _lastAttackLogId = Battle.UI.BattleLog.RecordEnemyAttack(portrait, damage, EnemyCombatParty.AliveIndexOf(this), enemyName, attackIndex);
             // 공격 모션이 있으면 마지막(임팩트) 프레임에서만 이펙트(이벤트로 처리). 모션이 없을 때만 시작 시 폴백 재생.
             if (view == null || !view.HasAttackMotion) PlayAttackVfx();

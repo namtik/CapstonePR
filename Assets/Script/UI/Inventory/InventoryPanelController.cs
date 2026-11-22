@@ -1,9 +1,10 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Battle.UI
 {
-    // 인벤토리 패널 — 상단 버튼으로 열고 부적/사방비급 탭을 전환(보기 전용)
+    // 인벤토리 패널 — 상단 버튼으로 열고 부적/사방비급/유물 탭을 전환(보기 전용)
     // 주의: 이 컴포넌트(+panelRoot)는 어떤 스테이지에도 속하지 않는 "항상 켜진"
     //       상위 오버레이 캔버스에 둔다. 그래야 맵/전투/상점 등 모든 스테이지에서 뜬다.
     //       데이터(RunDeckState·NewBattleController)는 싱글톤이라 스테이지 토글과 무관하게 유지된다.
@@ -23,8 +24,10 @@ namespace Battle.UI
         [Header("탭 페이지")]
         [SerializeField] private GameObject cardTabPage;      // 부적 탭 페이지
         [SerializeField] private GameObject comboTabPage;     // 사방비급 탭 페이지
+        [SerializeField] private GameObject relicTabPage;     // 유물 탭 페이지
         [SerializeField] private InventoryCardTab cardTab;    // 부적 탭 컴포넌트
         [SerializeField] private InventoryComboTab comboTab;  // 사방비급 탭 컴포넌트
+        [SerializeField] private CodexRelicTab relicTab;      // 유물 탭 컴포넌트(보유 유물만)
 
         [Header("버튼 (있으면 자동 연결)")]
         [Tooltip("상단 인벤토리 열기 버튼. 패널 바깥(항상 활성)에 두기.")]
@@ -32,6 +35,7 @@ namespace Battle.UI
         [SerializeField] private Button closeButton;          // 닫기(X) 버튼
         [SerializeField] private Button cardTabButton;        // 부적 탭 버튼
         [SerializeField] private Button comboTabButton;       // 사방비급 탭 버튼
+        [SerializeField] private Button relicTabButton;       // 유물 탭 버튼
 
         [Header("옵션")]
         [SerializeField] private bool startHidden = true;     // 시작 시 패널 숨김
@@ -56,6 +60,7 @@ namespace Battle.UI
             if (closeButton != null) closeButton.onClick.AddListener(Close);
             if (cardTabButton != null) cardTabButton.onClick.AddListener(ShowCardTab);
             if (comboTabButton != null) comboTabButton.onClick.AddListener(ShowComboTab);
+            if (relicTabButton != null) relicTabButton.onClick.AddListener(ShowRelicTab);
 
             if (startHidden)
             {
@@ -88,20 +93,23 @@ namespace Battle.UI
             canvas.sortingOrder = overlaySortingOrder;
         }
 
-        // 열림/닫힘 토글 — 캐시 대신 패널의 실제 활성 상태를 기준으로 판단
+        // 열림/닫힘 토글 — 부모 캔버스가 꺼져 있으면 닫힌 것으로 본다
         public void Toggle()
         {
-            bool open = panelRoot != null ? panelRoot.activeSelf : _isOpen;
+            bool open = panelRoot != null && panelRoot.activeInHierarchy;
             if (open) Close();
             else Open();
         }
 
-        // 패널을 열고 부적 탭부터 표시
+        // 패널을 열고 부적 탭부터 표시.
+        // 캔버스가 씬 시작부터 비활성이어도 여기서 켠다. 그때 스케일이 0이면 화면에 안 나오므로 보정한다.
         public void Open()
         {
+            bool wasOpen = panelRoot != null && panelRoot.activeInHierarchy;
             if (CodexPanelController.IsOpen) CodexPanelController.Instance.Close();
 
             _isOpen = true;
+            WakeHiddenCanvas();
             if (panelRoot != null)
             {
                 panelRoot.SetActive(true);
@@ -110,6 +118,72 @@ namespace Battle.UI
             EnsureOnTop();
             ShowCardTab();
             if (pauseTimeWhenOpen) Time.timeScale = 0f;
+            if (!wasOpen) SfxManager.Instance?.PlayInventoryOpen();
+        }
+
+        // 패널 위의 꺼진 캔버스까지 켜고, 시작부터 꺼져 있어 스케일이 0인 루트 캔버스는 다시 맞춘다
+        void WakeHiddenCanvas()
+        {
+            if (panelRoot == null) return;
+
+            var chain = new List<GameObject>();
+            Transform t = panelRoot.transform.parent;
+            while (t != null)
+            {
+                chain.Add(t.gameObject);
+                t = t.parent;
+            }
+            for (int i = chain.Count - 1; i >= 0; i--)
+            {
+                if (!chain[i].activeSelf)
+                    chain[i].SetActive(true);
+            }
+
+            Canvas canvas = panelRoot.GetComponentInParent<Canvas>();
+            if (canvas == null || !CanvasScaleBroken(canvas)) return;
+            ApplyFallbackScale(canvas);
+            if (_scaleRepair != null) StopCoroutine(_scaleRepair);
+            _scaleRepair = StartCoroutine(RepairCanvasScale(canvas));
+        }
+
+        Coroutine _scaleRepair;
+
+        static bool CanvasScaleBroken(Canvas canvas)
+        {
+            RectTransform rt = canvas.transform as RectTransform;
+            return rt != null && rt.localScale.sqrMagnitude < 0.0001f;
+        }
+
+        // 시작부터 꺼진 캔버스는 CanvasScaler가 스케일 0을 유지하는 경우가 있다.
+        // 한 프레임 뒤에도 0이면 스케일러를 끄고 화면 크기에 맞춰 직접 넣는다.
+        System.Collections.IEnumerator RepairCanvasScale(Canvas canvas)
+        {
+            yield return null;
+            if (canvas != null && CanvasScaleBroken(canvas))
+            {
+                CanvasScaler scaler = canvas.GetComponent<CanvasScaler>();
+                if (scaler != null) scaler.enabled = false;
+                ApplyFallbackScale(canvas);
+            }
+            _scaleRepair = null;
+        }
+
+        static void ApplyFallbackScale(Canvas canvas)
+        {
+            CanvasScaler scaler = canvas.GetComponent<CanvasScaler>();
+            float scale = 1f;
+            if (scaler != null &&
+                scaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize &&
+                scaler.referenceResolution.x > 1f &&
+                scaler.referenceResolution.y > 1f &&
+                Screen.width > 0 && Screen.height > 0)
+            {
+                float logWidth = Mathf.Log(Screen.width / scaler.referenceResolution.x, 2f);
+                float logHeight = Mathf.Log(Screen.height / scaler.referenceResolution.y, 2f);
+                scale = Mathf.Pow(2f, Mathf.Lerp(logWidth, logHeight, scaler.matchWidthOrHeight));
+            }
+            if (scale < 0.01f || float.IsNaN(scale) || float.IsInfinity(scale)) scale = 1f;
+            canvas.scaleFactor = scale;
         }
 
         // 패널을 닫음
@@ -123,8 +197,7 @@ namespace Battle.UI
         // 부적 탭으로 전환하고 갱신(활성 탭 버튼을 앞으로)
         public void ShowCardTab()
         {
-            if (cardTabPage != null) cardTabPage.SetActive(true);
-            if (comboTabPage != null) comboTabPage.SetActive(false);
+            SetTabVisible(cardTabPage);
             BringActiveTabToFront(cardTabButton);
             if (cardTab != null) cardTab.Refresh();
         }
@@ -132,10 +205,24 @@ namespace Battle.UI
         // 사방비급 탭으로 전환하고 갱신(활성 탭 버튼을 앞으로)
         public void ShowComboTab()
         {
-            if (cardTabPage != null) cardTabPage.SetActive(false);
-            if (comboTabPage != null) comboTabPage.SetActive(true);
+            SetTabVisible(comboTabPage);
             BringActiveTabToFront(comboTabButton);
             if (comboTab != null) comboTab.Refresh();
+        }
+
+        // 유물 탭으로 전환하고 갱신(활성 탭 버튼을 앞으로)
+        public void ShowRelicTab()
+        {
+            SetTabVisible(relicTabPage);
+            BringActiveTabToFront(relicTabButton);
+            if (relicTab != null) relicTab.Refresh();
+        }
+
+        void SetTabVisible(GameObject activePage)
+        {
+            if (cardTabPage != null) cardTabPage.SetActive(cardTabPage == activePage);
+            if (comboTabPage != null) comboTabPage.SetActive(comboTabPage == activePage);
+            if (relicTabPage != null) relicTabPage.SetActive(relicTabPage == activePage);
         }
 
         // 현재 열린 탭의 버튼을 형제 중 맨 뒤(가장 위에 그려짐)로 올린다

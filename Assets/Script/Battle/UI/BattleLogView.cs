@@ -25,6 +25,8 @@ namespace Battle.UI
         [SerializeField] Sprite relicPanel;
         [SerializeField] Sprite awakenPanel;
         [SerializeField] TMP_FontAsset font;
+        [Tooltip("조선100년체를 쓰는 기록 글자에 씌울 머티리얼.")]
+        [SerializeField] Material chosunMaterial;
         [SerializeField] Color numberColor = new Color(0.957f, 0.808f, 0.549f, 1f);
         [Tooltip("숫자 정렬. Center 는 가로·세로 가운데.")]
         [SerializeField] TextAlignmentOptions numberAlignment = TextAlignmentOptions.Center;
@@ -328,19 +330,25 @@ namespace Battle.UI
 
         void BuildPanel(RectTransform root, BattleLog.Entry entry)
         {
+            // 각성·드로우 그림은 회색 배경과 같은 152x102라 칸 전체를 채운다.
+            bool plateArt = entry.Icon != null
+                && (entry.Category == BattleLog.Kind.Draw || entry.Category == BattleLog.Kind.Awaken);
+
             RectTransform back = CreateChild(root, "Back");
             Place(back, 0f, BackWidth, BackHeight);
             Image backImage = back.GetComponent<Image>();
-            backImage.color = new Color(0.45f, 0.45f, 0.45f, 1f);
+            backImage.sprite = plateArt ? entry.Icon : null;
+            backImage.color = plateArt ? Color.white : new Color(0.45f, 0.45f, 0.45f, 1f);
+            backImage.preserveAspect = false;
             backImage.raycastTarget = false;
 
             RectTransform icon = CreateChild(root, "Icon");
             Place(icon, (PanelWidth - IconWidth) * 0.5f, IconWidth, IconHeight);
             Image iconImage = icon.GetComponent<Image>();
-            iconImage.sprite = entry.Icon;
+            iconImage.sprite = plateArt ? null : entry.Icon;
             iconImage.color = Color.white;
             iconImage.preserveAspect = false;
-            iconImage.enabled = entry.Icon != null;
+            iconImage.enabled = !plateArt && entry.Icon != null;
             iconImage.raycastTarget = false;
 
             RectTransform frame = CreateChild(root, "Frame");
@@ -353,6 +361,15 @@ namespace Battle.UI
             frameImage.raycastTarget = false;
 
             BuildLabel(root, entry.Caption);
+        }
+
+        void ApplyChosunFont(TMP_Text label, TMP_FontAsset used)
+        {
+            if (label == null || used == null) return;
+            if (label.font != used) label.font = used;
+            if (chosunMaterial == null || font == null || used != font) return;
+            if (label.fontSharedMaterial != chosunMaterial)
+                label.fontSharedMaterial = chosunMaterial;
         }
 
         void BuildLabel(RectTransform root, string value)
@@ -369,8 +386,7 @@ namespace Battle.UI
 
             TextMeshProUGUI label = textGo.AddComponent<TextMeshProUGUI>();
             label.text = value ?? string.Empty;
-            TMP_FontAsset usedFont = labelFont != null ? labelFont : font;
-            if (usedFont != null) label.font = usedFont;
+            ApplyChosunFont(label, labelFont != null ? labelFont : font);
             label.fontSize = Mathf.Max(8f, labelFontSize);
             label.color = labelColor;
             label.alignment = labelAlignment;
@@ -629,7 +645,7 @@ namespace Battle.UI
             label.raycastTarget = false;
             label.enableWordWrapping = false;
             label.overflowMode = TextOverflowModes.Overflow;
-            if (font != null) label.font = font;
+            ApplyChosunFont(label, font);
         }
 
         void BuildMonsterNumber(RectTransform parent, Sprite mark)

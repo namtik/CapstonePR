@@ -18,6 +18,10 @@ public class GameAudio : MonoBehaviour
     [SerializeField] private AudioClip restClip; // 휴식 곡
     [SerializeField] private AudioClip event1Clip; // 이벤트 1 곡
     [SerializeField] private AudioClip event2Clip; // 이벤트 2~5 곡
+    [Tooltip("최종 보스 클리어 화면에서 맵이나 메인 메뉴로 나가기 전까지 재생한다.")]
+    [SerializeField] private AudioClip winClip; // 게임 클리어 곡
+    [Tooltip("플레이어 사망 화면에서 맵이나 메인 메뉴로 나가기 전까지 재생한다.")]
+    [SerializeField] private AudioClip defeatClip; // 패배 곡
     [Tooltip("켜져 있는 동안 메인 곡을 재생한다.")]
     [SerializeField] private GameObject mainMenuRoot; // 메인 화면 루트
     [Tooltip("켜져 있는 동안 맵 곡을 재생한다. 메인 화면이 켜져 있으면 메인 곡이 우선한다.")]
@@ -42,7 +46,10 @@ public class GameAudio : MonoBehaviour
 
     public static GameAudio Instance { get; private set; }
 
+    enum OutcomeBgm { None, Win, Defeat }
+
     AudioClip playingBgm; // 지금 소스에 올라가 있는 배경음
+    OutcomeBgm outcomeBgm; // 승리·패배 중이면 화면 곡보다 우선한다
     NodeType combatTrack = NodeType.Combat; // 전투 화면에서 재생할 곡 종류
     readonly List<RaycastResult> hits = new List<RaycastResult>(); // 클릭 위치의 UI 히트
 
@@ -82,6 +89,24 @@ public class GameAudio : MonoBehaviour
             Instance = null;
     }
 
+    // 게임 클리어 화면이 열려 있는 동안 승리 곡을 유지한다.
+    public void PlayWinBgm()
+    {
+        outcomeBgm = OutcomeBgm.Win;
+    }
+
+    // 사망 화면이 열려 있는 동안 패배 곡을 유지한다.
+    public void PlayDefeatBgm()
+    {
+        outcomeBgm = OutcomeBgm.Defeat;
+    }
+
+    // 맵이나 메인 메뉴로 돌아가면 화면 곡으로 되돌린다.
+    public void ClearOutcomeBgm()
+    {
+        outcomeBgm = OutcomeBgm.None;
+    }
+
     // 전투 화면이 켜지면 이 종류에 해당하는 곡을 재생한다.
     public void SetCombatTrack(NodeType type)
     {
@@ -108,19 +133,22 @@ public class GameAudio : MonoBehaviour
         if (bgmSource == null)
             return;
 
-        AudioClip next = null;
-        if (mainMenuRoot != null && mainMenuRoot.activeInHierarchy)
-            next = mainMenuClip;
-        else if (mapRoot != null && mapRoot.activeInHierarchy)
-            next = mapClip;
-        else if (combatRoot != null && combatRoot.activeInHierarchy)
-            next = CombatClip();
-        else if (shopRoot != null && shopRoot.activeInHierarchy)
-            next = shopClip;
-        else if (restRoot != null && restRoot.activeInHierarchy)
-            next = restClip;
-        else if (eventRoot != null && eventRoot.activeInHierarchy)
-            next = EventClip();
+        AudioClip next = OutcomeClip();
+        if (next == null)
+        {
+            if (mainMenuRoot != null && mainMenuRoot.activeInHierarchy)
+                next = mainMenuClip;
+            else if (mapRoot != null && mapRoot.activeInHierarchy)
+                next = mapClip;
+            else if (combatRoot != null && combatRoot.activeInHierarchy)
+                next = CombatClip();
+            else if (shopRoot != null && shopRoot.activeInHierarchy)
+                next = shopClip;
+            else if (restRoot != null && restRoot.activeInHierarchy)
+                next = restClip;
+            else if (eventRoot != null && eventRoot.activeInHierarchy)
+                next = EventClip();
+        }
 
         if (next != playingBgm)
         {
@@ -136,6 +164,16 @@ public class GameAudio : MonoBehaviour
 
         if (next != null)
             bgmSource.volume = Mathf.Clamp01(bgmVolume) * SettingPanel.GetChannelVolume("BGM");
+    }
+
+    // 승리·패배 중이면 그 곡을, 아니면 null을 반환해 화면 곡을 고르게 한다.
+    AudioClip OutcomeClip()
+    {
+        if (outcomeBgm == OutcomeBgm.Win)
+            return winClip;
+        if (outcomeBgm == OutcomeBgm.Defeat)
+            return defeatClip;
+        return null;
     }
 
     AudioClip CombatClip()

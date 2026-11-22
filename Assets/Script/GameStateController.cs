@@ -40,6 +40,53 @@ public class GameStateController : MonoBehaviour
     public const int RequiredBossDefeats = 2;
     public int bossDefeatCount = 0; // 이번 런에서 처치한 보스 수
 
+    // 이번 런에서 처치한 몬스터 한 마리. 초상화는 전투 로그와 같은 EnemyData.enemySprite.
+    public readonly struct RunKillRecord
+    {
+        public readonly Sprite Portrait;
+        public readonly string EnemyName;
+        public readonly EnemyClass Rank;
+
+        public RunKillRecord(Sprite portrait, string enemyName, EnemyClass rank)
+        {
+            Portrait = portrait;
+            EnemyName = enemyName ?? string.Empty;
+            Rank = rank;
+        }
+    }
+
+    readonly System.Collections.Generic.List<RunKillRecord> runKills = new System.Collections.Generic.List<RunKillRecord>();
+
+    // 이번 런에서 플레이어를 죽인 몬스터 이름
+    public string RunKillerName { get; private set; }
+
+    // 이번 런 처치 수
+    public int RunKillCount => runKills.Count;
+
+    // 처치 순서(먼저 잡은 것이 앞)
+    public System.Collections.Generic.IReadOnlyList<RunKillRecord> RunKills => runKills;
+
+    // 전투에서 몬스터 한 마리가 죽었을 때 기록한다. 테스트 라운드는 런 기록에 넣지 않는다.
+    public void RecordRunKill(Sprite portrait, string enemyName, EnemyClass rank)
+    {
+        if (RoundManager.DebugRoundActive) return;
+        runKills.Add(new RunKillRecord(portrait, enemyName, rank));
+    }
+
+    // 플레이어를 죽인 몬스터 이름을 남긴다. 빈 이름은 무시한다.
+    public void RecordRunKiller(string enemyName)
+    {
+        if (string.IsNullOrWhiteSpace(enemyName)) return;
+        RunKillerName = enemyName.Trim();
+    }
+
+    // 새 런을 시작하거나 메인으로 나갈 때 처치 기록과 킬러 이름을 비운다
+    public void ClearRunKills()
+    {
+        runKills.Clear();
+        RunKillerName = null;
+    }
+
     // 현재 진행 중인 바퀴 (1부터 시작)
     public int CurrentLap => bossDefeatCount + 1;
 
@@ -136,6 +183,7 @@ public class GameStateController : MonoBehaviour
             mainMenuStage.SetActive(false);
 
         bossDefeatCount = 0;
+        ClearRunKills();
         ResetMapStageForLapStart();
         ResetEventRunState();
         Battle.NewBattleController.Instance?.ResetOwnedCombosForNewRun();
@@ -216,6 +264,7 @@ public class GameStateController : MonoBehaviour
     // 맵 화면으로 전환하고 HP UI 동기화 및 맵 새로고침
     public void ShowMap()
     {
+        GameAudio.Instance?.ClearOutcomeBgm();
         HideAllStages();
 
         if (mapStage != null)
@@ -421,6 +470,7 @@ public class GameStateController : MonoBehaviour
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
         bossDefeatCount = 0;
+        ClearRunKills();
         ResetMapStageForLapStart();
 
         // 신규 전투 시스템: 런 덱을 기본값으로 리셋
@@ -450,6 +500,7 @@ public class GameStateController : MonoBehaviour
     // 진행 중이던 런/전투를 정리하고 메인 메뉴 화면으로 돌아간다
     public void ReturnToMainMenu()
     {
+        GameAudio.Instance?.ClearOutcomeBgm();
         Time.timeScale = 1f;
 
         // 진행 중이던 전투의 잔여 적/상태 정리
@@ -460,6 +511,7 @@ public class GameStateController : MonoBehaviour
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
         bossDefeatCount = 0;
+        ClearRunKills();
         ResetMapStageForLapStart();
         Battle.RunDeckState.Instance?.ResetRun();
 

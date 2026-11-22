@@ -19,8 +19,11 @@ public class MoneyUI : MonoBehaviour
     [SerializeField] private float fontSize = 22f;
     [SerializeField] private Color textColor = Color.white;
 
+    Vector3 _restScale = Vector3.one;
+
     void Awake()
     {
+        _restScale = transform.localScale;
         ResolveReferences();
         ApplyBackgroundSprite();
         ApplyMoneyIcon();
@@ -44,6 +47,13 @@ public class MoneyUI : MonoBehaviour
     {
         if (MoneyManager.Instance != null)
             MoneyManager.Instance.OnMoneyChanged -= UpdateMoneyDisplay;
+
+        if (_pulseCo != null)
+        {
+            StopCoroutine(_pulseCo);
+            _pulseCo = null;
+            transform.localScale = RestScale();
+        }
     }
 
 #if UNITY_EDITOR
@@ -147,25 +157,32 @@ public class MoneyUI : MonoBehaviour
         return RectTransformUtility.WorldToScreenPoint(cam, (corners[0] + corners[2]) * 0.5f);
     }
 
+    Vector3 RestScale()
+    {
+        return _restScale.sqrMagnitude < 0.0001f ? Vector3.one : _restScale;
+    }
+
     System.Collections.IEnumerator ReceivePulse()
     {
-        Vector3 from = transform.localScale;
-        Vector3 peak = from * 1.08f;
+        Vector3 rest = RestScale();
+        Vector3 peak = rest * 1.08f;
         float t = 0f;
-        while (t < 0.08f)
+        const float up = 0.08f;
+        while (t < up)
         {
-            t += Time.deltaTime;
-            transform.localScale = Vector3.Lerp(from, peak, t / 0.08f);
+            t += Time.unscaledDeltaTime;
+            transform.localScale = Vector3.Lerp(rest, peak, Mathf.Clamp01(t / up));
             yield return null;
         }
         t = 0f;
-        while (t < 0.14f)
+        const float down = 0.14f;
+        while (t < down)
         {
-            t += Time.deltaTime;
-            transform.localScale = Vector3.Lerp(peak, from, t / 0.14f);
+            t += Time.unscaledDeltaTime;
+            transform.localScale = Vector3.Lerp(peak, rest, Mathf.Clamp01(t / down));
             yield return null;
         }
-        transform.localScale = from;
+        transform.localScale = rest;
         _pulseCo = null;
     }
 

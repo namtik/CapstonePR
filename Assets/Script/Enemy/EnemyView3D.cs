@@ -89,6 +89,8 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     [Header("HUD/카메라")]
     [Tooltip("Overlay HUD가 따라갈 앵커(보통 머리 위 빈 오브젝트). 비우면 이 오브젝트.")]
     [SerializeField] private Transform hudAnchor;   // HUD 팔로우 앵커
+    [Tooltip("HP바를 화면 픽셀만큼 더 옮긴다. 양수는 오른쪽·위. 키가 커서 특이사항 아이콘이 화면 밖으로 나가면 Y를 음수로.")]
+    [SerializeField] private Vector2 hudScreenOffset;
     [Tooltip("몬스터를 렌더하는 스테이지 카메라. 비우면 Camera.main. 3단계에서 주입.")]
     [SerializeField] private Camera renderCamera;   // 렌더 카메라
 
@@ -269,7 +271,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
 
         Transform anchor = hudAnchor != null ? hudAnchor : transform;
         Camera cam = renderCamera != null ? renderCamera : Camera.main;
-        _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS, followWorld, _barScale);
+        _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS, followWorld, _barScale, hudScreenOffset);
         if (_stat != null) _hud.SetHp(_stat.currentHp, _stat.maxHp);
         _hud.SetGauge(0f);
         if (_pendingNote != null) _hud.SetSpecialNote(_pendingNote);

@@ -15,7 +15,7 @@ namespace Battle.UI
         const float NumberDrop = 14f;
         const int ComboBooksPerRow = 5;
         const int ComboBookMax = 20;
-        const string ComboBookPrefabPath = "Assets/Prefab/ComboBook.prefab";
+        const string ComboBookPrefabPath = "Assets/Prefab/UI/ComboBook.prefab";
         const string ChosunFontPath = "Assets/Fonts/ChosunCentennial_otf.otf";
         static readonly Color ComboOverflowColor = new Color(244f / 255f, 206f / 255f, 141f / 255f, 1f);
         static float _overflowOutlineWidth = 0.2f;

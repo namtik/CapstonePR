@@ -6,9 +6,14 @@ using Battle.Relic;
 
 namespace Battle.UI
 {
-    // 유물 도감 탭 — 전체 유물을 그리드로 표시(미발견은 실루엣/???), 분류 필터 + 수집률 + 호버 툴팁
+    // 유물 탭 — 전체 유물을 그리드로 표시(미발견은 실루엣/???). ownedOnly면 보유 유물만.
+    // 분류 필터 + 수집률 + 호버 툴팁. 도감과 인벤토리가 같은 컴포넌트를 쓴다.
     public class CodexRelicTab : CodexTab
     {
+        [Header("표시")]
+        [Tooltip("ON이면 현재 보유한 유물만 표시합니다. 인벤토리 탭용.")]
+        [SerializeField] private bool ownedOnly;                     // 보유 유물만
+
         [Header("바인딩")]
         [Tooltip("유물 셀들이 들어갈 부모. GridLayoutGroup 사용 권장(셀 크기 = cellSize).")]
         [SerializeField] private Transform gridRoot;                 // 셀 그리드 부모
@@ -51,16 +56,29 @@ namespace Battle.UI
 
             List<RelicSO> items = BuildItems();
             int discovered = 0;
-            foreach (var r in items) if (CodexProgress.IsRelicDiscovered(r.id)) discovered++;
 
             if (gridRoot != null)
             {
                 RectTransform clipRect = FindClipRect(gridRoot);
                 foreach (var relic in items)
-                    _spawned.Add(CreateCell(relic, CodexProgress.IsRelicDiscovered(relic.id), clipRect));
+                {
+                    bool known = ownedOnly || CodexProgress.IsRelicDiscovered(relic.id);
+                    if (known) discovered++;
+                    _spawned.Add(CreateCell(relic, known, clipRect));
+                }
             }
 
-            ShowCollection(countText, discovered, items.Count);
+            if (ownedOnly)
+            {
+                if (countText != null)
+                {
+                    CodexCollectionRing ring = countText.GetComponentInParent<CodexCollectionRing>();
+                    if (ring != null) ring.gameObject.SetActive(false);
+                    else countText.gameObject.SetActive(false);
+                }
+            }
+            else
+                ShowCollection(countText, discovered, items.Count);
             if (emptyState != null) emptyState.SetActive(items.Count == 0);
             UpdateFilterButtons();
         }
@@ -85,9 +103,15 @@ namespace Battle.UI
         List<RelicSO> BuildItems()
         {
             var items = new List<RelicSO>();
-            IReadOnlyList<RelicSO> all = RelicManager.Instance != null
-                ? RelicManager.Instance.RelicDefinitions
-                : LoadDatabaseRelics();
+            IReadOnlyList<RelicSO> all;
+            if (ownedOnly)
+                all = RelicManager.Instance != null
+                    ? RelicManager.Instance.OwnedRelics
+                    : System.Array.Empty<RelicSO>();
+            else
+                all = RelicManager.Instance != null
+                    ? RelicManager.Instance.RelicDefinitions
+                    : LoadDatabaseRelics();
 
             foreach (var r in all)
             {

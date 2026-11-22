@@ -524,6 +524,13 @@ public class RoundManager : MonoBehaviour
     {
         GrantTieredCombatGold();
 
+        // 2스테이지 보스는 카드·콤보 보상 없이, 전투 스테이지 위에 클리어 화면만 띄운다.
+        if (IsFinalClearBoss())
+        {
+            ShowFinalClearOnBattleStage();
+            return;
+        }
+
         if (IsNewBattleSystemActive())
         {
             ShowCardReward();
@@ -582,6 +589,22 @@ public class RoundManager : MonoBehaviour
     });
 }
 
+    // 최종 보스 클리어: 맵으로 나가지 않고, 보스를 잡은 전투 스테이지 위에 클리어 패널을 띄운다.
+    void ShowFinalClearOnBattleStage()
+    {
+        GameStateController state = GameStateController.Instance;
+        if (state != null)
+        {
+            state.RegisterBossDefeat();
+            state.MarkNodeCleared(state.lastVisitedNodeIndex);
+        }
+
+        if (GameClearController.Instance != null && GameClearController.Instance.IsReady)
+            GameClearController.Instance.ShowGameClear();
+        else
+            Debug.LogError("[RoundManager] GameClearController가 없어 전투 스테이지 위에 클리어 화면을 띄우지 못했습니다.");
+    }
+
     // 보상 종료 후 걷기 연출을 거쳐 맵으로 복귀한다(연출 OFF면 즉시 복귀).
     void ReturnToMapWithWalk()
     {
@@ -596,6 +619,16 @@ public class RoundManager : MonoBehaviour
         walk.Play(ReturnToMap);
     }
 
+    // 이번 보스 처치로 런이 끝나는지. 보상 UI를 띄우기 전이라 처치 수는 아직 오르지 않았다.
+    bool IsFinalClearBoss()
+    {
+        if (DebugRoundActive) return false;
+        if (currentRoundData is not BossRoundData) return false;
+
+        GameStateController state = GameStateController.Instance;
+        return state != null && state.bossDefeatCount + 1 >= GameStateController.RequiredBossDefeats;
+    }
+
     // 카드 보상 후 콤보 책 보상을 표시할 라운드인지 판정한다(정예/보스).
     bool ShouldShowComboBookRewardAfterCard()
     {
@@ -605,7 +638,31 @@ public class RoundManager : MonoBehaviour
     // 카드 보상 후 콤보 책 보상 UI를 표시하고 선택한 콤보를 지급한다.
     void ShowComboBookRewardAfterCard()
     {
+        if (ShouldDropStageBossRelic())
+        {
+            ShowComboBookReward(ShowStageBossRelicThenLeave);
+            return;
+        }
+
         ShowComboBookReward(ReturnToMapWithWalk);
+    }
+
+    // 1스테이지 보스만 유물을 떨어뜨린다. 2스테이지 보스는 클리어 화면으로 끝난다.
+    bool ShouldDropStageBossRelic()
+    {
+        if (currentRoundData is not BossRoundData)
+            return false;
+        if (IsFinalClearBoss())
+            return false;
+
+        GameStateController state = GameStateController.Instance;
+        return state == null || state.bossDefeatCount == 0;
+    }
+
+    // 콤보 보상 뒤에 유물을 띄우고, 받으면 맵으로 돌아간다.
+    void ShowStageBossRelicThenLeave()
+    {
+        BossRelicDropUI.Present(ReturnToMapWithWalk);
     }
 
     // 런 시작 직후 맵에서 콤보 3택1을 표시한다.
@@ -703,7 +760,9 @@ public class RoundManager : MonoBehaviour
 
     void ReturnToMapNow()
     {
-        StageManager.Instance?.HideStage(); // 전투 이탈 — 3D 스테이지 숨김
+        // 최종 보스 클리어는 전투 스테이지를 유지한다. 맵 복귀에서만 스테이지를 숨긴다.
+        if (!IsFinalClearBoss())
+            StageManager.Instance?.HideStage(); // 전투 이탈 — 3D 스테이지 숨김
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.EndBattle();
 
@@ -1042,12 +1101,51 @@ public class RoundManager : MonoBehaviour
     // 적 사망 시 재화 연출을 띄우고, 남은 적이 없으면 라운드 종료를 예약한다.
     void OnPartyMemberDied(EnemyStat stat, IEnemyView view)
     {
-        PlayKillReward(stat, view);
+        if (!DebugRoundActive && stat != null && stat.Data != null && GameStateController.Instance != null)
+            GameStateController.Instance.RecordRunKill(stat.Data.enemySprite, stat.Data.enemyName, stat.Data.enemyClass);
+
+        Vector2 screen = ResolveDeathScreen(stat, view);
+        PlayKillReward(screen);
+        if (IsLastRewardKill() && !IsFinalClearBoss())
+            RewardDropFx.Play(screen, ShouldShowComboBookRewardAfterCard(), ShouldDropStageBossRelic());
         HandleEnemyDied();
     }
 
+    // 이번 처치로 전투가 끝나고 카드(와 정예·보스면 콤보) 보상이 열리는지.
+    bool IsLastRewardKill()
+    {
+        if (!IsNewBattleSystemActive()) return false;
+        if (_waitingForRoundEnd) return false;
+        if (EnemyCombatParty.AliveCount > 0) return false;
+        if (!EnemyCombatParty.IsMulti && _injectedEnemies.Count > 0) return false;
+        return currentRoundData is CombatRoundData
+            || currentRoundData is EliteRoundData
+            || currentRoundData is BossRoundData;
+    }
+
+    // 죽은 적의 화면 좌표. 조준점이 없으면 월드 위치를 투영한다.
+    static Vector2 ResolveDeathScreen(EnemyStat stat, IEnemyView view)
+    {
+        if (view != null && view.TryGetAimScreen(out Vector2 aim, out _))
+            return aim;
+
+        if (stat != null)
+        {
+            Camera cam = BattleStageController.Current != null
+                ? BattleStageController.Current.StageCamera
+                : Camera.main;
+            if (cam != null)
+            {
+                Vector3 sp = cam.WorldToScreenPoint(stat.transform.position);
+                if (sp.z > 0f) return new Vector2(sp.x, sp.y);
+            }
+        }
+
+        return new Vector2(Screen.width * 0.5f, Screen.height * 0.55f);
+    }
+
     // 처치 위치에 +N을 띄우고, 영혼이 재화 UI에 닿으면 골드를 넣는다.
-    void PlayKillReward(EnemyStat stat, IEnemyView view)
+    void PlayKillReward(Vector2 screen)
     {
         if (MoneyManager.Instance == null) return;
 
@@ -1066,21 +1164,6 @@ public class RoundManager : MonoBehaviour
 
         if (gold <= 0) return;
         _killGoldPaid += gold;
-
-        Vector2 screen = new Vector2(Screen.width * 0.5f, Screen.height * 0.55f);
-        if (view != null && view.TryGetAimScreen(out Vector2 aim, out _))
-            screen = aim;
-        else if (stat != null)
-        {
-            Camera cam = BattleStageController.Current != null
-                ? BattleStageController.Current.StageCamera
-                : Camera.main;
-            if (cam != null)
-            {
-                Vector3 sp = cam.WorldToScreenPoint(stat.transform.position);
-                if (sp.z > 0f) screen = new Vector2(sp.x, sp.y);
-            }
-        }
 
         int pay = gold;
         KillRewardFx.Play(screen, pay, () =>

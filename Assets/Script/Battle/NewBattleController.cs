@@ -230,6 +230,7 @@ namespace Battle
         {
             public CardElement element;
             public int remainingUses;
+            public string sourceName; // 이 저주를 건 몬스터. 저주로 죽으면 게임오버 문장에 쓴다.
         }
         private readonly List<ActiveCurse> _curses = new List<ActiveCurse>(); // 중첩 가능한 속성 저주
         private int _recoverCooldown;               // 방해행동(회복) 쿨다운
@@ -1142,32 +1143,40 @@ namespace Battle
         // D 드로우 시도 — 1장 뽑고 적 게이지 +1 (비급서 10011 보유 시 패 전부 버리고 5장)
         void TryDDraw()
         {
-            // 유물(비급서 10011): D 드로우가 "현재 패 모두 버리고 5장 뽑기"로 교체
-            if (RelicManager.Instance != null && RelicManager.Instance.HasDDrawOverride())
+            BattleLog.BeginPlayerDraw();
+            try
             {
-                int discarded = _deck.DiscardAllFromHand();
-                int redrawn = _deck.Draw(5, true);
-                if (redrawn > 0) AccrueEnemyGauge(1);
-                handHud?.Refresh();
-                Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우");
-                return;
-            }
+                // 유물(비급서 10011): D 드로우가 "현재 패 모두 버리고 5장 뽑기"로 교체
+                if (RelicManager.Instance != null && RelicManager.Instance.HasDDrawOverride())
+                {
+                    int discarded = _deck.DiscardAllFromHand();
+                    int redrawn = _deck.Draw(5, true);
+                    if (redrawn > 0) AccrueEnemyGauge(1);
+                    handHud?.Refresh();
+                    Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우");
+                    return;
+                }
 
-            if (_deck.IsHandFull)
-            {
-                Log("D 드로우 불가 — 손패 가득 참");
-                return;
+                if (_deck.IsHandFull)
+                {
+                    Log("D 드로우 불가 — 손패 가득 참");
+                    return;
+                }
+                int drawn = _deck.Draw(1, true);
+                if (drawn > 0)
+                {
+                    AccrueEnemyGauge(1);
+                    Log("D 드로우 — 적 게이지 +1");
+                }
+                else
+                {
+                    Log($"D 드로우 실패 — 뽑을 더미({_deck.DrawCount})·버린 더미({_deck.DiscardCount}) 카드 없음 " +
+                        $"(소멸 더미={_deck.ExilePile.Count})");
+                }
             }
-            int drawn = _deck.Draw(1, true);
-            if (drawn > 0)
+            finally
             {
-                AccrueEnemyGauge(1);
-                Log("D 드로우 — 적 게이지 +1");
-            }
-            else
-            {
-                Log($"D 드로우 실패 — 뽑을 더미({_deck.DrawCount})·버린 더미({_deck.DiscardCount}) 카드 없음 " +
-                    $"(소멸 더미={_deck.ExilePile.Count})");
+                BattleLog.EndPlayerDraw();
             }
         }
 
@@ -1244,11 +1253,22 @@ namespace Battle
             _cardPresenting = true;
 
             if (handHud != null)
-                handHud.PlayCardUsePresentation(card, () => { ResolveCardUse(card); _cardPresenting = false; });
+            {
+                handHud.PlayCardUsePresentation(card, () =>
+                {
+                    try { ResolveCardUse(card); }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
+                    }
+                    finally { _cardPresenting = false; }
+                });
+            }
             else
             {
-                ResolveCardUse(card);
-                _cardPresenting = false;
+                try { ResolveCardUse(card); }
+                catch (System.Exception ex) { Debug.LogException(ex); }
+                finally { _cardPresenting = false; }
             }
             return true;
         }
@@ -2226,19 +2246,22 @@ namespace Battle
                 {
                     CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
                     CardElement target = elements[Random.Range(0, elements.Length)];
-                    ApplyElementCurse(target, CURSE_DURATION_USES);
+                    string curseSource = _enemyStat != null && _enemyStat.Data != null ? _enemyStat.Data.enemyName : null;
+                    ApplyElementCurse(target, CURSE_DURATION_USES, curseSource);
+                    SfxManager.Instance?.PlayCurse();
                     if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0);
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
-                    return $"방해: {ElementName(target)} 저주!";
+                    return $"방해: {ElementName(target)} 부적 저주!";
                 }
                 case 1: // 탈진 — 무속성 더미 카드(500)를 뽑을 더미에 섞어 넣음
                 {
                     var dummy = CardDatabase.CreateNeutralFillerInstance();
                     if (dummy != null) _deck.AddToDrawShuffled(dummy);
                     handHud?.Refresh();
+                    SfxManager.Instance?.PlayExhaust();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 1); if (_track != null) _track.exhaustCard = dummy; }
                     Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
-                    return "방해: 탈진 카드 삽입!";
+                    return "방해: 탈진 부적 삽입!";
                 }
                 case 2: // 흡수 — 각성 게이지를 EnemyData.흡수수치만큼 감소  [즉시형]
                 {
@@ -2248,6 +2271,7 @@ namespace Battle
                     int before = _elementInputCount;
                     _elementInputCount = Mathf.Max(0, _elementInputCount - absorb);
                     UpdateAwakenText();
+                    SfxManager.Instance?.PlayAbsorb();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 2, AbsorbReward(before));
                     Log($"[방해] 흡수 — 각성 게이지 -{absorb} ({before} → {_elementInputCount})");
                     return "방해: 각성 게이지 흡수!";
@@ -2255,9 +2279,10 @@ namespace Battle
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
                 {
                     _enemy?.BuffNextAttack();
+                    SfxManager.Instance?.PlayEnhance();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 3); if (_track != null) _track.playerHpAtFire = _player != null ? _player.currentHp : 0; }
                     Log("[방해] 강화 — 적 다음 공격 피해 증가(1회)");
-                    return "방해: 적 강화!";
+                    return "방해: 강화!";
                 }
                 case 4: // 회복 — 적 HP 30% 회복, 재사용까지 다른 방해행동 2회 필요  [즉시형]
                 {
@@ -2269,8 +2294,9 @@ namespace Battle
                         _enemyStat.Heal(heal);
                         Log($"[방해] 회복 — 적 HP +{heal:F0} (최대 30%)");
                     }
+                    SfxManager.Instance?.PlayHeal();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 4, RecoverReward(enemyHpBefore));
-                    return "방해: 적 체력 회복!";
+                    return "방해: 회복!";
                 }
                 default: // 5 버리기 — 플레이어가 패에서 2장 직접 선택해 버림  [즉시형]
                 {
@@ -2284,9 +2310,10 @@ namespace Battle
                         return "방해: 부적 무작위 버리기!";
                     }
                     if (n > 0) EnqueueEnemyForcedDiscard(n);
+                    SfxManager.Instance?.PlayDiscard();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
                     Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");
-                    return "방해: 카드 버리기!";
+                    return "방해: 부적 버리기!";
                 }
             }
         }
@@ -2498,7 +2525,7 @@ namespace Battle
                 ActiveCurse curse = _curses[i];
                 if (card.Element == curse.element && _player != null)
                 {
-                    _player.TakeDamage(CURSE_PLAYER_DAMAGE);
+                    _player.TakeDamage(CURSE_PLAYER_DAMAGE, "normal", curse.sourceName);
                     Log($"[저주] {curse.element} 카드 사용 — 플레이어 {CURSE_PLAYER_DAMAGE} 피해");
                     if (_track != null && _track.action == 0) _track.curseHits++;
                 }
@@ -2721,28 +2748,30 @@ namespace Battle
         // ─────────────────────────────────────────────────────────────
 
         // 특이사항: 지정 속성에 저주 부여(uses회 카드 사용 동안 지속)
-        public void ApplyElementCurse(CardElement element, int uses)
+        public void ApplyElementCurse(CardElement element, int uses, string sourceName = null)
         {
             uses = Mathf.Max(1, uses);
             for (int i = 0; i < _curses.Count; i++)
             {
                 if (_curses[i].element != element) continue;
                 _curses[i].remainingUses += uses;
+                if (!string.IsNullOrWhiteSpace(sourceName))
+                    _curses[i].sourceName = sourceName;
                 handHud?.Refresh();
                 Log($"[특이사항] {ElementName(element)} 속성 저주 중첩 — {_curses[i].remainingUses}회 지속");
                 return;
             }
 
-            _curses.Add(new ActiveCurse { element = element, remainingUses = uses });
+            _curses.Add(new ActiveCurse { element = element, remainingUses = uses, sourceName = sourceName });
             handHud?.Refresh();
             Log($"[특이사항] {ElementName(element)} 속성 저주 — {uses}회 지속");
         }
 
         // 특이사항: 무작위 속성에 저주 부여
-        public void CurseRandomElement(int uses)
+        public void CurseRandomElement(int uses, string sourceName = null)
         {
             CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
-            ApplyElementCurse(elements[Random.Range(0, elements.Length)], uses);
+            ApplyElementCurse(elements[Random.Range(0, elements.Length)], uses, sourceName);
         }
 
         // 특이사항: 패에서 count장을 무작위로 버림
