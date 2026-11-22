@@ -1419,6 +1419,7 @@ namespace Battle
             // 이번 카드가 붙인 빙결은 이 카드의 게이지를 막지 않는다. 맞은 적이 여러 명이어도 같이 미룬다.
             HoldFrostAddedThisCard();
             AccrueEnemyGauge(gaugeCost);
+            AccrueGaugeOnCardUseAbility();
             ReleaseHeldFrost();
 
             if (result.skipNextGaugeCost) _skipNextGaugeCount++;
@@ -1515,6 +1516,19 @@ namespace Battle
                 // 패의 모든 카드 gaugeSinceDrawn 누적 (땅6/405, 땅16/415 공식용)
                 for (int h = 0; h < _deck.Hand.Count; h++)
                     _deck.Hand[h].gaugeSinceDrawn++;
+            }
+        }
+
+        // 특이사항(인차무샤): 부적을 사용할 때마다 이 적의 행동게이지 +1(코스트와 별도)
+        void AccrueGaugeOnCardUseAbility()
+        {
+            if (_awakenActive) return;
+            EnemyCombatParty.CollectAlive(_aliveBuf);
+            for (int e = 0; e < _aliveBuf.Count; e++)
+            {
+                EnemyController en = _aliveBuf[e];
+                if (en == null || en.Ability != EnemySpecialAbility.GaugeUpOnCardUse) continue;
+                en.GetComponent<EnemyStat>()?.ConsumeGaugeStep();
             }
         }
 
@@ -2135,6 +2149,13 @@ namespace Battle
                 {
                     int handBefore = _deck != null ? _deck.HandCount : 0;
                     int n = Mathf.Min(2, _deck.HandCount);
+                    // 특이사항(가라카사오바케): 버리기 방해는 고르지 못하고 무작위 2장
+                    if (_enemy != null && _enemy.Ability == EnemySpecialAbility.DisruptionDiscardRandom)
+                    {
+                        DiscardRandomFromHand(n);
+                        if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
+                        return "방해: 부적 무작위 버리기!";
+                    }
                     if (n > 0) EnqueueEnemyForcedDiscard(n);
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
                     Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");
@@ -2650,6 +2671,47 @@ namespace Battle
             if (added > 0) Log($"[특이사항] 탈진 카드 {added}장 삽입");
         }
 
+        // 특이사항(가마이타치): 뽑을 더미에 둔화(506) 카드 count장 삽입
+        public void InsertSlowCards(int count)
+        {
+            if (_deck == null) return;
+            int added = 0;
+            for (int i = 0; i < count; i++)
+            {
+                var slow = CardDatabase.CreateTransientInstance(CardDatabase.SLOW);
+                if (slow != null) { _deck.AddToDrawShuffled(slow); added++; }
+            }
+            handHud?.Refresh();
+            if (added > 0) Log($"[특이사항] 둔화 카드 {added}장 삽입");
+            else Debug.LogWarning("[특이사항] 둔화 카드(506)가 카드 DB에 없음");
+        }
+
+        // 특이사항(불개): 패에서 무작위 부적 count장 소멸
+        public void ExileRandomHandCards(int count)
+        {
+            if (_deck == null || count <= 0) return;
+            int exiled = 0;
+            for (int i = 0; i < count && _deck.HandCount > 0; i++)
+            {
+                CardInstance victim = _deck.Hand[Random.Range(0, _deck.HandCount)];
+                _deck.ExileFromHand(victim);
+                _resolver?.NotifyExile(victim);
+                exiled++;
+            }
+            handHud?.Refresh();
+            if (exiled > 0) Log($"[특이사항] 패의 부적 {exiled}장 소멸");
+        }
+
+        // 특이사항(미코시뉴도): 패 전체 부적의 호흡(게이지 코스트)을 amount만큼 증가(이번 전투 동안)
+        public void RaiseHandGaugeCost(int amount)
+        {
+            if (_deck == null || amount == 0 || _deck.HandCount == 0) return;
+            for (int i = 0; i < _deck.HandCount; i++)
+                if (_deck.Hand[i] != null) _deck.Hand[i].gaugeCostModifier += amount;
+            _deck.NotifyChanged();
+            Log($"[특이사항] 패 전체 호흡 {amount:+0;-0}");
+        }
+
         // 특이사항: 뽑을 더미에 매혹 카드 count장 삽입(사용 시 적 게이지 가득 참)
         public void InsertCharmCards(int count)
         {
@@ -2725,6 +2787,14 @@ namespace Battle
         void BindEnemyFromHudOrAlive()
         {
             EnemyController aimed = handHud != null ? handHud.PendingEnemyTarget : null;
+            // 특이사항(도로타보): 도발 적이 살아 있으면 단일 대상은 반드시 그 적
+            EnemyController taunt = EnemyCombatParty.FirstAliveTaunt();
+            if (taunt != null)
+            {
+                if (aimed != null && aimed != taunt) Log("[특이사항] 도발 — 우선 공격 대상으로 변경");
+                BindEnemy(taunt);
+                return;
+            }
             if (aimed != null && aimed.IsAlive)
             {
                 BindEnemy(aimed);

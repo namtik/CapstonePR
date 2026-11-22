@@ -17,16 +17,17 @@ MonoBehaviour:
   enemySprite: {fileID: 21300000, guid: 2e04784125b049340a1cbb0c1f571b75, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
-  id: 100020
+  id: 100021
   element: 5
   enemyClass: 2
-  specialAbility: 0
-  Note: 
-  maxHp: 100
-  actionGaugeMax: 14
+  specialAbility: 25
+  Note: "\uBD80\uC801\uC744 \uC0AC\uC6A9\uD560 \uB54C \uB9C8\uB2E4 \uD589\uB3D9\uAC8C\uC774\uC9C0\uAC00 1 \uC99D\uAC00\uD55C\uB2E4."
+  maxHp: 180
+  actionGaugeMax: 10
+  disruptionTurn: 4
   attackSequence: 08000000
-  disruptionActions: 000000000500000003000000
-  "\uD761\uC218\uC218\uCE58": 4
+  disruptionActions: 030000000500000000000000
+  "\uD761\uC218\uC218\uCE58": 1
   backgroundSprites:
   - {fileID: 21300000, guid: 2ed17f46569e7834eb0fe28e8cee9c99, type: 3}
   - {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}

@@ -20,13 +20,14 @@ MonoBehaviour:
   id: 100004
   element: 1
   enemyClass: 1
-  specialAbility: 0
-  Note: 
-  maxHp: 100
-  actionGaugeMax: 14
-  attackSequence: 0800000009000000
+  specialAbility: 16
+  Note: "\uACF5\uACA9 \uC2DC \uD0C8\uC9C4 \uBD80\uC801\uC744 1\uC7A5 \uC11E\uC5B4\uB123\uB294\uB2E4."
+  maxHp: 70
+  actionGaugeMax: 7
+  disruptionTurn: 2
+  attackSequence: 0400000005000000
   disruptionActions: 000000000100000003000000
-  "\uD761\uC218\uC218\uCE58": 4
+  "\uD761\uC218\uC218\uCE58": 1
   backgroundSprites:
   - {fileID: 21300000, guid: 2ed17f46569e7834eb0fe28e8cee9c99, type: 3}
   - {fileID: 21300000, guid: b3ac097ab2aa93e4e8022aea354cdfda, type: 3}

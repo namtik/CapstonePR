@@ -202,6 +202,15 @@ namespace Battle.Card
             return new CardInstance(_byId[fragmentId], transient: true);
         }
 
+        public const int SLOW = 506; // 둔화 카드 ID(가마이타치 특이사항, 콤보 1019 제거 대상)
+
+        // 지정 ID 카드의 이번 전투 한정 인스턴스 생성(없는 ID면 null)
+        public static CardInstance CreateTransientInstance(int id)
+        {
+            EnsureInit();
+            return _byId.TryGetValue(id, out var data) ? new CardInstance(data, transient: true) : null;
+        }
+
         // 무속성 더미 카드 인스턴스 생성
         public static CardInstance CreateNeutralFillerInstance()
         {

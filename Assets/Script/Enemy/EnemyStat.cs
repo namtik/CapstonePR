@@ -22,6 +22,8 @@ public class EnemyStat : MonoBehaviour
     public int GaugeStep => gaugeStep; // 현재 게이지 단계 조회
     public int GaugeMaxSteps => gaugeMaxSteps; // 이 적의 행동 게이지 최대치(10~30) 조회
     public bool MidPatternTriggered => midPatternTriggered; // 이번 사이클 방해행동 발동 여부 조회(행동 순서 예측용)
+    private int disruptionStep = GAUGE_MAX_STEPS / 2; // 방해행동이 발동하는 게이지 단계
+    public int DisruptionStep => disruptionStep; // 방해행동 발동 단계 조회(행동 순서 예측용)
     public int CycleCount { get; private set; } // 게이지가 가득 찬(공격한) 누적 횟수 — 행동 순서 바 항목 식별용
 
     private EnemyData enemyData; // 적 데이터 원본
@@ -78,7 +80,9 @@ public class EnemyStat : MonoBehaviour
         CycleCount = 0;
         NormalizeHp();
         // 기획서 0.6v: 적마다 행동 게이지 최대치 10~30 (미설정/0이면 기본 20)
-        gaugeMaxSteps = Mathf.Clamp(data.actionGaugeMax > 0 ? data.actionGaugeMax : GAUGE_MAX_STEPS, 10, 30);
+        gaugeMaxSteps = Mathf.Clamp(data.actionGaugeMax > 0 ? data.actionGaugeMax : GAUGE_MAX_STEPS, 2, 30);
+        // 엑셀 '방해행동 턴'(0이면 절반). 공격 단계와 겹치지 않게 1~최대-1로 제한
+        disruptionStep = Mathf.Clamp(data.disruptionTurn > 0 ? data.disruptionTurn : gaugeMaxSteps / 2, 1, gaugeMaxSteps - 1);
 
         OnHpChanged?.Invoke(currentHp, maxHp);
 
@@ -171,7 +175,7 @@ public class EnemyStat : MonoBehaviour
     {
         if (!IsAlive) return;
         gaugeStep = Mathf.Max(0, gaugeMaxSteps - 1);
-        if (gaugeStep >= gaugeMaxSteps / 2) midPatternTriggered = true; // 건너뛴 중간 패턴은 발동하지 않음
+        if (gaugeStep >= disruptionStep) midPatternTriggered = true; // 건너뛴 중간 패턴은 발동하지 않음
         OnGaugeStepChanged?.Invoke((float)gaugeStep / gaugeMaxSteps);
     }
 
@@ -210,8 +214,8 @@ public class EnemyStat : MonoBehaviour
         gaugeStep++;
         OnGaugeStepChanged?.Invoke((float)gaugeStep / gaugeMaxSteps);
 
-        // 절반 지점: 사이클당 한 번 방해행동 발동
-        if (gaugeStep == gaugeMaxSteps / 2 && !midPatternTriggered)
+        // 방해행동 단계(기본 절반, 엑셀 '방해행동 턴'): 사이클당 한 번 발동
+        if (gaugeStep == disruptionStep && !midPatternTriggered)
         {
             midPatternTriggered = true;
             OnMidPattern?.Invoke();

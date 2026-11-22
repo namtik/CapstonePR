@@ -267,7 +267,7 @@ namespace Battle.UI
 
                             if (frost > 0) { frost--; continue; }
                             step++;
-                            if (step == max / 2 && !mid)
+                            if (step == st.DisruptionStep && !mid)
                             {
                                 mid = true;
                                 if (needDisrupt) f.disruptSteps = k;

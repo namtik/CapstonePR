@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
   m_Name: BossOniData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: "\uB3C4\uAE68\uBE44"
+  enemyName: "\uBB34\uC0AC"
   battlePrefab3D: {fileID: 5942565393479847256, guid: 47e72397601e21e49889c18c27ea831e, type: 3}
   enemySprite: {fileID: 21300000, guid: 9a625cb65a6263f4fb2bdde7ec3f2c7b, type: 3}
   hitSprite: {fileID: 21300000, guid: 3fc1e03892bf5f34dab57a1d0e22f547, type: 3}
@@ -23,12 +23,12 @@ MonoBehaviour:
   element: 0
   enemyClass: 3
   specialAbility: 10
-  Note: "\uCCB4\uB825\uC774 \uC808\uBC18\uC774 \uB418\uBA74 \uD53C\uD574\uAC00 2\uBC30\uAC00
-    \uB41C\uB2E4."
+  Note: "\uCCB4\uB825\uC774 \uC808\uBC18\uC774 \uB418\uBA74 \uD53C\uD574\uAC00 2\uBC30\uAC00 \uB41C\uB2E4."
   maxHp: 300
-  actionGaugeMax: 16
-  attackSequence: 050000000b00000013000000
+  actionGaugeMax: 8
+  disruptionTurn: 5
+  attackSequence: 05000000080000000a000000
   disruptionActions: 010000000500000003000000
-  "\uD761\uC218\uC218\uCE58": 8
+  "\uD761\uC218\uC218\uCE58": 2
   backgroundSprites:
   - {fileID: 21300000, guid: b334bf84c8f049848b52d2676c8c7206, type: 3}

@@ -12,21 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e806b7ca8456664c93580e88317a68f, type: 3}
   m_Name: LandPuppetEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
-  enemyName: "\uD1A0\uC6B0\uADC0"
+  enemyName: "\uB3C4\uB85C\uD0C0\uBCF4"
   battlePrefab3D: {fileID: 2338152107676477914, guid: ff2f77e74e2450d41beac8f026999a5a, type: 3}
   enemySprite: {fileID: 21300000, guid: 4bb8586632d4def4799b3634ef18742e, type: 3}
   hitSprite: {fileID: 0}
   attackSprites: []
-  id: 100014
+  id: 100013
   element: 4
   enemyClass: 1
-  specialAbility: 0
-  Note: 
-  maxHp: 1000
-  actionGaugeMax: 20
-  attackSequence: 0a000000050000000f000000
-  disruptionActions: 010000000000000005000000
-  "\uD761\uC218\uC218\uCE58": 5
+  specialAbility: 21
+  Note: "\uC774 \uC694\uAD34\uAC00 \uC788\uB2E4\uBA74 \uBC18\uB4DC\uC2DC \uC6B0\uC120\uC73C\uB85C \uACF5\uACA9\uD574\uC57C\uD55C\uB2E4."
+  maxHp: 100
+  actionGaugeMax: 10
+  disruptionTurn: 5
+  attackSequence: 080000000f000000
+  disruptionActions: 010000000500000004000000
+  "\uD761\uC218\uC218\uCE58": 2
   backgroundSprites:
   - {fileID: 21300000, guid: 5bea49d0d346dc842ab0640ce071d4d9, type: 3}
   - {fileID: 21300000, guid: 74f4cc4f85b03234392e30ffcb472885, type: 3}

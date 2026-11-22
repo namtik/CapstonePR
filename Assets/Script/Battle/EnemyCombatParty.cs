@@ -64,6 +64,14 @@ public static class EnemyCombatParty
         return null;
     }
 
+    // 살아 있는 도발(우선 공격) 적. 없으면 null — 도로타보(100013)
+    public static EnemyController FirstAliveTaunt()
+    {
+        for (int i = 0; i < Members.Count; i++)
+            if (IsUsable(Members[i]) && Members[i].Ability == EnemySpecialAbility.Taunt) return Members[i];
+        return null;
+    }
+
     public static EnemyController PickRandomAlive()
     {
         CollectAlive(AliveBuffer);

@@ -22,11 +22,12 @@ MonoBehaviour:
   enemyClass: 1
   specialAbility: 0
   Note: 
-  maxHp: 100
-  actionGaugeMax: 16
-  attackSequence: 070000000d000000
+  maxHp: 80
+  actionGaugeMax: 8
+  disruptionTurn: 2
+  attackSequence: 040000000a000000
   disruptionActions: 050000000200000004000000
-  "\uD761\uC218\uC218\uCE58": 4
+  "\uD761\uC218\uC218\uCE58": 2
   backgroundSprites:
   - {fileID: 21300000, guid: 95d6fb0b5eea0c24a9db1ab379c12a0f, type: 3}
   - {fileID: 21300000, guid: 0bda1ef5007630643abb6e0b2f210eed, type: 3}

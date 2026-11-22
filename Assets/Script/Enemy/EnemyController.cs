@@ -60,7 +60,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private bool _halfHpTriggered = false;   // 체력 절반 특이사항 1회 트리거 여부
     private int _escalateBonus = 0;          // 풍식귀: 누적 공격 증가량
     private int _cycleCurseIndex = 0;        // 백족승: 현재 저주 속성 인덱스
+    private bool _nextAttackDoubled = false; // 백풍원: 직전 공격이 체력 피해를 줬으면 다음 공격 2배
     public bool AllowDuplication = true;     // 액괴 복제 허용(복제된 사본은 false로 무한 복제 방지)
+
+    // 이 몬스터의 특이사항(데이터 준비 전이면 None)
+    public EnemySpecialAbility Ability { get { ResolveAbility(); return _ability; } }
 
     // 특이사항 조회(EnemyStat.Initialize 이후 데이터 준비되면 1회 확정)
     void ResolveAbility()
@@ -197,8 +201,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
 
         if (_ability != EnemySpecialAbility.ExileRandomDiscardOnHit) return;
-        Battle.NewBattleController.Instance?.ExileRandomDiscardCards(2);
-        view?.ShowMidPatternNotice("카드 소멸!");
+        Battle.NewBattleController.Instance?.ExileRandomDiscardCards(1);
+        view?.ShowMidPatternNotice("부적 소멸!");
     }
 
     // 특이사항(액괴/무사): 체력 절반 도달 시 1회 트리거
@@ -221,6 +225,29 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         {
             _halfHpTriggered = true; // 이후 공격 2배(HandleGaugeFull에서 적용)
             view?.ShowMidPatternNotice("피해 2배!");
+        }
+    }
+
+    // 공격 피해가 들어간 직후 특이사항 트리거(hpDamaged: 이번 공격이 플레이어 체력을 깎았는지)
+    void TriggerOnAttackAbility(bool hpDamaged)
+    {
+        ResolveAbility();
+        var nbc = Battle.NewBattleController.Instance;
+        if (nbc == null) return;
+        switch (_ability)
+        {
+            case EnemySpecialAbility.AttackInsertExhaust: nbc.InsertExhaustCards(1); break;            // 츠루베비
+            case EnemySpecialAbility.AttackExileHandCard: nbc.ExileRandomHandCards(1); break;          // 불개
+            case EnemySpecialAbility.AttackInsertSlow: nbc.InsertSlowCards(1); break;                  // 가마이타치
+            case EnemySpecialAbility.AttackCurseRandomElement: nbc.CurseRandomElement(5); break;       // 강시
+            case EnemySpecialAbility.AttackRaiseHandCost: nbc.RaiseHandGaugeCost(1); break;            // 미코시뉴도
+            case EnemySpecialAbility.DoubleNextAttackOnHpHit:                                          // 백풍원
+                if (hpDamaged)
+                {
+                    _nextAttackDoubled = true;
+                    UpdateAttackPreviewForNewSystem();
+                }
+                break;
         }
     }
 
@@ -273,6 +300,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             nextDamage = Mathf.Max(0, nextDamage + _nextAttackPowerMod); // 콤보: 다음 공격 1회 공격력 증감
         if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp && _halfHpTriggered)
             nextDamage *= 2;                                    // 무사: 체력 절반 도달 후 2배
+        if (_nextAttackDoubled && ahead == 0)
+            nextDamage *= 2;                                    // 백풍원: 직전 공격이 체력 피해 → 다음 공격 2배
         return nextDamage;
     }
 
@@ -555,6 +584,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp && _halfHpTriggered)
             damagePerHit *= 2;
 
+        // 특이사항(백풍원): 직전 공격이 체력 피해를 줬으면 이번 공격 2배
+        if (_nextAttackDoubled)
+        {
+            damagePerHit *= 2;
+            _nextAttackDoubled = false;
+            view?.ShowMidPatternNotice("피해 2배!");
+        }
+
         if (player != null)
         {
             StartCoroutine(ExecuteMultiHit(hitCount, damagePerHit, attackIndex));
@@ -653,6 +690,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             }
         }
 
+        // 특이사항(멧돼지): 피해를 넣기 전에 플레이어 방어도를 전부 제거
+        if (_ability == EnemySpecialAbility.AttackRemoveBlock && player.guard > 0f)
+        {
+            player.AddGuard(-player.guard);
+            view?.ShowMidPatternNotice("방어도 제거!");
+        }
+        int hpBeforeAttack = player.currentHp;
+
         for (int i = 0; i < count; i++)
         {
             Battle.UI.BattleLog.BeginCombatCapture();
@@ -667,6 +712,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             yield return new WaitForSeconds(0.15f);
         }
         Debug.Log($"[EnemyController] {count} hit");
+        TriggerOnAttackAbility(player.currentHp < hpBeforeAttack);
         yield return new WaitForSeconds(0.45f);
         // 공격 애니메이션이 끝까지 재생될 때까지 대기(뒤이은 화상/유물 피격 모션이 공격 모션을 끊지 않게)
         float motionDeadline = Time.time + 3f;

@@ -47,6 +47,26 @@ public enum EnemySpecialAbility
     OnDeathClearAwakenGauge, // 처치 시 각성 게이지 초기화
     [InspectorName("처치 시 탈진 카드 2장 삽입")]
     OnDeathShuffleExhaust,   // 처치 시 뽑을 더미에 탈진 카드 2장 삽입
+    [InspectorName("공격 시 탈진 부적 1장 삽입")]
+    AttackInsertExhaust,     // 100004 츠루베비
+    [InspectorName("공격 시 패의 무작위 부적 1장 소멸")]
+    AttackExileHandCard,     // 100005 불개
+    [InspectorName("버리기 방해 시 무작위 2장 버리기")]
+    DisruptionDiscardRandom, // 100007 가라카사오바케
+    [InspectorName("공격으로 체력 피해 시 다음 공격 2배")]
+    DoubleNextAttackOnHpHit, // 100010 백풍원
+    [InspectorName("공격 시 둔화 부적 1장 삽입")]
+    AttackInsertSlow,        // 100011 가마이타치
+    [InspectorName("우선 공격 대상(도발)")]
+    Taunt,                   // 100013 도로타보
+    [InspectorName("공격 시 플레이어 방어도 전부 제거")]
+    AttackRemoveBlock,       // 100014 멧돼지
+    [InspectorName("공격 시 무작위 속성 5행동 저주")]
+    AttackCurseRandomElement,// 100019 강시
+    [InspectorName("공격 시 패 전체 호흡 +1")]
+    AttackRaiseHandCost,     // 100020 미코시뉴도
+    [InspectorName("부적 사용마다 행동게이지 +1")]
+    GaugeUpOnCardUse,        // 100021 인차무샤
 }
 
 [CreateAssetMenu(fileName = "EnemyData", menuName = "Enemy/EnemyData")]
@@ -80,8 +100,10 @@ public class EnemyData : ScriptableObject
     public string Note; // 특이사항 원문
 
     public float maxHp = 1000f; // 최대 체력
-    [Tooltip("행동 게이지 최대치(10~30). 다 차면 공격, 절반에서 방해행동. 0/미설정 시 기본 20.")]
-    public int actionGaugeMax = 20; // 행동 게이지 최대치(10~30)
+    [Tooltip("행동 게이지 최대치(2~30). 다 차면 공격. 0/미설정 시 기본 20.")]
+    public int actionGaugeMax = 20; // 행동 게이지 최대치(2~30)
+    [Tooltip("엑셀 '방해행동 턴'. 게이지가 이 단계에 도달하면 방해행동. 0이면 게이지 절반.")]
+    public int disruptionTurn = 0; // 방해행동 발동 게이지 단계(0=절반)
 
     [Header("공격 시퀀스")]
     [Tooltip("게이지가 가득 찰 때마다 순서대로 순환하는 공격 피해 값(엑셀 1차/2차/3차 공격, '-'는 제외).\n" +
