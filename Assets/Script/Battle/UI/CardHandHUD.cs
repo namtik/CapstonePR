@@ -1766,9 +1766,10 @@ namespace Battle.UI
             if (UseCardCallback == null) return false;
 
             PendingEnemyTarget = null;
-            // 지정 카드는 적 위에서 놓아야 사용(임계선만으로는 사용되지 않음)
+            // 지정 카드는 임계선 위(화살표 표시 중) + 적 위에서 놓아야 사용
             if (ShouldUseEnemyTargeting(view.Card))
             {
+                if (ev.position.y < useThresholdY) return false; // 손패 쪽으로 되돌리면 취소
                 EnemyController aimed = EnemyCombatParty.HitTest(ev.position);
                 if (aimed == null) return false;
                 PendingEnemyTarget = aimed;

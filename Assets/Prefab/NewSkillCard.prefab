@@ -503,19 +503,20 @@ MonoBehaviour:
   waterElementSprite: {fileID: 21300000, guid: f68250f15b3c78f4bba9776c3996310c, type: 3}
   windElementSprite: {fileID: 21300000, guid: d462bff8d4dfb2443a46bb9272280886, type: 3}
   earthElementSprite: {fileID: 21300000, guid: f009cdb146609244f8bb12cb2f9ecf53, type: 3}
-  neutralElementSprite: {fileID: 21300000, guid: 9eb13f0f5c6b1d44d82a9acc2229bb4e, type: 3}
+  neutralElementSprite: {fileID: 21300000, guid: 182c11287e8f39f499bbfe2dd6b6cc27, type: 3}
   useElementBackgroundSprite: 1
   fireBackgroundSprite: {fileID: 21300000, guid: 2f0206a9a3b505e4d8b59437bc534618, type: 3}
   waterBackgroundSprite: {fileID: 21300000, guid: bc190dcc88e8914489ade76d6f553e84, type: 3}
   windBackgroundSprite: {fileID: 21300000, guid: c54a1b4250454ed43b40c236b26849ca, type: 3}
   earthBackgroundSprite: {fileID: 21300000, guid: 04d85694c2fb11948a961ed473685314, type: 3}
-  neutralBackgroundSprite: {fileID: 21300000, guid: 04d85694c2fb11948a961ed473685314, type: 3}
+  neutralBackgroundSprite: {fileID: 21300000, guid: f1df131178b9a8c4ca80299c039e9069, type: 3}
   cardIcons: []
   resourcesFallback: 1
   useElementSpriteAsIcon: 1
   dragScaleMultiplier: 1.1
   hoverScaleMultiplier: 1.08
   hoverPositionOffset: {x: 0, y: 100}
+  gridHoverScaleMultiplier: 1.06
   drawIntroEnabled: 1
   drawIntroDuration: 0.28
   drawIntroRiseDistance: 240
@@ -1100,7 +1101,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f009cdb146609244f8bb12cb2f9ecf53, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 182c11287e8f39f499bbfe2dd6b6cc27, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
