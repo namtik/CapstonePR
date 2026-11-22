@@ -1358,7 +1358,7 @@ namespace Battle.Deck
         }
 
         // 적에게 피해를 가함(타격 보너스/배율/연쇄 포함). 총 피해량 반환
-        int DealDamage(int amount, bool isAttackCard, int baseHits = 1)
+        int DealDamage(int amount, bool isAttackCard, int baseHits = 1, bool burnDamage = false)
         {
             if (Ctx.enemy == null || amount <= 0) return 0;
 
@@ -1378,7 +1378,7 @@ namespace Battle.Deck
             int total = 0;
             for (int i = 0; i < hits; i++)
             {
-                Ctx.enemy.TakeDamage(dmg);
+                Ctx.enemy.TakeDamage(dmg, burnDamage ? "burn" : "Default");
                 total += dmg;
                 if (Ctx.enemyStat != null && !Ctx.enemyStat.IsAlive)
                     Ctx.enemyKilledThisResolve = true;
@@ -1431,7 +1431,7 @@ namespace Battle.Deck
             if (isCardEffect && key == "burn" && Ctx.burnOnByCardActive && Ctx.burnOnByCardAmount > 0)
             {
                 SfxManager.Instance?.PlayBurn();
-                Ctx.enemy.TakeDamage(Ctx.burnOnByCardAmount);
+                Ctx.enemy.TakeDamage(Ctx.burnOnByCardAmount, "burn");
                 Sprite burnPortrait = Ctx.enemyStat != null && Ctx.enemyStat.Data != null ? Ctx.enemyStat.Data.enemySprite : null;
                 string burnName = Ctx.enemyStat != null && Ctx.enemyStat.Data != null ? Ctx.enemyStat.Data.enemyName : null;
                 Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, Ctx.burnOnByCardAmount, burnName);
@@ -1477,7 +1477,7 @@ namespace Battle.Deck
                 Ctx.enemyStat = t.GetComponent<EnemyStat>();
                 if (burnDamage && amount > 0)
                     SfxManager.Instance?.PlayBurn();
-                int dealt = DealDamage(amount, isAttackCard, actualHits);
+                int dealt = DealDamage(amount, isAttackCard, actualHits, burnDamage);
                 total += dealt;
                 hit++;
             }

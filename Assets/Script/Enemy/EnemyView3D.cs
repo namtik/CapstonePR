@@ -320,6 +320,16 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     // 카드 타입별 월드 피격 파티클 재생
     public void PlayHitEffect(string cardType)
     {
+        if (cardType == "burn")
+        {
+            if (TryGetAimBounds(out Bounds body))
+            {
+                var visible = Array.Find(flashRenderers, r => r && r.enabled && r.gameObject.activeInHierarchy);
+                BurnDamageVfx.PlayWorld(shakeTarget ? shakeTarget : transform, ResolveAimCamera(), body,
+                    visible ? visible.gameObject.layer : gameObject.layer);
+            }
+            return;
+        }
         ParticleSystem ps = cardType switch
         {
             "Q" => qEffect, "W" => wEffect, "E" => eEffect, "R" => rEffect, "L" => lEffect, _ => null

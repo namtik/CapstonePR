@@ -419,6 +419,7 @@ public class EnemyView : MonoBehaviour, IEnemyView
     {
         switch (cardType)
         {
+            case "burn": BurnDamageVfx.PlayUi(enemyImage ? enemyImage.rectTransform : transform as RectTransform); break;
             case "Q": PlayHitParticle(qEffect); break;
             case "W": PlayHitParticle(wEffect); break;
             case "E": PlayHitParticle(eEffect); break;

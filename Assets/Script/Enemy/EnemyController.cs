@@ -32,6 +32,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [SerializeField] private int[] newSystemAttackSequence = { 8, 9, 20 }; // 새 시스템 공격 피해 시퀀스(폴백)
     private int _newSystemAttackIndex = 0; // 현재 공격 시퀀스 인덱스
     int _lastAttackLogId = -1;
+    int _lastBurnHitFrame = -1;
 
     // 실제 사용할 공격 시퀀스: EnemyData.attackSequence 우선, 비어 있으면 인스펙터 폴백
     int[] EffectiveAttackSequence()
@@ -298,9 +299,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             }
             if (damage > 0f)
                 Battle.UI.BattleLog.NoteEnemy(this, Battle.UI.BattleLog.CombatKind.Damage, Mathf.Max(0, Mathf.RoundToInt(damage)), false);
+            bool burnHit = cardtype == "burn" || cardtype == "detonate";
+            if (burnHit && stat.IsAlive) PlayBurnHit();
             stat.TakeDamage(damage);
             view.ShowDamage(damage);
-            view.PlayHitEffect(cardtype);
+            if (!burnHit) view.PlayHitEffect(cardtype);
         }
     }
 
@@ -308,6 +311,13 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     public void TakeDamage(float damage)
     {
         TakeDamage(damage, "Default");
+    }
+
+    void PlayBurnHit()
+    {
+        if (_lastBurnHitFrame == Time.frameCount) return;
+        _lastBurnHitFrame = Time.frameCount;
+        view?.PlayHitEffect("burn");
     }
 
     public event Action<string, int> OnStatusChanged; // 상태이상 변경 이벤트
@@ -570,6 +580,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
         // 체력이 깎이기 전에 소리를 건다. 클립 로드가 한 박자 밀려도 숫자보다 늦게 나지 않게.
         SfxManager.Instance?.PlayBurn();
+        PlayBurnHit();
         stat.TakeDamage(burn);
         Sprite burnPortrait = stat.Data != null ? stat.Data.enemySprite : null;
         string burnName = stat.Data != null ? stat.Data.enemyName : null;

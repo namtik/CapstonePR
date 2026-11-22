@@ -35520,6 +35520,7 @@ MonoBehaviour:
   awakenExplosionInterval: 0.18
   frostAppliedEffectName: Frost_EFF
   awakenScreenEffectPrefab: {fileID: 3942825033974895155, guid: 7297fe0a5e06fb644a731296af23d579, type: 3}
+  awakenEntryVfx: {fileID: 0}
   awakenScreenEffectScale: 110
   turnOrderTimeline: {fileID: 0}
   lockInputDuringEnemyTurn: 1
@@ -50246,8 +50247,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f54753f6f9d38e4e92f4fe6d08a7099, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.DeckDebugTool
-  deckEntries: []
-  useAsStartingDeck: 0
+  deckEntries:
+  - cardId: 104
+    count: 10
+  useAsStartingDeck: 1
   quickAddCardId: 100
 --- !u!4 &1966438784
 Transform:
