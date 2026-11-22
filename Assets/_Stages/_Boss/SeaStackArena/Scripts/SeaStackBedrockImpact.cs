@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 public sealed class SeaStackBedrockImpact : MonoBehaviour
@@ -18,8 +19,93 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
     private Pose cameraRest;
     private Pose boatRest;
     private float impactTime;
+    private float nextBindingCheck;
     private bool recoiling;
     private Motion motion;
+
+    public void BindStage(Transform cameraTransform, Transform boatTransform, ParticleSystem impactSpray)
+    {
+        RestorePose();
+        stageCamera = cameraTransform;
+        battleBoat = boatTransform;
+        spray = impactSpray;
+    }
+
+    private void Start()
+    {
+        ResolveStageBindings();
+    }
+
+    private void ResolveStageBindings()
+    {
+        nextBindingCheck = Time.unscaledTime + 0.5f;
+        Scene bossScene = gameObject.scene;
+        if (!battleBoat)
+        {
+            Scene preferredScene = spray ? spray.gameObject.scene : bossScene;
+            battleBoat = FindUnique<Transform>(preferredScene, "BattleBoat");
+
+            if (!battleBoat)
+            {
+                Transform candidate = null;
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene scene = SceneManager.GetSceneAt(i);
+                    if (scene == preferredScene)
+                        continue;
+
+                    var boat = FindUnique<Transform>(scene, "BattleBoat");
+                    if (!boat)
+                        continue;
+
+                    if (candidate)
+                        return;
+
+                    candidate = boat;
+                }
+                battleBoat = candidate;
+            }
+        }
+
+        if (!battleBoat)
+            return;
+
+        Scene stageScene = battleBoat.gameObject.scene;
+        if (!spray)
+            spray = FindUnique<ParticleSystem>(stageScene, "BedrockImpactSpray");
+
+        if (!stageCamera)
+        {
+            stageCamera = FindUnique<Transform>(stageScene, "StageCamera");
+            if (!stageCamera && stageScene != bossScene)
+                stageCamera = FindUnique<Transform>(bossScene, "StageCamera");
+
+            if (!stageCamera)
+                stageCamera = Camera.main?.transform;
+        }
+    }
+
+    private static T FindUnique<T>(Scene scene, string objectName) where T : Component
+    {
+        if (!scene.isLoaded)
+            return null;
+
+        T match = null;
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name != objectName || !child.TryGetComponent(out T component))
+                    continue;
+
+                if (match)
+                    return null;
+
+                match = component;
+            }
+        }
+        return match;
+    }
 
     // Called by DeepSeaGiant_Attack_BedrockThrow on the first contact frame.
     public void PlayBedrockImpact()
@@ -50,7 +136,13 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
 
     public void PlayAbyssalEyeEruption()
     {
-        if (!isActiveAndEnabled || !spray || !abyssalColumn)
+        if (!isActiveAndEnabled)
+            return;
+
+        if (!spray)
+            ResolveStageBindings();
+
+        if (!spray || !abyssalColumn)
             return;
 
         Vector3 center = abyssalColumn.position + Vector3.up * (abyssalColumn.lossyScale.y * 0.52f);
@@ -77,6 +169,9 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
             return;
 
         RestorePose();
+        if (!stageCamera || !battleBoat || !spray)
+            ResolveStageBindings();
+
         motion = next;
         cameraRest = LocalPose(stageCamera);
         boatRest = LocalPose(battleBoat);
@@ -91,7 +186,12 @@ public sealed class SeaStackBedrockImpact : MonoBehaviour
     private void LateUpdate()
     {
         if (!recoiling)
+        {
+            if ((!stageCamera || !battleBoat || !spray) && Time.unscaledTime >= nextBindingCheck)
+                ResolveStageBindings();
+
             return;
+        }
 
         float elapsed = Time.time - impactTime;
         float duration = motion switch

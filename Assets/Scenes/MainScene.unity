@@ -42878,7 +42878,7 @@ MonoBehaviour:
   - element: 5
     sceneName: Human_ClosedGateMarket
   defaultStageSceneName: Land_ForestGate
-  bossStageSceneName: Boss_ReedField
+  bossStageSceneName: Boss_SeaStackArena
   preloadAllOnStart: 1
   progressTimeOfDay: 1
   columnsPerTimeStep: 2
