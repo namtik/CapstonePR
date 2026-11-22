@@ -61,7 +61,12 @@ namespace Battle.Deck
             _powerField.Clear();
             ResetHandLimit();
 
-            foreach (var card in startingDeck) _drawPile.Add(card);
+            foreach (var card in startingDeck)
+            {
+                if (card == null) continue;
+                card.gaugeCostModifier = 0; // 코스트 증감은 전투 한정
+                _drawPile.Add(card);
+            }
             Shuffle(_drawPile);
             OnPileChanged?.Invoke();
         }
@@ -303,6 +308,36 @@ namespace Battle.Deck
         {
             _powerField.Remove(card);
             if (_exilePile.Remove(card)) OnPileChanged?.Invoke();
+        }
+
+        // 소멸 더미에서 조건에 맞는 카드를 전부 뽑을 더미(무작위 위치)로 옮긴다. 필드에 남은 파워 카드는 제외. 옮긴 장수 반환
+        public int MoveAllFromExileToDraw(System.Predicate<CardInstance> filter)
+        {
+            int moved = 0;
+            for (int i = _exilePile.Count - 1; i >= 0; i--)
+            {
+                CardInstance c = _exilePile[i];
+                if (c == null || _powerField.Contains(c)) continue;
+                if (filter != null && !filter(c)) continue;
+                _exilePile.RemoveAt(i);
+                _drawPile.Insert(Random.Range(0, _drawPile.Count + 1), c);
+                Track(Battle.UI.BattleLog.MoveZone.Deck, c);
+                moved++;
+            }
+            if (moved > 0) OnPileChanged?.Invoke();
+            return moved;
+        }
+
+        // 지정 ID 카드를 패/뽑을/버린/소멸 더미에서 모두 제거. 제거한 장수 반환
+        public int RemoveCardsById(ICollection<int> ids)
+        {
+            if (ids == null || ids.Count == 0) return 0;
+            int removed = _hand.RemoveAll(c => c != null && ids.Contains(c.Id))
+                        + _drawPile.RemoveAll(c => c != null && ids.Contains(c.Id))
+                        + _discardPile.RemoveAll(c => c != null && ids.Contains(c.Id))
+                        + _exilePile.RemoveAll(c => c != null && ids.Contains(c.Id));
+            if (removed > 0) OnPileChanged?.Invoke();
+            return removed;
         }
 
         // 카드를 뽑을 더미에 무작위 위치로 삽입

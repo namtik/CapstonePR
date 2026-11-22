@@ -72,6 +72,7 @@ namespace Battle
                 case "REPEAT_BY_RESOURCE_CONSUME_ALL":      return Mathf.Max(1, ctx.playerChain);
                 case "REPEAT_BY_AWAKEN_FRAGMENT_EXHAUSTED": return Mathf.Max(1, ctx.awakenFragmentExhausted);
                 case "REPEAT_BY_SELF_AWAKEN_USE_COUNT":     return Mathf.Max(1, ctx.selfRepeatCount);
+                case "REPEAT_BY_CHAIN_COUNT":               return Mathf.Max(0, ctx.playerChain); // 연쇄 0이면 0회, 연쇄는 소모하지 않음
                 default:
                     Debug.LogWarning($"[ComboEffect] 미지원 Repeat '{eff.repeat}' (ref={eff.refComboId}) — 1회만 실행");
                     return 1;
@@ -138,7 +139,36 @@ namespace Battle
                     break;
 
                 case "MOVE_CARD":
+                    HandleMoveCard(eff, ctx);
+                    break;
+
+                case "COPY_CARD":
+                    HandleCopyCard(eff, ctx);
+                    break;
+
+                case "REMOVE_CARD":
+                {
+                    var ids = ParseCardIds(ExtraValue(eff.extra, "CardIDs"));
+                    int removed = ctx.deck != null ? ctx.deck.RemoveCardsById(ids) : 0;
+                    Debug.Log($"[ComboEffect] REMOVE_CARD [{string.Join(",", ids)}] — {removed}장 제거 (ref={eff.refComboId})");
+                    break;
+                }
+
+                case "RESET_ENEMY_GAUGE":
+                    ForEachComboTarget(eff, ctx, e => e.ResetActionGauge());
+                    break;
+
                 case "MODIFY_ENEMY_STAT":
+                {
+                    string st = (eff.status ?? "").Trim().ToUpperInvariant();
+                    string duration = ExtraValue(eff.extra, "Duration").ToUpperInvariant();
+                    if (st == "ATTACK_POWER" && duration == "NEXT_ATTACK")
+                        ForEachComboTarget(eff, ctx, e => e.ModifyNextAttackPower(amount));
+                    else
+                        WarnSkip($"MODIFY_ENEMY_STAT:{st}/{duration}", eff);
+                    break;
+                }
+
                 case "BUFF_NEXT_COMBO":
                 case "SKIP_COOLDOWN":
                     WarnSkip(verb, eff);
@@ -148,6 +178,92 @@ namespace Battle
                     Debug.LogWarning($"[ComboEffect] 미구현 동사 '{eff.doAction}' (ref={eff.refComboId})");
                     break;
             }
+        }
+
+        // MOVE_CARD: 소멸 더미 → 뽑을 더미 전체 이동(카드 필터 적용)
+        void HandleMoveCard(ComboEffectData eff, ComboResolveContext ctx)
+        {
+            string from = (eff.fromZone ?? "").Trim().ToUpperInvariant();
+            string to = (eff.toZone ?? "").Trim().ToUpperInvariant();
+            string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+            if (ctx.deck == null) return;
+
+            if (from == "EXHAUSTED_PILE" && to == "DRAW_PILE" && sel == "ALL")
+            {
+                int moved = ctx.deck.MoveAllFromExileToDraw(c => MatchesCardFilter(c, eff.cardFilter));
+                Debug.Log($"[ComboEffect] MOVE_CARD 소멸→뽑을 더미 {moved}장 ({eff.cardFilter}, ref={eff.refComboId})");
+                return;
+            }
+            WarnSkip($"MOVE_CARD:{from}->{to}/{sel}", eff);
+        }
+
+        // COPY_CARD: 패 전체를 복사해 뽑을 더미에 섞어 넣음(원본은 패에 유지)
+        void HandleCopyCard(ComboEffectData eff, ComboResolveContext ctx)
+        {
+            string from = (eff.fromZone ?? "").Trim().ToUpperInvariant();
+            string to = (eff.toZone ?? "").Trim().ToUpperInvariant();
+            string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+            if (ctx.deck == null) return;
+
+            if (from == "HAND" && sel == "ALL_IN_HAND" && (to == "DRAW_PILE" || to == "DISCARD_PILE"))
+            {
+                var snapshot = new List<CardInstance>(ctx.deck.Hand);
+                int copied = 0;
+                foreach (var h in snapshot)
+                {
+                    if (h == null || h.data == null || !MatchesCardFilter(h, eff.cardFilter)) continue;
+                    var copy = new CardInstance(h.data, transient: true);
+                    if (to == "DRAW_PILE") ctx.deck.AddToDrawShuffled(copy);
+                    else ctx.deck.AddToDiscard(copy);
+                    copied++;
+                }
+                Debug.Log($"[ComboEffect] COPY_CARD 패 {copied}장 복사 → {to} (ref={eff.refComboId})");
+                return;
+            }
+            WarnSkip($"COPY_CARD:{from}->{to}/{sel}", eff);
+        }
+
+        // 카드 필터(FIRE_CARD/WATER_CARD/WIND_CARD/EARTH_CARD/FRAGMENT_CARD/ANY_CARD, 빈칸=전체) 일치 여부
+        static bool MatchesCardFilter(CardInstance c, string filter)
+        {
+            if (c == null) return false;
+            switch ((filter ?? "").Trim().ToUpperInvariant())
+            {
+                case "":
+                case "ANY_CARD":      return true;
+                case "FIRE_CARD":     return c.Element == CardElement.Fire;
+                case "WATER_CARD":    return c.Element == CardElement.Water;
+                case "WIND_CARD":     return c.Element == CardElement.Wind;
+                case "EARTH_CARD":    return c.Element == CardElement.Earth;
+                case "FRAGMENT_CARD": return c.Element == CardElement.Fragment;
+                default:
+                    Debug.LogWarning($"[ComboEffect] 알 수 없는 CardFilter '{filter}' — 일치하지 않음으로 처리");
+                    return false;
+            }
+        }
+
+        // Extra("Key=Value;Key2=Value2")에서 값 추출(없으면 "")
+        static string ExtraValue(string extra, string key)
+        {
+            if (string.IsNullOrEmpty(extra)) return "";
+            foreach (var part in extra.Split(';'))
+            {
+                int eq = part.IndexOf('=');
+                if (eq <= 0) continue;
+                if (part.Substring(0, eq).Trim().Equals(key, StringComparison.OrdinalIgnoreCase))
+                    return part.Substring(eq + 1).Trim();
+            }
+            return "";
+        }
+
+        // "506,500" 형식 카드 ID 목록 파싱
+        static List<int> ParseCardIds(string csv)
+        {
+            var ids = new List<int>();
+            if (string.IsNullOrEmpty(csv)) return ids;
+            foreach (var p in csv.Split(','))
+                if (int.TryParse(p.Trim(), out int id)) ids.Add(id);
+            return ids;
         }
 
         // 미지원 동사 스킵 경고 출력
@@ -197,6 +313,7 @@ namespace Battle
                 case "PLAYER_BLOCK":             return ctx.player != null ? Mathf.RoundToInt(ctx.player.guard) : 0;
                 case "PLAYER_CHAIN":             return ctx.playerChain;
                 case "LAST_DISCARDED_COUNT":     return _lastDiscardedCount;
+                case "HAND_SPACE":               return ctx.deck != null ? Mathf.Max(0, ctx.deck.HandLimit - ctx.deck.HandCount) : 0;
                 default:
                     if (int.TryParse(token, out int v)) return v;
                     Debug.LogWarning($"[ComboEffect] 알 수 없는 Formula 토큰 '{token}' — 기본값 {fallback} 사용");

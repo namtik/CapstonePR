@@ -324,7 +324,11 @@ namespace Battle
             card.gaugeSinceDrawn = 0;
             card.justDrawn = true;
             _ctx.currentCardJustDrawn = true;
-            if (_inBattle && !_awakenActive) _resolver.NotifyCardEnteredHand(card);
+            if (_inBattle && !_awakenActive)
+            {
+                _resolver.NotifyCardEnteredHand(card);
+                _resolver.NotifyCardDrawnForPowers(); // 선회(325)
+            }
 
             if (_track != null && _track.action == 1 && ReferenceEquals(card, _track.exhaustCard))
                 ResolveTrack(0.7f);
@@ -749,11 +753,17 @@ namespace Battle
             _ctx.frostOnWaterUseActive = false;
             _ctx.frostOnWaterUseAmount = 0;
             _ctx.frostOnWaterUseEveryN = 0;
+            _ctx.frostOnWaterUseRandomTarget = false;
             _ctx.waterUseCounter = 0;
             _ctx.attackPowerOnHpLossActive = false;
             _ctx.attackPowerOnHpLossAmount = 0;
             _ctx.frostOnFrostByCardActive = false;
             _ctx.frostOnFrostByCardAmount = 0;
+            _ctx.damageOnFrostByCardActive = false;
+            _ctx.damageOnFrostByCardAmount = 0;
+            _ctx.burnOnHpLossActive = false;
+            _ctx.damageOnDrawActive = false;
+            _ctx.damageOnDrawAmount = 0;
             _ctx.blockOnEnemyAttackActive = false;
             _ctx.blockOnEnemyAttackAmount = 0;
             _ctx.recastExhaustCardActive = false;
@@ -822,6 +832,7 @@ namespace Battle
                 return;
             }
             RelicManager.Instance?.NotifyPlayerHpLost(this, amount, first);
+            if (_inBattle) _resolver.NotifyPlayerHpLostForPowers(amount); // 수라의 길(122)
         }
 
         // 미뤄 둔 체력 손실 유물 발동을 순서대로 처리
@@ -832,7 +843,10 @@ namespace Battle
             _deferredHpLost.Clear();
             if (!_inBattle) return;
             for (int i = 0; i < pending.Length; i++)
+            {
                 RelicManager.Instance?.NotifyPlayerHpLost(this, pending[i].amount, pending[i].first);
+                _resolver.NotifyPlayerHpLostForPowers(pending[i].amount); // 수라의 길(122)
+            }
         }
 
         // 땅18(417): 방어도 소모 시 무작위 파편 1장 버린 더미에
@@ -873,6 +887,7 @@ namespace Battle
             public Battle.UI.PileViewerKind? pileKind;           // 덱/묘지 후보면 더미 패널로 표시(null=가로 배치)
             public int count = 1;                                // 손패에서 고를 장수(빈 칸 수)
             public System.Action<IList<CardInstance>> multiCallback; // 여러 장 선택 결과 콜백(있으면 callback 대신 사용)
+            public System.Action onFinished;                     // 선택·취소·건너뜀 어느 쪽이든 이 요청이 끝난 뒤 1회 호출(전투 종료로 버려지면 호출 안 함)
         }
         private readonly Queue<SelectionRequest> _selectionQueue = new Queue<SelectionRequest>();
         private bool _selectionActive;          // 대기열이 연 선택창이 아직 열려 있음
@@ -884,11 +899,13 @@ namespace Battle
             || (handHud != null && (handHud.IsSelectionMode || handHud.IsPickerMode));
 
         // 손패 1장 선택 요청을 대기열에 넣는다(직전 효과의 시각 갱신 후 다음 프레임 이후 진입)
-        void EnqueueHandSelection(string prompt, System.Action<CardInstance> callback,
+        SelectionRequest EnqueueHandSelection(string prompt, System.Action<CardInstance> callback,
             System.Func<CardInstance, bool> filter)
         {
-            _selectionQueue.Enqueue(new SelectionRequest { picker = false, prompt = prompt, callback = callback, filter = filter });
+            var req = new SelectionRequest { picker = false, prompt = prompt, callback = callback, filter = filter };
+            _selectionQueue.Enqueue(req);
             StartSelectionQueue();
+            return req;
         }
 
         // 손패 count장 선택 요청(빈 칸 count개, 모두 채우고 확인)
@@ -904,11 +921,13 @@ namespace Battle
         }
 
         // 카드 픽커 요청을 대기열에 넣는다(후보 목록은 실제로 열 때 만든다)
-        void EnqueuePicker(string prompt, System.Func<IList<CardInstance>> cards,
+        SelectionRequest EnqueuePicker(string prompt, System.Func<IList<CardInstance>> cards,
             System.Action<CardInstance> callback, Battle.UI.PileViewerKind? pileKind = null)
         {
-            _selectionQueue.Enqueue(new SelectionRequest { picker = true, prompt = prompt, callback = callback, pickerCards = cards, pileKind = pileKind });
+            var req = new SelectionRequest { picker = true, prompt = prompt, callback = callback, pickerCards = cards, pileKind = pileKind };
+            _selectionQueue.Enqueue(req);
             StartSelectionQueue();
+            return req;
         }
 
         void StartSelectionQueue()
@@ -932,12 +951,13 @@ namespace Battle
                 if (req.picker)
                 {
                     cards = req.pickerCards != null ? req.pickerCards() : null;
-                    if (cards == null || cards.Count == 0) { Log($"[선택] '{req.prompt}' — 후보 없음, 건너뜀"); continue; }
+                    if (cards == null || cards.Count == 0) { Log($"[선택] '{req.prompt}' — 후보 없음, 건너뜀"); FinishSelection(req); continue; }
                 }
                 else if (!HandHasMatch(req.filter))
                 {
                     // 앞선 선택(예: 방해 버리기)으로 패가 바뀌어 고를 카드가 없어진 경우
                     Log($"[선택] '{req.prompt}' — 고를 수 있는 카드 없음, 건너뜀");
+                    FinishSelection(req);
                     continue;
                 }
 
@@ -967,11 +987,20 @@ namespace Battle
                     yield return null;
                 }
                 _selectionActive = false;
+                FinishSelection(req);
             }
             _selectionRoutine = null;
             BattleLog.CloseMoveTarget();
             // 선택이 모두 끝났으면 보류 중이던 각성을 발동
             TryActivatePendingAwaken();
+        }
+
+        // 선택 요청 종료 후처리(사용한 카드를 묘지로 보내는 등). 전투가 끝났으면 버린다.
+        void FinishSelection(SelectionRequest req)
+        {
+            var done = req?.onFinished;
+            if (req != null) req.onFinished = null;
+            if (done != null && _inBattle) done();
         }
 
         // 선택 대기열을 비우고 처리 코루틴을 멈춘다(전투 종료/시작 시)
@@ -1233,25 +1262,30 @@ namespace Battle
                 Log("[유물] 복사경 — 첫 카드 효과 재발동");
             }
 
-            // 바람314: 버린 더미 대신 패로 복귀 (소멸이 아닐 때만)
-            if (result.returnToHandInsteadOfDiscard && !result.exile && !result.keepOnField)
+            // 사용한 카드를 묘지/소멸/필드/패로 보낸다. 이 카드가 선택(묘지·덱·패에서 고르기)을 요구하면
+            // 선택이 끝나 효과가 발동한 뒤에 보낸다 — 그래야 묘지에서 고를 때 방금 쓴 카드 자신이 후보에 섞이지 않는다.
+            void PlaceUsedCard()
             {
-                if (!_deck.AddToHand(card)) _deck.AddToDiscard(card);
-            }
-            else
-            {
-                _deck.PlaceCardAfterUse(card, result.exile, result.keepOnField);
+                // 바람314: 버린 더미 대신 패로 복귀 (소멸이 아닐 때만)
+                if (result.returnToHandInsteadOfDiscard && !result.exile && !result.keepOnField)
+                {
+                    if (!_deck.AddToHand(card)) _deck.AddToDiscard(card);
+                }
+                else
+                {
+                    _deck.PlaceCardAfterUse(card, result.exile, result.keepOnField);
 
-                // 바람318: 사용 후 버린 더미로 이동하는 카드 트리거
-                if (!result.exile && !result.keepOnField)
-                    _resolver.NotifyCardMovedToDiscard(card);
-            }
+                    // 바람318: 사용 후 버린 더미로 이동하는 카드 트리거
+                    if (!result.exile && !result.keepOnField)
+                        _resolver.NotifyCardMovedToDiscard(card);
+                }
 
-            if (result.exile) BattleLog.NoteMove(BattleLog.MoveZone.Exile, card);
+                if (result.exile) BattleLog.NoteMove(BattleLog.MoveZone.Exile, card);
+                if (result.exile) _resolver.NotifyExile(card);
+            }
+            SelectionRequest lastSelection = null; // 이 카드가 연 마지막 선택 요청
 
             if (effectOverlay != null) effectOverlay.Play(card.data, fxTarget);
-
-            if (result.exile) _resolver.NotifyExile(card);
 
             // 물12(211): 마지막 사용 카드 효과 재사용
             if (result.recastLastCard && _lastResolvedCard != null)
@@ -1267,7 +1301,7 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    EnqueueHandSelection("패에서 소멸할 카드를 선택하세요",
+                    lastSelection = EnqueueHandSelection("패에서 소멸할 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
@@ -1284,7 +1318,7 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    EnqueueHandSelection("패에서 버릴 카드를 선택하세요",
+                    lastSelection = EnqueueHandSelection("패에서 버릴 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
@@ -1301,7 +1335,7 @@ namespace Battle
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
                 if (HandHasMatch(filter))
                 {
-                    EnqueueHandSelection("복사할 카드를 선택하세요",
+                    lastSelection = EnqueueHandSelection("복사할 카드를 선택하세요",
                         (selected) =>
                         {
                             if (selected == null) return;
@@ -1315,7 +1349,7 @@ namespace Battle
             // 뽑을 더미에서 카드 선택 → 패로 (물7/206)
             if (result.requiresDrawPileMoveSelection && handHud != null)
             {
-                EnqueuePicker("뽑을 더미에서 카드를 선택하세요",
+                lastSelection = EnqueuePicker("뽑을 더미에서 카드를 선택하세요",
                     () => new List<CardInstance>(_deck.DrawPile),
                     (picked) => { if (picked != null) _deck.MoveFromDrawPileToHand(picked); },
                     Battle.UI.PileViewerKind.Draw);
@@ -1327,7 +1361,7 @@ namespace Battle
                 if (_deck.DiscardCount > 0)
                 {
                     string zone = (result.discardMoveTargetZone ?? "").Trim().ToUpperInvariant();
-                    EnqueuePicker("버린 더미에서 카드를 선택하세요",
+                    lastSelection = EnqueuePicker("버린 더미에서 카드를 선택하세요",
                         () => new List<CardInstance>(_deck.DiscardPile),
                         (picked) =>
                         {
@@ -1355,7 +1389,7 @@ namespace Battle
                 }
                 string zone = result.fragmentPickerTargetZone;
                 int copies = Mathf.Max(1, result.fragmentPickerCopyCount);
-                EnqueuePicker("파편 카드를 선택하세요",
+                lastSelection = EnqueuePicker("파편 카드를 선택하세요",
                     () => pool,
                     (picked) =>
                     {
@@ -1368,6 +1402,10 @@ namespace Battle
                         }
                     });
             }
+
+            // 선택이 있으면 마지막 선택이 끝난 뒤, 없으면 지금 카드를 보낸다
+            if (lastSelection != null) lastSelection.onFinished = PlaceUsedCard;
+            else PlaceUsedCard();
 
             // 게이지 누적
             int gaugeCost = card.Gauge;
@@ -2766,6 +2804,20 @@ namespace Battle
             if (source == null) return;
             _attackQueue.Enqueue(new EnemyAction { enemy = source, disruption = true });
             TryProcessAttackQueue();
+        }
+
+        // 콤보(행동게이지 초기화): 대기열에서 이 적의 아직 시작 안 된 공격·방해 행동을 취소. 취소 수 반환
+        public int CancelQueuedActions(EnemyController source)
+        {
+            if (source == null || _attackQueue.Count == 0) return 0;
+            int before = _attackQueue.Count;
+            var keep = new List<EnemyAction>(_attackQueue);
+            keep.RemoveAll(a => a.enemy == source);
+            _attackQueue.Clear();
+            foreach (var a in keep) _attackQueue.Enqueue(a);
+            int cancelled = before - _attackQueue.Count;
+            if (cancelled > 0) Log($"[콤보] {source.name} 예약 행동 {cancelled}건 취소(게이지 초기화)");
+            return cancelled;
         }
 
         void TryProcessAttackQueue()

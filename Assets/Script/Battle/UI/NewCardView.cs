@@ -326,7 +326,7 @@ namespace Battle.UI
 
             if (nameText != null) nameText.text = Card.data.displayName;
             if (descText != null) descText.text = CardDatabase.GetDisplayDescription(Card.data);
-            if (gaugeText != null) gaugeText.text = EffectiveGaugeCost(Card.data.gauge).ToString();
+            if (gaugeText != null) gaugeText.text = EffectiveGaugeCost(Card.Gauge).ToString();
 
             // 카드 타입 표시
             if (cardTypeText != null) cardTypeText.text = CardTypeName(Card.Type);

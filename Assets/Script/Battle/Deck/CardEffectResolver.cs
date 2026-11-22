@@ -72,11 +72,17 @@ namespace Battle.Deck
         public bool frostOnWaterUseActive;        // 물 카드 사용 시 빙결 부여 활성
         public int  frostOnWaterUseAmount;         // 물 사용 시 빙결 부여량
         public int  frostOnWaterUseEveryN;         // 빙결 부여 주기(N회마다)
+        public bool frostOnWaterUseRandomTarget;   // 빙결 부여 대상 무작위 여부(낙숫물 226)
         public int  waterUseCounter;               // 물 카드 사용 카운터
         public bool attackPowerOnHpLossActive;    // 체력 잃을 때 공격력 증가 활성
         public int  attackPowerOnHpLossAmount;     // 체력 잃을 때 공격력 증가량
         public bool frostOnFrostByCardActive;     // 카드로 빙결 부여 시 추가 빙결 활성
         public int  frostOnFrostByCardAmount;      // 카드로 빙결 부여 시 추가 빙결량
+        public bool damageOnFrostByCardActive;    // 카드로 빙결 부여 시 모든 적 피해 활성(혹한 225)
+        public int  damageOnFrostByCardAmount;     // 카드로 빙결 부여 시 모든 적 피해량
+        public bool burnOnHpLossActive;           // 체력 잃을 때 모든 적 화상 활성(수라의 길 122)
+        public bool damageOnDrawActive;           // 부적 뽑을 때 모든 적 피해 활성(선회 325)
+        public int  damageOnDrawAmount;            // 부적 뽑을 때 모든 적 피해량
         public bool blockOnEnemyAttackActive;     // 적 공격 종료 후 방어도 활성
         public int  blockOnEnemyAttackAmount;      // 적 공격 종료 후 방어도량
         public bool recastExhaustCardActive;      // 소멸 태그 카드 사용 시 효과 재발동 활성
@@ -223,7 +229,13 @@ namespace Battle.Deck
                 Ctx.waterUseCounter++;
                 int everyN = Mathf.Max(1, Ctx.frostOnWaterUseEveryN);
                 if (Ctx.waterUseCounter % everyN == 0)
-                    AddEnemyStatus("frost", Mathf.Max(1, Ctx.frostOnWaterUseAmount), isCardEffect: true);
+                {
+                    int frostAmt = Mathf.Max(1, Ctx.frostOnWaterUseAmount);
+                    if (Ctx.frostOnWaterUseRandomTarget)
+                        ForEachEnemyTarget("RANDOM_ENEMY", false, () => AddEnemyStatus("frost", frostAmt, isCardEffect: true));
+                    else
+                        AddEnemyStatus("frost", frostAmt, isCardEffect: true);
+                }
             }
 
             if (applyPowerEffects && Ctx.recastExhaustCardActive && card.data.HasTag("EXHAUST"))
@@ -543,7 +555,8 @@ namespace Battle.Deck
                         {
                             Ctx.frostOnWaterUseActive = true;
                             Ctx.frostOnWaterUseAmount = Mathf.Max(1, amount);
-                            Ctx.frostOnWaterUseEveryN = Mathf.Max(1, ExtraIntOrDefault(eff.extra, "EveryNthUse", 3));
+                            Ctx.frostOnWaterUseEveryN = Mathf.Max(1, ExtraIntOrDefault(eff.extra, "EveryNthUse", 1));
+                            Ctx.frostOnWaterUseRandomTarget = (eff.target ?? "").Trim().ToUpperInvariant() == "RANDOM_ENEMY";
                         }
                     }
                     break;
@@ -595,6 +608,19 @@ namespace Battle.Deck
                         Ctx.firstCardAfterAttackFreeActive = true;
                     break;
 
+                case "ON_PLAYER_LOSE_HP":
+                    if (verb == "APPLY_STATUS" && status == "BURN")
+                        Ctx.burnOnHpLossActive = true; // 수라의 길(122): 잃은 체력만큼 모든 적에게 화상
+                    break;
+
+                case "ON_CARD_DRAWN":
+                    if (verb == "DAMAGE")
+                    {
+                        Ctx.damageOnDrawActive = true; // 선회(325): 부적을 뽑을 때마다 모든 적 피해
+                        Ctx.damageOnDrawAmount += amount;
+                    }
+                    break;
+
                 case "ON_PLAYER_LOSE_HP_BY_CARD_EFFECT":
                     if (verb == "GAIN_STAT" || verb == "GAIN_STATUS")
                     {
@@ -608,6 +634,11 @@ namespace Battle.Deck
                     {
                         Ctx.frostOnFrostByCardActive = true;
                         Ctx.frostOnFrostByCardAmount += Mathf.Max(1, amount);
+                    }
+                    else if (verb == "DAMAGE")
+                    {
+                        Ctx.damageOnFrostByCardActive = true; // 혹한(225): 카드로 빙결 부여 시 모든 적 피해
+                        Ctx.damageOnFrostByCardAmount += Mathf.Max(1, amount);
                     }
                     break;
 
@@ -869,6 +900,10 @@ namespace Battle.Deck
                 if (card != null && card.data.displayName == name) cnt += 1;
                 return cnt;
             }
+
+            // 대상 적의 상태이상 수치만큼 타격(동사 208: 빙결 수치만큼 반복, 0이면 기본 1회)
+            if (up.StartsWith("ENEMY_STATUS_VALUE:"))
+                return GetEnemyStatus(f.Substring("ENEMY_STATUS_VALUE:".Length).Trim().ToLowerInvariant());
 
             if (up == "USED_ATTACK_CARD_COUNT")
                 return Ctx.usedAttackCardCount + (card != null && card.Type == CardType.Attack ? 1 : 0);
@@ -1140,6 +1175,10 @@ namespace Battle.Deck
                 case "NO_EFFECT":
                     break;
 
+                case "MODIFY_CARD_GAUGE_COST":
+                    HandleModifyCardGaugeCost(eff, card, amount);
+                    break;
+
                 case "MODIFY_DAMAGE_MULTIPLIER":
                 case "MODIFY_HIT_COUNT":
                     break;
@@ -1321,6 +1360,33 @@ namespace Battle.Deck
                 Debug.LogWarning($"[CardEffect] MOVE_CARD 미지원 (sel={sel}, cardId={eff.cardId})");
         }
 
+        // MODIFY_CARD_GAUGE_COST: 패의 무작위 부적 1장의 게이지 코스트를 이번 전투 동안 amount만큼 증감(청류 202)
+        // 감소일 때는 코스트가 남아 있는 부적을 우선 고르고, 없으면 패 전체에서 고른다. 사용 중인 카드 자신은 제외.
+        void HandleModifyCardGaugeCost(CardEffectData eff, CardInstance card, int amount)
+        {
+            if (Ctx.deck == null || amount == 0) return;
+            string from = (eff.fromZone ?? "").Trim().ToUpperInvariant();
+            string sel = (eff.select ?? "").Trim().ToUpperInvariant();
+            if ((from != "" && from != "HAND") || (sel != "" && sel != "RANDOM"))
+            {
+                Debug.LogWarning($"[CardEffect] MODIFY_CARD_GAUGE_COST 미지원 (from={from}, sel={sel}, cardId={eff.cardId})");
+                return;
+            }
+
+            var pool = new List<CardInstance>();
+            foreach (var h in Ctx.deck.Hand)
+                if (h != null && h != card && (amount > 0 || h.Gauge > 0)) pool.Add(h);
+            if (pool.Count == 0)
+                foreach (var h in Ctx.deck.Hand)
+                    if (h != null && h != card) pool.Add(h);
+            if (pool.Count == 0) return;
+
+            CardInstance target = pool[UnityEngine.Random.Range(0, pool.Count)];
+            target.gaugeCostModifier += amount;
+            Debug.Log($"[CardEffect] {target.data.displayName} 코스트 {amount:+0;-0} → {target.Gauge} (cardId={eff.cardId})");
+            Ctx.deck.NotifyChanged(); // 패 UI 코스트 표시 갱신
+        }
+
         // COPY_CARD 동사 처리(자기/선택/패 전체 복사 모드 분기)
         void HandleCopyCard(CardEffectData eff, CardInstance card, ref ResolveResult result)
         {
@@ -1444,6 +1510,37 @@ namespace Battle.Deck
                 Ctx.enemy.AddStatus("frost", Ctx.frostOnFrostByCardAmount);
                 Ctx.FrostTriggerReentrancy = false;
             }
+
+            if (isCardEffect && key == "frost" && amount > 0 && Ctx.damageOnFrostByCardActive
+                && Ctx.damageOnFrostByCardAmount > 0 && !Ctx.FrostTriggerReentrancy)
+            {
+                Ctx.FrostTriggerReentrancy = true;
+                try { DamageAllEnemies(Ctx.damageOnFrostByCardAmount); }
+                finally { Ctx.FrostTriggerReentrancy = false; }
+            }
+        }
+
+        static readonly CardEffectData AllEnemiesTarget = new CardEffectData { target = "ALL_ENEMIES" };
+
+        // 파워 효과용: 살아 있는 모든 적에게 공격 카드 보너스 없이 피해
+        int DamageAllEnemies(int amount)
+        {
+            if (amount <= 0) return 0;
+            return ApplyTargetedDamage(AllEnemiesTarget, amount, isAttackCard: false, actualHits: 1);
+        }
+
+        // 선회(325): 부적이 패에 들어올 때(뽑기) 모든 적 피해
+        public void NotifyCardDrawnForPowers()
+        {
+            if (Ctx == null || !Ctx.damageOnDrawActive || Ctx.damageOnDrawAmount <= 0) return;
+            DamageAllEnemies(Ctx.damageOnDrawAmount);
+        }
+
+        // 수라의 길(122): 플레이어가 체력을 잃으면 잃은 만큼 모든 적에게 화상
+        public void NotifyPlayerHpLostForPowers(int amount)
+        {
+            if (Ctx == null || !Ctx.burnOnHpLossActive || amount <= 0) return;
+            ForEachEnemyTarget("ALL_ENEMIES", true, () => AddEnemyStatus("burn", amount, isCardEffect: false));
         }
 
         // 적 상태이상 수치 조회

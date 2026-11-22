@@ -8,7 +8,7 @@
       "cooldown": 5,
       "comboName": "염화 작렬",
       "skillImg": "1000Img",
-      "description": "모든 적에게 피해 20, 모든 적에게 화상을 10 부여한다.",
+      "description": "모든 적에게 피해 20, 모든 적에게 화상을 30 부여한다.",
       "refComboId": 1000
     },
     {
@@ -19,7 +19,7 @@
       "cooldown": 5,
       "comboName": "잔염 환생",
       "skillImg": "1001Img",
-      "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 카드 1장을 선택하여 뽑을 카드 더미에 넣는다.",
+      "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 부적을 모두 뽑을 부적 더미에 넣는다.",
       "refComboId": 1001
     },
     {
@@ -30,7 +30,7 @@
       "cooldown": 5,
       "comboName": "잔염 환생",
       "skillImg": "1001Img",
-      "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 카드 1장을 선택하여 뽑을 카드 더미에 넣는다.",
+      "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 부적을 모두 뽑을 부적 더미에 넣는다.",
       "refComboId": 1001
     },
     {
@@ -41,7 +41,7 @@
       "cooldown": 5,
       "comboName": "잔염 환생",
       "skillImg": "1001Img",
-      "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 카드 1장을 선택하여 뽑을 카드 더미에 넣는다.",
+      "description": "모든 적에게 피해를 20 준다. 이번 전투에서 소멸한 불 속성 부적을 모두 뽑을 부적 더미에 넣는다.",
       "refComboId": 1001
     },
     {
@@ -85,7 +85,7 @@
       "cooldown": 5,
       "comboName": "축화 일격",
       "skillImg": "1003Img",
-      "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 카드 수 만큼 피해를 준다.",
+      "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 속성 부적 수 만큼 피해를 준다.",
       "refComboId": 1003
     },
     {
@@ -96,7 +96,7 @@
       "cooldown": 5,
       "comboName": "축화 일격",
       "skillImg": "1003Img",
-      "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 카드 수 만큼 피해를 준다.",
+      "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 속성 부적 수 만큼 피해를 준다.",
       "refComboId": 1003
     },
     {
@@ -107,7 +107,7 @@
       "cooldown": 5,
       "comboName": "축화 일격",
       "skillImg": "1003Img",
-      "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 카드 수 만큼 피해를 준다.",
+      "description": "무작위 적에게 피해를 30 준다. 추가로 이번 전투에서 사용한 불 속성 부적 수 만큼 피해를 준다.",
       "refComboId": 1003
     },
     {
@@ -118,7 +118,7 @@
       "cooldown": 5,
       "comboName": "감로 세례",
       "skillImg": "1004Img",
-      "description": "모든 적에게 피해를 10 준다. 최대 체력의 10%만큼 회복한다.",
+      "description": "모든 적에게 피해를 10 준다. 각성 종료 후 패를 가득 채운다.",
       "refComboId": 1004
     },
     {
@@ -129,7 +129,7 @@
       "cooldown": 5,
       "comboName": "수화 상생",
       "skillImg": "1005Img",
-      "description": "무작위 적에게 피해를 20 준다. 최대 체력의 10%만큼 회복한다.",
+      "description": "무작위 적에게 피해를 20 준다. 최대 체력의 5%만큼 회복한다.",
       "refComboId": 1005
     },
     {
@@ -140,7 +140,7 @@
       "cooldown": 5,
       "comboName": "수화 상생",
       "skillImg": "1005Img",
-      "description": "무작위 적에게 피해를 20 준다. 최대 체력의 10%만큼 회복한다.",
+      "description": "무작위 적에게 피해를 20 준다. 최대 체력의 5%만큼 회복한다.",
       "refComboId": 1005
     },
     {
@@ -151,7 +151,7 @@
       "cooldown": 5,
       "comboName": "수화 상생",
       "skillImg": "1005Img",
-      "description": "무작위 적에게 피해를 20 준다. 최대 체력의 10%만큼 회복한다.",
+      "description": "무작위 적에게 피해를 20 준다. 최대 체력의 5%만큼 회복한다.",
       "refComboId": 1005
     },
     {
@@ -162,7 +162,7 @@
       "cooldown": 5,
       "comboName": "동빙 강설",
       "skillImg": "1006Img",
-      "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 5 부여한다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 10 부여한다.",
       "refComboId": 1006
     },
     {
@@ -173,7 +173,7 @@
       "cooldown": 5,
       "comboName": "동빙 강설",
       "skillImg": "1006Img",
-      "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 5 부여한다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 10 부여한다.",
       "refComboId": 1006
     },
     {
@@ -184,7 +184,7 @@
       "cooldown": 5,
       "comboName": "동빙 강설",
       "skillImg": "1006Img",
-      "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 5 부여한다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적에게 빙결을 10 부여한다.",
       "refComboId": 1006
     },
     {
@@ -195,7 +195,7 @@
       "cooldown": 5,
       "comboName": "반석 가호",
       "skillImg": "1007Img",
-      "description": "최대 체력의 10%만큼 회복한다. 방어도를 10 얻는다.",
+      "description": "최대 체력의 5%만큼 회복한다. 방어도를 20 얻는다.",
       "refComboId": 1007
     },
     {
@@ -206,7 +206,7 @@
       "cooldown": 5,
       "comboName": "반석 가호",
       "skillImg": "1007Img",
-      "description": "최대 체력의 10%만큼 회복한다. 방어도를 10 얻는다.",
+      "description": "최대 체력의 5%만큼 회복한다. 방어도를 20 얻는다.",
       "refComboId": 1007
     },
     {
@@ -217,7 +217,7 @@
       "cooldown": 5,
       "comboName": "반석 가호",
       "skillImg": "1007Img",
-      "description": "최대 체력의 10%만큼 회복한다. 방어도를 10 얻는다.",
+      "description": "최대 체력의 5%만큼 회복한다. 방어도를 20 얻는다.",
       "refComboId": 1007
     },
     {
@@ -228,7 +228,7 @@
       "cooldown": 5,
       "comboName": "청룡파천무",
       "skillImg": "1008Img",
-      "description": "무작위 적 하나에게 피해를 30 준다. 연쇄를 10 얻는다.",
+      "description": "무작위 적 하나에게 피해를 30 준다. 연쇄를 20 얻는다.",
       "refComboId": 1008
     },
     {
@@ -239,7 +239,7 @@
       "cooldown": 5,
       "comboName": "열풍 난무",
       "skillImg": "1009Img",
-      "description": "모든 적에게 피해를 10 준다. 이번 각성 때 발동한 콤보 스킬 만큼 반복한다.",
+      "description": "모든 적에게 피해를 15 준다. 이번 각성 때 발동한 사방비급 만큼 반복한다.",
       "refComboId": 1009
     },
     {
@@ -250,7 +250,7 @@
       "cooldown": 5,
       "comboName": "열풍 난무",
       "skillImg": "1009Img",
-      "description": "모든 적에게 피해를 10 준다. 이번 각성 때 발동한 콤보 스킬 만큼 반복한다.",
+      "description": "모든 적에게 피해를 15 준다. 이번 각성 때 발동한 사방비급 만큼 반복한다.",
       "refComboId": 1009
     },
     {
@@ -261,7 +261,7 @@
       "cooldown": 5,
       "comboName": "열풍 난무",
       "skillImg": "1009Img",
-      "description": "모든 적에게 피해를 10 준다. 이번 각성 때 발동한 콤보 스킬 만큼 반복한다.",
+      "description": "모든 적에게 피해를 15 준다. 이번 각성 때 발동한 사방비급 만큼 반복한다.",
       "refComboId": 1009
     },
     {
@@ -272,7 +272,7 @@
       "cooldown": 5,
       "comboName": "선풍 환류",
       "skillImg": "1010Img",
-      "description": "모든 적에게 피해를 20 준다. 패에 있는 카드를 모두 버리고 버린 만큼 다시 뽑는다.",
+      "description": "모든 적에게 피해를 20 준다. 각성 종료 후 패에 있는 부적을 모두 복사하여 뽑을 부적 더미에 넣는다.",
       "refComboId": 1010
     },
     {
@@ -283,7 +283,7 @@
       "cooldown": 5,
       "comboName": "선풍 환류",
       "skillImg": "1010Img",
-      "description": "모든 적에게 피해를 20 준다. 패에 있는 카드를 모두 버리고 버린 만큼 다시 뽑는다.",
+      "description": "모든 적에게 피해를 20 준다. 각성 종료 후 패에 있는 부적을 모두 복사하여 뽑을 부적 더미에 넣는다.",
       "refComboId": 1010
     },
     {
@@ -294,7 +294,7 @@
       "cooldown": 5,
       "comboName": "선풍 환류",
       "skillImg": "1010Img",
-      "description": "모든 적에게 피해를 20 준다. 패에 있는 카드를 모두 버리고 버린 만큼 다시 뽑는다.",
+      "description": "모든 적에게 피해를 20 준다. 각성 종료 후 패에 있는 부적을 모두 복사하여 뽑을 부적 더미에 넣는다.",
       "refComboId": 1010
     },
     {
@@ -305,7 +305,7 @@
       "cooldown": 5,
       "comboName": "태풍 쇄도",
       "skillImg": "1011Img",
-      "description": "무작위 적에게 피해를 3 준다. 연쇄를 보유한 수 만큼 반복한다.",
+      "description": "무작위 적에게 피해를 5 준다. 연쇄를 보유한 수 만큼 반복한다.",
       "refComboId": 1011
     },
     {
@@ -316,7 +316,7 @@
       "cooldown": 5,
       "comboName": "태풍 쇄도",
       "skillImg": "1011Img",
-      "description": "무작위 적에게 피해를 3 준다. 연쇄를 보유한 수 만큼 반복한다.",
+      "description": "무작위 적에게 피해를 5 준다. 연쇄를 보유한 수 만큼 반복한다.",
       "refComboId": 1011
     },
     {
@@ -327,7 +327,7 @@
       "cooldown": 5,
       "comboName": "태풍 쇄도",
       "skillImg": "1011Img",
-      "description": "무작위 적에게 피해를 3 준다. 연쇄를 보유한 수 만큼 반복한다.",
+      "description": "무작위 적에게 피해를 5 준다. 연쇄를 보유한 수 만큼 반복한다.",
       "refComboId": 1011
     },
     {
@@ -349,7 +349,7 @@
       "cooldown": 5,
       "comboName": "용암 파열",
       "skillImg": "1013Img",
-      "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 카드 만큼 피해를 준다.",
+      "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 부적 만큼 피해를 준다.",
       "refComboId": 1013
     },
     {
@@ -360,7 +360,7 @@
       "cooldown": 5,
       "comboName": "용암 파열",
       "skillImg": "1013Img",
-      "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 카드 만큼 피해를 준다.",
+      "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 부적 만큼 피해를 준다.",
       "refComboId": 1013
     },
     {
@@ -371,7 +371,7 @@
       "cooldown": 5,
       "comboName": "용암 파열",
       "skillImg": "1013Img",
-      "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 카드 만큼 피해를 준다.",
+      "description": "모든 적에게 피해를 15 준다. 추가로 이번 전투에서 사용한 파편 부적 만큼 피해를 준다.",
       "refComboId": 1013
     },
     {
@@ -382,7 +382,7 @@
       "cooldown": 5,
       "comboName": "토석 붕류",
       "skillImg": "1014Img",
-      "description": "모든 적에게 피해를 30 준다. 방어도를 10 얻는다.",
+      "description": "모든 적에게 피해를 30 준다. 방어도를 20 얻는다.",
       "refComboId": 1014
     },
     {
@@ -393,7 +393,7 @@
       "cooldown": 5,
       "comboName": "토석 붕류",
       "skillImg": "1014Img",
-      "description": "모든 적에게 피해를 30 준다. 방어도를 10 얻는다.",
+      "description": "모든 적에게 피해를 30 준다. 방어도를 20 얻는다.",
       "refComboId": 1014
     },
     {
@@ -404,7 +404,7 @@
       "cooldown": 5,
       "comboName": "토석 붕류",
       "skillImg": "1014Img",
-      "description": "모든 적에게 피해를 30 준다. 방어도를 10 얻는다.",
+      "description": "모든 적에게 피해를 30 준다. 방어도를 20 얻는다.",
       "refComboId": 1014
     },
     {
@@ -415,7 +415,7 @@
       "cooldown": 5,
       "comboName": "황진 연타",
       "skillImg": "1015Img",
-      "description": "무작위 적에게 피해를 5 준다. 각성 돌입 시 사라진 파편 카드 수 만큼 반복한다.",
+      "description": "무작위 적에게 피해를 15 준다. 각성 돌입 때 사라진 파편 부적 수 만큼 반복한다.",
       "refComboId": 1015
     },
     {
@@ -426,7 +426,7 @@
       "cooldown": 5,
       "comboName": "황진 연타",
       "skillImg": "1015Img",
-      "description": "무작위 적에게 피해를 5 준다. 각성 돌입 시 사라진 파편 카드 수 만큼 반복한다.",
+      "description": "무작위 적에게 피해를 15 준다. 각성 돌입 때 사라진 파편 부적 수 만큼 반복한다.",
       "refComboId": 1015
     },
     {
@@ -437,7 +437,7 @@
       "cooldown": 5,
       "comboName": "황진 연타",
       "skillImg": "1015Img",
-      "description": "무작위 적에게 피해를 5 준다. 각성 돌입 시 사라진 파편 카드 수 만큼 반복한다.",
+      "description": "무작위 적에게 피해를 15 준다. 각성 돌입 때 사라진 파편 부적 수 만큼 반복한다.",
       "refComboId": 1015
     },
     {
@@ -448,7 +448,7 @@
       "cooldown": 5,
       "comboName": "연무 산개",
       "skillImg": "1016Img",
-      "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
     {
@@ -459,7 +459,7 @@
       "cooldown": 5,
       "comboName": "연무 산개",
       "skillImg": "1016Img",
-      "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
     {
@@ -470,7 +470,7 @@
       "cooldown": 5,
       "comboName": "연무 산개",
       "skillImg": "1016Img",
-      "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
     {
@@ -481,7 +481,7 @@
       "cooldown": 5,
       "comboName": "연무 산개",
       "skillImg": "1016Img",
-      "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
     {
@@ -492,7 +492,7 @@
       "cooldown": 5,
       "comboName": "연무 산개",
       "skillImg": "1016Img",
-      "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
     {
@@ -503,7 +503,7 @@
       "cooldown": 5,
       "comboName": "연무 산개",
       "skillImg": "1016Img",
-      "description": "모든 적에게 피해를 20 준다. 그 적의 공격력이 10 만큼 줄어든다.",
+      "description": "모든 적에게 피해를 20 준다. 모든 적의 공격력이 10 만큼 줄어든다.",
       "refComboId": 1016
     },
     {
@@ -514,7 +514,7 @@
       "cooldown": 5,
       "comboName": "원기 해방",
       "skillImg": "1017Img",
-      "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
+      "description": "모든 적에게 피해를 20 준다. 적의 행동게이지를 초기화 시킨다.",
       "refComboId": 1017
     },
     {
@@ -525,7 +525,7 @@
       "cooldown": 5,
       "comboName": "원기 해방",
       "skillImg": "1017Img",
-      "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
+      "description": "모든 적에게 피해를 20 준다. 적의 행동게이지를 초기화 시킨다.",
       "refComboId": 1017
     },
     {
@@ -536,7 +536,7 @@
       "cooldown": 5,
       "comboName": "원기 해방",
       "skillImg": "1017Img",
-      "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
+      "description": "모든 적에게 피해를 20 준다. 적의 행동게이지를 초기화 시킨다.",
       "refComboId": 1017
     },
     {
@@ -547,7 +547,7 @@
       "cooldown": 5,
       "comboName": "원기 해방",
       "skillImg": "1017Img",
-      "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
+      "description": "모든 적에게 피해를 20 준다. 적의 행동게이지를 초기화 시킨다.",
       "refComboId": 1017
     },
     {
@@ -558,7 +558,7 @@
       "cooldown": 5,
       "comboName": "원기 해방",
       "skillImg": "1017Img",
-      "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
+      "description": "모든 적에게 피해를 20 준다. 적의 행동게이지를 초기화 시킨다.",
       "refComboId": 1017
     },
     {
@@ -569,7 +569,7 @@
       "cooldown": 5,
       "comboName": "원기 해방",
       "skillImg": "1017Img",
-      "description": "모든 적에게 피해를 20 준다. 다음 콤보 스킬의 위력이 50% 증가한다.",
+      "description": "모든 적에게 피해를 20 준다. 적의 행동게이지를 초기화 시킨다.",
       "refComboId": 1017
     },
     {
@@ -580,7 +580,7 @@
       "cooldown": 5,
       "comboName": "삼원 연환",
       "skillImg": "1018Img",
-      "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
+      "description": "모든 적에게 피해를 10 준다. 이 기술이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
     },
     {
@@ -591,7 +591,7 @@
       "cooldown": 5,
       "comboName": "삼원 연환",
       "skillImg": "1018Img",
-      "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
+      "description": "모든 적에게 피해를 10 준다. 이 기술이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
     },
     {
@@ -602,7 +602,7 @@
       "cooldown": 5,
       "comboName": "삼원 연환",
       "skillImg": "1018Img",
-      "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
+      "description": "모든 적에게 피해를 10 준다. 이 기술이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
     },
     {
@@ -613,7 +613,7 @@
       "cooldown": 5,
       "comboName": "삼원 연환",
       "skillImg": "1018Img",
-      "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
+      "description": "모든 적에게 피해를 10 준다. 이 기술이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
     },
     {
@@ -624,7 +624,7 @@
       "cooldown": 5,
       "comboName": "삼원 연환",
       "skillImg": "1018Img",
-      "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
+      "description": "모든 적에게 피해를 10 준다. 이 기술이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
     },
     {
@@ -635,7 +635,7 @@
       "cooldown": 5,
       "comboName": "삼원 연환",
       "skillImg": "1018Img",
-      "description": "모든 적에게 피해를 10 준다. 이 스킬이 반복된 수 만큼 반복한다.",
+      "description": "모든 적에게 피해를 10 준다. 이 기술이 반복된 수 만큼 반복한다.",
       "refComboId": 1018
     },
     {
@@ -646,7 +646,7 @@
       "cooldown": 5,
       "comboName": "절명 추격",
       "skillImg": "1019Img",
-      "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
+      "description": "모든 적에게 피해를 30 준다. 각성 종료 후 둔화, 탈진을 모두 제거한다.",
       "refComboId": 1019
     },
     {
@@ -657,7 +657,7 @@
       "cooldown": 5,
       "comboName": "절명 추격",
       "skillImg": "1019Img",
-      "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
+      "description": "모든 적에게 피해를 30 준다. 각성 종료 후 둔화, 탈진을 모두 제거한다.",
       "refComboId": 1019
     },
     {
@@ -668,7 +668,7 @@
       "cooldown": 5,
       "comboName": "절명 추격",
       "skillImg": "1019Img",
-      "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
+      "description": "모든 적에게 피해를 30 준다. 각성 종료 후 둔화, 탈진을 모두 제거한다.",
       "refComboId": 1019
     },
     {
@@ -679,7 +679,7 @@
       "cooldown": 5,
       "comboName": "절명 추격",
       "skillImg": "1019Img",
-      "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
+      "description": "모든 적에게 피해를 30 준다. 각성 종료 후 둔화, 탈진을 모두 제거한다.",
       "refComboId": 1019
     },
     {
@@ -690,7 +690,7 @@
       "cooldown": 5,
       "comboName": "절명 추격",
       "skillImg": "1019Img",
-      "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
+      "description": "모든 적에게 피해를 30 준다. 각성 종료 후 둔화, 탈진을 모두 제거한다.",
       "refComboId": 1019
     },
     {
@@ -701,7 +701,7 @@
       "cooldown": 5,
       "comboName": "절명 추격",
       "skillImg": "1019Img",
-      "description": "무작위 적에게 피해를 20 준다. 이 콤보 스킬로 적을 처치했다면 쿨타임이 돌지 않음.",
+      "description": "모든 적에게 피해를 30 준다. 각성 종료 후 둔화, 탈진을 모두 제거한다.",
       "refComboId": 1019
     }
   ]

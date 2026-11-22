@@ -157,6 +157,15 @@ public class EnemyStat : MonoBehaviour
         OnGaugeFull?.Invoke();
     }
 
+    // 콤보(행동게이지 초기화): 게이지를 0으로 되돌리고 이번 사이클 방해행동도 다시 발동 가능하게 한다
+    public void ResetGauge()
+    {
+        if (!IsAlive) return;
+        gaugeStep = 0;
+        midPatternTriggered = false;
+        OnGaugeStepChanged?.Invoke(0f);
+    }
+
     // [테스트] 게이지를 공격 직전(최대-1)까지 채운다 — 다음 플레이어 행동에 공격
     public void FillGaugeToAlmostFull()
     {

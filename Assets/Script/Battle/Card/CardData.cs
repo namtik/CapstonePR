@@ -77,6 +77,8 @@ namespace Battle.Card
 
         public int selfUseCount;       // 이 인스턴스 누적 사용 횟수
 
+        public int gaugeCostModifier;  // 이번 전투 동안의 게이지 코스트 증감(청류 202 등, 전투 시작 시 0으로 초기화)
+
         // 카드 데이터로 인스턴스 생성
         public CardInstance(CardData data, bool transient = false)
         {
@@ -92,7 +94,7 @@ namespace Battle.Card
         public CardElement Element => data.element;
         // 카드 유형
         public CardType Type => data.type;
-        // 게이지 코스트
-        public int Gauge => data.gauge;
+        // 게이지 코스트(이번 전투 증감 반영, 0 하한)
+        public int Gauge => System.Math.Max(0, data.gauge + gaugeCostModifier);
     }
 }

@@ -40,6 +40,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         return newSystemAttackSequence;
     }
     private bool _nextAttackBuffed = false; // 다음 공격 +50% 강화 여부
+    private int _nextAttackPowerMod = 0; // 다음 공격 1회 피해 증감(콤보 공격력 감소 등)
 
     private EnemyStat stat; // 적 스탯 컴포넌트
     private IEnemyView view; // 적 뷰(2D UI 또는 3D 모델)
@@ -268,6 +269,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             nextDamage += _escalateBonus + ahead;               // 풍식귀: 공격마다 1씩 누적
         if (_nextAttackBuffed && ahead == 0)
             nextDamage = Mathf.CeilToInt(nextDamage * 1.5f);    // 방해행동-강화: 다음 공격 +50%
+        if (ahead == 0 && _nextAttackPowerMod != 0)
+            nextDamage = Mathf.Max(0, nextDamage + _nextAttackPowerMod); // 콤보: 다음 공격 1회 공격력 증감
         if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp && _halfHpTriggered)
             nextDamage *= 2;                                    // 무사: 체력 절반 도달 후 2배
         return nextDamage;
@@ -438,6 +441,23 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     }
     public bool IsNextAttackBuffed => _nextAttackBuffed; // 다음 공격 강화 적용 여부
 
+    // 콤보: 다음 공격 1회의 피해를 delta만큼 증감(음수=감소, 누적)
+    public void ModifyNextAttackPower(int delta)
+    {
+        if (delta == 0) return;
+        _nextAttackPowerMod += delta;
+        UpdateAttackPreviewForNewSystem();
+    }
+
+    // 콤보(행동게이지 초기화): 게이지를 0으로 되돌리고 대기 중인 공격·방해 행동을 취소
+    public void ResetActionGauge()
+    {
+        if (stat == null || !IsAlive) return;
+        stat.ResetGauge();
+        Battle.NewBattleController.Instance?.CancelQueuedActions(this);
+        UpdateAttackPreviewForNewSystem();
+    }
+
     void RefreshPowerUpIcon()
     {
         EnemyPowerUpMark.Apply(view != null ? view.HpBarRect : null, _nextAttackBuffed);
@@ -521,6 +541,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             RefreshPowerUpIcon();
             view?.ShowMidPatternNotice("강화!");
             Debug.Log($"[적 강화] 다음 공격 +50% → {damagePerHit}");
+        }
+
+        // 콤보(공격력 감소 등): 다음 공격 1회 한정 피해 증감
+        if (_nextAttackPowerMod != 0)
+        {
+            damagePerHit = Mathf.Max(0, damagePerHit + _nextAttackPowerMod);
+            Debug.Log($"[적 공격력 변경] 다음 공격 {_nextAttackPowerMod:+0;-0} → {damagePerHit}");
+            _nextAttackPowerMod = 0;
         }
 
         // 특이사항(무사): 체력 절반 도달 후 피해 2배
