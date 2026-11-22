@@ -83,6 +83,7 @@ public class EnemyOverlayHUD : MonoBehaviour
     private bool _barBaseCaptured;      // 기준 위치 저장 여부
     private bool _headLocked;           // 머리 위치를 한 번 잡았는지
     private Vector3 _lockedHead;        // 전투 시작 시 머리 월드 좌표. 애니메이션·피격 흔들림은 무시한다.
+    private Vector2 _screenOffset;      // 이 적만 추가로 내리는 화면 픽셀. 전역 오프셋에 더한다.
     private RoundManager _roundManager; // 바 높이 조절값. 씬에 있는 RoundManager에서 읽는다.
 
     const float DefaultOffsetX = 0f;
@@ -109,13 +110,14 @@ public class EnemyOverlayHUD : MonoBehaviour
     }
 
     // 3D 몬스터 전투 시작. followWorld면 이 적 전용 바를 만들어 머리 위에 붙인다.
-    public void Bind(Transform worldAnchor, Camera renderCamera, int gaugeMax, bool followWorld = false, float barScale = 1f)
+    public void Bind(Transform worldAnchor, Camera renderCamera, int gaugeMax, bool followWorld = false, float barScale = 1f, Vector2 screenOffset = default)
     {
         _gaugeMax = Mathf.Max(1, gaugeMax);
         _worldAnchor = worldAnchor;
         _renderCamera = renderCamera;
         _followWorld = followWorld && worldAnchor != null;
         _barScale = Mathf.Max(0.01f, barScale);
+        _screenOffset = screenOffset;
         _headLocked = false;
         if (_roundManager == null) _roundManager = FindFirstObjectByType<RoundManager>();
         if (_followWorld) PreparePerEnemyBars();
@@ -216,6 +218,7 @@ public class EnemyOverlayHUD : MonoBehaviour
         {
             hpBar = hp.GetComponent<Slider>();
             hpValueText = FindNamed<TMP_Text>(hp.transform, "HpValueText");
+            AlignHpReadout(hpValueText);
             // HP 바 안에 들어 있는 게이지가 세트다. 루트에 따로 붙은 복제본은 지운다.
             var nested = hp.transform.Find("gaugeSlider");
             if (nested != null)
@@ -406,7 +409,7 @@ public class EnemyOverlayHUD : MonoBehaviour
         Vector3 world = _headLocked ? _lockedHead : _worldAnchor.position + Vector3.up * 1.6f;
         Vector3 sp = cam.WorldToScreenPoint(world);
         if (sp.z < 0f) return;
-        _barRoot.position = new Vector3(sp.x + offsetX, sp.y + offsetY, 0f);
+        _barRoot.position = new Vector3(sp.x + offsetX + _screenOffset.x, sp.y + offsetY + _screenOffset.y, 0f);
     }
 
     // 메시 꼭대기를 한 번만 읽는다. 이후 공격·대기·피격 흔들림은 바 위치에 반영하지 않는다.
@@ -492,7 +495,39 @@ public class EnemyOverlayHUD : MonoBehaviour
     {
         if (hpBar != null) hpBar.value = max > 0f ? current / max : 0f;
         if (hpValueText != null)
+        {
+            AlignHpReadout(hpValueText);
             hpValueText.text = $"{Mathf.Max(0, Mathf.RoundToInt(current))}/{Mathf.Max(0, Mathf.RoundToInt(max))}";
+        }
+    }
+
+    // 숫자가 바 한가운데에 오게 맞춘다. 왼쪽 정렬 + 오른쪽 여백이면 두 자리는 가운데처럼 보이고 세 자리부터 한쪽으로 밀린다.
+    public static void AlignHpReadout(TMP_Text text)
+    {
+        if (text == null) return;
+
+        RectTransform rt = text.rectTransform;
+        RectTransform parent = rt.parent as RectTransform;
+        float barWidth = 0f;
+        if (parent != null)
+        {
+            barWidth = parent.rect.width;
+            if (barWidth < 1f) barWidth = parent.sizeDelta.x;
+        }
+
+        float y = rt.anchoredPosition.y;
+        float height = rt.sizeDelta.y > 1f ? rt.sizeDelta.y : 50f;
+        float width = Mathf.Max(rt.sizeDelta.x, barWidth);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = new Vector2(0f, y);
+        rt.sizeDelta = new Vector2(width, height);
+
+        text.alignment = TextAlignmentOptions.Center;
+        Vector4 margin = text.margin;
+        text.margin = new Vector4(0f, margin.y, 0f, margin.w);
+        text.enableWordWrapping = false;
+        text.overflowMode = TextOverflowModes.Overflow;
     }
 
     // 행동 게이지 바/수치 갱신(0~1)

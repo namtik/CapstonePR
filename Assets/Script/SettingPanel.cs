@@ -114,6 +114,7 @@ public class SettingPanel : MonoBehaviour
     }
 
     GameObject soundReturnCanvas; // 사운드 설정을 닫을 때 복귀할 캔버스
+    bool includeMainMenuButton = true; // 메인 메뉴에서 연 설정은 메인 메뉴 버튼을 숨긴다
     Coroutine animRoutine; // 열림/닫힘 연출
     System.Action pendingConfirm; // 확인 팝업에서 예 선택 시 실행
     bool isClosing; // 닫힘 연출 진행 중
@@ -286,17 +287,59 @@ public class SettingPanel : MonoBehaviour
         }
     }
 
-    // 설정 캔버스를 열고 게임을 일시정지한다
+    // 설정 캔버스를 열고 게임을 일시정지한다. 인게임에서는 버튼 4개를 모두 보여 준다.
     public void OpenSettings()
+    {
+        ShowSettings(true);
+    }
+
+    // 메인 메뉴에서 연 설정은 메인 메뉴 버튼을 빼고 나머지 3개만 보여 준다.
+    public void OpenSettingsFromMainMenu()
+    {
+        ShowSettings(false);
+    }
+
+    void ShowSettings(bool includeMainMenu)
     {
         if (settingCanvas == null || isClosing)
             return;
 
+        ApplyMainMenuButton(includeMainMenu);
         HideConfirm();
         settingCanvas.SetActive(true);
         BringPauseUiToFront();
         Time.timeScale = 0f;
         PlayAnim(true);
+    }
+
+    // 메인 메뉴 버튼 표시가 바뀌면 레이아웃 기준 위치를 다시 잡는다
+    void ApplyMainMenuButton(bool include)
+    {
+        includeMainMenuButton = include;
+        if (mainMenuButton == null)
+            return;
+
+        if (mainMenuButton.gameObject.activeSelf == include)
+            return;
+
+        mainMenuButton.gameObject.SetActive(include);
+        ClearMenuButtonCache();
+    }
+
+    void ClearMenuButtonCache()
+    {
+        if (menuLayout != null)
+            menuLayout.enabled = true;
+
+        menuButtons.Clear();
+        menuButtonGroups.Clear();
+        menuHovers.Clear();
+        menuRestPos.Clear();
+        menuRestScale.Clear();
+        menuFromPos.Clear();
+        menuFromScale.Clear();
+        menuFromAlpha.Clear();
+        menuRestCached = false;
     }
 
     // 딤을 클릭하면 확인 팝업이 없을 때 창을 닫는다
@@ -514,7 +557,7 @@ public class SettingPanel : MonoBehaviour
         RectTransform group = null;
         for (int i = 0; i < sources.Length; i++)
         {
-            if (sources[i] == null)
+            if (sources[i] == null || !sources[i].gameObject.activeSelf)
                 continue;
 
             var rt = sources[i].transform as RectTransform;
@@ -766,7 +809,7 @@ public class SettingPanel : MonoBehaviour
 
         if (ret == settingCanvas)
         {
-            OpenSettings();
+            ShowSettings(includeMainMenuButton);
             return;
         }
 

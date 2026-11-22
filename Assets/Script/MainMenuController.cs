@@ -163,7 +163,7 @@ public class MainMenuController : MonoBehaviour
         ResolveReferences();
 
         if (settingPanel != null)
-            settingPanel.OpenSettings();
+            settingPanel.OpenSettingsFromMainMenu();
         else
             Debug.LogWarning("[MainMenuController] 메인 메뉴 설정 캔버스도, SettingPanel도 찾지 못해 설정을 열 수 없습니다.");
     }

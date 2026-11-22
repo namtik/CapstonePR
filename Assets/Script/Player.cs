@@ -334,9 +334,16 @@ public class Player : MonoBehaviour, IBattleUnit
     // 피해를 받고 방어도 소모·HP 감소·사망 처리 및 트리거를 발생시킨다
     public void TakeDamage(float damage, string cardtype = "normal")
     {
+        TakeDamage(damage, cardtype, null);
+    }
+
+    // sourceName은 이 피해로 죽이면 게임오버 문장에 쓰는 몬스터 이름
+    public void TakeDamage(float damage, string cardtype, string sourceName)
+    {
         float incomingDamage = damage;
         float guardBefore = guard;
         float hpBefore = currentHp;
+        bool wasAlive = currentHp > 0f;
         bool blockConsumed = false;
         if (guard > 0)
         {
@@ -365,8 +372,10 @@ public class Player : MonoBehaviour, IBattleUnit
             if (cardtype != "burn" && cardtype != "self_loss")
                 SfxManager.Instance?.PlayPlayerHit();
 
-            if (currentHp <= 0)
+            if (wasAlive && currentHp <= 0f)
             {
+                if (!string.IsNullOrWhiteSpace(sourceName))
+                    GameStateController.Instance?.RecordRunKiller(sourceName);
                 Die();
             }
         }

@@ -223,6 +223,7 @@ namespace Battle
         {
             public CardElement element;
             public int remainingUses;
+            public string sourceName; // 이 저주를 건 몬스터. 저주로 죽으면 게임오버 문장에 쓴다.
         }
         private readonly List<ActiveCurse> _curses = new List<ActiveCurse>(); // 중첩 가능한 속성 저주
         private int _recoverCooldown;               // 방해행동(회복) 쿨다운
@@ -1163,11 +1164,22 @@ namespace Battle
             _cardPresenting = true;
 
             if (handHud != null)
-                handHud.PlayCardUsePresentation(card, () => { ResolveCardUse(card); _cardPresenting = false; });
+            {
+                handHud.PlayCardUsePresentation(card, () =>
+                {
+                    try { ResolveCardUse(card); }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
+                    }
+                    finally { _cardPresenting = false; }
+                });
+            }
             else
             {
-                ResolveCardUse(card);
-                _cardPresenting = false;
+                try { ResolveCardUse(card); }
+                catch (System.Exception ex) { Debug.LogException(ex); }
+                finally { _cardPresenting = false; }
             }
             return true;
         }
@@ -2047,7 +2059,8 @@ namespace Battle
                 {
                     CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
                     CardElement target = elements[Random.Range(0, elements.Length)];
-                    ApplyElementCurse(target, CURSE_DURATION_USES);
+                    string curseSource = _enemyStat != null && _enemyStat.Data != null ? _enemyStat.Data.enemyName : null;
+                    ApplyElementCurse(target, CURSE_DURATION_USES, curseSource);
                     if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0);
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
                     return $"방해: {ElementName(target)} 저주!";
@@ -2312,7 +2325,7 @@ namespace Battle
                 ActiveCurse curse = _curses[i];
                 if (card.Element == curse.element && _player != null)
                 {
-                    _player.TakeDamage(CURSE_PLAYER_DAMAGE);
+                    _player.TakeDamage(CURSE_PLAYER_DAMAGE, "normal", curse.sourceName);
                     Log($"[저주] {curse.element} 카드 사용 — 플레이어 {CURSE_PLAYER_DAMAGE} 피해");
                     if (_track != null && _track.action == 0) _track.curseHits++;
                 }
@@ -2535,28 +2548,30 @@ namespace Battle
         // ─────────────────────────────────────────────────────────────
 
         // 특이사항: 지정 속성에 저주 부여(uses회 카드 사용 동안 지속)
-        public void ApplyElementCurse(CardElement element, int uses)
+        public void ApplyElementCurse(CardElement element, int uses, string sourceName = null)
         {
             uses = Mathf.Max(1, uses);
             for (int i = 0; i < _curses.Count; i++)
             {
                 if (_curses[i].element != element) continue;
                 _curses[i].remainingUses += uses;
+                if (!string.IsNullOrWhiteSpace(sourceName))
+                    _curses[i].sourceName = sourceName;
                 handHud?.Refresh();
                 Log($"[특이사항] {ElementName(element)} 속성 저주 중첩 — {_curses[i].remainingUses}회 지속");
                 return;
             }
 
-            _curses.Add(new ActiveCurse { element = element, remainingUses = uses });
+            _curses.Add(new ActiveCurse { element = element, remainingUses = uses, sourceName = sourceName });
             handHud?.Refresh();
             Log($"[특이사항] {ElementName(element)} 속성 저주 — {uses}회 지속");
         }
 
         // 특이사항: 무작위 속성에 저주 부여
-        public void CurseRandomElement(int uses)
+        public void CurseRandomElement(int uses, string sourceName = null)
         {
             CardElement[] elements = { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth };
-            ApplyElementCurse(elements[Random.Range(0, elements.Length)], uses);
+            ApplyElementCurse(elements[Random.Range(0, elements.Length)], uses, sourceName);
         }
 
         // 특이사항: 패에서 count장을 무작위로 버림

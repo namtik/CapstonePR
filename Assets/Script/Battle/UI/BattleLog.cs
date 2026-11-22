@@ -374,6 +374,14 @@ namespace Battle.UI
             _combatBuffer.Clear();
         }
 
+        // 유물 기록에 붙이지 못한 채 남아 있으면, 다음 카드 기록으로 새지 않게 버린다.
+        public static void CancelCombatCapture()
+        {
+            if (!_capturingCombat) return;
+            _combatBuffer.Clear();
+            _capturingCombat = false;
+        }
+
         public static void NotePlayer(CombatKind kind, int amount, bool gained)
         {
             NoteCombat(true, -1, kind, amount, gained);
@@ -528,7 +536,9 @@ namespace Battle.UI
         public static void RecordRelic(Sprite icon, string relicName)
         {
             if (!InBattle || icon == null) return;
-            Push(Kind.Relic, icon, null, false, 0, relicName, null);
+            // 유물 효과 중에 모은 방어도·피해는 별도 칸이 아니라 이 유물 호버에 붙인다.
+            List<CombatNote> combat = _capturingCombat ? TakeCombat() : null;
+            Push(Kind.Relic, icon, null, false, 0, relicName, null, null, combat);
         }
 
         static Sprite MonsterMark(int monsterIndex)

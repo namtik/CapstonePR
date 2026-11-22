@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 // 플레이어 사망 시 눈꺼풀 감김 연출과 다시하기/종료 버튼을 처리하는 컨트롤러
 public class GameOverController : MonoBehaviour
@@ -28,6 +29,14 @@ public class GameOverController : MonoBehaviour
     [Tooltip("닫힘 시 중앙에서 약간 겹치게 해 검은 틈을 방지한다.")]
     [SerializeField] private float centerOverlap = 4f; // 중앙 겹침 보정값
 
+    [Header("사망 결과")]
+    [Tooltip("문장 안의 N을 이번 런 처치 수로 바꾼다.")]
+    [SerializeField] private TMP_Text defeatText;
+    [Tooltip("사망한 스테이지. 상단 스테이지 표시와 같은 바퀴-스테이지.")]
+    [SerializeField] private TMP_Text finalStageText;
+    [Tooltip("처치한 몬스터 초상화를 왼쪽 위부터 채운다. 초상화는 전투 로그와 같은 스프라이트.")]
+    [SerializeField] private RectTransform killedMonsters;
+
     private Vector2 topClosedPos; // 위 눈꺼풀 닫힘 위치
     private Vector2 topOpenPos; // 위 눈꺼풀 열림 위치
     private Vector2 bottomClosedPos; // 아래 눈꺼풀 닫힘 위치
@@ -35,6 +44,7 @@ public class GameOverController : MonoBehaviour
     private bool positionsCached; // 눈꺼풀 위치 캐시 완료 여부
     private bool isDead; // 사망 연출 진행 중 여부
     private Coroutine animRoutine; // 진행 중인 연출 코루틴
+    private string defeatTextTemplate; // N이 들어 있는 원문
 
     // 초기화: 싱글턴 설정, 위치 캐시, 캔버스 비활성화, 버튼 리스너 연결
     void Awake()
@@ -44,6 +54,9 @@ public class GameOverController : MonoBehaviour
 
         if (gameOverCanvas != null)
             gameOverCanvas.SetActive(false);
+
+        if (defeatText != null)
+            defeatTextTemplate = defeatText.text.Replace("</color=#AC0013>", "</color>");
 
         if (retryButton != null)
         {
@@ -108,6 +121,8 @@ public class GameOverController : MonoBehaviour
         if (gameOverCanvas != null)
             gameOverCanvas.SetActive(true);
 
+        ShowDeathResult();
+
         if (buttonGroup != null)
             buttonGroup.SetActive(false);
 
@@ -119,6 +134,43 @@ public class GameOverController : MonoBehaviour
 
         if (animRoutine != null) StopCoroutine(animRoutine);
         animRoutine = StartCoroutine(CloseEyelids());
+    }
+
+    // 처치 수, 사망 스테이지, 처치 초상화를 게임오버 화면에 넣는다
+    void ShowDeathResult()
+    {
+        GameStateController state = GameStateController.Instance;
+        int count = state != null ? state.RunKillCount : 0;
+
+        if (defeatText != null)
+        {
+            string body = string.IsNullOrEmpty(defeatTextTemplate) ? defeatText.text : defeatTextTemplate;
+            string killer = state != null ? state.RunKillerName : null;
+            if (string.IsNullOrWhiteSpace(killer))
+                killer = FallbackKillerName();
+            if (string.IsNullOrWhiteSpace(killer))
+                killer = "요괴";
+            defeatText.text = body.Replace(">N<", ">" + count + "<").Replace("가라카사오바케", killer);
+        }
+
+        if (finalStageText != null && state != null)
+            finalStageText.text = state.CurrentDisplayLap + "-" + state.CurrentDisplayStage;
+
+        RunKillGallery.Fill(killedMonsters, state != null ? state.RunKills : null);
+    }
+
+    // 죽인 쪽이 기록되지 않았으면, 지금 전투 중인 몬스터 이름을 쓴다.
+    static string FallbackKillerName()
+    {
+        EnemyController enemy = EnemyCombatParty.AliveCount == 1
+            ? EnemyCombatParty.FirstAlive()
+            : EnemyCombatParty.CurrentTarget;
+        if (enemy == null)
+            enemy = EnemyCombatParty.FirstAlive();
+        if (enemy == null) return null;
+
+        EnemyStat stat = enemy.GetComponent<EnemyStat>();
+        return stat != null && stat.Data != null ? stat.Data.enemyName : null;
     }
 
     // 눈꺼풀을 닫는 코루틴 (감긴 뒤 버튼 그룹 표시)

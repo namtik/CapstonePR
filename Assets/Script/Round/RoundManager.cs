@@ -524,6 +524,13 @@ public class RoundManager : MonoBehaviour
     {
         GrantTieredCombatGold();
 
+        // 2스테이지 보스는 카드·콤보 보상 없이, 전투 스테이지 위에 클리어 화면만 띄운다.
+        if (IsFinalClearBoss())
+        {
+            ShowFinalClearOnBattleStage();
+            return;
+        }
+
         if (IsNewBattleSystemActive())
         {
             ShowCardReward();
@@ -582,6 +589,22 @@ public class RoundManager : MonoBehaviour
     });
 }
 
+    // 최종 보스 클리어: 맵으로 나가지 않고, 보스를 잡은 전투 스테이지 위에 클리어 패널을 띄운다.
+    void ShowFinalClearOnBattleStage()
+    {
+        GameStateController state = GameStateController.Instance;
+        if (state != null)
+        {
+            state.RegisterBossDefeat();
+            state.MarkNodeCleared(state.lastVisitedNodeIndex);
+        }
+
+        if (GameClearController.Instance != null && GameClearController.Instance.IsReady)
+            GameClearController.Instance.ShowGameClear();
+        else
+            Debug.LogError("[RoundManager] GameClearController가 없어 전투 스테이지 위에 클리어 화면을 띄우지 못했습니다.");
+    }
+
     // 보상 종료 후 걷기 연출을 거쳐 맵으로 복귀한다(연출 OFF면 즉시 복귀).
     void ReturnToMapWithWalk()
     {
@@ -594,6 +617,16 @@ public class RoundManager : MonoBehaviour
         var walk = FindFirstObjectByType<BattleWalkTransition>();
         if (walk == null) walk = new GameObject("BattleWalkTransition").AddComponent<BattleWalkTransition>();
         walk.Play(ReturnToMap);
+    }
+
+    // 이번 보스 처치로 런이 끝나는지. 보상 UI를 띄우기 전이라 처치 수는 아직 오르지 않았다.
+    bool IsFinalClearBoss()
+    {
+        if (DebugRoundActive) return false;
+        if (currentRoundData is not BossRoundData) return false;
+
+        GameStateController state = GameStateController.Instance;
+        return state != null && state.bossDefeatCount + 1 >= GameStateController.RequiredBossDefeats;
     }
 
     // 카드 보상 후 콤보 책 보상을 표시할 라운드인지 판정한다(정예/보스).
@@ -703,7 +736,9 @@ public class RoundManager : MonoBehaviour
 
     void ReturnToMapNow()
     {
-        StageManager.Instance?.HideStage(); // 전투 이탈 — 3D 스테이지 숨김
+        // 최종 보스 클리어는 전투 스테이지를 유지한다. 맵 복귀에서만 스테이지를 숨긴다.
+        if (!IsFinalClearBoss())
+            StageManager.Instance?.HideStage(); // 전투 이탈 — 3D 스테이지 숨김
         if (!IsNewBattleSystemActive())
             ElementSlotSystem.Instance?.EndBattle();
 
@@ -1042,9 +1077,12 @@ public class RoundManager : MonoBehaviour
     // 적 사망 시 재화 연출을 띄우고, 남은 적이 없으면 라운드 종료를 예약한다.
     void OnPartyMemberDied(EnemyStat stat, IEnemyView view)
     {
+        if (!DebugRoundActive && stat != null && stat.Data != null && GameStateController.Instance != null)
+            GameStateController.Instance.RecordRunKill(stat.Data.enemySprite, stat.Data.enemyName, stat.Data.enemyClass);
+
         Vector2 screen = ResolveDeathScreen(stat, view);
         PlayKillReward(screen);
-        if (IsLastRewardKill())
+        if (IsLastRewardKill() && !IsFinalClearBoss())
             RewardDropFx.Play(screen, ShouldShowComboBookRewardAfterCard());
         HandleEnemyDied();
     }
