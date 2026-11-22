@@ -311,6 +311,9 @@ namespace Battle
             {
                 _player.OnPlayerHit -= OnPlayerHitHandler;
                 _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
+                _player.OnGuardGained -= OnGuardGainedHandler;
+                _player.OnGuardBrokenByDamage -= OnGuardBrokenByDamageHandler;
+                _player.OnGuardAbsorbedHit -= OnGuardAbsorbedHitHandler;
                 _player.OnHpDecreased -= OnPlayerHpDecreasedHandler;
             }
             UnbindPartyEvents();
@@ -388,6 +391,12 @@ namespace Battle
         // 전투 진입 — 참조/컨텍스트/덱/UI 초기화 후 시작 드로우
         public void StartBattle()
         {
+            if (_player != null)
+            {
+                _player.OnGuardGained -= OnGuardGainedHandler;
+                _player.OnGuardBrokenByDamage -= OnGuardBrokenByDamageHandler;
+                _player.OnGuardAbsorbedHit -= OnGuardAbsorbedHitHandler;
+            }
             _player = Player.Resolve(true);
             BindParty();
             _ctx.player = _player;
@@ -405,6 +414,9 @@ namespace Battle
                 _player.OnPlayerHit += OnPlayerHitHandler;
                 _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
                 _player.OnBlockConsumedByAttack += OnBlockConsumedHandler;
+                _player.OnGuardGained += OnGuardGainedHandler;
+                _player.OnGuardBrokenByDamage += OnGuardBrokenByDamageHandler;
+                _player.OnGuardAbsorbedHit += OnGuardAbsorbedHitHandler;
                 _player.OnHpDecreased -= OnPlayerHpDecreasedHandler;
                 _player.OnHpDecreased += OnPlayerHpDecreasedHandler;
             }
@@ -528,6 +540,12 @@ namespace Battle
         public void EndBattle()
         {
             _inBattle = false;
+            if (_player != null)
+            {
+                _player.OnGuardGained -= OnGuardGainedHandler;
+                _player.OnGuardBrokenByDamage -= OnGuardBrokenByDamageHandler;
+                _player.OnGuardAbsorbedHit -= OnGuardAbsorbedHitHandler;
+            }
             BattleLog.Clear();
             _cardPresenting = false;
             _awakenActive = false;
@@ -833,6 +851,24 @@ namespace Battle
             if (!_inBattle) return;
             for (int i = 0; i < pending.Length; i++)
                 RelicManager.Instance?.NotifyPlayerHpLost(this, pending[i].amount, pending[i].first);
+        }
+
+        void OnGuardGainedHandler()
+        {
+            if (_inBattle && isActiveAndEnabled && effectOverlay != null)
+                effectOverlay.PlayGuardGain();
+        }
+
+        void OnGuardBrokenByDamageHandler()
+        {
+            if (_inBattle && isActiveAndEnabled && effectOverlay != null)
+                effectOverlay.PlayGuardBreak();
+        }
+
+        void OnGuardAbsorbedHitHandler()
+        {
+            if (_inBattle && isActiveAndEnabled && effectOverlay != null)
+                effectOverlay.PlayGuardBlock();
         }
 
         // 땅18(417): 방어도 소모 시 무작위 파편 1장 버린 더미에
