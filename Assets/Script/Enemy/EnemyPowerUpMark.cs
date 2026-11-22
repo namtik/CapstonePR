@@ -120,6 +120,8 @@ public class EnemyPowerUpMark : MonoBehaviour
         RoundManager style = FindFirstObjectByType<RoundManager>(FindObjectsInactive.Include);
         if (style != null && style.EnemyPowerUpIcon != null)
             _sprite = style.EnemyPowerUpIcon;
+        if (_sprite == null && BuildAssetRefs.Instance != null)
+            _sprite = BuildAssetRefs.Instance.enemyPowerUpIcon;
 #if UNITY_EDITOR
         if (_sprite == null)
             _sprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);

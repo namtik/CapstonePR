@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b0aee5e1bb84c5396f4e39e4d7f1627, type: 3}
+  m_Name: BuildAssetRefs
+  m_EditorClassIdentifier: Assembly-CSharp::BuildAssetRefs
+  comboBookPrefab: {fileID: 508118524899797681, guid: 3027a1c9e6009d243a0057e42cb33a1c, type: 3}
+  chosunFont: {fileID: 12800000, guid: 94e3c937c821b064eaa6ed84c5a98999, type: 3}
+  nyjUnheoFont: {fileID: 11400000, guid: 624ba3875d81cfd41b8f6058c7c3e447, type: 2}
+  enemyPowerUpIcon: {fileID: 21300000, guid: af0309d150631c145bbf26d3b582be94, type: 3}
+  statusIconDatabase: {fileID: 11400000, guid: b620407d6d749a54c8c245e88ddf4747, type: 2}

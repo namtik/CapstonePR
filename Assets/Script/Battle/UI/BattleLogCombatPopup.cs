@@ -315,8 +315,9 @@ namespace Battle.UI
             prefab = _comboBookPrefab;
             if (prefab == null)
             {
+                prefab = BuildAssetRefs.Instance != null ? BuildAssetRefs.Instance.comboBookPrefab : null;
 #if UNITY_EDITOR
-                prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(ComboBookPrefabPath);
+                if (prefab == null) prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(ComboBookPrefabPath);
 #endif
                 _comboBookPrefab = prefab;
             }
@@ -431,8 +432,10 @@ namespace Battle.UI
         TMP_FontAsset ChosunFont()
         {
             if (_chosunFont != null) return _chosunFont;
+            Font source = BuildAssetRefs.Instance != null ? BuildAssetRefs.Instance.chosunFont : null;
 #if UNITY_EDITOR
-            Font source = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>(ChosunFontPath);
+            if (source == null) source = UnityEditor.AssetDatabase.LoadAssetAtPath<Font>(ChosunFontPath);
+#endif
             if (source != null)
             {
                 _chosunFont = TMP_FontAsset.CreateFontAsset(
@@ -441,14 +444,13 @@ namespace Battle.UI
                 {
                     _chosunFont.TryAddCharacters("+0123456789");
                     ShaderUtilities.GetShaderPropertyIDs();
-                    TMP_FontAsset reference = UnityEditor.AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/NYJUnheo SDF.asset");
+                    TMP_FontAsset reference = LoadUnheoFont();
                     if (reference != null && reference.material != null && reference.material.shader != null && _chosunFont.material != null)
                         _chosunFont.material.shader = reference.material.shader;
                     if (_chosunFont.material != null)
                         _chosunFont.material.SetFloat(ShaderUtilities.ID_GradientScale, _chosunFont.atlasPadding + 1f);
                 }
             }
-#endif
             if (_chosunFont == null) _chosunFont = _font;
             return _chosunFont;
         }
@@ -750,13 +752,21 @@ namespace Battle.UI
                 out local);
         }
 
+        // 전투 로그 기본 TMP 폰트(NYJUnheo SDF) — 빌드에서는 BuildAssetRefs, 에디터는 경로 폴백
+        static TMP_FontAsset LoadUnheoFont()
+        {
+            TMP_FontAsset f = BuildAssetRefs.Instance != null ? BuildAssetRefs.Instance.nyjUnheoFont : null;
+#if UNITY_EDITOR
+            if (f == null) f = UnityEditor.AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/NYJUnheo SDF.asset");
+#endif
+            return f;
+        }
+
         void LoadArt()
         {
             if (_font == null)
             {
-#if UNITY_EDITOR
-                _font = UnityEditor.AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/NYJUnheo SDF.asset");
-#endif
+                _font = LoadUnheoFont();
             }
             if (_attack == null) _attack = Resources.Load<Sprite>("UI/Tab/EnemyAttackIcon");
             if (_burn == null) _burn = StatusIconDatabase.LoadIcon("burn");

@@ -331,7 +331,9 @@ namespace Battle.UI
             }
             tex.SetPixels32(px);
             tex.Apply(false, false);
-            tex.alphaIsTransparency = true;
+#if UNITY_EDITOR
+            tex.alphaIsTransparency = true; // 에디터 전용 속성 — 플레이어 빌드에는 없음
+#endif
             return Sprite.Create(tex, new Rect(0f, 0f, s, s), new Vector2(0f, 0f), s, 0, SpriteMeshType.Tight);
         }
     }

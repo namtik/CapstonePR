@@ -38,6 +38,8 @@ public class StatusIconDatabase : ScriptableObject
             Sprite sprite = all[i].GetIcon(key);
             if (sprite != null) return sprite;
         }
+        StatusIconDatabase refs = BuildAssetRefs.Instance != null ? BuildAssetRefs.Instance.statusIconDatabase : null;
+        if (refs != null) return refs.GetIcon(key);
 #if UNITY_EDITOR
         StatusIconDatabase asset = UnityEditor.AssetDatabase.LoadAssetAtPath<StatusIconDatabase>(
             "Assets/Script/UI/StatusIconDatabase.asset");
