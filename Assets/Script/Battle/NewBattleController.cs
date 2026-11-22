@@ -226,6 +226,10 @@ namespace Battle
 
         public const int CURSE_DURATION_USES = 2;   // 저주 지속 카드 사용 횟수
         public const int CURSE_PLAYER_DAMAGE = 6;   // 저주 카드 사용 시 플레이어 피해량
+        public const int ABSORB_AMOUNT = 2;         // 흡수 방해행동 각성 게이지 감소량(모든 몬스터 공통)
+        public const int ATTACK_AWAKEN_DRAIN_DEFAULT = 5; // 적 공격 시 각성 감소량(EnemyData 없을 때)
+        public const float RECOVER_RATIO = 0.1f;    // 회복 방해행동 회복 비율(최대 HP 대비)
+        public const int DISCARD_DISRUPTION_COUNT = 1; // 버리기 방해행동 무작위 버림 장수
         class ActiveCurse
         {
             public CardElement element;
@@ -909,8 +913,8 @@ namespace Battle
                 _deck.AddToDiscard(CardDatabase.CreateFragmentInstance());
         }
 
-        // 적 공격 발생 시 — 강화 발현 처리·각성 게이지 -5·땅424 방어도 획득
-        void OnEnemyAttackFiredHandler()
+        // 적 공격 발생 시 — 강화 발현 처리·각성 게이지 -(공격한 적의 흡수수치)·땅424 방어도 획득
+        void OnEnemyAttackFiredHandler(EnemyStat attacker)
         {
             _ctx.firstCardAfterEnemyAttack = true;
 
@@ -918,7 +922,8 @@ namespace Battle
 
             if (!_awakenActive)
             {
-                _elementInputCount = Mathf.Max(0, _elementInputCount - 5);
+                int drain = attacker != null && attacker.Data != null ? Mathf.Max(0, attacker.Data.흡수수치) : ATTACK_AWAKEN_DRAIN_DEFAULT;
+                _elementInputCount = Mathf.Max(0, _elementInputCount - drain);
                 UpdateAwakenText();
             }
 
@@ -1357,7 +1362,8 @@ namespace Battle
             }
             SelectionRequest lastSelection = null; // 이 카드가 연 마지막 선택 요청
 
-            if (effectOverlay != null) effectOverlay.Play(card.data, fxTarget);
+            // 실제로 맞은 적(전체 공격이면 전부, 무작위면 뽑힌 적) 자리마다 이펙트 재생
+            if (effectOverlay != null) effectOverlay.Play(card.data, _resolver.LastCardFxTargets, fxTarget);
 
             // 물12(211): 마지막 사용 카드 효과 재사용
             if (result.recastLastCard && _lastResolvedCard != null)
@@ -2253,21 +2259,19 @@ namespace Battle
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
                     return $"방해: {ElementName(target)} 부적 저주!";
                 }
-                case 1: // 탈진 — 무속성 더미 카드(500)를 뽑을 더미에 섞어 넣음
+                case 1: // 탈진 — 소멸 무속성 더미 카드(500)를 버린 카드 더미에 넣음
                 {
                     var dummy = CardDatabase.CreateNeutralFillerInstance();
-                    if (dummy != null) _deck.AddToDrawShuffled(dummy);
+                    if (dummy != null) _deck.AddToDiscard(dummy);
                     handHud?.Refresh();
                     SfxManager.Instance?.PlayExhaust();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 1); if (_track != null) _track.exhaustCard = dummy; }
-                    Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
+                    Log("[방해] 탈진 — 소멸 무속성 카드 1장 버린 더미에 삽입");
                     return "방해: 탈진 부적 삽입!";
                 }
-                case 2: // 흡수 — 각성 게이지를 EnemyData.흡수수치만큼 감소  [즉시형]
+                case 2: // 흡수 — 각성 게이지를 ABSORB_AMOUNT만큼 감소  [즉시형]
                 {
-                    int absorb = _enemyStat != null && _enemyStat.Data != null
-                        ? Mathf.Max(0, _enemyStat.Data.흡수수치)
-                        : 2;
+                    int absorb = ABSORB_AMOUNT;
                     int before = _elementInputCount;
                     _elementInputCount = Mathf.Max(0, _elementInputCount - absorb);
                     UpdateAwakenText();
@@ -2284,36 +2288,29 @@ namespace Battle
                     Log("[방해] 강화 — 적 다음 공격 피해 증가(1회)");
                     return "방해: 강화!";
                 }
-                case 4: // 회복 — 적 HP 30% 회복, 재사용까지 다른 방해행동 2회 필요  [즉시형]
+                case 4: // 회복 — 적 HP 10% 회복, 재사용까지 다른 방해행동 2회 필요  [즉시형]
                 {
                     _recoverCooldown = 2;
                     float enemyHpBefore = _enemyStat != null ? _enemyStat.currentHp : 0f;
                     if (_enemyStat != null)
                     {
-                        float heal = _enemyStat.maxHp * 0.3f;
+                        float heal = _enemyStat.maxHp * RECOVER_RATIO;
                         _enemyStat.Heal(heal);
-                        Log($"[방해] 회복 — 적 HP +{heal:F0} (최대 30%)");
+                        Log($"[방해] 회복 — 적 HP +{heal:F0} (최대 {RECOVER_RATIO * 100f:F0}%)");
                     }
                     SfxManager.Instance?.PlayHeal();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 4, RecoverReward(enemyHpBefore));
                     return "방해: 회복!";
                 }
-                default: // 5 버리기 — 플레이어가 패에서 2장 직접 선택해 버림  [즉시형]
+                default: // 5 버리기 — 패에서 무작위 1장 버림  [즉시형]
                 {
                     int handBefore = _deck != null ? _deck.HandCount : 0;
-                    int n = Mathf.Min(2, _deck.HandCount);
-                    // 특이사항(가라카사오바케): 버리기 방해는 고르지 못하고 무작위 2장
-                    if (_enemy != null && _enemy.Ability == EnemySpecialAbility.DisruptionDiscardRandom)
-                    {
-                        DiscardRandomFromHand(n);
-                        if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
-                        return "방해: 부적 무작위 버리기!";
-                    }
-                    if (n > 0) EnqueueEnemyForcedDiscard(n);
+                    int n = Mathf.Min(DISCARD_DISRUPTION_COUNT, _deck != null ? _deck.HandCount : 0);
+                    if (n > 0) DiscardRandomFromHand(n);
                     SfxManager.Instance?.PlayDiscard();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
-                    Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");
-                    return "방해: 부적 버리기!";
+                    Log($"[방해] 버리기 — 패에서 무작위 {n}장 버림");
+                    return "방해: 부적 무작위 버리기!";
                 }
             }
         }
@@ -2992,8 +2989,8 @@ namespace Battle
                 EnemyStat stat = e.GetComponent<EnemyStat>();
                 if (stat != null)
                 {
-                    stat.OnGaugeFull -= OnEnemyAttackFiredHandler;
-                    stat.OnGaugeFull += OnEnemyAttackFiredHandler;
+                    stat.OnGaugeFullBy -= OnEnemyAttackFiredHandler;
+                    stat.OnGaugeFullBy += OnEnemyAttackFiredHandler;
                 }
                 e.OnStatusApplied -= OnEnemyStatusAppliedHandler;
                 e.OnStatusApplied += OnEnemyStatusAppliedHandler;
@@ -3010,7 +3007,7 @@ namespace Battle
                 EnemyController e = _boundEnemies[i];
                 if (e == null) continue;
                 EnemyStat stat = e.GetComponent<EnemyStat>();
-                if (stat != null) stat.OnGaugeFull -= OnEnemyAttackFiredHandler;
+                if (stat != null) stat.OnGaugeFullBy -= OnEnemyAttackFiredHandler;
                 e.OnStatusApplied -= OnEnemyStatusAppliedHandler;
             }
             _boundEnemies.Clear();

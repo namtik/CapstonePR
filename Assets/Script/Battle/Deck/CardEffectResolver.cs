@@ -158,11 +158,22 @@ namespace Battle.Deck
             return doubled;
         }
 
+        // 마지막으로 해석한 카드가 실제로 피해·상태이상을 준 적 목록(이펙트 위치용, 중복 없음)
+        private readonly List<EnemyController> _cardFxTargets = new List<EnemyController>();
+        public IReadOnlyList<EnemyController> LastCardFxTargets => _cardFxTargets;
+        private int _fxRecordDepth;   // 카드 자체 효과 실행 중일 때만 대상 기록
+
+        void RecordFxTarget(EnemyController t)
+        {
+            if (_fxRecordDepth > 0 && t != null && !_cardFxTargets.Contains(t)) _cardFxTargets.Add(t);
+        }
+
         // 카드 효과 해석/실행 메인 진입점
         public ResolveResult Resolve(CardInstance card)
         {
             var result = new ResolveResult();
             Ctx.enemyKilledThisResolve = false;
+            _cardFxTargets.Clear();
 
             if (card.cursed && Ctx.player != null)
             {
@@ -184,7 +195,9 @@ namespace Battle.Deck
                     }
                     if (!IsImmediateTrigger(eff.when)) continue;
                     if (!EvaluateCondition(eff.ifCond, card, ref result)) continue;
-                    ApplyAction(eff, card, ref result);
+                    _fxRecordDepth++;
+                    try { ApplyAction(eff, card, ref result); }
+                    finally { _fxRecordDepth--; }
                 }
             }
             else
@@ -1574,6 +1587,7 @@ namespace Battle.Deck
                 Ctx.enemyStat = t.GetComponent<EnemyStat>();
                 if (burnDamage && amount > 0)
                     SfxManager.Instance?.PlayBurn();
+                RecordFxTarget(t);
                 int dealt = DealDamage(amount, isAttackCard, actualHits, burnDamage);
                 total += dealt;
                 hit++;
@@ -1596,6 +1610,7 @@ namespace Battle.Deck
                 if (t == null || !t.IsAlive) continue;
                 Ctx.enemy = t;
                 Ctx.enemyStat = t.GetComponent<EnemyStat>();
+                RecordFxTarget(t);
                 body();
             }
             Ctx.enemy = savedEnemy;

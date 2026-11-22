@@ -42,6 +42,7 @@ public class EnemyStat : MonoBehaviour
     public event Action<int> OnAttackCountChanged; // 공격 횟수 변경 이벤트
     public event Action OnMidPattern; // 게이지 절반 도달 이벤트
     public event Action OnGaugeFull; // 게이지 가득 참(적 공격) 이벤트
+    public event Action<EnemyStat> OnGaugeFullBy; // 게이지 가득 참 — 공격한 적 정보 포함
     public event Action<float> OnGaugeStepChanged; // 게이지 비율 변경 이벤트(0~1)
     public event Action<float> OnDamaged; // 피해 발생 이벤트(피격 연출용)
     public bool isNewlyFrozen = false; // 이번에 막 빙결되었는지 여부
@@ -159,6 +160,7 @@ public class EnemyStat : MonoBehaviour
         CycleCount++;
         OnGaugeStepChanged?.Invoke(0f);
         OnGaugeFull?.Invoke();
+        OnGaugeFullBy?.Invoke(this);
     }
 
     // 콤보(행동게이지 초기화): 게이지를 0으로 되돌리고 이번 사이클 방해행동도 다시 발동 가능하게 한다
@@ -229,6 +231,7 @@ public class EnemyStat : MonoBehaviour
             CycleCount++;
             OnGaugeStepChanged?.Invoke(0f);
             OnGaugeFull?.Invoke();
+            OnGaugeFullBy?.Invoke(this);
         }
     }
 }

@@ -273,6 +273,31 @@ namespace Battle.UI
             PlayByName(effectName);
         }
 
+        // 카드 효과를 여러 대상 몬스터 위치에서 각각 재생(전체 공격 등). 효과음은 1회만.
+        // targets가 비었거나 적 대상 효과가 아니면 fallback 대상으로 단일 재생.
+        public void Play(CardData card, IReadOnlyList<EnemyController> targets, EnemyController fallback)
+        {
+            if (card == null || string.IsNullOrEmpty(card.effectName)) return;
+            string effectName = card.effectName;
+            if (!followTargetEnemy || targets == null || targets.Count == 0 || !IsEnemyTargetEffect(effectName))
+            {
+                Play(card, fallback);
+                return;
+            }
+
+            Vector2 delta = ResolvePositionFor(effectName) - enemyAnchoredPos;
+            bool sfxPlayed = false;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                EnemyController t = targets[i];
+                if (t == null || !t.TryGetAimScreen(out Vector2 screen) || !TryScreenToAnchored(screen, out Vector2 at))
+                    continue;
+                PlayAtCore(effectName, at + delta + targetEnemyOffset, !sfxPlayed);
+                sfxPlayed = true;
+            }
+            if (!sfxPlayed) Play(card, fallback); // 위치를 하나도 못 구하면 기존 방식
+        }
+
         internal static bool IsGuardGainEffect(string effectName)
         {
             return effectName != null && effectName.EndsWith("_DEF", System.StringComparison.OrdinalIgnoreCase);
