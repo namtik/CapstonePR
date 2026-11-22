@@ -338,6 +338,7 @@ public class Player : MonoBehaviour, IBattleUnit
         float guardBefore = guard;
         float hpBefore = currentHp;
         bool blockConsumed = false;
+        bool guardDepleted = false;
         if (guard > 0)
         {
             blockConsumed = true;
@@ -351,16 +352,21 @@ public class Player : MonoBehaviour, IBattleUnit
             {
                 damage -= guard;
                 guard = 0;
+                guardDepleted = true;
             }
             OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
         }
         int finalDamage = Mathf.RoundToInt(damage);
+        if (blockConsumed && incomingDamage > 0f && finalDamage == 0 && cardtype != "self_loss")
+            OnGuardAbsorbedHit?.Invoke();
         if (finalDamage > 0)
         {
             if (cardtype == "burn")
                 SfxManager.Instance?.PlayBurn();
             currentHp -= finalDamage;
             SyncAllInstancesFrom(this);
+            if (guardDepleted && cardtype != "self_loss")
+                OnGuardBrokenByDamage?.Invoke();
             OnHpDecreased?.Invoke(finalDamage);
             if (cardtype != "burn" && cardtype != "self_loss")
                 SfxManager.Instance?.PlayPlayerHit();
@@ -395,6 +401,9 @@ public class Player : MonoBehaviour, IBattleUnit
 
     public event Action OnPlayerHit; // 피격(방어도로 막힘 포함) 발생 이벤트
     public event Action<int> OnHpDecreased; // 실제 HP 감소 시(줄어든 양) 이벤트
+    public event Action OnGuardGained;
+    public event Action OnGuardAbsorbedHit;
+    public event Action OnGuardBrokenByDamage; // 같은 피해로 방어도가 소진되고 HP가 줄었을 때
     public event Action OnBlockConsumedByAttack; // 적 공격에 방어도가 소모됐을 때 이벤트
     public event Action<string, int> OnStatusChanged; // 상태이상 수치 변경 이벤트
 
@@ -448,7 +457,8 @@ public class Player : MonoBehaviour, IBattleUnit
         float before = guard;
         guard = Mathf.Clamp(guard + amount, 0f, 999f);
         OnStatusChanged?.Invoke("guard", Mathf.RoundToInt(guard));
-        int gained = Mathf.RoundToInt(guard - before);
+        float change = guard - before;
+        int gained = Mathf.RoundToInt(change);
         if (gained > 0)
         {
             Battle.UI.BattleLog.RecordGuard(gained);
@@ -456,6 +466,8 @@ public class Player : MonoBehaviour, IBattleUnit
         }
         else if (gained < 0)
             Battle.UI.BattleLog.NotePlayer(Battle.UI.BattleLog.CombatKind.Guard, -gained, false);
+        if (change > 0f)
+            OnGuardGained?.Invoke();
     }
 
     // 사망 처리 — 게임오버 연출을 재생한다

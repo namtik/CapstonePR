@@ -1,0 +1,79 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &100000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 400000}
+  - component: {fileID: 11400000}
+  m_Layer: 0
+  m_Name: AwakeningDurationFlicker
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &400000
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 100000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b5f6d31a9c94f8cba6c6b1ab6d15a02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  startingFrequency: 1.5
+  maximumFrequency: 3.5
+  fullSpeedAtPercent: 80
+  pulseRiseFraction: 0.2
+  extensionSmoothingRate: 10
+  startDelay: 0
+  startFadeSeconds: 0.18
+  endFadeSeconds: 0.16
+  effectIntensity: 0.8
+  restingDarkness: 0
+  peakDarkness: 0
+  canvasSortingOrder: 30000
+  glowEdges: -1
+  edgeGlowOpacity: 0.25
+  endGlowMultiplier: 3
+  edgeGlowColor: {r: 1, g: 0.58961684, b: 0, a: 1}
+  horizontalGlowReach: 0.193
+  verticalGlowReach: 0.156
+  glowBetweenPulses: 0.45
+  brushEdges: 7
+  startingBrushCount: 7
+  maximumBrushCount: 25
+  brushLength: 80
+  brushWidth: 13
+  brushTravel: 13
+  brushVariation: 0.48
+  brushSpacing: 50
+  brushSpawnSpread: 20
+  mirrorTopBrushDirection: 1
+  brushTextureDetail: 0.7
+  brushVisibleFraction: 0.84
+  brushOpacity: 0.95
+  brushColor: {r: 1, g: 0.82, b: 0.5, a: 1}

@@ -1,0 +1,106 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4010000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4010000000000002}
+  - component: {fileID: 4010000000000003}
+  - component: {fileID: 4010000000000004}
+  m_Layer: 0
+  m_Name: Sashindo_AwakeningVFX
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &4010000000000002
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4010000000000001}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!223 &4010000000000003
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4010000000000001}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 0
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 0
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 30000
+  m_TargetDisplay: 0
+--- !u!114 &4010000000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4010000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 143496860b375744b32f93b0581648ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  entryDuration: 0.6
+  returnDuration: 0.1
+  playOnEnable: 0
+  intensity: 1
+  overlayOpacity: 0.7
+  showTitle: 1
+  titleText: 1
+  writeTitle: 1
+  titlePosition: {x: 0.5, y: 0.55}
+  titleScale: 1.1
+  titleBounceStrength: 40
+  useTitleGradient: 1
+  titleGradientTop: {r: 1, g: 0.7629346, b: 0.3820755, a: 1}
+  titleGradientBottom: {r: 0.98039216, g: 0.82338375, b: 0.37647066, a: 1}
+  groundAnchor: {fileID: 0}
+  worldDiameter: 5.4
+  groundOffset: 0.045
+  groundTint: {r: 1, g: 1, b: 1, a: 1}
+  useCustomColors: 1
+  spiralColor: {r: 1, g: 0.82407373, b: 0.43137252, a: 1}
+  shadeColor: {r: 0, g: 0, b: 0, a: 1}
+  titleColor: {r: 1, g: 0.78, b: 0.43, a: 1}
+  groundColor: {r: 0.97, g: 0.7, b: 0.35, a: 1}
+  spiralAtlasPages:
+  - {fileID: 2800000, guid: 008fb839321a5489a4099626fdfc25e6, type: 3}
+  - {fileID: 2800000, guid: f3e4dc5d51c15811913eb4f2e6d3ffd9, type: 3}
+  - {fileID: 2800000, guid: 2d7bfb6bec475d77a694ecc0a0676057, type: 3}
+  - {fileID: 2800000, guid: ab089789e52b5c2eb1004547f635675b, type: 3}
+  - {fileID: 2800000, guid: de89f6d0aeab5df1bc5236fa207601c9, type: 3}
+  awakeningTitle: {fileID: 2800000, guid: e9b3acf3ca695ca1b481271bd14b7669, type: 3}
+  brushWave: {fileID: 2800000, guid: b4175c154f3550008d95a352aac50eed, type: 3}
+  groundGlow: {fileID: 2800000, guid: 3a2601a54fe353028d7926816abdefb8, type: 3}

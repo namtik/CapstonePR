@@ -35318,6 +35318,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1709904949}
     - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
+      propertyPath: awakenDimColor.a
+      value: 0.85882354
+      objectReference: {fileID: 0}
+    - target: {fileID: 1832375744852430415, guid: 8b90dd08cae091e4e81a8fbc52a05248, type: 3}
       propertyPath: discardCountText
       value: 
       objectReference: {fileID: 540803144}
@@ -35517,9 +35521,11 @@ MonoBehaviour:
   awakenMarkerMaxRadius: 0
   awakenMarkerCenterOffset: {x: 0, y: 0}
   awakenMarkerVerticalSquash: 0.72
+  awakenComboParticleScale: 1.32
   awakenExplosionInterval: 0.18
   frostAppliedEffectName: Frost_EFF
   awakenScreenEffectPrefab: {fileID: 3942825033974895155, guid: 7297fe0a5e06fb644a731296af23d579, type: 3}
+  awakenEntryVfx: {fileID: 0}
   awakenScreenEffectScale: 110
   turnOrderTimeline: {fileID: 0}
   lockInputDuringEnemyTurn: 1
@@ -49719,6 +49725,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -50
       objectReference: {fileID: 0}
+    - target: {fileID: 2870063230061005964, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
+      propertyPath: m_CullTransparentMesh
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4859507973697582988, guid: 3e7ba04d31bfb1548b359070ac8ce211, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: -215.5
@@ -50246,7 +50256,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f54753f6f9d38e4e92f4fe6d08a7099, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.DeckDebugTool
-  deckEntries: []
+  deckEntries:
+  - cardId: 104
+    count: 10
   useAsStartingDeck: 0
   quickAddCardId: 100
 --- !u!4 &1966438784

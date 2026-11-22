@@ -7,6 +7,7 @@ using Battle.Card;
 using Battle.Deck;
 using Battle.Relic;
 using Battle.UI;
+using Sashindo.VFX;
 
 namespace Battle
 {
@@ -91,6 +92,8 @@ namespace Battle
         [Tooltip("표식 배치 세로 눌림 비율 — 1=정원, <1이면 가로로 넓은 타원(화면에 자연스럽게 둘러싸이는 느낌).")]
         [Range(0.3f, 1f)]
         [SerializeField] private float awakenMarkerVerticalSquash = 0.72f; // 표식 세로 눌림
+        [Tooltip("사방비급 성립 시 몬스터 주변에 맺히는 금빛 파티클의 크기.")]
+        [SerializeField, Min(.1f)] private float awakenComboParticleScale = 1.32f;
         [Tooltip("각성 종료 후 표식이 하나씩 터지는 간격(초).")]
         [SerializeField] private float awakenExplosionInterval = 0.18f; // 순차 폭발 간격
 
@@ -102,6 +105,9 @@ namespace Battle
         [Header("각성 화면 효과")]
         [Tooltip("각성 동안 3D 스테이지 카메라 앞에 유지될 프리팹(Hovl Screen wind 등). UI가 아니라 카메라에 붙여 시야만 덮는다. 비우면 화면 효과 없음.")]
         [SerializeField] private GameObject awakenScreenEffectPrefab; // 각성 화면 효과 프리팹
+        [Tooltip("각성 진입 연출. 비워 두면 씬의 연출 또는 패키지 기본 프리팹을 사용한다.")]
+        [SerializeField] private AwakeningVfx awakenEntryVfx;
+        private bool ownsAwakenEntryVfx;
         [Tooltip("구 UIParticle 스케일. 카메라 부착 방식으로 바꾼 뒤로는 사용하지 않는다.")]
         [FormerlySerializedAs("awakenScreenEffectScale")]
         [SerializeField] private float awakenScreenEffectScale = 100f; // 미사용(호환용)
@@ -210,6 +216,7 @@ namespace Battle
         private readonly List<CardElement> _awakenInputHistory = new List<CardElement>(); // 각성 중 입력 속성 전체 기록
         private readonly List<Vector2> _awakenMarkerPositions = new List<Vector2>(); // 콤보 큐와 1:1 표식 위치
         private readonly List<GameObject> _awakenMarkerHandles = new List<GameObject>(); // 콤보 큐와 1:1 표식 핸들
+        private readonly List<GameObject> _awakenDetonatingParticles = new List<GameObject>();
         private Coroutine _awakenExplosionRoutine; // 진행 중인 표식 순차 폭발 코루틴
 
         private int _usedFireCardCount;       // 이번 전투 불 카드 사용 수
@@ -268,6 +275,8 @@ namespace Battle
         private bool _relicFirstCardRecastPending; // 유물(복사경 10015): 첫 사용 카드 효과 1회 재발동 예약
 
         public bool IsAwakenActive => _awakenActive;        // 각성 활성 여부 노출
+        public static bool IsAwakeningEntryPlaying =>
+            Instance != null && Instance.awakenEntryVfx != null && Instance.awakenEntryVfx.IsPlaying;
         public EnemyController CurrentEnemy =>
             _enemy != null && _enemy.IsAlive ? _enemy : EnemyCombatParty.FirstAlive();
         public CardDeckSystem Deck => _deck;                // 덱 시스템 노출
@@ -305,12 +314,19 @@ namespace Battle
         // 이벤트 구독 해제 및 싱글톤 정리
         void OnDestroy()
         {
+            ClearAwakenComboParticles();
+            if (ownsAwakenEntryVfx && awakenEntryVfx != null)
+                Destroy(awakenEntryVfx.gameObject);
+
             _deck.OnCardDrawn -= OnCardDrawnHandler;
             _deck.OnCardDiscarded -= OnCardDiscardedHandler;
             if (_player != null)
             {
                 _player.OnPlayerHit -= OnPlayerHitHandler;
                 _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
+                _player.OnGuardGained -= OnGuardGainedHandler;
+                _player.OnGuardBrokenByDamage -= OnGuardBrokenByDamageHandler;
+                _player.OnGuardAbsorbedHit -= OnGuardAbsorbedHitHandler;
                 _player.OnHpDecreased -= OnPlayerHpDecreasedHandler;
             }
             UnbindPartyEvents();
@@ -378,6 +394,8 @@ namespace Battle
                     _awakenTimeRemaining = _awakenMaxTime;
                 return;
             }
+            // 진입 연출이 화면을 다시 열 때까지 각성 시간을 보존한다.
+            if (awakenEntryVfx != null && awakenEntryVfx.IsPlaying) return;
             // 손패가 부적으로 바뀌는 동안은 각성 시간이 흐르지 않음(여유 시간)
             if (pauseAwakenDuringTalismanBurn && handHud != null && handHud.IsTalismanTransitioning) return;
             _awakenTimeRemaining -= Time.deltaTime;
@@ -392,6 +410,13 @@ namespace Battle
         // 전투 진입 — 참조/컨텍스트/덱/UI 초기화 후 시작 드로우
         public void StartBattle()
         {
+            ClearAwakenComboParticles();
+            if (_player != null)
+            {
+                _player.OnGuardGained -= OnGuardGainedHandler;
+                _player.OnGuardBrokenByDamage -= OnGuardBrokenByDamageHandler;
+                _player.OnGuardAbsorbedHit -= OnGuardAbsorbedHitHandler;
+            }
             _player = Player.Resolve(true);
             BindParty();
             _ctx.player = _player;
@@ -409,6 +434,9 @@ namespace Battle
                 _player.OnPlayerHit += OnPlayerHitHandler;
                 _player.OnBlockConsumedByAttack -= OnBlockConsumedHandler;
                 _player.OnBlockConsumedByAttack += OnBlockConsumedHandler;
+                _player.OnGuardGained += OnGuardGainedHandler;
+                _player.OnGuardBrokenByDamage += OnGuardBrokenByDamageHandler;
+                _player.OnGuardAbsorbedHit += OnGuardAbsorbedHitHandler;
                 _player.OnHpDecreased -= OnPlayerHpDecreasedHandler;
                 _player.OnHpDecreased += OnPlayerHpDecreasedHandler;
             }
@@ -531,7 +559,14 @@ namespace Battle
         // 전투 종료 — 추적/큐 마감·덱 종료·UI/이펙트 정리
         public void EndBattle()
         {
+            bool wasAwakened = _awakenActive;
             _inBattle = false;
+            if (_player != null)
+            {
+                _player.OnGuardGained -= OnGuardGainedHandler;
+                _player.OnGuardBrokenByDamage -= OnGuardBrokenByDamageHandler;
+                _player.OnGuardAbsorbedHit -= OnGuardAbsorbedHitHandler;
+            }
             BattleLog.Clear();
             _cardPresenting = false;
             _awakenActive = false;
@@ -550,14 +585,13 @@ namespace Battle
                 handHud.ExitSelectionMode();
                 handHud.ExitPickerMode();
                 handHud.CloseViewer();
+                if (wasAwakened) handHud.SetAwakenMode(false);
                 handHud.UseCardCallback = null;
                 handHud.SelectionClosedCallback = null;
                 handHud.SetAwakenGaugeVisible(false);
             }
             if (awakenTimerGauge != null) awakenTimerGauge.Hide();
-            if (_awakenExplosionRoutine != null) { StopCoroutine(_awakenExplosionRoutine); _awakenExplosionRoutine = null; }
-            _awakenMarkerPositions.Clear();
-            _awakenMarkerHandles.Clear();
+            ClearAwakenComboParticles();
             if (effectOverlay != null) effectOverlay.ClearAll();
             StopAwakenScreenEffect();
             if (tabPanel != null) tabPanel.Hide();
@@ -847,6 +881,24 @@ namespace Battle
                 RelicManager.Instance?.NotifyPlayerHpLost(this, pending[i].amount, pending[i].first);
                 _resolver.NotifyPlayerHpLostForPowers(pending[i].amount); // 수라의 길(122)
             }
+        }
+
+        void OnGuardGainedHandler()
+        {
+            if (_inBattle && isActiveAndEnabled && effectOverlay != null)
+                effectOverlay.PlayGuardGain();
+        }
+
+        void OnGuardBrokenByDamageHandler()
+        {
+            if (_inBattle && isActiveAndEnabled && effectOverlay != null)
+                effectOverlay.PlayGuardBreak();
+        }
+
+        void OnGuardAbsorbedHitHandler()
+        {
+            if (_inBattle && isActiveAndEnabled && effectOverlay != null)
+                effectOverlay.PlayGuardBlock();
         }
 
         // 땅18(417): 방어도 소모 시 무작위 파편 1장 버린 더미에
@@ -1592,7 +1644,7 @@ namespace Battle
                 _queuedComboSkills.Clear();
                 _awakenInputHistory.Clear();
                 _awakenMarkerPositions.Clear();
-                _awakenMarkerHandles.Clear();
+                RemoveAwakenComboParticles(_awakenMarkerHandles);
 
                 if (handHud != null)
                 {
@@ -1604,6 +1656,7 @@ namespace Battle
 
                 if (awakenTimerGauge != null) awakenTimerGauge.Hide();
 
+                if (awakenStarting) PlayAwakenEntryVfx();
                 _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
                 SfxManager.Instance?.PlayAwakenStart();
 
@@ -1615,10 +1668,43 @@ namespace Battle
             }
         }
 
+        void PlayAwakenEntryVfx()
+        {
+            if (awakenEntryVfx == null)
+            {
+                foreach (var root in gameObject.scene.GetRootGameObjects())
+                {
+                    if (root.name == "Sashindo_AwakeningVFX" && root.TryGetComponent(out awakenEntryVfx))
+                        break;
+                }
+            }
+
+            if (awakenEntryVfx == null)
+            {
+                var preset = Resources.Load<AwakeningBattlePreset>("SashindoAwakening/BattlePreset");
+                if (preset == null || preset.EntryPrefab == null) return;
+                awakenEntryVfx = Instantiate(preset.EntryPrefab);
+                ownsAwakenEntryVfx = true;
+                if (awakenEntryVfx.gameObject.scene != gameObject.scene)
+                    UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(awakenEntryVfx.gameObject, gameObject.scene);
+            }
+
+            awakenEntryVfx.Play();
+        }
+
         // 각성 화면 이펙트를 3D 스테이지 카메라 앞에 붙여 시야만 덮는다(UI 위가 아님).
         GameObject SpawnAwakenScreenEffect()
         {
-            if (awakenScreenEffectPrefab == null) return null;
+            var prefab = awakenScreenEffectPrefab;
+            if (prefab == null || prefab.name == "Screen wind")
+            {
+                var packagedFlicker = Resources.Load<GameObject>("VFX/AwakeningDurationFlicker");
+                if (packagedFlicker != null) prefab = packagedFlicker;
+            }
+
+            if (prefab == null) return null;
+            if (prefab.TryGetComponent<AwakeningDurationFlicker>(out _))
+                return Instantiate(prefab);
 
             Camera cam = BattleStageController.Current != null
                 ? BattleStageController.Current.StageCamera
@@ -1626,7 +1712,7 @@ namespace Battle
             if (cam == null) cam = Camera.main;
             if (cam == null) return null;
 
-            GameObject go = Instantiate(awakenScreenEffectPrefab);
+            GameObject go = Instantiate(prefab);
             go.name = "AwakenScreenWind";
 
             // StageCamera는 Stage3D/Enemy3D만 그리므로, 그 마스크에 맞춰 레이어를 올린다.
@@ -1661,6 +1747,9 @@ namespace Battle
         // 각성 화면 이펙트를 정지하고 제거한다
         void StopAwakenScreenEffect()
         {
+            if (awakenEntryVfx != null && awakenEntryVfx.IsPlaying)
+                awakenEntryVfx.Stop();
+
             if (_awakenScreenEffectInstance == null) return;
 
             var systems = _awakenScreenEffectInstance.GetComponentsInChildren<ParticleSystem>(true);
@@ -1727,7 +1816,8 @@ namespace Battle
                     _awakenMarkerPositions.Clear();
                     _awakenMarkerHandles.Clear();
 
-                    if (_awakenExplosionRoutine != null) StopCoroutine(_awakenExplosionRoutine);
+                    CancelAwakenComboBurst();
+                    _awakenDetonatingParticles.AddRange(handles);
                     _awakenExplosionRoutine = StartCoroutine(ExplodeMarkersSequentially(skills, positions, handles, damageCount));
                 }
                 else
@@ -1785,13 +1875,40 @@ namespace Battle
         // 각성 중 콤보 성공 시 몬스터 주위에 표식 1개 생성(콤보 큐와 1:1 정렬)
         void SpawnAwakenComboMarker()
         {
-            if (!awakenMarkerSequence || effectOverlay == null) return;
-            Vector2 pos = ComputeAwakenMarkerPosition(_awakenMarkerPositions.Count);
-            // 표식은 딤 바로 위 레이어(다른 UI 아래)에 생성 — 레이어 없으면 effectOverlay 기본 위치로 폴백
-            RectTransform layer = handHud != null ? handHud.AwakenMarkerLayer : null;
-            GameObject handle = effectOverlay.SpawnAwakenMarker(pos, layer);
-            _awakenMarkerPositions.Add(pos);
+            if (!awakenMarkerSequence) return;
+            int index = _awakenMarkerHandles.Count;
+            float radius = awakenMarkerRadius + index * awakenMarkerRadiusGrowth;
+            if (awakenMarkerMaxRadius > 0f) radius = Mathf.Min(radius, awakenMarkerMaxRadius);
+
+            var handle = Sashindo.VFX.AwakeningComboParticle.Spawn(transform, _enemy, index, radius,
+                awakenMarkerVerticalSquash, awakenMarkerCenterOffset, awakenComboParticleScale,
+                handHud != null ? handHud.AwakenMarkerLayer : null);
+            _awakenMarkerPositions.Add(ComputeAwakenMarkerPosition(index));
             _awakenMarkerHandles.Add(handle);
+        }
+
+        void ClearAwakenComboParticles()
+        {
+            CancelAwakenComboBurst();
+            _awakenMarkerPositions.Clear();
+            RemoveAwakenComboParticles(_awakenMarkerHandles);
+        }
+
+        void CancelAwakenComboBurst()
+        {
+            if (_awakenExplosionRoutine != null)
+            {
+                StopCoroutine(_awakenExplosionRoutine);
+                _awakenExplosionRoutine = null;
+            }
+            RemoveAwakenComboParticles(_awakenDetonatingParticles);
+        }
+
+        void RemoveAwakenComboParticles(List<GameObject> handles)
+        {
+            foreach (var handle in handles)
+                if (handle != null) Destroy(handle);
+            handles.Clear();
         }
 
         // idx번째 표식의 배치 위치 — 몬스터 중심 기준 황금각 분산(겹침 최소화)
@@ -1819,14 +1936,23 @@ namespace Battle
                 if (!_inBattle) break; // 전투가 끝났으면 잔여 폭발 중단
 
                 var skill = skills[i];
-                if (skill == null) continue;
-
                 Vector2 pos = i < positions.Count
                     ? positions[i]
                     : (effectOverlay != null ? effectOverlay.EnemyAnchoredPos : Vector2.zero);
 
-                // 표식 제거 + 그 자리에서 폭발 이펙트
-                if (i < handles.Count && effectOverlay != null) effectOverlay.DestroyAwakenMarker(handles[i]);
+                if (i < handles.Count && handles[i] != null)
+                {
+                    var handle = handles[i];
+                    if (effectOverlay != null && handle.TryGetComponent<Sashindo.VFX.AwakeningComboParticle>(out var marker)
+                        && marker.TryGetBurstScreenPosition(out var screen)
+                        && effectOverlay.TryAnchoredFromScreen(screen, out var at))
+                        pos = at;
+
+                    handles[i] = null;
+                    Destroy(handle);
+                }
+
+                if (skill == null) continue;
                 if (effectOverlay != null && !string.IsNullOrEmpty(awakenDamageEffectName))
                     effectOverlay.PlayByNameAtPosition(awakenDamageEffectName, pos);
 
@@ -1838,6 +1964,7 @@ namespace Battle
                 if (i < skills.Count - 1 && wait != null) yield return wait;
             }
 
+            RemoveAwakenComboParticles(_awakenDetonatingParticles);
             ApplyAwakenComboGaugeRecovery(skills.Count);
             _awakenExplosionRoutine = null;
         }

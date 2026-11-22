@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Coffee.UIExtensions;
 using Battle.Card;
+using Sashindo.VFX;
 
 namespace Battle.UI
 {
@@ -94,6 +95,13 @@ namespace Battle.UI
         private readonly HashSet<string> _warned = new HashSet<string>(); // 누락 경고 1회 출력용
         private readonly List<GameObject> _activeFx = new List<GameObject>(); // 활성 FX 인스턴스 목록
 
+        private GuardShieldEffect _guardShield;
+        private GuardBreakEffect _guardBreak;
+        private GuardBlockSettings _guardBlockSettings;
+        private CanvasGroup _entryVisibility;
+        private float _alphaBeforeEntry;
+        private bool _hiddenDuringEntry;
+
         private RectTransform _selfRect; // 자신의 RectTransform 캐시
         private static int s_runtimeSortingOverride = int.MinValue; // 일시정지 중 전역 정렬 덮어쓰기
         // 자신의 RectTransform 반환(지연 캐싱)
@@ -103,6 +111,39 @@ namespace Battle.UI
         void Awake()
         {
             EnsureForegroundCanvas();
+        }
+
+        void LateUpdate()
+        {
+            bool hide = NewBattleController.IsAwakeningEntryPlaying;
+            if (hide == _hiddenDuringEntry) return;
+
+            if (hide)
+            {
+                if (_entryVisibility == null &&
+                    !TryGetComponent(out _entryVisibility))
+                    _entryVisibility = gameObject.AddComponent<CanvasGroup>();
+                _alphaBeforeEntry = _entryVisibility.alpha;
+                _entryVisibility.alpha = 0f;
+                _hiddenDuringEntry = true;
+                GuardBlockRendererFeature.Stop();
+            }
+            else
+            {
+                RestoreEntryVisibility();
+            }
+        }
+
+        void OnDisable()
+        {
+            RestoreEntryVisibility();
+        }
+
+        void RestoreEntryVisibility()
+        {
+            if (!_hiddenDuringEntry) return;
+            if (_entryVisibility != null) _entryVisibility.alpha = _alphaBeforeEntry;
+            _hiddenDuringEntry = false;
         }
 
         // 일시정지 창보다 뒤에 두거나, 기본 전경 정렬로 되돌린다
@@ -145,6 +186,69 @@ namespace Battle.UI
             }
         }
 
+        GuardShieldEffect ResolveGuardShieldPrefab()
+        {
+            var prefab = Resources.Load<GameObject>("VFX/GuardShieldCombat");
+            return prefab != null ? prefab.GetComponent<GuardShieldEffect>() : null;
+        }
+
+        public void PlayGuardGain()
+        {
+            if (!isActiveAndEnabled) return;
+            GuardShieldEffect prefab = ResolveGuardShieldPrefab();
+            if (prefab == null) return;
+
+            if (_guardShield == null)
+            {
+                _guardShield = Instantiate(prefab, Rect, false);
+                var rect = (RectTransform)_guardShield.transform;
+                rect.localScale = Vector3.one;
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.offsetMin = Vector2.zero;
+                rect.offsetMax = Vector2.zero;
+            }
+
+            _guardShield.gameObject.SetActive(true);
+            _guardShield.PlayFromPrefab(prefab);
+        }
+
+        public void PlayGuardBreak()
+        {
+            if (!isActiveAndEnabled) return;
+            GuardBlockRendererFeature.Stop();
+
+            if (_guardBreak == null)
+            {
+                var prefab = Resources.Load<GameObject>("VFX/GuardBreakCombat");
+                var graphic = prefab != null ? prefab.GetComponentInChildren<GuardBreakEffect>() : null;
+                if (graphic == null) return;
+
+                // Clone the graphic into the battle canvas to inherit its full-screen size and pause sorting.
+                _guardBreak = Instantiate(graphic, Rect, false);
+            }
+
+            if (_guardShield != null)
+                _guardShield.gameObject.SetActive(false);
+
+            _guardBreak.transform.SetAsLastSibling();
+            _guardBreak.Play();
+        }
+
+        [ContextMenu("완전 방어 미리보기")]
+        public void PlayGuardBlock()
+        {
+            if (!Application.isPlaying || !isActiveAndEnabled || NewBattleController.IsAwakeningEntryPlaying) return;
+
+            if (_guardBlockSettings == null)
+                _guardBlockSettings = Resources.Load<GuardBlockSettings>("VFX/GuardBlockSettings");
+
+            var stage = BattleStageController.Current;
+            var camera = stage != null ? stage.StageCamera : Camera.main;
+            if (camera != null && _guardBlockSettings != null)
+                GuardBlockRendererFeature.Play(camera, _guardBlockSettings);
+        }
+
         // 카드의 effectName으로 효과를 1회 재생
         public void Play(CardData card)
         {
@@ -167,6 +271,11 @@ namespace Battle.UI
                 return;
             }
             PlayByName(effectName);
+        }
+
+        internal static bool IsGuardGainEffect(string effectName)
+        {
+            return effectName != null && effectName.EndsWith("_DEF", System.StringComparison.OrdinalIgnoreCase);
         }
 
         // 이름 규칙상 적에게 재생되는 효과인지(공격·화상·연쇄)
@@ -240,6 +349,12 @@ namespace Battle.UI
             if (playSfx)
                 SfxManager.Instance?.PlayEffect(effectName);
 
+            if (NewBattleController.IsAwakeningEntryPlaying) return;
+
+            // 방어도 획득 이벤트에서 공통 방패를 재생한다.
+            if (IsGuardGainEffect(effectName) && ResolveGuardShieldPrefab() != null)
+                return;
+
             // 1순위로 파티클 프리팹이 있으면 사용
             if (preferParticlePrefab)
             {
@@ -267,6 +382,11 @@ namespace Battle.UI
         // 재생 중이거나 파괴 대기 중인 모든 FX를 즉시 제거
         public void ClearAll()
         {
+            GuardBlockRendererFeature.Stop();
+            if (_guardShield != null)
+                _guardShield.gameObject.SetActive(false);
+            if (_guardBreak != null)
+                _guardBreak.Stop();
             for (int i = 0; i < _activeFx.Count; i++)
             {
                 var go = _activeFx[i];
@@ -450,7 +570,7 @@ namespace Battle.UI
         // 임의 파티클 프리팹을 화면 중앙에 1회 재생
         public void PlayPrefab(GameObject prefab, float scale = 0f, float duration = 0f)
         {
-            if (prefab == null) return;
+            if (prefab == null || NewBattleController.IsAwakeningEntryPlaying) return;
 
             GameObject go = SpawnPrefabFx(prefab, scale, loop: false, out var uip);
             float life = duration > 0f

@@ -129,8 +129,8 @@ MonoBehaviour:
   selectionPromptText: {fileID: 0}
   dimOverlay: {fileID: 0}
   dimColor: {r: 0, g: 0, b: 0, a: 0.6}
-  awakenDimColor: {r: 0.02, g: 0, b: 0.08, a: 0.8666667}
-  awakenDimBrightRadius: 0.18
+  awakenDimColor: {r: 0, g: 0, b: 0, a: 0.35}
+  awakenDimBrightRadius: 0
   awakenDimFadeEnd: 1
   viewerCloseButton: {fileID: 0}
   viewerCloseButtonLabel: "\uB2EB\uAE30"
