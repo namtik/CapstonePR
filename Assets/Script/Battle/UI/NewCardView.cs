@@ -70,6 +70,12 @@ namespace Battle.UI
         [Tooltip("덱 보기/픽커 그리드 — 제자리에서만 살짝 확대(떠오름 없음).")]
         [SerializeField] private float gridHoverScaleMultiplier = 1.06f; // 그리드 호버 배율
 
+        [Header("키워드 툴팁 — 소멸/화상/빙결/파편 설명 패널")]
+        [Tooltip("호버 시 카드 옆에 키워드 설명 패널을 띄운다.")]
+        [SerializeField] private bool showKeywordTooltip = true; // 키워드 툴팁 사용 여부
+        [Tooltip("호버가 완전히 올라온 뒤 패널이 뜨기까지 대기(초).")]
+        [SerializeField] private float keywordTooltipDelay = 0.12f; // 툴팁 표시 대기
+
         [Header("드로우 등장 연출 — 아래에서 위로")]
         [Tooltip("패에 새로 들어온 카드가 아래에서 떠오르는 연출 ON/OFF.")]
         [SerializeField] private bool drawIntroEnabled = true; // 등장 연출 사용 여부
@@ -124,6 +130,8 @@ namespace Battle.UI
         private bool _targetingArmed; // 지정 카드가 임계선을 넘어 화살표 모드인지
         private bool _dragCancelled; // 우클릭으로 취소된 드래그 — 좌클릭을 뗄 때까지 드래그 이벤트 무시
         private int _hoverSlotOriginalSibling = -1; // 호버 전 형제 인덱스
+        private float _hoverStartTime;   // 호버 시작 시각(툴팁 지연용)
+        private bool _keywordTipShown;   // 이 카드가 키워드 툴팁을 띄웠는지
         private Coroutine _drawIntroCo; // 등장 연출 코루틴
         private bool _playingIntro; // 등장 연출 진행 중 여부
         public bool IsPlayingDrawIntro => _playingIntro; // 등장 연출 진행 중 여부
@@ -168,6 +176,7 @@ namespace Battle.UI
             // OnEndDrag 누락으로 클릭이 막히는 것을 막기 위해 레이캐스트 복구
             _isDragging = false;
             _targetingArmed = false;
+            HideKeywordTooltip();
             if (Hud != null) Hud.HideEnemyTargeting();
             if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
 
@@ -915,6 +924,7 @@ namespace Battle.UI
                 _rect.SetAsLastSibling();
             }
 
+            HideKeywordTooltip();
             _canvasGroup.blocksRaycasts = false;
             ApplyScale(dragScaleMultiplier);
             // 드래그 중엔 회전 제거
@@ -973,6 +983,7 @@ namespace Battle.UI
                 // hover 상태면 hover 표현을 다시 반영
                 if (_isHovering)
                 {
+                    _hoverStartTime = Time.unscaledTime;
                     ResolveHoverPresentation(out float scaleMultiplier, out Vector2 positionOffset);
                     ApplyScale(scaleMultiplier);
                     ApplyHoverOffset(positionOffset != Vector2.zero);
@@ -1013,6 +1024,7 @@ namespace Battle.UI
             if (Card == null || _isDragging) return;
 
             _isHovering = true;
+            _hoverStartTime = Time.unscaledTime;
             CancelDrawIntro();
             ResolveHoverPresentation(out float scaleMultiplier, out Vector2 positionOffset);
             ApplyScale(scaleMultiplier);
@@ -1033,6 +1045,7 @@ namespace Battle.UI
         {
             if (Hud == null) return;
             _isHovering = false;
+            HideKeywordTooltip();
             // 벌어졌던 양옆 카드를 원위치로(드래그 여부와 무관하게 복귀)
             Hud.ClearHoverSpread();
             if (_isDragging) return;
@@ -1063,6 +1076,7 @@ namespace Battle.UI
         // 드래그 중 우클릭 → 사용하지 않고 손패로 되돌림
         void Update()
         {
+            UpdateKeywordTooltip();
             if (!_isDragging) return;
             if (!Input.GetMouseButtonDown(1)) return;
             _dragCancelled = true;
@@ -1102,6 +1116,27 @@ namespace Battle.UI
             {
                 Hud.TryUseFromClick(this);
             }
+        }
+
+        // 호버가 지연 시간만큼 유지되면 키워드 툴팁 표시(드래그·부적 모드·손패 잠금 중엔 숨김)
+        void UpdateKeywordTooltip()
+        {
+            bool want = showKeywordTooltip && _isHovering && !_isDragging && Card != null && Card.data != null
+                        && !_talismanWanted && _burnCo == null && Hud != null && !Hud.IsHandBlocked;
+            if (!want) { HideKeywordTooltip(); return; }
+            if (_keywordTipShown) return;
+            if (Time.unscaledTime - _hoverStartTime < keywordTooltipDelay) return;
+
+            string desc = descText != null ? descText.text : CardDatabase.GetDisplayDescription(Card.data);
+            CardKeywordTooltip.Show(this, Card.data, desc, descText != null ? descText.font : null);
+            _keywordTipShown = true;
+        }
+
+        void HideKeywordTooltip()
+        {
+            if (!_keywordTipShown) return;
+            _keywordTipShown = false;
+            CardKeywordTooltip.Hide();
         }
 
         // 홈 베이스 스케일에 배율을 곱해 적용

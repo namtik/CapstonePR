@@ -23,7 +23,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     [Header("공격 임팩트 동기화")]
     [Tooltip("공격 모션이 있을 때 임팩트(피해 적용) 신호를 기다리는 최대 시간(초). 넘기면 즉시 피해 적용.")]
     [SerializeField] private float attackImpactMaxWait = 2f; // 임팩트 대기 상한
-    [Tooltip("공격 후 화상이 발동했을 때 다음 행동으로 넘어가기 전 대기(초) — 화상 숫자/알림 연출 시간.")]
+    [Tooltip("행동 전 화상이 발동했을 때 공격으로 넘어가기 전 대기(초) — 화상 숫자/알림 연출 시간.")]
     [SerializeField] private float burnPresentDuration = 0.5f; // 화상 연출 대기
 
     [Header("새 전투 시스템 공격 시퀀스 (폴백)")]
@@ -531,8 +531,32 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (player == null)
             player = Player.Resolve(true);
 
-        // 화상은 공격이 완전히 끝난 뒤 발동(ExecuteMultiHit 끝에서 ApplyBurnAfterAttack 호출)
+        // 화상은 행동 직전에 먼저 터진다 → 연출 후 살아 있으면 공격
+        StartCoroutine(BurnThenAttack());
+    }
 
+    // 게이지 가득: 화상 발동(연출 대기) → 화상으로 쓰러지지 않았으면 공격 실행
+    IEnumerator BurnThenAttack()
+    {
+        if (Battle.NewBattleController.Instance != null && stat != null && stat.IsAlive && ApplyBurnBeforeAction())
+        {
+            // 화상 데미지 숫자/알림이 보이도록 대기
+            if (burnPresentDuration > 0f) yield return new WaitForSeconds(burnPresentDuration);
+        }
+
+        // 화상으로 쓰러졌으면 공격하지 않고 행동 종료(파괴 시 OnDestroy도 완료 처리 — 중복 호출 안전)
+        if (stat == null || !stat.IsAlive)
+        {
+            CompleteQueuedAttack();
+            yield break;
+        }
+
+        ExecuteGaugeFullAttack();
+    }
+
+    // 게이지 가득 시 실제 공격(피해 계산·연타·특이사항)
+    void ExecuteGaugeFullAttack()
+    {
         int damagePerHit;
         int hitCount;
 
@@ -598,7 +622,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
         else
         {
-            StartCoroutine(BurnThenComplete());
+            CompleteQueuedAttack();
         }
 
         // 특이사항(백족승): 공격 시 다른 속성으로 저주 전환
@@ -614,19 +638,8 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         UpdateAttackPreviewForNewSystem();
     }
 
-    // 공격이 끝난 뒤 화상을 처리하고, 화상 연출이 끝나면 행동 완료를 알린다
-    IEnumerator BurnThenComplete()
-    {
-        if (Battle.NewBattleController.Instance != null && stat != null && stat.IsAlive && ApplyBurnAfterAttack())
-        {
-            // 화상 데미지 숫자/알림이 보이도록 대기(화상으로 죽으면 파괴 시 OnDestroy가 완료 처리)
-            if (burnPresentDuration > 0f) yield return new WaitForSeconds(burnPresentDuration);
-        }
-        CompleteQueuedAttack();
-    }
-
-    // [화상]: 적 공격이 끝난 뒤 화상 스택만큼 고정피해를 주고 화상을 절반으로 줄인다. 발동했으면 true.
-    bool ApplyBurnAfterAttack()
+    // [화상]: 적 행동 게이지가 가득 차면 행동 전에 화상 스택만큼 고정피해를 주고 화상을 절반으로 줄인다. 발동했으면 true.
+    bool ApplyBurnBeforeAction()
     {
         if (stat == null) return false;
         if (!stat.statusEffects.TryGetValue("burn", out int burn)) return false;
@@ -639,7 +652,6 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         string burnName = stat.Data != null ? stat.Data.enemyName : null;
         int slot = EnemyCombatParty.AliveIndexOf(this);
         int burnLog = Battle.UI.BattleLog.RecordEnemyBurn(burnPortrait, burn, burnName);
-        Battle.UI.BattleLog.AppendCombat(_lastAttackLogId, false, slot, Battle.UI.BattleLog.CombatKind.Burn, burn, false);
         Battle.UI.BattleLog.AppendCombat(burnLog, false, slot, Battle.UI.BattleLog.CombatKind.Burn, burn, false);
 
         // 데미지 숫자(화상 색) + 화상 알림 텍스트
@@ -658,7 +670,6 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         int consumed = burn - after;
         if (consumed > 0)
         {
-            Battle.UI.BattleLog.AppendCombat(_lastAttackLogId, false, slot, Battle.UI.BattleLog.CombatKind.Burn, consumed, false);
             Battle.UI.BattleLog.AppendCombat(burnLog, false, slot, Battle.UI.BattleLog.CombatKind.Burn, consumed, false);
         }
         Debug.Log($"[화상] 적 {burn} 고정피해, 잔여 화상={after}{(burnPersists ? " (유지)" : "")}");
@@ -714,11 +725,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         Debug.Log($"[EnemyController] {count} hit");
         TriggerOnAttackAbility(player.currentHp < hpBeforeAttack);
         yield return new WaitForSeconds(0.45f);
-        // 공격 애니메이션이 끝까지 재생될 때까지 대기(뒤이은 화상/유물 피격 모션이 공격 모션을 끊지 않게)
+        // 공격 애니메이션이 끝까지 재생될 때까지 대기(뒤이은 유물 피격 모션이 공격 모션을 끊지 않게)
         float motionDeadline = Time.time + 3f;
         while (view != null && view.IsAttackMotionPlaying && Time.time < motionDeadline) yield return null;
-        // 공격이 완전히 끝난 뒤 화상 발동, 화상 연출까지 끝나면 행동 완료
-        yield return BurnThenComplete();
+        // 공격이 완전히 끝나면 행동 완료(화상은 행동 전에 이미 처리됨)
+        CompleteQueuedAttack();
     }
 
     // 적 공격 파티클을 활성화 보장 후 재생한다
