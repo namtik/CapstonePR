@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: RockGiant
-  m_Shader: {fileID: 4800000, guid: 36a5ba50c5018664bba0195c138df077, type: 3}
+  m_Shader: {fileID: 4800000, guid: 6b0674a409bdc1c4bbe3fcfd7b4f2fd9, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
