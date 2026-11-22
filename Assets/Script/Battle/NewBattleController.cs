@@ -1062,32 +1062,40 @@ namespace Battle
         // D 드로우 시도 — 1장 뽑고 적 게이지 +1 (비급서 10011 보유 시 패 전부 버리고 5장)
         void TryDDraw()
         {
-            // 유물(비급서 10011): D 드로우가 "현재 패 모두 버리고 5장 뽑기"로 교체
-            if (RelicManager.Instance != null && RelicManager.Instance.HasDDrawOverride())
+            BattleLog.BeginPlayerDraw();
+            try
             {
-                int discarded = _deck.DiscardAllFromHand();
-                int redrawn = _deck.Draw(5, true);
-                if (redrawn > 0) AccrueEnemyGauge(1);
-                handHud?.Refresh();
-                Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우");
-                return;
-            }
+                // 유물(비급서 10011): D 드로우가 "현재 패 모두 버리고 5장 뽑기"로 교체
+                if (RelicManager.Instance != null && RelicManager.Instance.HasDDrawOverride())
+                {
+                    int discarded = _deck.DiscardAllFromHand();
+                    int redrawn = _deck.Draw(5, true);
+                    if (redrawn > 0) AccrueEnemyGauge(1);
+                    handHud?.Refresh();
+                    Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우");
+                    return;
+                }
 
-            if (_deck.IsHandFull)
-            {
-                Log("D 드로우 불가 — 손패 가득 참");
-                return;
+                if (_deck.IsHandFull)
+                {
+                    Log("D 드로우 불가 — 손패 가득 참");
+                    return;
+                }
+                int drawn = _deck.Draw(1, true);
+                if (drawn > 0)
+                {
+                    AccrueEnemyGauge(1);
+                    Log("D 드로우 — 적 게이지 +1");
+                }
+                else
+                {
+                    Log($"D 드로우 실패 — 뽑을 더미({_deck.DrawCount})·버린 더미({_deck.DiscardCount}) 카드 없음 " +
+                        $"(소멸 더미={_deck.ExilePile.Count})");
+                }
             }
-            int drawn = _deck.Draw(1, true);
-            if (drawn > 0)
+            finally
             {
-                AccrueEnemyGauge(1);
-                Log("D 드로우 — 적 게이지 +1");
-            }
-            else
-            {
-                Log($"D 드로우 실패 — 뽑을 더미({_deck.DrawCount})·버린 더미({_deck.DiscardCount}) 카드 없음 " +
-                    $"(소멸 더미={_deck.ExilePile.Count})");
+                BattleLog.EndPlayerDraw();
             }
         }
 
@@ -2061,18 +2069,20 @@ namespace Battle
                     CardElement target = elements[Random.Range(0, elements.Length)];
                     string curseSource = _enemyStat != null && _enemyStat.Data != null ? _enemyStat.Data.enemyName : null;
                     ApplyElementCurse(target, CURSE_DURATION_USES, curseSource);
+                    SfxManager.Instance?.PlayCurse();
                     if (rewardDecision.HasValue) BeginTrack(rewardDecision.Value, 0);
                     Log($"[방해] {target} 속성 저주 — 카드 사용 {CURSE_DURATION_USES}회 동안 지속");
-                    return $"방해: {ElementName(target)} 저주!";
+                    return $"방해: {ElementName(target)} 부적 저주!";
                 }
                 case 1: // 탈진 — 무속성 더미 카드(500)를 뽑을 더미에 섞어 넣음
                 {
                     var dummy = CardDatabase.CreateNeutralFillerInstance();
                     if (dummy != null) _deck.AddToDrawShuffled(dummy);
                     handHud?.Refresh();
+                    SfxManager.Instance?.PlayExhaust();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 1); if (_track != null) _track.exhaustCard = dummy; }
                     Log("[방해] 탈진 — 무속성 카드 1장 뽑을 더미에 삽입");
-                    return "방해: 탈진 카드 삽입!";
+                    return "방해: 탈진 부적 삽입!";
                 }
                 case 2: // 흡수 — 각성 게이지를 EnemyData.흡수수치만큼 감소  [즉시형]
                 {
@@ -2082,6 +2092,7 @@ namespace Battle
                     int before = _elementInputCount;
                     _elementInputCount = Mathf.Max(0, _elementInputCount - absorb);
                     UpdateAwakenText();
+                    SfxManager.Instance?.PlayAbsorb();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 2, AbsorbReward(before));
                     Log($"[방해] 흡수 — 각성 게이지 -{absorb} ({before} → {_elementInputCount})");
                     return "방해: 각성 게이지 흡수!";
@@ -2089,9 +2100,10 @@ namespace Battle
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
                 {
                     _enemy?.BuffNextAttack();
+                    SfxManager.Instance?.PlayEnhance();
                     if (rewardDecision.HasValue) { BeginTrack(rewardDecision.Value, 3); if (_track != null) _track.playerHpAtFire = _player != null ? _player.currentHp : 0; }
                     Log("[방해] 강화 — 적 다음 공격 피해 증가(1회)");
-                    return "방해: 적 강화!";
+                    return "방해: 강화!";
                 }
                 case 4: // 회복 — 적 HP 30% 회복, 재사용까지 다른 방해행동 2회 필요  [즉시형]
                 {
@@ -2103,17 +2115,19 @@ namespace Battle
                         _enemyStat.Heal(heal);
                         Log($"[방해] 회복 — 적 HP +{heal:F0} (최대 30%)");
                     }
+                    SfxManager.Instance?.PlayHeal();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 4, RecoverReward(enemyHpBefore));
-                    return "방해: 적 체력 회복!";
+                    return "방해: 회복!";
                 }
                 default: // 5 버리기 — 플레이어가 패에서 2장 직접 선택해 버림  [즉시형]
                 {
                     int handBefore = _deck != null ? _deck.HandCount : 0;
                     int n = Mathf.Min(2, _deck.HandCount);
                     if (n > 0) EnqueueEnemyForcedDiscard(n);
+                    SfxManager.Instance?.PlayDiscard();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));
                     Log($"[방해] 버리기 — 플레이어가 패 {n}장 선택해 버림");
-                    return "방해: 카드 버리기!";
+                    return "방해: 부적 버리기!";
                 }
             }
         }

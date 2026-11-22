@@ -264,6 +264,7 @@ public class GameStateController : MonoBehaviour
     // 맵 화면으로 전환하고 HP UI 동기화 및 맵 새로고침
     public void ShowMap()
     {
+        GameAudio.Instance?.ClearOutcomeBgm();
         HideAllStages();
 
         if (mapStage != null)
@@ -499,6 +500,7 @@ public class GameStateController : MonoBehaviour
     // 진행 중이던 런/전투를 정리하고 메인 메뉴 화면으로 돌아간다
     public void ReturnToMainMenu()
     {
+        GameAudio.Instance?.ClearOutcomeBgm();
         Time.timeScale = 1f;
 
         // 진행 중이던 전투의 잔여 적/상태 정리

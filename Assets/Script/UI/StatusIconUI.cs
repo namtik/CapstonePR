@@ -47,9 +47,11 @@ public class StatusIconUI : MonoBehaviour
         try
         {
             float outline = Mathf.Clamp01(outlineWidth);
-            if (!Mathf.Approximately(countText.outlineWidth, outline))
-                countText.outlineWidth = outline;
+            countText.outlineWidth = outline;
             countText.outlineColor = outlineColor;
+            // 글꼴 기본 재질의 색이 남아 있어도, 패널에 지정한 색으로 다시 덮는다.
+            if (countText.fontMaterial != null)
+                countText.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, outlineColor);
         }
         catch (System.Exception ex)
         {

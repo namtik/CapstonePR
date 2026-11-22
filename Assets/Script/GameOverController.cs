@@ -121,6 +121,8 @@ public class GameOverController : MonoBehaviour
         if (gameOverCanvas != null)
             gameOverCanvas.SetActive(true);
 
+        GameAudio.Instance?.PlayDefeatBgm();
+
         ShowDeathResult();
 
         if (buttonGroup != null)

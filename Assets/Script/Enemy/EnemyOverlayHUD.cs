@@ -55,6 +55,8 @@ public class EnemyOverlayHUD : MonoBehaviour
     [SerializeField] private GameObject patternNoticeObject; // 패턴 알림 오브젝트
     [SerializeField] private TMP_Text patternNoticeText; // 패턴 알림 텍스트
     [SerializeField] private float patternNoticeDuration = 1.6f; // 패턴 알림 표시 시간
+    [Tooltip("체력바 왼쪽 끝에서 패턴 알림을 더 옮긴다. x가 음수면 더 왼쪽.")]
+    [SerializeField] private Vector2 patternNoticeOffset = new Vector2(-12f, 0f);
 
     [Header("데미지 숫자")]
     [SerializeField] private TMP_Text damageTextTemplate; // 데미지 텍스트 템플릿(빈 상태 유지, 클론이 떠오름)
@@ -304,12 +306,7 @@ public class EnemyOverlayHUD : MonoBehaviour
 
         float aboveBars = hpHalf * 2f + 28f;
         PlaceFree(damageTextTemplate != null ? damageTextTemplate.transform as RectTransform : null, new Vector2(0f, aboveBars));
-        if (patternNoticeObject != null)
-        {
-            var rt = patternNoticeObject.transform as RectTransform;
-            if (rt != null) PlaceFree(rt, new Vector2(0f, aboveBars + 50f));
-            else patternNoticeObject.transform.localPosition = new Vector3(0f, aboveBars + 50f, 0f);
-        }
+        PlacePatternNotice(hpRt);
         if (damageTextTemplate != null)
         {
             damageTextTemplate.text = "";
@@ -354,6 +351,27 @@ public class EnemyOverlayHUD : MonoBehaviour
         rt.localRotation = Quaternion.identity;
         rt.localScale = Vector3.one;
         rt.anchoredPosition = pos;
+    }
+
+    // 패턴 알림은 씬 좌표를 쓰지 않는다. 체력바 왼쪽 끝에 글자 오른쪽을 붙인다.
+    void PlacePatternNotice(RectTransform hpRt)
+    {
+        if (patternNoticeObject == null) return;
+
+        float barWidth = 0f;
+        if (hpRt != null) barWidth = hpRt.rect.width > 1f ? hpRt.rect.width : hpRt.sizeDelta.x;
+        float barLeft = hpRt != null ? hpRt.anchoredPosition.x - barWidth * 0.5f : 0f;
+        float barY = hpRt != null ? hpRt.anchoredPosition.y : 0f;
+        var rt = patternNoticeObject.transform as RectTransform;
+        if (rt == null) rt = patternNoticeObject.AddComponent<RectTransform>();
+        PlaceFree(rt, new Vector2(barLeft, barY) + patternNoticeOffset);
+
+        if (patternNoticeText == null) return;
+        RectTransform textRt = patternNoticeText.rectTransform;
+        textRt.anchorMin = textRt.anchorMax = new Vector2(0.5f, 0.5f);
+        textRt.pivot = new Vector2(1f, 0.5f);
+        textRt.anchoredPosition = Vector2.zero;
+        patternNoticeText.alignment = TextAlignmentOptions.MidlineRight;
     }
 
     static void PlaceFree(RectTransform rt, Vector2 pos)

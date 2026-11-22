@@ -122,6 +122,7 @@ namespace Battle.UI
         static bool _capturingCombat;
         static int _awakenEntryId = -1;
         static bool _logDraws = true;
+        static bool _playerDraw; // D키 드로우 중 — 기록 이름은 카드명이 아니라 "드로우"
         static bool _logGuard = true;
 
         // 사용 중인 카드의 기록을 잠깐 치워 두고, 소멸·버림으로 발동한 카드의 효과를 따로 모은다.
@@ -495,12 +496,23 @@ namespace Battle.UI
             _deferredDraws.Clear();
         }
 
+        // D키로 뽑는 동안 켜 둔다. 이 구간의 기록 이름은 카드명이 아니라 "드로우"다.
+        public static void BeginPlayerDraw()
+        {
+            _playerDraw = true;
+        }
+
+        public static void EndPlayerDraw()
+        {
+            _playerDraw = false;
+        }
+
         public static void RecordDraw(CardData data, bool playerCommand = false)
         {
             if (!_logDraws || !InBattle || data == null) return;
             // 카드 효과가 뽑은 것은 그 카드의 팝업으로만 보여 준다.
             if (_drawDeferDepth > 0 || _capturingMoves || _moveTargetId >= 0) return;
-            PushDraw(data, playerCommand);
+            PushDraw(data, playerCommand || _playerDraw);
         }
 
         static void PushDraw(CardData data, bool playerCommand)
@@ -508,7 +520,7 @@ namespace Battle.UI
             if (!InBattle || data == null) return;
             string caption = playerCommand ? "드로우" : data.displayName;
             var moves = new List<CardMove> { new CardMove(MoveZone.Draw, data) };
-            Push(Kind.Draw, null, null, false, 0, caption, null, moves);
+            Push(Kind.Draw, Load("UI/Tab/드로우"), null, false, 0, caption, null, moves);
         }
 
         public static void RecordGuard(int amount)

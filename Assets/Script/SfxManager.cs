@@ -33,6 +33,20 @@ public class SfxManager : MonoBehaviour
     [SerializeField] private AudioClip burnClip; // 화상 피해 효과음
     [Tooltip("상점에서 카드, 유물, 콤보 구매가 성공했을 때 재생.")]
     [SerializeField] private AudioClip purchaseClip; // 상점 구매 효과음
+    [Tooltip("전투 스테이지가 끝나고 카드 보상창이 뜰 때 재생.")]
+    [SerializeField] private AudioClip getRewardClip; // 보상창 효과음
+    [Tooltip("적이 저주 방해행동을 쓸 때 재생.")]
+    [SerializeField] private AudioClip curseClip; // 저주 효과음
+    [Tooltip("적이 탈진 방해행동을 쓸 때 재생.")]
+    [SerializeField] private AudioClip exhaustClip; // 탈진 효과음
+    [Tooltip("적이 흡수 방해행동을 쓸 때 재생.")]
+    [SerializeField] private AudioClip absorbClip; // 흡수 효과음
+    [Tooltip("적이 강화 방해행동을 쓸 때 재생.")]
+    [SerializeField] private AudioClip enhanceClip; // 강화 효과음
+    [Tooltip("적이 버리기 방해행동을 쓸 때 재생.")]
+    [SerializeField] private AudioClip discardClip; // 버리기 효과음
+    [Tooltip("인벤토리 또는 도감이 열릴 때 재생.")]
+    [SerializeField] private AudioClip inventoryOpenClip; // 인벤토리·도감 열기 효과음
 
     // 이펙트 이름과 전용 클립을 묶는 매핑 데이터
     [System.Serializable]
@@ -59,6 +73,13 @@ public class SfxManager : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float healVolume = 1f; // 회복 볼륨
     [Range(0f, 1f)] [SerializeField] private float burnVolume = 1f; // 화상 피해 볼륨
     [Range(0f, 1f)] [SerializeField] private float purchaseVolume = 1f; // 상점 구매 볼륨
+    [Range(0f, 1f)] [SerializeField] private float getRewardVolume = 1f; // 보상창 볼륨
+    [Range(0f, 1f)] [SerializeField] private float curseVolume = 1f; // 저주 볼륨
+    [Range(0f, 1f)] [SerializeField] private float exhaustVolume = 1f; // 탈진 볼륨
+    [Range(0f, 1f)] [SerializeField] private float absorbVolume = 1f; // 흡수 볼륨
+    [Range(0f, 1f)] [SerializeField] private float enhanceVolume = 1f; // 강화 볼륨
+    [Range(0f, 1f)] [SerializeField] private float discardVolume = 1f; // 버리기 볼륨
+    [Range(0f, 1f)] [SerializeField] private float inventoryOpenVolume = 1f; // 인벤토리·도감 열기 볼륨
 
     int _burnPlayedFrame = -1; // 같은 프레임에 화상음이 여러 번 겹쳐 늦게 들리지 않게
 
@@ -70,6 +91,7 @@ public class SfxManager : MonoBehaviour
         if (source == null) source = GetComponent<AudioSource>();
         if (source != null) source.playOnAwake = false;
         PrepareClip(burnClip);
+        PrepareClip(getRewardClip);
     }
 
     // 파괴 시 싱글톤 참조를 해제한다
@@ -107,6 +129,27 @@ public class SfxManager : MonoBehaviour
 
     // 상점 구매 성공 효과음을 재생한다
     public void PlayPurchase() => Play(purchaseClip, purchaseVolume);
+
+    // 전투 보상창이 열릴 때 효과음을 재생한다
+    public void PlayGetReward() => Play(getRewardClip, getRewardVolume);
+
+    // 적 저주 방해행동 효과음을 재생한다
+    public void PlayCurse() => Play(curseClip, curseVolume);
+
+    // 적 탈진 방해행동 효과음을 재생한다
+    public void PlayExhaust() => Play(exhaustClip, exhaustVolume);
+
+    // 적 흡수 방해행동 효과음을 재생한다
+    public void PlayAbsorb() => Play(absorbClip, absorbVolume);
+
+    // 적 강화 방해행동 효과음을 재생한다
+    public void PlayEnhance() => Play(enhanceClip, enhanceVolume);
+
+    // 적 버리기 방해행동 효과음을 재생한다
+    public void PlayDiscard() => Play(discardClip, discardVolume);
+
+    // 인벤토리 또는 도감이 열릴 때 효과음을 재생한다
+    public void PlayInventoryOpen() => Play(inventoryOpenClip, inventoryOpenVolume);
 
     // 화상 피해 효과음을 재생한다. 같은 프레임의 중복 호출은 한 번만 낸다.
     public void PlayBurn()

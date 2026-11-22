@@ -77,6 +77,7 @@ public class GameClearController : MonoBehaviour
         }
 
         gameClearCanvas.SetActive(true);
+        GameAudio.Instance?.PlayWinBgm();
         Time.timeScale = 0f;
         ShowRunKills();
     }

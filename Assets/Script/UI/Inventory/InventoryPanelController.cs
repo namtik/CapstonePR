@@ -105,6 +105,7 @@ namespace Battle.UI
         // 캔버스가 씬 시작부터 비활성이어도 여기서 켠다. 그때 스케일이 0이면 화면에 안 나오므로 보정한다.
         public void Open()
         {
+            bool wasOpen = panelRoot != null && panelRoot.activeInHierarchy;
             if (CodexPanelController.IsOpen) CodexPanelController.Instance.Close();
 
             _isOpen = true;
@@ -117,6 +118,7 @@ namespace Battle.UI
             EnsureOnTop();
             ShowCardTab();
             if (pauseTimeWhenOpen) Time.timeScale = 0f;
+            if (!wasOpen) SfxManager.Instance?.PlayInventoryOpen();
         }
 
         // 패널 위의 꺼진 캔버스까지 켜고, 시작부터 꺼져 있어 스케일이 0인 루트 캔버스는 다시 맞춘다
