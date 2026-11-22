@@ -8,6 +8,8 @@ public class DifficultyConfig : ScriptableObject
 
     [Header("Stage Scale Curves (x: column progress, y: multiplier)")]
     public AnimationCurve hpCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 3f);
+    [Tooltip("첫 층 체력 배율을 기준으로, 두 막에 걸친 체력 증가분에 곱하는 값입니다.")]
+    [Min(0f)] public float enemyHpGrowth = 0.4f;
     public AnimationCurve attackCountCurve = AnimationCurve.EaseInOut(0, 1f, 1f, 3f);
 
     [Header("Type Multipliers")]
@@ -25,9 +27,14 @@ public class DifficultyConfig : ScriptableObject
 
     public float GetHpMultiplier(int column, NodeType type)
     {
-        float t = (float)column / totalColumns;
-        float baseMultiplier = EvaluateCurveWithLinearExtrapolation(hpCurve, t);
-        return baseMultiplier * GetTypeMultiplier(type);
+        int span = Mathf.Max(1, totalColumns);
+        int lapIndex = column / (span + 1);
+        int floorIndex = column % (span + 1);
+        // 이전 막의 보스와 다음 막 첫 층은 같은 진행도를 사용한다.
+        float progress = (lapIndex * span + floorIndex) / (2f * span);
+        float start = EvaluateCurveWithLinearExtrapolation(hpCurve, 0f);
+        float baseline = EvaluateCurveWithLinearExtrapolation(hpCurve, progress);
+        return (start + (baseline - start) * enemyHpGrowth) * GetTypeMultiplier(type);
     }
 
     public int GetAttackCount(int baseCount, int column, NodeType type)

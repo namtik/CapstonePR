@@ -20,7 +20,7 @@ MonoBehaviour:
       time: 0
       value: 0.6
       inSlope: 0
-      outSlope: 0
+      outSlope: 4
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
@@ -28,8 +28,8 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 0.1
       value: 1
-      inSlope: 1.6889458
-      outSlope: 1.6889458
+      inSlope: 4
+      outSlope: 2.2222223
       tangentMode: 0
       weightedMode: 0
       inWeight: 0.33333334
@@ -37,15 +37,16 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 1
       value: 3
-      inSlope: 2
-      outSlope: 2
+      inSlope: 2.2222223
+      outSlope: 2.2222223
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     m_PreInfinity: 2
-    m_PostInfinity: 3
+    m_PostInfinity: 2
     m_RotationOrder: 4
+  enemyHpGrowth: 0.4
   attackCountCurve:
     serializedVersion: 2
     m_Curve:

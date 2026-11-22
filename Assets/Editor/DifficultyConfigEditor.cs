@@ -20,7 +20,7 @@ public class DifficultyConfigEditor : Editor
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("난이도 스케일링 그래프 (HP 배율)", EditorStyles.boldLabel);
-        EditorGUILayout.LabelField("x: 컬럼(0~totalColumns), y: 배율", EditorStyles.miniLabel);
+        EditorGUILayout.LabelField("일반 전투 기준 · 1막 첫 층부터 2막 보스까지", EditorStyles.miniLabel);
 
         Rect area = GUILayoutUtility.GetRect(10, 220, GUILayout.ExpandWidth(true));
         DrawGraph(area, cfg);
@@ -37,16 +37,15 @@ public class DifficultyConfigEditor : Editor
                               area.width - padL - padR, area.height - padT - padB);
         if (inner.width <= 1f || inner.height <= 1f) return;
 
-        int cols = Mathf.Max(1, cfg.totalColumns);
+        int cols = Mathf.Max(1, cfg.GetEffectiveColumn(cfg.totalColumns, 1));
         int samples = Mathf.Clamp(cols, 2, 200);
 
-        // 샘플링 — 컬럼 0..cols 구간(커브 정의역 t=0..1)
         var hp = new float[samples + 1];
         float maxY = 1f, minY = 0f;
         for (int i = 0; i <= samples; i++)
         {
             float t = (float)i / samples;
-            hp[i]  = cfg.hpCurve != null && cfg.hpCurve.length > 0 ? cfg.hpCurve.Evaluate(t) : 1f;
+            hp[i] = cfg.GetHpMultiplier(Mathf.RoundToInt(t * cols), NodeType.Combat);
             maxY = Mathf.Max(maxY, hp[i]);
             minY = Mathf.Min(minY, hp[i]);
         }
