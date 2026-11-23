@@ -43,6 +43,7 @@ public class GameOverController : MonoBehaviour
     private Vector2 bottomOpenPos; // 아래 눈꺼풀 열림 위치
     private bool positionsCached; // 눈꺼풀 위치 캐시 완료 여부
     private bool isDead; // 사망 연출 진행 중 여부
+    public bool IsDead => isDead; // 게임오버 화면 표시 중 여부(스테이지 다시 시작 차단용)
     private Coroutine animRoutine; // 진행 중인 연출 코루틴
     private string defeatTextTemplate; // N이 들어 있는 원문
 

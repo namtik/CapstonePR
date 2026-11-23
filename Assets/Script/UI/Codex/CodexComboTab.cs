@@ -74,9 +74,8 @@ namespace Battle.UI
                             itemRt.anchoredPosition = Vector2.zero;
                             float fit = Mathf.Min(cell.x / native.x, cell.y / native.y);
                             itemRt.localScale = Vector3.one * fit;
-                            // ButtonHoverScale이 기준 스케일(1)로 되돌려 옆 책과 겹치지 않도록 기준을 맞춘다
-                            var hover = itemRt.GetComponent<ButtonHoverScale>();
-                            if (hover != null) hover.SetBaseScale(fit);
+                            // 주의: ComboBook의 ButtonHoverScale이 기준 스케일 1로 되돌리므로 실제 표시는 원래 크기(1)다.
+                            // 그리드 간격(셀 300 + 간격 400)이 원래 크기 기준으로 잡혀 있어 fit(0.5)을 기준으로 고정하면 책이 절반으로 작아진다.
                         }
                     }
 

@@ -190,12 +190,14 @@ namespace Battle.UI
         }
 
         // 속성에 대응하는 prefab 스프라이트를 반환
+        // 파편은 전용 아트가 없어 매핑이 비어 있었다 → 손패는 재사용 뷰의 이전 카드 모습이, 사용 연출(새 뷰)은 프리팹 기본값(무속성)이 나왔다.
+        // 땅 카드에서 생기는 카드이므로 땅 속성 모습으로 통일한다(부적 모드는 기존대로 없음).
         public Sprite GetElementSprite(CardElement element) => element switch
         {
             CardElement.Fire    => fireElementSprite,
             CardElement.Water   => waterElementSprite,
             CardElement.Wind    => windElementSprite,
-            CardElement.Earth   => earthElementSprite,
+            CardElement.Earth or CardElement.Fragment => earthElementSprite,
             CardElement.Neutral => neutralElementSprite,
             _ => null
         };
@@ -391,7 +393,7 @@ namespace Battle.UI
             CardElement.Fire    => fireBackgroundSprite,
             CardElement.Water   => waterBackgroundSprite,
             CardElement.Wind    => windBackgroundSprite,
-            CardElement.Earth   => earthBackgroundSprite,
+            CardElement.Earth or CardElement.Fragment => earthBackgroundSprite,
             CardElement.Neutral => neutralBackgroundSprite,
             _ => null
         };
@@ -405,7 +407,7 @@ namespace Battle.UI
                 CardElement.Fire    => fireElementSprite,
                 CardElement.Water   => waterElementSprite,
                 CardElement.Wind    => windElementSprite,
-                CardElement.Earth   => earthElementSprite,
+                CardElement.Earth or CardElement.Fragment => earthElementSprite,
                 CardElement.Neutral => neutralElementSprite,
                 _ => null
             };
@@ -856,7 +858,7 @@ namespace Battle.UI
                 CardElement.Fire    => new Color(0.95f, 0.55f, 0.40f, 1f),
                 CardElement.Water   => new Color(0.50f, 0.75f, 0.95f, 1f),
                 CardElement.Wind    => new Color(0.60f, 0.90f, 0.60f, 1f),
-                CardElement.Earth   => new Color(0.85f, 0.70f, 0.45f, 1f),
+                CardElement.Earth or CardElement.Fragment => new Color(0.85f, 0.70f, 0.45f, 1f),
                 CardElement.Neutral => new Color(0.70f, 0.70f, 0.70f, 1f),
                 _ => new Color(0.5f, 0.5f, 0.5f, 1f)
             };

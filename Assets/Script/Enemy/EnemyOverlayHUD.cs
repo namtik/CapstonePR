@@ -36,7 +36,9 @@ public class EnemyOverlayHUD : MonoBehaviour
     {
         var badge = GetComponent<EnemyNoteBadge>();
         if (badge == null) badge = gameObject.AddComponent<EnemyNoteBadge>();
-        badge.Bind(HpBarRect, note);
+        // 특이사항 말풍선은 부가 UI — 여기서 예외가 나도 적 스폰/전투 시작이 끊기지 않게 한다
+        try { badge.Bind(HpBarRect, note); }
+        catch (System.Exception e) { Debug.LogException(e); }
     }
 
     [Header("표시 루트")]
@@ -127,6 +129,14 @@ public class EnemyOverlayHUD : MonoBehaviour
         CacheBodyRenderers();
         SetVisible(true);
         FollowAnchor();
+    }
+
+    // 이 앵커에 묶여 있을 때만 해제한다. 파괴가 프레임 끝에 일어나므로, 그 사이 같은 HUD를 새 몬스터가
+    // 다시 Bind했다면(스테이지 다시 시작 F3 등) 옛 몬스터의 OnDestroy가 새 몬스터의 HP바를 숨기지 않게 한다.
+    public void UnbindIfBoundTo(Transform anchor)
+    {
+        if (_worldAnchor != null && _worldAnchor != anchor) return;
+        Unbind();
     }
 
     // 바인딩 해제(몬스터 사망/전투 종료) — 패널을 숨긴다.
@@ -436,8 +446,8 @@ public class EnemyOverlayHUD : MonoBehaviour
         point = _worldAnchor.position + Vector3.up * 1.6f;
         if (_bodyRenderers == null || _bodyRenderers.Length == 0) return false;
 
-        // 몸체(스킨드 메시)가 있으면 그것만 기준으로 삼는다. 우산귀처럼 물방울·침 등 부속 이펙트용 MeshRenderer가
-        // 몸 위쪽(또는 스케일 0 상태로 먼 위치)에 붙은 모델은, 전부 합치면 머리 높이가 실제보다 훨씬 높게 잡혔다.
+        // 몸체(스킨드 메시)가 있으면 그것만 기준으로 삼고, 크기 0인 부속은 뺀다.
+        // 스킨드 bounds는 본 기준이라 실제 정점보다 여유가 있어(우산귀 HP바가 너무 높던 원인) 구운 정점 최고점으로 좁힌다.
         bool any = SampleBodyTop(true, out Bounds bounds, out float top);
         if (!any) any = SampleBodyTop(false, out bounds, out top); // 스킨드 메시가 없는 모델은 일반 렌더러로
         if (!any) return false;
@@ -464,8 +474,9 @@ public class EnemyOverlayHUD : MonoBehaviour
             else bounds.Encapsulate(b);
 
             float rTop = b.max.y;
-            if (skinned && TryBakedTop((SkinnedMeshRenderer)r, out float baked)
-                && baked <= b.max.y + 0.01f && baked >= b.min.y)
+            // 구운 최고점이 bounds 높이의 위쪽 절반 안에 있을 때만 믿는다(몸 중앙으로 떨어지는 오계산 방지)
+            if (skinned && TryBakedTop((SkinnedMeshRenderer)r, b, out float baked)
+                && baked <= b.max.y + 0.01f && baked >= b.center.y)
                 rTop = baked; // 스킨드 bounds는 본 기준이라 여유가 있다 — 현재 포즈 정점 최고점으로 좁힌다
             if (rTop > top) top = rTop;
         }
@@ -475,7 +486,9 @@ public class EnemyOverlayHUD : MonoBehaviour
     static Mesh _bakeMesh;
 
     // 현재 포즈를 구워 월드 기준 정점 최고 높이를 구한다(전투 시작 때 한 번만 호출)
-    static bool TryBakedTop(SkinnedMeshRenderer smr, out float top)
+    // 구운 정점을 월드로 옮길 때 부모 스케일 반영 여부가 헷갈리기 쉽다(우산귀는 루트 스케일 2라 잘못 옮기면 높이가 절반 → 몸 중앙).
+    // 두 방식으로 옮겨 보고, 렌더러 bounds와 높이 범위가 더 잘 맞는 쪽을 쓴다.
+    static bool TryBakedTop(SkinnedMeshRenderer smr, Bounds reference, out float top)
     {
         top = 0f;
         if (smr == null || smr.sharedMesh == null || !smr.sharedMesh.isReadable) return false;
@@ -486,15 +499,21 @@ public class EnemyOverlayHUD : MonoBehaviour
             Vector3[] verts = _bakeMesh.vertices;
             if (verts == null || verts.Length == 0) return false;
             Transform t = smr.transform;
-            Matrix4x4 m = Matrix4x4.TRS(t.position, t.rotation, Vector3.one);
-            float best = float.NegativeInfinity;
+            Matrix4x4 withScale = t.localToWorldMatrix;
+            Matrix4x4 noScale = Matrix4x4.TRS(t.position, t.rotation, Vector3.one);
+            float minA = float.PositiveInfinity, maxA = float.NegativeInfinity;
+            float minB = float.PositiveInfinity, maxB = float.NegativeInfinity;
             for (int i = 0; i < verts.Length; i++)
             {
-                float y = m.MultiplyPoint3x4(verts[i]).y;
-                if (y > best) best = y;
+                float ya = withScale.MultiplyPoint3x4(verts[i]).y;
+                float yb = noScale.MultiplyPoint3x4(verts[i]).y;
+                if (ya < minA) minA = ya; if (ya > maxA) maxA = ya;
+                if (yb < minB) minB = yb; if (yb > maxB) maxB = yb;
             }
-            top = best;
-            return !float.IsInfinity(best);
+            float errA = Mathf.Abs(minA - reference.min.y) + Mathf.Abs(maxA - reference.max.y);
+            float errB = Mathf.Abs(minB - reference.min.y) + Mathf.Abs(maxB - reference.max.y);
+            top = errA <= errB ? maxA : maxB;
+            return !float.IsInfinity(top);
         }
         catch (System.Exception)
         {

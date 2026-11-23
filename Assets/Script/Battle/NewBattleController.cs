@@ -230,6 +230,7 @@ namespace Battle
         public const int ATTACK_AWAKEN_DRAIN_DEFAULT = 5; // 적 공격 시 각성 감소량(EnemyData 없을 때)
         public const float RECOVER_RATIO = 0.1f;    // 회복 방해행동 회복 비율(최대 HP 대비)
         public const int DISCARD_DISRUPTION_COUNT = 1; // 버리기 방해행동 무작위 버림 장수
+        public const int DISRUPTION_DISCARD_RANDOM_ABILITY_COUNT = 2; // 특이사항(가라카사오바케) 버리기 방해 시 버림 장수
         class ActiveCurse
         {
             public CardElement element;
@@ -2374,10 +2375,14 @@ namespace Battle
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 4, RecoverReward(enemyHpBefore));
                     return "방해: 회복!";
                 }
-                default: // 5 버리기 — 패에서 무작위 1장 버림  [즉시형]
+                default: // 5 버리기 — 패에서 무작위 1장 버림(가라카사오바케는 2장)  [즉시형]
                 {
                     int handBefore = _deck != null ? _deck.HandCount : 0;
-                    int n = Mathf.Min(DISCARD_DISRUPTION_COUNT, _deck != null ? _deck.HandCount : 0);
+                    int discardCount = DISCARD_DISRUPTION_COUNT;
+                    // 특이사항(가라카사오바케): 버리기 방해 발동 시 무작위로 부적 2장을 버리게 한다
+                    if (_enemy != null && _enemy.Ability == EnemySpecialAbility.DisruptionDiscardRandom)
+                        discardCount = DISRUPTION_DISCARD_RANDOM_ABILITY_COUNT;
+                    int n = Mathf.Min(discardCount, _deck != null ? _deck.HandCount : 0);
                     if (n > 0) DiscardRandomFromHand(n);
                     SfxManager.Instance?.PlayDiscard();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 5, DiscardReward(handBefore));

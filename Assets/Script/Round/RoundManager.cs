@@ -268,9 +268,113 @@ public class RoundManager : MonoBehaviour
         }
     }
 
+    // ── 시연용: 현재 전투 스테이지 다시 시작(F3) ──
+    [Header("시연용 단축키")]
+    [Tooltip("ON이면 전투 중 지정 키로 현재 스테이지(같은 적·같은 스테이지)를 처음부터 다시 시작한다. 정식 빌드에서도 동작.")]
+    [SerializeField] private bool enableRestartStageHotkey = true;
+    [SerializeField] private KeyCode restartStageKey = KeyCode.F3;
+
+    private int _roundStartHp = -1;        // 라운드 시작 시 플레이어 HP
+    private int _roundStartMoney = -1;     // 라운드 시작 시 골드
+    private int _roundStartKillCount = -1; // 라운드 시작 시 런 처치 수
+
+    private List<EnemyData> _lastRoster;    // 이번 라운드에 나온 적 명단
+    private List<EnemyData> _restartRoster; // 다시 시작 시 그대로 쓸 명단(일반 전투 명단은 매번 새로 뽑히므로 고정)
+
+    void Update()
+    {
+        if (enableRestartStageHotkey && Input.GetKeyDown(restartStageKey))
+            RestartCurrentStage();
+    }
+
+    // 다시 시작 중이면 직전 명단을 그대로 쓰고, 아니면 이번 명단을 기억한다
+    List<EnemyData> PinRoster(List<EnemyData> resolved)
+    {
+        if (_restartRoster != null)
+        {
+            List<EnemyData> pinned = _restartRoster;
+            _restartRoster = null;
+            _lastRoster = new List<EnemyData>(pinned);
+            return pinned;
+        }
+        _lastRoster = resolved != null ? new List<EnemyData>(resolved) : null;
+        return resolved;
+    }
+
+    // 진행 중인 전투를 버리고, 라운드 시작 시점의 HP·골드·처치 기록으로 되돌린 뒤 같은 라운드를 다시 연다.
+    public bool RestartCurrentStage()
+    {
+        bool isCombatRound = currentRoundData is CombatRoundData || currentRoundData is EliteRoundData
+                             || currentRoundData is BossRoundData;
+        var nb = Battle.NewBattleController.Instance;
+        if (!isCombatRound || !IsNewBattleSystemActive() || nb == null || !nb.InBattle)
+        {
+            Debug.Log("[RoundManager] 다시 시작 무시 — 진행 중인 전투가 없습니다.");
+            return false;
+        }
+        if (GameOverController.Instance != null && GameOverController.Instance.IsDead)
+        {
+            Debug.Log("[RoundManager] 다시 시작 무시 — 게임오버 화면입니다.");
+            return false;
+        }
+
+        if (_restartRoutine != null) return false; // 이미 다시 시작 중
+
+        RoundData data = currentRoundData;
+        bool debugRound = DebugRoundActive; // AbortActiveCombat이 끄므로 보관(테스트 라운드는 테스트 라운드로 재시작)
+        List<EnemyData> roster = _lastRoster != null && _lastRoster.Count > 0 ? new List<EnemyData>(_lastRoster) : null;
+
+        Time.timeScale = 1f;
+        GameStateController.ClearLingeringFx();
+        AbortActiveCombat(); // 내부에서 StopAllCoroutines — 재시작 코루틴은 이 뒤에 시작
+        _injectedEnemies.Clear();
+        _restartRoutine = StartCoroutine(RestartAfterTeardown(data, debugRound, roster));
+        return true;
+    }
+
+    private Coroutine _restartRoutine;
+
+    // 옛 적·HUD 복제본의 Destroy는 프레임 끝에 처리되고, 그때 OnDestroy가 파티/HUD/전투 상태를 건드린다.
+    // 같은 프레임에 새 전투를 열면 새 적·덱이 그 정리에 휘말렸다(적 일부 누락, 패/더미 비어 있음, HP바 사라짐).
+    // 정리가 끝난 뒤(2프레임) 맵에서 들어올 때와 같은 순서로 새로 시작한다.
+    IEnumerator RestartAfterTeardown(RoundData data, bool debugRound, List<EnemyData> roster)
+    {
+        yield return null;
+        yield return null;
+        _restartRoutine = null;
+        DebugRoundActive = debugRound;
+
+        Player player = Player.Resolve(true);
+        if (player != null && _roundStartHp > 0)
+        {
+            player.currentHp = Mathf.Clamp(_roundStartHp, 1, player.maxHp);
+            Player.SyncAllInstancesFrom(player);
+        }
+        if (MoneyManager.Instance != null && _roundStartMoney >= 0)
+            MoneyManager.Instance.SetMoney(_roundStartMoney);
+        if (GameStateController.Instance != null && _roundStartKillCount >= 0)
+            GameStateController.Instance.TrimRunKills(_roundStartKillCount);
+
+        Debug.Log($"[RoundManager] 현재 스테이지 다시 시작 — 적 {(roster != null ? roster.Count : 0)}마리");
+        _restartRoster = roster;
+        StartRound(data);
+
+        // 진단용: 시작 직후 상태
+        yield return null;
+        var deck = Battle.NewBattleController.Instance != null ? Battle.NewBattleController.Instance.Deck : null;
+        Debug.Log($"[RoundManager] 다시 시작 후 — 살아 있는 적 {EnemyCombatParty.AliveCount}, " +
+                  (deck != null ? $"패 {deck.HandCount}, 뽑을 {deck.DrawCount}, 버린 {deck.DiscardCount}" : "덱 없음"));
+    }
+
     // 라운드 데이터를 설정하고 핸들러를 만들어 라운드를 진행한다.
     void ContinueStartRound(RoundData roundData)
     {
+        // 다시 시작(F3)용 시작 상태 저장
+        Player startPlayer = Player.Resolve(true);
+        _roundStartHp = startPlayer != null ? startPlayer.currentHp : -1;
+        _roundStartMoney = MoneyManager.Instance != null ? MoneyManager.Instance.GetMoney() : -1;
+        _roundStartKillCount = GameStateController.Instance != null ? GameStateController.Instance.RunKillCount : -1;
+
         currentRoundData = roundData;
         currentEnemyIndex = 0;
 
@@ -318,7 +422,7 @@ public class RoundManager : MonoBehaviour
     // 일반 전투를 시작한다.
     public void StartCombat(CombatRoundData data)
     {
-        List<EnemyData> roster = ResolveCombatRoster(data);
+        List<EnemyData> roster = PinRoster(ResolveCombatRoster(data));
         ShowStageThen(roster, data.columnIndex, () => BeginCombat(data, roster));
     }
 
@@ -339,7 +443,8 @@ public class RoundManager : MonoBehaviour
     // 정예 전투를 시작한다.
     public void StartCombat(EliteRoundData data)
     {
-        List<EnemyData> roster = TakeFirstEnemy(data.enemies);
+        // 스테이지 속성 결정용 명단 — 다시 시작 명단은 여기서 소비하지 않고(BeginElite의 PinRoster가 소비) 엿보기만 한다
+        List<EnemyData> roster = _restartRoster != null ? _restartRoster : TakeFirstEnemy(data.enemies);
         ShowStageThen(roster, data.columnIndex, () => BeginElite(data, roster));
     }
 
@@ -352,7 +457,7 @@ public class RoundManager : MonoBehaviour
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
 
-        SpawnParty(ResolveEliteRoster(data), data.columnIndex, data.roundType);
+        SpawnParty(PinRoster(ResolveEliteRoster(data)), data.columnIndex, data.roundType);
 
         if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
@@ -848,6 +953,7 @@ public class RoundManager : MonoBehaviour
         currentEnemy = null;
 
         StopAllCoroutines();
+        _restartRoutine = null; // 다시 시작 대기 중이었다면 함께 취소됨
 
         // 2D 스폰 위치(EnemyPos) 아래 남은 적만 지운다.
         // 같은 트랜스폼에 3D 전투 HP바·예고 글자가 상주하므로, 적 컴포넌트가 없는 자식은 남긴다.

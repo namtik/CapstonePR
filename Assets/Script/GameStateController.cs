@@ -80,6 +80,13 @@ public class GameStateController : MonoBehaviour
         RunKillerName = enemyName.Trim();
     }
 
+    // 스테이지 다시 시작(F3) 시, 그 전투에서 쌓인 처치 기록을 시작 시점 개수로 되돌린다
+    public void TrimRunKills(int count)
+    {
+        count = Mathf.Max(0, count);
+        if (runKills.Count > count) runKills.RemoveRange(count, runKills.Count - count);
+    }
+
     // 새 런을 시작하거나 메인으로 나갈 때 처치 기록과 킬러 이름을 비운다
     public void ClearRunKills()
     {

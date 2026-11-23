@@ -73,7 +73,52 @@ public class EnemyNoteBadge : MonoBehaviour
     {
         if (_root == null || !_root.gameObject.activeInHierarchy) return;
         Place();
+        KeepIconOnScreen();
+        UpdateDirectHover();
         if (_bubble != null && _bubble.activeSelf) ApplyStyle();
+    }
+
+    // 말풍선은 해골 아이콘의 PointerEnter로만 열렸다. 키 큰 몬스터(그슨새 등)는 HP바가 화면 위쪽에 붙어
+    // 아이콘이 상단 UI(메뉴바·행동 순서 등) 밑에 깔리거나 다른 적 바와 겹치면 레이캐스트가 막혀 툴팁이 안 떴다.
+    // 마우스 위치를 직접 판정해(인벤토리 카드 슬롯과 같은 방식) 가려져도 열리게 한다.
+    readonly Vector3[] _corners = new Vector3[4];
+
+    void UpdateDirectHover()
+    {
+        if (_bubble == null) return;
+        // 전체 화면 패널(인벤토리·도감)이 열려 있으면 그 아래 아이콘 판정은 하지 않는다
+        bool panelOpen = Battle.UI.InventoryPanelController.IsOpen || Battle.UI.CodexPanelController.IsOpen;
+        bool over = !panelOpen && IsPointerOver(_root)
+            || (_bubble.activeSelf && IsPointerOver(_bubble.transform as RectTransform));
+        bool want = _hoverCount > 0 || over;
+        if (_bubble.activeSelf != want) _bubble.SetActive(want);
+    }
+
+    Camera CanvasCamera(RectTransform rt)
+    {
+        Canvas canvas = rt != null ? rt.GetComponentInParent<Canvas>() : null;
+        if (canvas == null) return null;
+        canvas = canvas.rootCanvas;
+        return canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+    }
+
+    bool IsPointerOver(RectTransform rt)
+    {
+        if (rt == null || !rt.gameObject.activeInHierarchy) return false;
+        return RectTransformUtility.RectangleContainsScreenPoint(rt, Input.mousePosition, CanvasCamera(rt));
+    }
+
+    // 아이콘이 화면 위로 나가면 화면 안으로 내린다(마우스를 올릴 수 없게 되는 것 방지)
+    void KeepIconOnScreen()
+    {
+        Camera cam = CanvasCamera(_root);
+        _root.GetWorldCorners(_corners);
+        Vector2 bottom = RectTransformUtility.WorldToScreenPoint(cam, _corners[0]);
+        Vector2 top = RectTransformUtility.WorldToScreenPoint(cam, _corners[1]);
+        float overflow = top.y - (Screen.height - 4f);
+        float pixelsPerUnit = _root.rect.height > 0.01f ? (top.y - bottom.y) / _root.rect.height : 0f;
+        if (overflow > 0f && pixelsPerUnit > 0.0001f)
+            _root.anchoredPosition -= new Vector2(0f, overflow / pixelsPerUnit);
     }
 
     void Ensure(RectTransform bar)
@@ -178,10 +223,16 @@ public class EnemyNoteBadge : MonoBehaviour
         _label.color = color;
         _label.fontStyle = fontStyle;
         _label.alignment = alignment;
-        _label.outlineWidth = Mathf.Clamp01(outlineWidth);
-        _ = _label.outlineColor;
-        _label.outlineColor = outlineColor;
-        FitText();
+        // 말풍선(라벨 부모)이 꺼져 있으면 TMP가 아직 머테리얼을 만들지 않아 outlineWidth 설정에서 NullReference가 났다
+        // (적 스폰 도중 예외 → 나머지 적·전투 시작이 통째로 건너뛰어짐). 외곽선·크기 맞춤은 보일 때만 적용한다 —
+        // 말풍선이 열리면 LateUpdate가 매 프레임 ApplyStyle을 다시 부른다.
+        if (_label.isActiveAndEnabled && _label.fontSharedMaterial != null)
+        {
+            _label.outlineWidth = Mathf.Clamp01(outlineWidth);
+            _ = _label.outlineColor;
+            _label.outlineColor = outlineColor;
+            FitText();
+        }
 
         var icon = _root != null ? _root.GetComponent<Image>() : null;
         if (icon != null && skullSprite != null) icon.sprite = skullSprite;

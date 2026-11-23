@@ -239,7 +239,8 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
             _stat.OnDamaged -= HandleDamaged;
         }
         // 이 몬스터가 파괴될 때 HUD가 떠 있으면 숨김(다음 몬스터가 다시 Bind).
-        if (_hud != null) _hud.Unbind();
+        // 이미 다른 몬스터가 같은 HUD를 가져갔으면 건드리지 않는다.
+        if (_hud != null) _hud.UnbindIfBoundTo(HudAnchorTransform);
     }
 
     // 3단계 배선용: 스테이지 카메라를 주입한다.
@@ -254,12 +255,15 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     // RoundManager가 몬스터별 HUD를 직접 연결한다.
     public void SetOverlayHud(EnemyOverlayHUD hud, bool followWorld, float barScale = 1f)
     {
-        if (_hud != null && _hud != hud) _hud.Unbind();
+        if (_hud != null && _hud != hud) _hud.UnbindIfBoundTo(HudAnchorTransform);
         _hud = hud;
         _followWorld = followWorld;
         _barScale = barScale;
         BindHud(followWorld);
     }
+
+    // HUD가 따라가는 앵커(지정 없으면 자기 자신)
+    Transform HudAnchorTransform => hudAnchor != null ? hudAnchor : transform;
 
     void BindHud(bool followWorld = false)
     {
@@ -269,7 +273,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
 
         if (_hud == null) return;
 
-        Transform anchor = hudAnchor != null ? hudAnchor : transform;
+        Transform anchor = HudAnchorTransform;
         Camera cam = renderCamera != null ? renderCamera : Camera.main;
         _hud.Bind(anchor, cam, _stat != null ? _stat.GaugeMaxSteps : EnemyStat.GAUGE_MAX_STEPS, followWorld, _barScale, hudScreenOffset);
         if (_stat != null) _hud.SetHp(_stat.currentHp, _stat.maxHp);
