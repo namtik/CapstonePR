@@ -34,7 +34,6 @@ namespace Battle.UI
                 // GridLayout이면 카드와 동일하게 셀 래퍼로 감싸 원본 배치가 안 깨지게 한다.
                 // (VerticalLayout 등 다른 레이아웃이면 그대로 직접 배치)
                 var grid = listRoot.GetComponent<UnityEngine.UI.GridLayoutGroup>();
-                Vector2 cell = grid != null ? grid.cellSize : Vector2.zero;
 
                 foreach (var def in combos)
                 {
@@ -60,15 +59,15 @@ namespace Battle.UI
                         RectTransform itemRt = item.GetComponent<RectTransform>();
                         if (itemRt != null)
                         {
-                            Vector2 native = itemRt.sizeDelta;
-                            if (native.x < 1f || native.y < 1f) native = new Vector2(600f, 400f);
                             itemRt.anchorMin = itemRt.anchorMax = new Vector2(0.5f, 0.5f);
                             itemRt.pivot = new Vector2(0.5f, 0.5f);
                             itemRt.anchoredPosition = Vector2.zero;
-                            float fit = Mathf.Min(cell.x / native.x, cell.y / native.y);
-                            itemRt.localScale = Vector3.one * fit;
-                            // 주의: ComboBook의 ButtonHoverScale이 기준 스케일 1로 되돌리므로 실제 표시는 원래 크기(1)다.
-                            // 그리드 간격(셀 300 + 간격 400)이 원래 크기 기준으로 잡혀 있어 fit(0.5)을 기준으로 고정하면 책이 절반으로 작아진다.
+                            // 그리드 간격(셀 300 + 간격 400)이 원래 크기(1) 기준이라 책은 항상 스케일 1로 표시한다.
+                            // 예전엔 셀에 맞춘 축소값(0.5)을 넣고 ButtonHoverScale이 1로 되돌리길 기대했는데,
+                            // 패널이 꺼진 상태에서 생성되면 Awake가 늦게 돌아 0.5를 기준으로 캡처해 빌드에서 책이 작아졌다.
+                            itemRt.localScale = Vector3.one;
+                            var hover = item.GetComponent<ButtonHoverScale>();
+                            if (hover != null) hover.SetBaseScale(1f);
                         }
                     }
 

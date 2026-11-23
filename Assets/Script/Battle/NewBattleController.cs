@@ -15,8 +15,8 @@ namespace Battle
     public class NewBattleController : MonoBehaviour, Battle.Relic.IRelicBattleContext
     {
         public const int AWAKEN_ACTIVATION_INPUT = 10;                  // 각성 발동에 필요한 속성 카드 사용 횟수
-        public const float AWAKEN_DURATION_SECONDS = 4f;               // 각성 기본 지속 시간(초)
-        public const float AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS = 1f; // 보유 콤보 1개당 추가 지속 시간(초)
+        public const float AWAKEN_DURATION_SECONDS = 7f;               // 각성 기본 지속 시간(초)
+        public const float AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS = 0.5f; // 보유 콤보 1개당 추가 지속 시간(초)
         public const float COMBO_BONUS_SECONDS = 0.1f;                 // 콤보 1회 성공 시 추가 시간(초)
         public const float COMBO_REUSE_SECONDS = 5f;                   // 콤보 재사용까지 걸리는 시간(초)
         public const int START_DRAW = 5;                              // 전투 시작 시 드로우 수
@@ -1664,6 +1664,12 @@ namespace Battle
         void TryActivatePendingAwaken()
         {
             if (!_awakenPending || _awakenActive || !_inBattle) return;
+            // 마지막 카드로 적이 모두 죽었으면 전투가 끝나므로 각성을 발동하지 않는다.
+            if (EnemyCombatParty.AliveCount == 0)
+            {
+                _awakenPending = false;
+                return;
+            }
             if (HasPendingSelection) return; // 선택(버리기 연쇄 포함)이 모두 끝난 뒤 대기열이 다시 호출
             // 사용 중인 카드가 아직 더미 밖(중앙 연출 중) — 스냅샷에서 빠지지 않도록 배치 후 발동
             if (_cardPresenting)
@@ -1732,7 +1738,7 @@ namespace Battle
                 _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
                 SfxManager.Instance?.PlayAwakenStart();
 
-                Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
+                Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F1}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
             }
             finally
             {
@@ -2589,6 +2595,17 @@ namespace Battle
                 if (_curses[i].element == element && _curses[i].remainingUses > 0)
                     return true;
             return false;
+        }
+
+        // 해당 속성 저주가 풀리기까지 남은 카드 사용 횟수(저주 없으면 0) — 카드 툴팁 표시용
+        public int GetCurseRemainingUses(CardElement element)
+        {
+            if (!_inBattle) return 0;
+            int max = 0;
+            for (int i = 0; i < _curses.Count; i++)
+                if (_curses[i].element == element && _curses[i].remainingUses > max)
+                    max = _curses[i].remainingUses;
+            return max;
         }
 
         // 저주된 속성 카드 사용 시 플레이어 피해 적용. 저주마다 카드 사용 1회씩 소모.

@@ -49,6 +49,7 @@ public class GameAudio : MonoBehaviour
     enum OutcomeBgm { None, Win, Defeat }
 
     AudioClip playingBgm; // 지금 소스에 올라가 있는 배경음
+    float mapResumeTime; // 맵 곡을 떠날 때의 재생 위치 — 다시 맵에 오면 여기서 이어서 재생
     OutcomeBgm outcomeBgm; // 승리·패배 중이면 화면 곡보다 우선한다
     NodeType combatTrack = NodeType.Combat; // 전투 화면에서 재생할 곡 종류
     readonly List<RaycastResult> hits = new List<RaycastResult>(); // 클릭 위치의 UI 히트
@@ -152,6 +153,13 @@ public class GameAudio : MonoBehaviour
 
         if (next != playingBgm)
         {
+            // 맵 곡에서 다른 곡으로 바뀌면 위치를 저장해 둔다
+            if (playingBgm != null && playingBgm == mapClip && bgmSource.clip == mapClip)
+                mapResumeTime = bgmSource.time;
+            // 메인 화면으로 돌아가면(새 런) 맵 곡은 처음부터
+            if (next != null && next == mainMenuClip)
+                mapResumeTime = 0f;
+
             playingBgm = next;
             if (next == null)
             {
@@ -204,8 +212,14 @@ public class GameAudio : MonoBehaviour
 
         bgmSource.clip = clip;
         bgmSource.volume = Mathf.Clamp01(bgmVolume) * SettingPanel.GetChannelVolume("BGM");
+        float start = 0f;
+        if (clip == mapClip && clip.length > 0f)
+            start = Mathf.Repeat(mapResumeTime, clip.length);
         bgmSource.time = 0f;
         bgmSource.Play();
+        // 스트리밍 클립은 Play 전에 넣은 위치가 무시될 수 있어 재생 직후에 위치를 맞춘다
+        if (start > 0f)
+            bgmSource.time = start;
     }
 
     // 포인터 아래 맨 위 UI가 사용 가능한 Button인지 확인한다

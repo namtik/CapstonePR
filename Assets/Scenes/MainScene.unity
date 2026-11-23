@@ -788,7 +788,7 @@ MonoBehaviour:
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 1.5
+  m_ScrollSensitivity: 50
   m_Viewport: {fileID: 1007852060}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 1841024259}
@@ -15325,7 +15325,7 @@ MonoBehaviour:
   gridRoot: {fileID: 1868692684}
   emptyState: {fileID: 0}
   cardScale: 1
-  hoverScale: 1.35
+  hoverScale: 1.06
   hoverSortingOrder: 200
   sortButtonVisuals:
   - image: {fileID: 442654104}
@@ -15396,7 +15396,7 @@ MonoBehaviour:
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 1
+  m_ScrollSensitivity: 50
   m_Viewport: {fileID: 1217508348}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 1080855834}
@@ -20356,7 +20356,7 @@ MonoBehaviour:
   countText: {fileID: 1745098294}
   emptyState: {fileID: 0}
   cardScale: 1
-  hoverScale: 1.35
+  hoverScale: 1.06
   hoverSortingOrder: 200
   undiscoveredColor: {r: 0, g: 0, b: 0, a: 0.85}
   sortButtonVisuals:
@@ -29229,7 +29229,7 @@ MonoBehaviour:
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 1.5
+  m_ScrollSensitivity: 50
   m_Viewport: {fileID: 1082801019}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 170289333}
@@ -34718,7 +34718,7 @@ MonoBehaviour:
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 1.5
+  m_ScrollSensitivity: 50
   m_Viewport: {fileID: 541043917}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 64362469}
@@ -44173,7 +44173,7 @@ MonoBehaviour:
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 1
+  m_ScrollSensitivity: 50
   m_Viewport: {fileID: 620249057}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 266367495}
@@ -44442,7 +44442,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1754242297
 RectTransform:
   m_ObjectHideFlags: 0
@@ -46029,7 +46029,7 @@ MonoBehaviour:
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 1
+  m_ScrollSensitivity: 50
   m_Viewport: {fileID: 362327711}
   m_HorizontalScrollbar: {fileID: 239390675}
   m_VerticalScrollbar: {fileID: 0}
@@ -46787,7 +46787,7 @@ MonoBehaviour:
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
-  m_ScrollSensitivity: 1.5
+  m_ScrollSensitivity: 50
   m_Viewport: {fileID: 517017789}
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 1466975822}
@@ -48223,20 +48223,19 @@ MonoBehaviour:
       \uAC83 \uAC19\uB2E4."
     event3Branch2Choice1Body: "\uD0DC\uC744\uC740 \uB4A4\uB3CC\uC544\uAC00\uC9C0
       \uC54A\uACE0 \uB354\uC6B1 \uAE4A\uC740 \uC548\uAC1C \uC18D\uC73C\uB85C \uBC1C\uC744
-      \uB0B4\uB514\uB3A0\uB2E4. \\n\\n\uCC98\uC74C\uC5D0\uB294 \uC544\uBB34 \uC77C\uB3C4
+      \uB0B4\uB514\uB3A0\uB2E4. \\n\uCC98\uC74C\uC5D0\uB294 \uC544\uBB34 \uC77C\uB3C4
       \uC77C\uC5B4\uB098\uC9C0 \uC54A\uB294 \uB4EF\uD588\uC9C0\uB9CC, \uACE7 \uC0AC\uBC29\uC5D0\uC11C
       \uAC19\uC740 \uB098\uBB34\uC640 \uAC19\uC740 \uBC14\uC704\uAC00 \uBC18\uBCF5\uD574\uC11C
-      \uB098\uD0C0\uB098\uAE30 \uC2DC\uC791\uD588\uB2E4. \\n\\n\uBC29\uD5A5\uC744
-      \uC783\uC5C8\uB2E4\uB294 \uC0AC\uC2E4\uC744 \uAE68\uB2EC\uC740 \uC21C\uAC04,
-      \uC548\uAC1C \uC18D\uC5D0\uC11C \uC624\uC5FC\uB418\uC9C0 \uC54A\uC740 \uBC14\uB78C\uC774
-      \uBD88\uC5B4\uC624\uB294 \uAC83\uC744 \uB290\uB080\uB2E4. \\n\\n\uC774\uAC83\uC744
-      \uB530\uB77C\uAC00\uB2E4 \uBCF4\uB2C8 \uC810\uC810 \uC548\uAC1C\uAC00 \uAC77\uD78C\uB2E4.
-      \\n\\n\uC232\uC5D0\uC11C \uBE60\uC838\uB098\uC62C \uB54C \uC988\uC74C\uC5D0
-      \uBC14\uB78C\uC758 \uAE30\uC6B4\uC744 \uBA38\uAE08\uC740 \uC218\uD589\uC790\uC758
-      \uD574\uACE8\uC744 \uBC1C\uACAC\uD55C\uB2E4. \\n\\n\uADF8\uB7EC\uC790 \uD574\uACE8\uC774
-      \uD759\uC73C\uB85C \uBCC0\uD558\uBA70 \uC0AC\uB77C\uC9C4\uB2E4. \\n\\n\uD0DC\uC744\uC740
-      \uADF8\uAC83\uC5D0\uAC8C \uAC10\uC0AC\uC778\uC0AC\uB97C \uC62C\uB9AC\uBA70
-      \uC218\uD589\uC790\uC758 \uBCF4\uB530\uB9AC\uB97C \uCC59\uAE34\uB2E4."
+      \uB098\uD0C0\uB098\uAE30 \uC2DC\uC791\uD588\uB2E4. \\n\uBC29\uD5A5\uC744 \uC783\uC5C8\uB2E4\uB294
+      \uC0AC\uC2E4\uC744 \uAE68\uB2EC\uC740 \uC21C\uAC04, \uC548\uAC1C \uC18D\uC5D0\uC11C
+      \uC624\uC5FC\uB418\uC9C0 \uC54A\uC740 \uBC14\uB78C\uC774 \uBD88\uC5B4\uC624\uB294
+      \uAC83\uC744 \uB290\uB080\uB2E4. \\n\uC774\uAC83\uC744 \uB530\uB77C\uAC00\uB2E4
+      \uBCF4\uB2C8 \uC810\uC810 \uC548\uAC1C\uAC00 \uAC77\uD78C\uB2E4. \\n\uC232\uC5D0\uC11C
+      \uBE60\uC838\uB098\uC62C \uB54C \uC988\uC74C\uC5D0 \uBC14\uB78C\uC758 \uAE30\uC6B4\uC744
+      \uBA38\uAE08\uC740 \uC218\uD589\uC790\uC758 \uD574\uACE8\uC744 \uBC1C\uACAC\uD55C\uB2E4.
+      \\n\uADF8\uB7EC\uC790 \uD574\uACE8\uC774 \uD759\uC73C\uB85C \uBCC0\uD558\uBA70
+      \uC0AC\uB77C\uC9C4\uB2E4. \\n\uD0DC\uC744\uC740 \uADF8\uAC83\uC5D0\uAC8C \uAC10\uC0AC\uC778\uC0AC\uB97C
+      \uC62C\uB9AC\uBA70 \uC218\uD589\uC790\uC758 \uBCF4\uB530\uB9AC\uB97C \uCC59\uAE34\uB2E4."
     event3Branch2Choice2Body: "\uD0DC\uC744\uC740 \uB354 \uAE4A\uC774 \uB4E4\uC5B4\uAC00\uB294
       \uAC83\uC744 \uD3EC\uAE30\uD558\uACE0 \uC654\uB358 \uAE38\uC744 \uB418\uC9DA\uC5B4
       \uB3CC\uC544\uAC00\uAE30 \uC2DC\uC791\uD588\uB2E4. \\n\\n\uD558\uC9C0\uB9CC
@@ -53688,7 +53687,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2090370067
 RectTransform:
   m_ObjectHideFlags: 0

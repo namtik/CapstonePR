@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Battle.Card;
+using TMPro;
 
 namespace Battle.UI
 {
@@ -33,8 +34,8 @@ namespace Battle.UI
         [Header("옵션")]
         [Tooltip("카드 표시 스케일(1 = 프리팹 원본).")]
         [SerializeField] private float cardScale = 1f;              // 카드 표시 스케일
-        [Tooltip("마우스 오버 시 카드가 제자리에서 커지는 배율.")]
-        [SerializeField] private float hoverScale = 1.35f;          // 호버 확대 배율
+        [Tooltip("마우스 오버 시 카드가 제자리에서 커지는 배율(덱/묘지 보기와 같은 1.06).")]
+        [SerializeField] private float hoverScale = 1.06f;          // 호버 확대 배율
         [Tooltip("호버 카드가 이웃 위로 그려질 정렬 순서(인벤토리 캔버스보다 높게).")]
         [SerializeField] private int hoverSortingOrder = 200;       // 호버 정렬 순서
 
@@ -96,10 +97,12 @@ namespace Battle.UI
                         cardRt.localScale = Vector3.one * (fit * (cardScale > 0f ? cardScale : 1f));
                     }
 
-                    // 호버 확대는 래퍼에 부착(래퍼를 키우면 카드도 함께 확대)
-                    // hoverScale이 1 이하(인스펙터 미설정/0 직렬화)면 기본 1.35 사용 → 확대가 안 보이는 것 방지
+                    // 호버는 덱/묘지 보기와 같게: 제자리에서 살짝 확대 + 옆에 특수효과(키워드) 툴팁
                     var slot = cellGo.AddComponent<InventoryCardSlot>();
-                    slot.Configure(hoverScale > 1f ? hoverScale : 1.35f, hoverSortingOrder, clipRect);
+                    slot.ConfigureInPlace(hoverScale > 1f ? hoverScale : 1.06f, clipRect);
+                    CardData captured = data;
+                    NewCardView capturedView = view;
+                    slot.HoverChanged += over => OnCardHover(capturedView, captured, over);
 
                     _spawned.Add(cellGo);
                 }
@@ -107,6 +110,20 @@ namespace Battle.UI
 
             if (emptyState != null) emptyState.SetActive(items.Count == 0);
         }
+
+        // 카드 호버 시 덱/묘지 보기와 같은 특수효과 툴팁 표시
+        void OnCardHover(NewCardView view, CardData data, bool over)
+        {
+            if (!over || view == null || data == null)
+            {
+                CardKeywordTooltip.Hide();
+                return;
+            }
+            TMP_Text label = view.GetComponentInChildren<TMP_Text>(true);
+            CardKeywordTooltip.Show(view, data, CardDatabase.GetDisplayDescription(data), label != null ? label.font : null);
+        }
+
+        void OnDisable() => CardKeywordTooltip.Hide();
 
         // gridRoot 위쪽에서 스크롤 마스크(RectMask2D/Mask) RectTransform을 찾는다(없으면 null)
         RectTransform FindClipRect(Transform from)

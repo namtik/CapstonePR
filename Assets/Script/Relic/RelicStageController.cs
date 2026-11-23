@@ -535,30 +535,13 @@ public class RelicStageController : MonoBehaviour
             ? shown.sprite
             : (shown.relic != null ? shown.relic.icon : null);
 
-        if (pendingPresentedRelics.Count == 1)
-        {
-            grantedRewardName = string.IsNullOrWhiteSpace(shown.displayName) ? "유물" : shown.displayName;
-            grantedRewardDescription = string.IsNullOrWhiteSpace(shown.description)
-                ? DefaultSpriteOnlyRelicDescription
-                : shown.description;
-            return;
-        }
-
-        grantedRewardName = $"유물 {pendingPresentedRelics.Count}개";
-        var lines = new List<string>(pendingPresentedRelics.Count + 1)
-        {
-            "유물 호리병 — 제시된 유물을 모두 획득합니다."
-        };
-        for (int i = 0; i < pendingPresentedRelics.Count; i++)
-        {
-            RewardCandidate candidate = pendingPresentedRelics[i];
-            string name = string.IsNullOrWhiteSpace(candidate.displayName) ? "유물" : candidate.displayName;
-            string desc = string.IsNullOrWhiteSpace(candidate.description)
-                ? DefaultSpriteOnlyRelicDescription
-                : candidate.description;
-            lines.Add($"· {name}: {desc}");
-        }
-        grantedRewardDescription = string.Join("\n", lines);
+        // 팝업에는 상자에 보이는 유물 1개의 설명만 띄운다(호리병으로 여러 개를 받아도 목록을 나열하지 않음).
+        grantedRewardName = string.IsNullOrWhiteSpace(shown.displayName) ? "유물" : shown.displayName;
+        grantedRewardDescription = string.IsNullOrWhiteSpace(shown.description)
+            ? DefaultSpriteOnlyRelicDescription
+            : shown.description;
+        if (pendingPresentedRelics.Count > 1)
+            grantedRewardDescription += $"\n(유물 호리병: 이번에 유물 {pendingPresentedRelics.Count}개를 함께 획득)";
     }
 
     // 대기 중 보상을 실제로 보유 목록에 지급

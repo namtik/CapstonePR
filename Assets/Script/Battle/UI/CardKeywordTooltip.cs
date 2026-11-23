@@ -29,6 +29,8 @@ namespace Battle.UI
         static readonly KeywordDef Fragment = new KeywordDef("파편", new Color(0.85f, 0.75f, 0.50f),
             "전투 중에 생성되는 임시 부적입니다. 사용하면 소멸합니다.");
 
+        static readonly Color CurseColor = new Color(0.85f, 0.45f, 0.95f); // 저주 제목 색
+
         const float PanelWidth = 300f;   // 패널 폭(캔버스 단위)
         const float Pad = 12f;           // 패널 내부 여백
         const float Gap = 8f;            // 패널 사이 간격
@@ -62,7 +64,27 @@ namespace Battle.UI
             canvas = canvas.rootCanvas;
 
             if (_instance == null || _instance._canvas != canvas) Create(canvas);
-            _instance.ShowFor((RectTransform)card.transform, data, description ?? string.Empty, font);
+            _instance.ShowFor((RectTransform)card.transform, card.Card, data, description ?? string.Empty, font);
+        }
+
+        // 카드가 아닌 UI(휴식 선택지 등)에 같은 모양의 설명 패널 1개를 띄운다.
+        public static void ShowText(RectTransform target, string title, Color titleColor, string desc, TMP_FontAsset font = null)
+        {
+            if (target == null) { Hide(); return; }
+            Canvas canvas = target.GetComponentInParent<Canvas>();
+            if (canvas == null) { Hide(); return; }
+            canvas = canvas.rootCanvas;
+
+            if (_instance == null || _instance._canvas != canvas) Create(canvas);
+            _instance._buffer.Clear();
+            _instance._buffer.Add(new KeywordDef(title ?? string.Empty, titleColor, desc ?? string.Empty));
+            _instance.ShowBuffer(target, font);
+        }
+
+        // 지정한 대상에 붙어 있는 툴팁일 때만 숨긴다(다른 UI가 띄운 툴팁은 건드리지 않음).
+        public static void HideFor(RectTransform target)
+        {
+            if (_instance != null && _instance._target == target) Hide();
         }
 
         public static void Hide()
@@ -96,9 +118,16 @@ namespace Battle.UI
             if (_instance == this) _instance = null;
         }
 
-        void ShowFor(RectTransform target, CardData data, string description, TMP_FontAsset font)
+        void ShowFor(RectTransform target, CardInstance card, CardData data, string description, TMP_FontAsset font)
         {
             CollectKeywords(data, description, _buffer);
+            AddCurse(card, _buffer);
+            ShowBuffer(target, font);
+        }
+
+        // _buffer에 담긴 패널들을 target 옆에 띄운다
+        void ShowBuffer(RectTransform target, TMP_FontAsset font)
+        {
             if (_buffer.Count == 0) { Hide(); return; }
 
             while (_panels.Count < _buffer.Count) _panels.Add(BuildPanel());
@@ -167,6 +196,25 @@ namespace Battle.UI
             if (description.Contains("빙결")) outList.Add(Frost);
             if (description.Contains("파편") || data.HasTag("FRAGMENT")) outList.Add(Fragment);
         }
+
+        // 이 카드 속성에 저주가 걸려 있으면 저주 패널을 맨 위에 넣는다
+        static void AddCurse(CardInstance card, List<KeywordDef> outList)
+        {
+            var nb = NewBattleController.Instance;
+            if (card == null || card.data == null || nb == null) return;
+            int remaining = nb.GetCurseRemainingUses(card.Element);
+            if (remaining <= 0) return;
+
+            string desc = $"{ElementName(card.Element)} 속성 부적을 사용할 때마다 피해를 {NewBattleController.CURSE_PLAYER_DAMAGE} 입습니다.\n"
+                        + $"부적을 {remaining}장 더 사용하면 풀립니다.";
+            outList.Insert(0, new KeywordDef("저주", CurseColor, desc));
+        }
+
+        static string ElementName(CardElement e) => e switch
+        {
+            CardElement.Fire => "불", CardElement.Water => "물",
+            CardElement.Wind => "바람", CardElement.Earth => "땅", _ => "무"
+        };
 
         Panel BuildPanel()
         {

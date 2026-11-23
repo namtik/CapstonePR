@@ -271,20 +271,20 @@
       "comboSlot": true,
       "effectName": "Fire_DEF",
       "skillImg": "120Img",
-      "description": "자신에게 피해를 5 준다. 방어도를 15 얻는다."
+      "description": "자신에게 피해를 5 준다. 방어도를 12 얻는다."
     },
     {
       "id": 121,
       "name": "타오르는 희생",
       "element": "FIRE",
       "type": "SKILL",
-      "gauge": 1,
+      "gauge": 0,
       "rarity": "Normal",
       "tags": [],
       "comboSlot": true,
       "effectName": "Fire_DEF",
       "skillImg": "121Img",
-      "description": "무작위 부적을 1장 소멸 시킨다. 방어도를 10 얻는다."
+      "description": "무작위 부적을 1장 소멸 시킨다. 방어도를 5 얻는다."
     },
     {
       "id": 122,
@@ -596,7 +596,7 @@
       "comboSlot": true,
       "effectName": "Water_DEF",
       "skillImg": "216Img",
-      "description": "방어도를 10 얻는다. 무작위 적에게 빙결을 4 부여한다."
+      "description": "방어도를 5 얻는다. 무작위 적에게 빙결을 4 부여한다."
     },
     {
       "id": 217,
@@ -733,13 +733,13 @@
       "name": "수막",
       "element": "WATER",
       "type": "SKILL",
-      "gauge": 1,
+      "gauge": 2,
       "rarity": "Normal",
       "tags": [],
       "comboSlot": true,
       "effectName": "",
       "skillImg": "227Img",
-      "description": "패를 모두 버리고 버린 수 만큼 방어도를 4 얻는다."
+      "description": "패를 모두 버리고 버린 수 만큼 방어도를 3 얻는다."
     },
     {
       "id": 228,
@@ -752,7 +752,7 @@
       "comboSlot": true,
       "effectName": "",
       "skillImg": "228Img",
-      "description": "소멸, 체력을 8 회복한다."
+      "description": "소멸, 체력을 6 회복한다."
     },
     {
       "id": 300,
@@ -941,7 +941,7 @@
       "name": "회풍",
       "element": "WIND",
       "type": "SKILL",
-      "gauge": 1,
+      "gauge": 0,
       "rarity": "Rare",
       "tags": [],
       "comboSlot": true,
@@ -1194,7 +1194,7 @@
       "comboSlot": true,
       "effectName": "Earth_ATK",
       "skillImg": "404Img",
-      "description": "플레이어가 현재 보유한 방어도 만큼 피해를 준다."
+      "description": "플레이어가 현재 보유한 방어도 만큼 피해를 준다. 방어도를 절반 만큼 줄인다."
     },
     {
       "id": 405,
@@ -1266,13 +1266,13 @@
       "name": "연마",
       "element": "EARTH",
       "type": "ATTACK",
-      "gauge": 1,
+      "gauge": 2,
       "rarity": "Rare",
       "tags": [],
       "comboSlot": true,
       "effectName": "Earth_ATK",
       "skillImg": "410Img",
-      "description": "피해를 20 준다. 이 부적으로 적 처치 시 영구적으로 피해 10 씩 증가한다."
+      "description": "피해를 10 준다. 이 부적으로 적 처치 시 영구적으로 피해 10 씩 증가한다."
     },
     {
       "id": 411,
@@ -1337,7 +1337,7 @@
       "comboSlot": true,
       "effectName": "Earth_DEF",
       "skillImg": "415Img",
-      "description": "방어도를 10 얻는다."
+      "description": "방어도를 8 얻는다."
     },
     {
       "id": 416,
@@ -1350,7 +1350,7 @@
       "comboSlot": true,
       "effectName": "Earth_DEF",
       "skillImg": "416Img",
-      "description": "필드에 있는 적 수 만큼 방어도를 5 얻는다."
+      "description": "필드에 있는 적 수 만큼 방어도를 3 얻는다."
     },
     {
       "id": 417,
@@ -1454,7 +1454,7 @@
       "comboSlot": true,
       "effectName": "Earth_POW",
       "skillImg": "424Img",
-      "description": "적 공격 이후 방어도를 5 얻는다."
+      "description": "적 공격 이후 방어도를 3 얻는다."
     },
     {
       "id": 425,
@@ -1519,7 +1519,7 @@
       "comboSlot": false,
       "effectName": "",
       "skillImg": "500Img",
-      "description": "소멸, 아무 일도 일어나지 않는다."
+      "description": "아무 일도 일어나지 않는다."
     },
     {
       "id": 501,

@@ -23,7 +23,7 @@ namespace Battle.UI
 
         [Header("옵션")]
         [SerializeField] private float cardScale = 1f;                // 카드 표시 스케일(1 = 셀에 맞춤)
-        [SerializeField] private float hoverScale = 1.35f;            // 호버 확대 배율
+        [SerializeField] private float hoverScale = 1.06f;            // 호버 확대 배율(덱/묘지 보기와 같은 1.06)
         [SerializeField] private int hoverSortingOrder = 200;         // 호버 정렬 순서
         [SerializeField] private Color undiscoveredColor = new Color(0f, 0f, 0f, 0.85f); // 미발견 실루엣 색
 
@@ -89,8 +89,12 @@ namespace Battle.UI
 
             if (known)
             {
+                // 덱/묘지 보기와 같게: 제자리에서 살짝 확대 + 옆에 특수효과(키워드) 툴팁
                 var slot = cellGo.AddComponent<InventoryCardSlot>();
-                slot.Configure(hoverScale > 1f ? hoverScale : 1.35f, hoverSortingOrder, clipRect);
+                slot.ConfigureInPlace(hoverScale > 1f ? hoverScale : 1.06f, clipRect);
+                CardData captured = data;
+                NewCardView capturedView = view;
+                slot.HoverChanged += over => OnCardHover(capturedView, captured, over);
             }
             else
             {
@@ -182,6 +186,20 @@ namespace Battle.UI
                 if (s != null) v.image.sprite = s;
             }
         }
+
+        // 카드 호버 시 덱/묘지 보기와 같은 특수효과 툴팁 표시
+        void OnCardHover(NewCardView view, CardData data, bool over)
+        {
+            if (!over || view == null || data == null)
+            {
+                CardKeywordTooltip.Hide();
+                return;
+            }
+            TMP_Text label = view.GetComponentInChildren<TMP_Text>(true);
+            CardKeywordTooltip.Show(view, data, CardDatabase.GetDisplayDescription(data), label != null ? label.font : null);
+        }
+
+        void OnDisable() => CardKeywordTooltip.Hide();
 
         void ClearSpawned()
         {

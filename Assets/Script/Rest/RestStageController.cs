@@ -1,5 +1,8 @@
 using Battle;
+using Battle.UI;
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class RestStageController : MonoBehaviour
@@ -10,6 +13,14 @@ public class RestStageController : MonoBehaviour
 
     [Header("깨달음")]
     [SerializeField] private RestEnlightenmentPanel enlightenmentPanel; // 보유 콤보 목록/재배열 패널
+
+    [Header("설명 툴팁 (카드 특수효과 툴팁과 같은 UI)")]
+    [SerializeField] private string restTooltipTitle = "휴식";
+    [SerializeField, TextArea] private string restTooltipDesc = "체력을 회복합니다.";
+    [SerializeField] private Color restTooltipColor = new Color(0.55f, 0.95f, 0.55f);
+    [SerializeField] private string enlightenmentTooltipTitle = "깨달음";
+    [SerializeField, TextArea] private string enlightenmentTooltipDesc = "사방비급의 원소 배열을 변경합니다.";
+    [SerializeField] private Color enlightenmentTooltipColor = new Color(1.00f, 0.85f, 0.35f);
 
     [Header("Hover")]
     [SerializeField] private bool enableButtonHoverScale = true;   // 버튼 호버 스케일 사용 여부
@@ -218,6 +229,9 @@ public class RestStageController : MonoBehaviour
     // 호버 스케일이 켜져 있으면 각 버튼에 호버 효과를 설정한다
     private void EnsureHoverEffects()
     {
+        ConfigureTooltip(button1, restTooltipTitle, restTooltipDesc, restTooltipColor);
+        ConfigureTooltip(button2, enlightenmentTooltipTitle, enlightenmentTooltipDesc, enlightenmentTooltipColor);
+
         if (!enableButtonHoverScale)
             return;
 
@@ -237,6 +251,46 @@ public class RestStageController : MonoBehaviour
 
         hover.enabled = true;
         hover.Configure(hoverScale, pressedScale, hoverLerpSpeed);
+    }
+
+    // 버튼에 호버 설명 툴팁을 붙인다
+    private void ConfigureTooltip(Button button, string title, string desc, Color color)
+    {
+        if (button == null)
+            return;
+
+        RestChoiceTooltip tip = button.GetComponent<RestChoiceTooltip>();
+        if (tip == null)
+            tip = button.gameObject.AddComponent<RestChoiceTooltip>();
+        tip.Set(title, desc, color);
+    }
+
+    // 휴식 선택지 호버 시 카드 특수효과 툴팁(CardKeywordTooltip)과 같은 패널로 설명을 띄운다
+    private sealed class RestChoiceTooltip : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+    {
+        string _title;
+        string _desc;
+        Color _color;
+
+        public void Set(string title, string desc, Color color)
+        {
+            _title = title;
+            _desc = desc;
+            _color = color;
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (string.IsNullOrEmpty(_desc)) return;
+            TMP_Text label = GetComponentInChildren<TMP_Text>(true);
+            CardKeywordTooltip.ShowText((RectTransform)transform, _title, _color, _desc, label != null ? label.font : null);
+        }
+
+        public void OnPointerExit(PointerEventData eventData) => CardKeywordTooltip.HideFor((RectTransform)transform);
+
+        public void OnPointerClick(PointerEventData eventData) => CardKeywordTooltip.HideFor((RectTransform)transform);
+
+        void OnDisable() => CardKeywordTooltip.HideFor((RectTransform)transform);
     }
 
     // 버튼 클릭 콜백을 중복 없이 등록한다

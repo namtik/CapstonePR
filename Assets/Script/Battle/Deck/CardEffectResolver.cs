@@ -813,6 +813,15 @@ namespace Battle.Deck
             if (up == "PLAYER_BLOCK")
                 return Ctx.player != null ? Mathf.RoundToInt(Ctx.player.guard) : 0;
 
+            // PLAYER_BLOCK*배수 (소수 허용, 예: 쇄석 404 "PLAYER_BLOCK*0.5" = 방어도 절반, 내림)
+            if (up.StartsWith("PLAYER_BLOCK*"))
+            {
+                float block = Ctx.player != null ? Ctx.player.guard : 0f;
+                float.TryParse(up.Substring("PLAYER_BLOCK*".Length),
+                    System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float mul);
+                return Mathf.Max(0, Mathf.FloorToInt(block * mul));
+            }
+
             if (up == "FLOOR(PLAYER_CURRENT_HP/2)")
                 return Ctx.player != null ? Ctx.player.currentHp / 2 : 0;
 
@@ -1019,6 +1028,11 @@ namespace Battle.Deck
 
                 case "GAIN_BLOCK":
                     if (amount > 0) AddPlayerGuard(amount);
+                    break;
+
+                case "LOSE_BLOCK":
+                    // 플레이어 방어도를 amount만큼 줄인다(0 아래로는 안 내려감)
+                    if (amount > 0 && Ctx.player != null) Ctx.player.AddGuard(-amount);
                     break;
 
                 case "HEAL":
