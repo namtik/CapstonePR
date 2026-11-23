@@ -74,6 +74,9 @@ namespace Battle.UI
                             itemRt.anchoredPosition = Vector2.zero;
                             float fit = Mathf.Min(cell.x / native.x, cell.y / native.y);
                             itemRt.localScale = Vector3.one * fit;
+                            // ButtonHoverScale이 기준 스케일(1)로 되돌려 옆 책과 겹치지 않도록 기준을 맞춘다
+                            var hover = itemRt.GetComponent<ButtonHoverScale>();
+                            if (hover != null) hover.SetBaseScale(fit);
                         }
                     }
 

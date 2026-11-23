@@ -400,7 +400,7 @@ public class RoundManager : MonoBehaviour
             begin();
             return;
         }
-        StageManager.Instance.ShowStage(StageManager.ResolveElement(roster), progressColumn, begin, isBoss);
+        StageManager.Instance.ShowStage(StageManager.ResolveElement(roster), progressColumn, begin, isBoss, roster);
     }
 
     // 상점 스테이지를 연다.

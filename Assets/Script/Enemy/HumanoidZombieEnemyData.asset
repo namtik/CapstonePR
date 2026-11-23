@@ -21,10 +21,11 @@ MonoBehaviour:
   element: 5
   enemyClass: 1
   specialAbility: 23
-  Note: "\uACF5\uACA9 \uC2DC \uB79C\uB364\uD55C \uC18D\uC131 \uBD80\uC801\uC5D0 5\uBC88\uC758 \uD589\uB3D9\uB3D9\uC548 \uC800\uC8FC\uB97C \uBD80\uC5EC\uD569\uB2C8\uB2E4."
+  Note: "\uACF5\uACA9 \uC2DC \uB79C\uB364\uD55C \uC18D\uC131 \uBD80\uC801\uC5D0 5\uBC88\uC758
+    \uD589\uB3D9\uB3D9\uC548 \uC800\uC8FC\uB97C \uBD80\uC5EC\uD569\uB2C8\uB2E4."
   maxHp: 80
-  actionGaugeMax: 7
-  disruptionTurn: 2
+  actionGaugeMax: 11
+  disruptionTurn: 4
   attackSequence: 0a0000000700000005000000
   disruptionActions: 040000000200000000000000
   "\uD761\uC218\uC218\uCE58": 1

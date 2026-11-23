@@ -436,23 +436,70 @@ public class EnemyOverlayHUD : MonoBehaviour
         point = _worldAnchor.position + Vector3.up * 1.6f;
         if (_bodyRenderers == null || _bodyRenderers.Length == 0) return false;
 
+        // 몸체(스킨드 메시)가 있으면 그것만 기준으로 삼는다. 우산귀처럼 물방울·침 등 부속 이펙트용 MeshRenderer가
+        // 몸 위쪽(또는 스케일 0 상태로 먼 위치)에 붙은 모델은, 전부 합치면 머리 높이가 실제보다 훨씬 높게 잡혔다.
+        bool any = SampleBodyTop(true, out Bounds bounds, out float top);
+        if (!any) any = SampleBodyTop(false, out bounds, out top); // 스킨드 메시가 없는 모델은 일반 렌더러로
+        if (!any) return false;
+        point = new Vector3(bounds.center.x, top, bounds.center.z);
+        return true;
+    }
+
+    // skinnedOnly: 스킨드 메시만 볼지. top은 실제 정점 기준 최고점(가능하면), 아니면 bounds.max.y
+    bool SampleBodyTop(bool skinnedOnly, out Bounds bounds, out float top)
+    {
+        bounds = default;
+        top = float.NegativeInfinity;
         bool any = false;
-        Bounds bounds = default;
         for (int i = 0; i < _bodyRenderers.Length; i++)
         {
             Renderer r = _bodyRenderers[i];
             if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
             if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
-            if (!any)
-            {
-                bounds = r.bounds;
-                any = true;
-            }
-            else bounds.Encapsulate(r.bounds);
+            bool skinned = r is SkinnedMeshRenderer;
+            if (skinnedOnly && !skinned) continue;
+            Bounds b = r.bounds;
+            if (b.size.sqrMagnitude < 1e-6f) continue; // 스케일 0으로 숨겨 둔 부속(물방울 등)
+            if (!any) { bounds = b; any = true; }
+            else bounds.Encapsulate(b);
+
+            float rTop = b.max.y;
+            if (skinned && TryBakedTop((SkinnedMeshRenderer)r, out float baked)
+                && baked <= b.max.y + 0.01f && baked >= b.min.y)
+                rTop = baked; // 스킨드 bounds는 본 기준이라 여유가 있다 — 현재 포즈 정점 최고점으로 좁힌다
+            if (rTop > top) top = rTop;
         }
-        if (!any) return false;
-        point = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
-        return true;
+        return any;
+    }
+
+    static Mesh _bakeMesh;
+
+    // 현재 포즈를 구워 월드 기준 정점 최고 높이를 구한다(전투 시작 때 한 번만 호출)
+    static bool TryBakedTop(SkinnedMeshRenderer smr, out float top)
+    {
+        top = 0f;
+        if (smr == null || smr.sharedMesh == null || !smr.sharedMesh.isReadable) return false;
+        if (_bakeMesh == null) _bakeMesh = new Mesh { name = "EnemyHudBake" };
+        try
+        {
+            smr.BakeMesh(_bakeMesh, true);
+            Vector3[] verts = _bakeMesh.vertices;
+            if (verts == null || verts.Length == 0) return false;
+            Transform t = smr.transform;
+            Matrix4x4 m = Matrix4x4.TRS(t.position, t.rotation, Vector3.one);
+            float best = float.NegativeInfinity;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                float y = m.MultiplyPoint3x4(verts[i]).y;
+                if (y > best) best = y;
+            }
+            top = best;
+            return !float.IsInfinity(best);
+        }
+        catch (System.Exception)
+        {
+            return false;
+        }
     }
 
     static T FindNamed<T>(Transform root, string childName) where T : Component

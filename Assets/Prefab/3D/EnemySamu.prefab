@@ -134,7 +134,7 @@ MonoBehaviour:
     shakeAmplitude: 0.08
     shakeFrequency: 28
   hudAnchor: {fileID: 1301559519741222471}
-  hudScreenOffset: {x: 0, y: -120}
+  hudScreenOffset: {x: 0, y: -30}
   renderCamera: {fileID: 0}
   deathDuration: 1
 --- !u!114 &789525914197789848

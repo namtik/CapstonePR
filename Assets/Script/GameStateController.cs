@@ -481,6 +481,16 @@ public class GameStateController : MonoBehaviour
         return bossDefeatCount * 10;
     }
 
+    // 게임 종료(사망·클리어·재시작·메인 메뉴) 시 화면에 남는 연출을 모두 정리한다.
+    // 보상 연출 3종은 DontDestroyOnLoad 전용 캔버스(정렬 220~700)라 전투 종료 처리로는 지워지지 않는다.
+    public static void ClearLingeringFx()
+    {
+        KillRewardFx.ClearAll();
+        RewardDropFx.ClearAll();
+        BossRelicDropUI.ClearAll();
+        Battle.NewBattleController.Instance?.ClearPresentationFx();
+    }
+
     // 런을 처음부터 재시작하고 맵으로 돌아간다
     public void RestartRunToMap()
     {
@@ -496,6 +506,7 @@ public class GameStateController : MonoBehaviour
         // 사망 등으로 중단된 전투의 잔여 적/상태 정리 (살아있는 적이 다음 전투로 이월되는 것 방지)
         if (roundManager != null)
             roundManager.AbortActiveCombat();
+        ClearLingeringFx();
 
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
@@ -537,6 +548,7 @@ public class GameStateController : MonoBehaviour
         // 진행 중이던 전투의 잔여 적/상태 정리
         if (roundManager != null)
             roundManager.AbortActiveCombat();
+        ClearLingeringFx();
 
         // 런 상태 초기화 (메인으로 나가면 현재 런을 포기)
         lastVisitedNodeIndex = -1;

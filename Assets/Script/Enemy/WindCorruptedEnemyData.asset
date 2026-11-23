@@ -23,8 +23,8 @@ MonoBehaviour:
   specialAbility: 14
   Note: "\uCC98\uCE58 \uC2DC \uAC01\uC131 \uAC8C\uC774\uC9C0\uAC00 \uCD08\uAE30\uD654\uB41C\uB2E4."
   maxHp: 50
-  actionGaugeMax: 5
-  disruptionTurn: 2
+  actionGaugeMax: 8
+  disruptionTurn: 3
   attackSequence: 02000000
   disruptionActions: 02000000
   "\uD761\uC218\uC218\uCE58": 1

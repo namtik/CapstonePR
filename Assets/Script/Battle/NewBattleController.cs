@@ -576,6 +576,8 @@ namespace Battle
             _cardPresenting = false;
             _awakenActive = false;
             _awakenPending = false;
+            // 저주가 남은 채 전투가 끝나면 보상창 카드가 저주(보라색) 모습으로 나왔다 — 종료 시 해제
+            _curses.Clear();
             ResetEnemyTurnState();
             ClearSelectionQueue();
             UnbindPartyEvents();
@@ -601,6 +603,16 @@ namespace Battle
             StopAwakenScreenEffect();
             if (tabPanel != null) tabPanel.Hide();
             Log("전투 종료");
+        }
+
+        // 게임 종료(사망·클리어) 시 화면에 남는 전투 연출(카드 사용 연출·카드 이펙트·각성 화면/표식)을 즉시 정리.
+        // 사망 화면은 timeScale=0이지만 이 연출들은 unscaled time으로 계속 돌아 결과 화면 위에 남았다.
+        public void ClearPresentationFx()
+        {
+            if (handHud != null) handHud.CancelCardUsePresentations();
+            ClearAwakenComboParticles();
+            if (effectOverlay != null) effectOverlay.ClearAll();
+            StopAwakenScreenEffect();
         }
 
         // [테스트] 인스펙터 보유 콤보(ownedComboIds)를 즉시 적용(각성 중에는 보류)
@@ -1027,12 +1039,16 @@ namespace Battle
                     _selectionActive = false;
                     closed = true;
                     req.callback?.Invoke(c);
+                    // 사용한 카드 배치(onFinished)도 HUD가 보류 각성을 발동하기 '전에' 끝낸다.
+                    // (늦으면 각성 스냅샷에 이 카드가 빠져, 각성 종료 복원 때 패/묘지에서 사라졌음)
+                    FinishSelection(req);
                 };
                 System.Action<IList<CardInstance>> wrappedMulti = list =>
                 {
                     _selectionActive = false;
                     closed = true;
                     req.multiCallback?.Invoke(list);
+                    FinishSelection(req);
                 };
                 if (req.picker) handHud.EnterCardPickerMode(req.prompt, cards, wrapped, req.pileKind);
                 else if (req.multiCallback != null) handHud.EnterMultiSelectionMode(req.prompt, req.count, wrappedMulti, req.filter);
@@ -1265,6 +1281,7 @@ namespace Battle
                     catch (System.Exception ex)
                     {
                         Debug.LogException(ex);
+                        RecoverOrphanUsedCard(card);
                     }
                     finally { _cardPresenting = false; }
                 });
@@ -1272,10 +1289,32 @@ namespace Battle
             else
             {
                 try { ResolveCardUse(card); }
-                catch (System.Exception ex) { Debug.LogException(ex); }
+                catch (System.Exception ex) { Debug.LogException(ex); RecoverOrphanUsedCard(card); }
                 finally { _cardPresenting = false; }
             }
             return true;
+        }
+
+        // 효과 처리 중 예외로 사용한 카드가 어떤 더미에도 놓이지 못했으면 버린 더미로 돌려놓는다(카드 증발 방지)
+        void RecoverOrphanUsedCard(CardInstance card)
+        {
+            if (card == null || _deck == null || !_inBattle) return;
+            if (HasPendingSelection) return; // 선택 종료 시 PlaceUsedCard가 배치한다
+            if (IsCardInAnyPile(card)) return;
+            _deck.AddToDiscard(card);
+            Debug.LogWarning($"[NewBattle] 예외로 배치되지 못한 카드 '{card.data?.displayName}'를 버린 더미로 복구");
+        }
+
+        bool IsCardInAnyPile(CardInstance card)
+        {
+            return ContainsRef(_deck.Hand, card) || ContainsRef(_deck.DrawPile, card)
+                || ContainsRef(_deck.DiscardPile, card) || ContainsRef(_deck.ExilePile, card);
+        }
+
+        static bool ContainsRef(IReadOnlyList<CardInstance> list, CardInstance card)
+        {
+            for (int i = 0; i < list.Count; i++) if (ReferenceEquals(list[i], card)) return true;
+            return false;
         }
 
         // 카드 효과를 실행하고, 피해·방어도를 카드 이미지와 한 기록으로 남긴다.
@@ -1625,6 +1664,12 @@ namespace Battle
         {
             if (!_awakenPending || _awakenActive || !_inBattle) return;
             if (HasPendingSelection) return; // 선택(버리기 연쇄 포함)이 모두 끝난 뒤 대기열이 다시 호출
+            // 사용 중인 카드가 아직 더미 밖(중앙 연출 중) — 스냅샷에서 빠지지 않도록 배치 후 발동
+            if (_cardPresenting)
+            {
+                if (isActiveAndEnabled) StartCoroutine(DeferredPendingAwakenCheck());
+                return;
+            }
 
             _awakenPending = false;
             ActivateAwaken();
@@ -1805,6 +1850,33 @@ namespace Battle
             if (awakenTimerGauge != null) awakenTimerGauge.Hide();
 
             StopAwakenScreenEffect();
+
+            // 스냅샷 이후 더미에 들어온 정규 카드(스냅샷 당시 사용 연출/선택 대기 중이었거나 소멸 더미에서 되돌아온 카드)는
+            // 복원으로 덮어쓰면 패·묘지 어디에도 없게 되므로 버린 더미에 보존한다. 임시(transient) 카드는 기존대로 버린다.
+            if (_awakenSnapshotHand != null && _awakenSnapshotDraw != null && _awakenSnapshotDiscard != null)
+            {
+                var known = new HashSet<CardInstance>(_awakenSnapshotHand);
+                known.UnionWith(_awakenSnapshotDraw);
+                known.UnionWith(_awakenSnapshotDiscard);
+                var strays = new List<CardInstance>();
+                void CollectStrays(IReadOnlyList<CardInstance> pile)
+                {
+                    for (int i = 0; i < pile.Count; i++)
+                    {
+                        CardInstance c = pile[i];
+                        if (c == null || c.transient || known.Contains(c) || strays.Contains(c)) continue;
+                        strays.Add(c);
+                    }
+                }
+                CollectStrays(_deck.Hand);
+                CollectStrays(_deck.DrawPile);
+                CollectStrays(_deck.DiscardPile);
+                if (strays.Count > 0)
+                {
+                    _awakenSnapshotDiscard.AddRange(strays);
+                    Log($"[각성] 종료 — 스냅샷 밖 카드 {strays.Count}장을 버린 더미로 보존");
+                }
+            }
 
             // 각성 직전 상태로 패/뽑을 더미/버린 더미 복원 (격리 카드 포함)
             _deck.RestorePiles(_awakenSnapshotHand, _awakenSnapshotDraw, _awakenSnapshotDiscard);
@@ -2506,6 +2578,8 @@ namespace Battle
         // 외부(NewCardView)가 카드 속성이 저주되었는지 확인용
         public bool IsElementCursed(CardElement element)
         {
+            // 저주는 전투 범위 상태 — 전투 밖(보상창·상점·이벤트 등)의 카드는 저주 표시를 하지 않는다
+            if (!_inBattle) return false;
             for (int i = 0; i < _curses.Count; i++)
                 if (_curses[i].element == element && _curses[i].remainingUses > 0)
                     return true;

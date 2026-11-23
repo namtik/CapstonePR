@@ -25,7 +25,11 @@ public class EnemyNoteBadge : MonoBehaviour
 
     [Header("글자")]
     [SerializeField] private TMP_FontAsset font;
+    [Tooltip("비우면 폰트 기본 머테리얼을 쓴다.")]
+    [SerializeField] private Material fontMaterial;
     [SerializeField] private float fontSize = 22f;
+    [Tooltip("문구가 길면 이 크기까지 글자를 줄여 말풍선 안에 맞춘다.")]
+    [SerializeField] private float minFontSize = 14f;
     [SerializeField] private Color color = Color.white;
     [SerializeField] private FontStyles fontStyle = FontStyles.Normal;
     [SerializeField] private TextAlignmentOptions alignment = TextAlignmentOptions.Center;
@@ -117,13 +121,15 @@ public class EnemyNoteBadge : MonoBehaviour
 
     void ResolveSprites()
     {
-        if (skullSprite != null && bubbleSprite != null) return;
+        if (skullSprite != null && bubbleSprite != null && font != null && fontMaterial != null) return;
         var all = FindObjectsByType<EnemyNoteBadge>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (int i = 0; i < all.Length; i++)
         {
             if (all[i] == null || all[i] == this) continue;
             if (skullSprite == null) skullSprite = all[i].skullSprite;
             if (bubbleSprite == null) bubbleSprite = all[i].bubbleSprite;
+            if (font == null) font = all[i].font;
+            if (fontMaterial == null) fontMaterial = all[i].fontMaterial;
         }
     }
 
@@ -159,13 +165,23 @@ public class EnemyNoteBadge : MonoBehaviour
     {
         if (_label == null) return;
         if (font != null) _label.font = font;
-        _label.fontSize = Mathf.Max(1f, fontSize);
+        // outlineWidth 설정 시 TMP가 머테리얼 인스턴스를 만들므로, 원본 지정은 바뀔 때만 한다(매 프레임 인스턴스 생성 방지).
+        if (fontMaterial != null && _appliedMaterial != fontMaterial)
+        {
+            _label.fontSharedMaterial = fontMaterial;
+            _appliedMaterial = fontMaterial;
+        }
+        _label.enableWordWrapping = true;
+        _label.enableAutoSizing = false;
+        // 최소 크기로도 안 들어가면 말풍선 밖으로 넘기지 않고 말줄임 처리.
+        _label.overflowMode = TextOverflowModes.Ellipsis;
         _label.color = color;
         _label.fontStyle = fontStyle;
         _label.alignment = alignment;
         _label.outlineWidth = Mathf.Clamp01(outlineWidth);
         _ = _label.outlineColor;
         _label.outlineColor = outlineColor;
+        FitText();
 
         var icon = _root != null ? _root.GetComponent<Image>() : null;
         if (icon != null && skullSprite != null) icon.sprite = skullSprite;
@@ -175,6 +191,46 @@ public class EnemyNoteBadge : MonoBehaviour
             bubbleImage.sprite = bubbleSprite;
             bubbleImage.type = Image.Type.Simple;
             bubbleImage.preserveAspect = true;
+        }
+    }
+
+    Material _appliedMaterial;
+    string _fitText;
+    Vector2 _fitRect;
+    float _fitMax, _fitMin;
+    Object _fitFont, _fitMat;
+
+    // TMP 자동 크기는 레이아웃 줄높이만 보고, 머테리얼의 Dilate/외곽선으로 두꺼워진 실제 글자 크기는 보지 않는다.
+    // 그래서 실제로 그려지는 글자 범위(textBounds)가 글자 영역 안에 들어올 때까지 직접 줄인다.
+    void FitText()
+    {
+        Rect r = _label.rectTransform.rect;
+        if (r.width <= 1f || r.height <= 1f) return;
+
+        float maxSize = Mathf.Max(1f, fontSize);
+        float minSize = Mathf.Clamp(minFontSize, 1f, maxSize);
+        if (_fitText == _label.text && _fitRect == r.size && _fitMax == maxSize && _fitMin == minSize
+            && _fitFont == _label.font && _fitMat == _label.fontSharedMaterial)
+            return;
+
+        _fitText = _label.text;
+        _fitRect = r.size;
+        _fitMax = maxSize;
+        _fitMin = minSize;
+        _fitFont = _label.font;
+        _fitMat = _label.fontSharedMaterial;
+
+        const float tolerance = 0.5f;
+        for (float size = maxSize; ; size -= 1f)
+        {
+            if (size <= minSize) size = minSize;
+            _label.fontSize = size;
+            _label.ForceMeshUpdate();
+            Bounds b = _label.textBounds;
+            bool fits = !_label.isTextTruncated
+                && b.min.x >= r.xMin - tolerance && b.max.x <= r.xMax + tolerance
+                && b.min.y >= r.yMin - tolerance && b.max.y <= r.yMax + tolerance;
+            if (fits || size <= minSize) break;
         }
     }
 

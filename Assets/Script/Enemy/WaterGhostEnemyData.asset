@@ -23,8 +23,8 @@ MonoBehaviour:
   specialAbility: 0
   Note: 
   maxHp: 80
-  actionGaugeMax: 8
-  disruptionTurn: 2
+  actionGaugeMax: 12
+  disruptionTurn: 4
   attackSequence: 040000000a000000
   disruptionActions: 050000000200000004000000
   "\uD761\uC218\uC218\uCE58": 2

@@ -118,6 +118,9 @@ public class GameOverController : MonoBehaviour
 
         CacheEyelidPositions();
 
+        // 사망 순간 진행 중이던 카드/보상/각성 연출이 게임오버 화면 위에 남지 않도록 정리
+        GameStateController.ClearLingeringFx();
+
         if (gameOverCanvas != null)
             gameOverCanvas.SetActive(true);
 

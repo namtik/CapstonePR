@@ -27,6 +27,16 @@ public class RewardDropFx : MonoBehaviour
         Instance.Begin(screenPos, withCombo, withRelic);
     }
 
+    // 게임 종료(사망·클리어·재시작·메인 메뉴) 시 진행 중이던 보상 점 연출을 즉시 지운다.
+    public static void ClearAll()
+    {
+        if (_instance == null) return;
+        _instance.StopAllCoroutines();
+        if (_instance._root == null) return;
+        for (int i = _instance._root.childCount - 1; i >= 0; i--)
+            Destroy(_instance._root.GetChild(i).gameObject);
+    }
+
     static RewardDropFx Instance
     {
         get
@@ -59,7 +69,7 @@ public class RewardDropFx : MonoBehaviour
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
 
         _root = transform as RectTransform;
     }

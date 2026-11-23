@@ -23,7 +23,7 @@ MonoBehaviour:
   specialAbility: 7
   Note: "\uACF5\uACA9 \uC2DC \uD53C\uD574\uAC00 1\uC529 \uC99D\uAC00\uD55C\uB2E4."
   maxHp: 150
-  actionGaugeMax: 5
+  actionGaugeMax: 6
   disruptionTurn: 2
   attackSequence: 04000000
   disruptionActions: 020000000300000004000000

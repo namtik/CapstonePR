@@ -55,6 +55,20 @@ namespace Battle
             Debug.Log($"[RunDeck] 영구 공격력 +{n} (누적 {_permanentAttackPower})");
         }
 
+        private readonly Dictionary<int, int> _permanentCardDamage = new Dictionary<int, int>(); // 카드 ID별 영구 피해 보너스(연마 410 등)
+
+        // 해당 카드 ID의 영구 피해 보너스
+        public int GetPermanentCardDamage(int cardId) =>
+            _permanentCardDamage.TryGetValue(cardId, out int v) ? v : 0;
+
+        // 해당 카드 ID의 영구 피해 보너스 누적 증가 (플레이어 공격력에는 영향 없음)
+        public void AddPermanentCardDamage(int cardId, int n)
+        {
+            if (n == 0) return;
+            _permanentCardDamage[cardId] = GetPermanentCardDamage(cardId) + n;
+            Debug.Log($"[RunDeck] 카드 {cardId} 영구 피해 +{n} (누적 {_permanentCardDamage[cardId]})");
+        }
+
         // 최근 사용 윈도우에서 해당 카테고리 사용 비율 계산
         float CategoryUseRatio(Battle.AI.CardCategory cat)
         {
@@ -287,6 +301,7 @@ namespace Battle
             _runDeck.Clear();
             _seeded = false;
             _permanentAttackPower = 0;
+            _permanentCardDamage.Clear();
             _basicCardStatMultiplier = 1;
             _doubleBasicCardEffects = false;
             _recentUses.Clear();

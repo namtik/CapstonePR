@@ -76,6 +76,9 @@ public class GameClearController : MonoBehaviour
             return;
         }
 
+        // 마지막 처치의 보상/카드 연출이 클리어 화면 위에 남지 않도록 정리
+        GameStateController.ClearLingeringFx();
+
         gameClearCanvas.SetActive(true);
         GameAudio.Instance?.PlayWinBgm();
         Time.timeScale = 0f;

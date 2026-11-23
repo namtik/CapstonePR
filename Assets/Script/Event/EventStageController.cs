@@ -209,6 +209,10 @@ public class EventStageController : MonoBehaviour
     [SerializeField] private NewCardView event5CardViewPrefab;
     [Tooltip("비우면 event5Canvas 자식으로 카드 선택 UI를 생성한다.")]
     [SerializeField] private Transform event5CardPickContainer;
+    [Tooltip("카드 선택에 쓸 더미 보기 패널(전투 '뽑을 더미에서 선택'과 같은 UI). 비우면 씬의 PileViewerPanel을 복제해 쓴다.")]
+    [SerializeField] private PileViewerPanel event5CardPickPanel;
+    [Tooltip("패널 프레임 종류. Draw = 뽑을 더미 선택과 같은 모습.")]
+    [SerializeField] private PileViewerKind event5CardPickPanelKind = PileViewerKind.Draw;
     [SerializeField] private string event5CardPickTitle = "변화시킬 기본 카드를 선택하세요";
     [Tooltip("비워 두면 event5StoryBodyText 폰트를 사용한다.")]
     [SerializeField] private TMP_FontAsset event5CardPickTitleFont;
@@ -272,7 +276,10 @@ public class EventStageController : MonoBehaviour
 
     private Event3Phase event3Phase = Event3Phase.Initial;   // 이벤트3 진행 단계
     private Event5Phase event5Phase = Event5Phase.Initial;   // 이벤트5 진행 단계
-    private GameObject event5CardPickRoot;   // 이벤트5 카드 선택 UI 루트
+    private GameObject event5CardPickRoot;   // 이벤트5 카드 선택 UI 루트(예비 UI)
+    private PileViewerPanel _event5ActivePanel;   // 이벤트5 카드 선택에 열어 둔 더미 패널
+    private PileViewerPanel _event5PanelClone;    // 인스펙터 미지정 시 복제해 만든 패널
+    private readonly List<CardData> _event5PickCandidates = new List<CardData>();   // 패널에 깐 카드 목록
     private int event3SelectedBranch;   // 1차에서 고른 분기 (1 또는 2)
     private int pendingGoldReward;   // 현재 결과에 표시할 골드 획득량
     private readonly Dictionary<int, GoldRewardRowUI> goldRewardRows = new Dictionary<int, GoldRewardRowUI>();
@@ -336,6 +343,99 @@ public class EventStageController : MonoBehaviour
         }
 
         event1Choice1Button.interactable = CanAffordEvent1Choice1();
+    }
+
+    // ── 본문/선택지 버튼 겹침 방지 ──
+    // 본문 TMP는 Overflow 모드(박스 250px 고정)라 문장이 길면 아래로 흘러넘쳐 선택지 버튼 뒤로 깔렸다.
+    // 선택지 버튼이 보이는 동안 본문 맨 아래가 가장 위 버튼보다 위에 오도록 글자 크기를 줄여 맞춘다.
+    [Header("본문-선택지 겹침 방지")]
+    [SerializeField] private bool fitBodyAboveChoices = true;
+    [Tooltip("본문 맨 아래와 가장 위 선택지 버튼 사이에 둘 최소 간격(px).")]
+    [SerializeField] private float bodyChoiceGap = 16f;
+    [Tooltip("겹침을 피하려고 줄일 수 있는 최소 글자 크기.")]
+    [SerializeField] private float bodyMinFontSize = 22f;
+
+    private TextMeshProUGUI _fitBody;   // 마지막으로 맞춘 본문
+    private string _fitText;            // 마지막으로 맞춘 문장
+    private float _fitBaseSize;         // 줄이기 전 글자 크기
+    private float _fitAppliedSize = -1f; // 맞춘 결과 글자 크기
+    private float _fitButtonTop = float.NaN; // 맞출 때 기준이 된 버튼 상단 높이
+    private readonly Vector3[] _fitCorners = new Vector3[4];
+
+    void LateUpdate()
+    {
+        if (fitBodyAboveChoices && phase != EventPhase.Idle)
+            FitStoryBodyAboveChoices();
+    }
+
+    void FitStoryBodyAboveChoices()
+    {
+        TextMeshProUGUI body = GetStoryBodyText(currentEventIndex);
+        if (body == null || !body.isActiveAndEnabled) return;
+        RectTransform bodyRt = body.rectTransform;
+        RectTransform parent = bodyRt.parent as RectTransform;
+        if (parent == null) return;
+
+        // 지금 보이는 선택지 버튼 중 가장 높은 상단(본문 부모 좌표)
+        bool anyButton = false;
+        float buttonTop = float.NegativeInfinity;
+        foreach (Button b in AllChoiceButtonsOfCurrentEvent())
+        {
+            if (b == null || !b.gameObject.activeInHierarchy) continue;
+            ((RectTransform)b.transform).GetWorldCorners(_fitCorners);
+            for (int i = 0; i < 4; i++)
+                buttonTop = Mathf.Max(buttonTop, parent.InverseTransformPoint(_fitCorners[i]).y);
+            anyButton = true;
+        }
+        if (!anyButton) return; // 결과 단계(버튼 숨김) — 결과 스타일을 건드리지 않는다
+
+        string text = body.text ?? string.Empty;
+        bool sameText = body == _fitBody && text == _fitText;
+        if (sameText && Mathf.Abs(body.fontSize - _fitAppliedSize) < 0.01f
+            && !float.IsNaN(_fitButtonTop) && Mathf.Abs(buttonTop - _fitButtonTop) < 1f)
+            return; // 이미 맞춤
+
+        // 다른 문장이거나 외부(스타일 복원 등)에서 글자 크기를 바꿨으면 그 크기를 새 기준으로
+        if (!sameText || Mathf.Abs(body.fontSize - _fitAppliedSize) >= 0.01f)
+            _fitBaseSize = body.fontSize;
+
+        bodyRt.GetWorldCorners(_fitCorners);
+        float bodyTop = parent.InverseTransformPoint(_fitCorners[1]).y;
+        float available = bodyTop - buttonTop - bodyChoiceGap;
+        float width = bodyRt.rect.width;
+
+        float size = _fitBaseSize;
+        if (available > 1f && width > 1f && text.Length > 0)
+        {
+            body.fontSize = size;
+            float h = body.GetPreferredValues(text, width, 0f).y;
+            float min = Mathf.Min(bodyMinFontSize, _fitBaseSize);
+            while (h > available && size - 1f >= min)
+            {
+                size -= 1f;
+                body.fontSize = size;
+                h = body.GetPreferredValues(text, width, 0f).y;
+            }
+        }
+        body.fontSize = size;
+
+        _fitBody = body;
+        _fitText = text;
+        _fitAppliedSize = size;
+        _fitButtonTop = buttonTop;
+    }
+
+    // 현재 이벤트에서 화면에 나올 수 있는 모든 선택지 버튼(이벤트3은 갈래 버튼 포함)
+    IEnumerable<Button> AllChoiceButtonsOfCurrentEvent()
+    {
+        foreach (Button b in CurrentChoiceButtons()) yield return b;
+        if (currentEventIndex == 2)
+        {
+            yield return event3Branch1Choice1Button;
+            yield return event3Branch1Choice2Button;
+            yield return event3Branch2Choice1Button;
+            yield return event3Branch2Choice2Button;
+        }
     }
 
     // 결과 단계에서 클릭을 받아 타이핑 스킵 또는 맵 복귀를 처리한다
@@ -1020,11 +1120,94 @@ public class EventStageController : MonoBehaviour
         return result;
     }
 
+    // 이벤트5 카드 선택 — 전투의 '뽑을 더미에서 카드 선택'과 같은 PileViewerPanel UI로 덱의 기본 카드를 보여 준다.
     void ShowEvent5CardPick(List<int> basicCardIds)
     {
         ClearEvent5CardPick();
         event5Phase = Event5Phase.CardSelect;
 
+        PileViewerPanel panel = ResolveEventCardPickPanel();
+        NewCardView prefab = ResolveEventCardViewPrefab();
+        if (panel != null && prefab != null)
+        {
+            // 덱 보기처럼 보유 장수만큼 펼쳐 보여 준다
+            _event5PickCandidates.Clear();
+            RunDeckState deck = RunDeckState.EnsureExists();
+            foreach (var entry in deck.RunDeck)
+            {
+                if (entry.count <= 0 || !basicCardIds.Contains(entry.cardId)) continue;
+                CardData data = CardDatabase.GetById(entry.cardId);
+                if (data == null) continue;
+                for (int i = 0; i < entry.count; i++) _event5PickCandidates.Add(data);
+            }
+
+            if (_event5PickCandidates.Count > 0)
+            {
+                _event5ActivePanel = panel;
+                panel.ShowSelectable(event5CardPickPanelKind, event5CardPickTitle, _event5PickCandidates, prefab,
+                    OnEvent5PanelCardClicked, OnEvent5PanelCancelled);
+                return;
+            }
+        }
+
+        ShowEvent5CardPickLegacy(basicCardIds);
+    }
+
+    void OnEvent5PanelCardClicked(int index)
+    {
+        if (index < 0 || index >= _event5PickCandidates.Count) return;
+        OnEvent5CardPicked(_event5PickCandidates[index].id);
+    }
+
+    // 닫기(X) — 카드를 고르지 않고 선택지로 돌아간다
+    void OnEvent5PanelCancelled()
+    {
+        if (currentEventIndex != 4 || event5Phase != Event5Phase.CardSelect) return;
+        ResetEvent5Flow();
+    }
+
+    // 인스펙터 지정 패널 → 없으면 씬의 PileViewerPanel(전투 HUD/상점)을 이벤트 캔버스 아래로 복제해 쓴다
+    PileViewerPanel ResolveEventCardPickPanel()
+    {
+        if (event5CardPickPanel != null) return event5CardPickPanel;
+        if (_event5PanelClone != null) return _event5PanelClone;
+
+        Transform parent = event5CardPickContainer != null ? event5CardPickContainer
+            : event5Canvas != null ? event5Canvas.transform : null;
+        if (parent == null) return null;
+
+        PileViewerPanel source = null;
+        var all = FindObjectsByType<PileViewerPanel>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] == null) continue;
+            source = all[i];
+            if (all[i].GetComponentInParent<CardHandHUD>(true) != null) break; // 전투 더미 보기 패널 우선
+        }
+        if (source == null)
+        {
+            Debug.LogWarning("[EventStage] PileViewerPanel을 찾지 못해 기존 카드 선택 UI를 사용합니다.");
+            return null;
+        }
+
+        bool wasActive = source.gameObject.activeSelf;
+        source.gameObject.SetActive(false); // 복제본이 활성 상태로 Awake되지 않게
+        _event5PanelClone = Instantiate(source, parent, false);
+        source.gameObject.SetActive(wasActive);
+        _event5PanelClone.name = "EventCardPickPanel";
+        return _event5PanelClone;
+    }
+
+    NewCardView ResolveEventCardViewPrefab()
+    {
+        if (event5CardViewPrefab != null) return event5CardViewPrefab;
+        var hud = FindFirstObjectByType<CardHandHUD>(FindObjectsInactive.Include);
+        return hud != null ? hud.CardPrefab : null;
+    }
+
+    // (예비) 패널을 쓸 수 없을 때의 가로 나열 선택 UI
+    void ShowEvent5CardPickLegacy(List<int> basicCardIds)
+    {
         Transform parent = event5CardPickContainer;
         if (parent == null && event5Canvas != null)
             parent = event5Canvas.transform;
@@ -1226,6 +1409,13 @@ public class EventStageController : MonoBehaviour
 
     void ClearEvent5CardPick()
     {
+        if (_event5ActivePanel != null)
+        {
+            PileViewerPanel panel = _event5ActivePanel;
+            _event5ActivePanel = null;
+            if (panel.IsOpen) panel.Hide();
+        }
+
         if (event5CardPickRoot != null)
         {
             Destroy(event5CardPickRoot);

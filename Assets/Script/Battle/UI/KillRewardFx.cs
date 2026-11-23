@@ -32,6 +32,23 @@ public class KillRewardFx : MonoBehaviour
         Instance.Begin(screenPos, amount, onCollected);
     }
 
+    // 게임 종료(사망·클리어·재시작·메인 메뉴) 시 진행 중이던 +N/영혼 연출을 즉시 지운다.
+    // DontDestroyOnLoad + unscaled time이라 그대로 두면 결과 화면 위에 남는다.
+    public static void ClearAll()
+    {
+        if (_instance == null) return;
+        _instance.StopAllCoroutines();
+        DestroyChildren(_instance._root);
+        DestroyChildren(_instance._flyRoot);
+    }
+
+    static void DestroyChildren(Transform parent)
+    {
+        if (parent == null) return;
+        for (int i = parent.childCount - 1; i >= 0; i--)
+            Destroy(parent.GetChild(i).gameObject);
+    }
+
     static KillRewardFx Instance
     {
         get
@@ -64,7 +81,7 @@ public class KillRewardFx : MonoBehaviour
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
 
         _root = transform as RectTransform;
     }

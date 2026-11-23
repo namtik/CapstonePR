@@ -50,6 +50,21 @@ public class BossRelicDropUI : MonoBehaviour
         Instance.Begin(relic, onComplete);
     }
 
+    // 게임 종료(사망·클리어·재시작·메인 메뉴) 시 떠 있던 유물 아이콘/툴팁을 숨기고 연출을 멈춘다.
+    // onComplete는 호출하지 않는다(런이 끝났으므로 보상 흐름을 이어가지 않음).
+    public static void ClearAll()
+    {
+        if (_instance == null) return;
+        _instance.StopAllCoroutines();
+        _instance._floating = false;
+        _instance._absorbing = false;
+        _instance._pointerOver = false;
+        _instance._relic = null;
+        _instance._onComplete = null;
+        if (_instance._tooltip != null) _instance._tooltip.gameObject.SetActive(false);
+        if (_instance._icon != null) _instance._icon.gameObject.SetActive(false);
+    }
+
     static BossRelicDropUI Instance
     {
         get
@@ -89,7 +104,7 @@ public class BossRelicDropUI : MonoBehaviour
         var scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
 
         gameObject.AddComponent<GraphicRaycaster>();
         _root = transform as RectTransform;

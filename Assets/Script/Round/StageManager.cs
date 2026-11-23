@@ -20,6 +20,22 @@ public class StageManager : MonoBehaviour
         public string sceneName;
     }
 
+    [Serializable]
+    public class BossStage
+    {
+        [Tooltip("이 스테이지를 쓸 보스 몬스터 ID (EnemyData.id).")]
+        public int enemyId;
+        [Tooltip("해당 보스의 스테이지 씬 이름(Build Settings에 등록되어 있어야 함).")]
+        public string sceneName;
+    }
+
+    [Header("보스별 스테이지 씬")]
+    [Tooltip("보스 몬스터 ID → 스테이지 씬. 매칭되면 bossStageSceneName보다 우선한다.")]
+    [SerializeField] private List<BossStage> bossStages = new List<BossStage>
+    {
+        new BossStage { enemyId = 100018, sceneName = "Boss_ReedField" }, // 무사
+    };
+
     [Header("속성별 스테이지 씬")]
     [Tooltip("적 속성 → 스테이지 씬 매핑. 전투 명단에서 첫 번째로 속성이 있는 적 기준.")]
     [SerializeField] private List<ElementStage> elementStages = new List<ElementStage>
@@ -147,8 +163,18 @@ public class StageManager : MonoBehaviour
     }
 
     // 속성에 해당하는 씬 이름(매칭 없으면 기본 스테이지).
-    public string ResolveSceneName(EnemyElement element, bool isBoss = false)
+    public string ResolveSceneName(EnemyElement element, bool isBoss = false, IList<EnemyData> roster = null)
     {
+        if (isBoss && roster != null)
+        {
+            foreach (var b in bossStages)
+            {
+                if (b == null || string.IsNullOrEmpty(b.sceneName)) continue;
+                for (int i = 0; i < roster.Count; i++)
+                    if (roster[i] != null && roster[i].id == b.enemyId)
+                        return b.sceneName;
+            }
+        }
         if (isBoss && !string.IsNullOrEmpty(bossStageSceneName)) return bossStageSceneName;
         foreach (var s in elementStages)
             if (s != null && s.element == element && !string.IsNullOrEmpty(s.sceneName))
@@ -165,10 +191,10 @@ public class StageManager : MonoBehaviour
 
     // progressColumn: 누적 진행 컬럼(난이도 컬럼 = 맵컬럼 + 바퀴*10). 0 이상이면 그에 맞는 시간대를 적용한다.
     // isBoss: 보스 전투면 bossStageSceneName을 우선 사용한다.
-    public void ShowStage(EnemyElement element, int progressColumn, Action onReady = null, bool isBoss = false)
+    public void ShowStage(EnemyElement element, int progressColumn, Action onReady = null, bool isBoss = false, IList<EnemyData> roster = null)
     {
         // [테스트] StageTestPanel이 스테이지 씬/시간대를 강제할 수 있다(평소에는 null → 기존 동작)
-        string target = !string.IsNullOrEmpty(DebugSceneOverride) ? DebugSceneOverride : ResolveSceneName(element, isBoss);
+        string target = !string.IsNullOrEmpty(DebugSceneOverride) ? DebugSceneOverride : ResolveSceneName(element, isBoss, roster);
         int id = ++_requestId;
         _visible = true;
         _shownSceneName = target;
@@ -357,6 +383,9 @@ public class StageManager : MonoBehaviour
     IEnumerable<string> AllSceneNames()
     {
         var seen = new HashSet<string>();
+        foreach (var b in bossStages)
+            if (b != null && !string.IsNullOrEmpty(b.sceneName) && seen.Add(b.sceneName))
+                yield return b.sceneName;
         foreach (var s in elementStages)
             if (s != null && !string.IsNullOrEmpty(s.sceneName) && seen.Add(s.sceneName))
                 yield return s.sceneName;

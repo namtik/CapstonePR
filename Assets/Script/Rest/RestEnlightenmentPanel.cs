@@ -260,7 +260,13 @@ public class RestEnlightenmentPanel : MonoBehaviour
         float fit = Mathf.Min(
             (cell.x - bookFitPadding) / native.x,
             (cell.y - bookFitPadding) / native.y);
-        itemRt.localScale = Vector3.one * Mathf.Max(0.1f, fit);
+        float scale = Mathf.Max(0.1f, fit);
+        itemRt.localScale = Vector3.one * scale;
+
+        // ComboBook 프리팹의 ButtonHoverScale은 Awake 때 스케일(1)을 기준으로 잡고 매 프레임 그 값으로 되돌린다.
+        // 기준을 맞춰 주지 않으면 책이 원래 크기(600)로 커져 칸(520)+간격을 넘고 옆 책과 겹친다.
+        var hover = itemRt.GetComponent<ButtonHoverScale>();
+        if (hover != null) hover.SetBaseScale(scale);
     }
 
     void OnComboPicked(ComboSkillDef picked)
