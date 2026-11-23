@@ -116,6 +116,7 @@ namespace Battle.UI
             foreach (var r in all)
             {
                 if (r == null) continue;
+                if (!ownedOnly && !RelicManager.IsOfferable(r)) continue; // 등장 제외 유물은 도감에서도 숨김
                 if (_categoryFilter.HasValue && r.category != _categoryFilter.Value) continue;
                 items.Add(r);
             }

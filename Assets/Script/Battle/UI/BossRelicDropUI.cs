@@ -361,6 +361,8 @@ public class BossRelicDropUI : MonoBehaviour
             RelicSO def = defs[i];
             if (def == null || string.IsNullOrWhiteSpace(def.id) || def.icon == null)
                 continue;
+            if (!RelicManager.IsOfferable(def))
+                continue; // 등장 제외(호리병 등)
             if (manager.HasRelicId(def.id))
                 continue;
             pool.Add(def);

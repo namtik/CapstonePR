@@ -630,6 +630,7 @@ public class RelicStageController : MonoBehaviour
             var def = defs[i];
             if (def == null || string.IsNullOrWhiteSpace(def.id)) continue;
             if (def.icon == null) continue;
+            if (!RelicManager.IsOfferable(def)) continue; // 등장 제외(호리병 등)
 
             // 후보 유물이 지정돼 있으면 그 목록에 든 유물만 등장
             if (preferred != null && preferred.Count > 0 && !preferred.Contains(def))

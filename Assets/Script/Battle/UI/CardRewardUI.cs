@@ -153,44 +153,30 @@ namespace Battle.UI
                 }
             }
 
+            // 전투 보상 등급: 파워 카드 = 레어, 나머지 = 일반 (카드 DB의 rarity는 보지 않음)
+            var normal = new List<CardData>();
+            var rare = new List<CardData>();
+            foreach (var c in pool)
+                (c.type == CardType.Power ? rare : normal).Add(c);
+
+            // 칸마다 등급을 먼저 뽑고(일반 70 : 레어 30) 그 등급 안에서 무작위 1장. 한쪽이 바닥나면 다른 쪽에서.
             var result = new List<CardData>();
-            var used = new HashSet<int>();
             int target = Mathf.Min(count, pool.Count);
-            int guard = 0;
-            while (result.Count < target && guard++ < 2000)
+            while (result.Count < target)
             {
-                CardData pick = WeightedPick(pool);
-                if (pick == null) break;
-                if (used.Add(pick.id)) result.Add(pick);
+                bool wantRare = Random.Range(0, 100) < RARE_TIER_PERCENT;
+                List<CardData> from = wantRare ? rare : normal;
+                if (from.Count == 0) from = wantRare ? normal : rare;
+                if (from.Count == 0) break;
+
+                int idx = Random.Range(0, from.Count);
+                result.Add(from[idx]);
+                from.RemoveAt(idx); // 같은 카드 중복 제시 방지
             }
             return result;
         }
 
-        // 등급별 추첨 가중치를 반환
-        static int RarityWeight(CardRarity r) => r switch
-        {
-            CardRarity.Normal => 60,
-            CardRarity.Rare => 30,
-            CardRarity.Epic => 10,
-            _ => 30
-        };
-
-        // 등급 가중치로 풀에서 카드 1장을 추첨
-        static CardData WeightedPick(List<CardData> pool)
-        {
-            if (pool.Count == 0) return null;
-            int total = 0;
-            for (int i = 0; i < pool.Count; i++) total += RarityWeight(pool[i].rarity);
-            if (total <= 0) return pool[Random.Range(0, pool.Count)];
-
-            int roll = Random.Range(0, total);
-            for (int i = 0; i < pool.Count; i++)
-            {
-                roll -= RarityWeight(pool[i].rarity);
-                if (roll < 0) return pool[i];
-            }
-            return pool[pool.Count - 1];
-        }
+        const int RARE_TIER_PERCENT = 30; // 레어(파워 카드) 등급이 뽑힐 확률(%). 나머지는 일반.
 
         // 딤/타이틀/카드 행/스킵 버튼을 런타임으로 구성
         void BuildUI(NewCardView cardPrefab, List<CardData> choices)

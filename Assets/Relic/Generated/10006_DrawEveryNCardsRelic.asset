@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Battle.Relic.DrawEveryNCardsRelic
   id: 10006
   displayName: "\uC6C3\uB294 \uD0C8"
-  description: "\uCE74\uB4DC\uB97C 3\uC7A5 \uC0AC\uC6A9 \uC2DC, \uCE74\uB4DC\uB97C
-    1\uC7A5 \uBF51\uB294\uB2E4."
+  description: "\uBD80\uC801\uC744 3\uC7A5 \uC0AC\uC6A9 \uC2DC, \uBD80\uC801\uC744 1\uC7A5 \uBF51\uB294\uB2E4."
   icon: {fileID: 21300000, guid: ebe7f3d21907e8148abecc565469eca1, type: 3}
   category: 0
   everyN: 3

@@ -184,6 +184,17 @@ namespace Battle.Relic
             for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) sum += _owned[i].GoldRewardBonus();
             return sum;
         }
+        // D 드로우 시 적 게이지 추가 증가량 합 (비급서 10011)
+        public int GetDDrawExtraGaugeCost()
+        {
+            int sum = 0;
+            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) sum += _owned[i].DDrawExtraGaugeCost;
+            return sum;
+        }
+
+        // 보상·상점·도감에 내보낼 수 있는 유물인지 (등장 제외 플래그)
+        public static bool IsOfferable(RelicSO relic) => relic != null && !relic.excludeFromPool;
+
         // D 드로우 동작을 교체하는 유물 보유 여부 (비급서 10011)
         public bool HasDDrawOverride()
         {

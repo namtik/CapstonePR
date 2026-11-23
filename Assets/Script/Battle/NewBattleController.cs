@@ -1173,9 +1173,10 @@ namespace Battle
                 {
                     int discarded = _deck.DiscardAllFromHand();
                     int redrawn = _deck.Draw(5, true);
-                    if (redrawn > 0) AccrueEnemyGauge(1);
+                    int gaugeCost = 1 + RelicManager.Instance.GetDDrawExtraGaugeCost(); // 비급서: 코스트 +3
+                    if (redrawn > 0) AccrueEnemyGauge(gaugeCost);
                     handHud?.Refresh();
-                    Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우");
+                    Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우, 적 게이지 +{gaugeCost}");
                     return;
                 }
 

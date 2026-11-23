@@ -39,6 +39,7 @@ public class GameStateController : MonoBehaviour
     [Tooltip("게임 클리어에 필요한 보스 처치 횟수(= 맵 바퀴 수).")]
     public const int RequiredBossDefeats = 2;
     public int bossDefeatCount = 0; // 이번 런에서 처치한 보스 수
+    public readonly System.Collections.Generic.List<RoundData> defeatedBossRounds = new System.Collections.Generic.List<RoundData>(); // 이번 런에서 잡은 보스 라운드(다음 바퀴 보스 중복 방지)
 
     // 이번 런에서 처치한 몬스터 한 마리. 초상화는 전투 로그와 같은 EnemyData.enemySprite.
     public readonly struct RunKillRecord
@@ -221,6 +222,8 @@ public class GameStateController : MonoBehaviour
             mainMenuStage.SetActive(false);
 
         bossDefeatCount = 0;
+
+        defeatedBossRounds.Clear();
         ClearRunKills();
         ResetMapStageForLapStart();
         ResetEventRunState();
@@ -442,9 +445,11 @@ public class GameStateController : MonoBehaviour
     }
 
     // 보스 처치를 기록한다
-    public void RegisterBossDefeat()
+    public void RegisterBossDefeat(RoundData bossRound = null)
     {
         bossDefeatCount++;
+        if (bossRound != null && !defeatedBossRounds.Contains(bossRound))
+            defeatedBossRounds.Add(bossRound);
         Debug.Log($"[GameState] 보스 처치 {bossDefeatCount}/{RequiredBossDefeats}");
     }
 
@@ -518,6 +523,7 @@ public class GameStateController : MonoBehaviour
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
         bossDefeatCount = 0;
+        defeatedBossRounds.Clear();
         ClearRunKills();
         ResetMapStageForLapStart();
 
@@ -561,6 +567,7 @@ public class GameStateController : MonoBehaviour
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
         bossDefeatCount = 0;
+        defeatedBossRounds.Clear();
         ClearRunKills();
         ResetMapStageForLapStart();
         Battle.RunDeckState.Instance?.ResetRun();

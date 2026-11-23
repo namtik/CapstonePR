@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Battle.Relic.DDrawDiscardRedrawRelic
   id: 10011
   displayName: "\uBE44\uAE09\uC11C"
-  description: "D \uB4DC\uB85C\uC6B0\uC758 \uD6A8\uACFC\uAC00 \uD604\uC7AC \uD328\uB97C
-    \uBAA8\uB450 \uBC84\uB9AC\uACE0 \uBF51\uC744 \uCE74\uB4DC \uB354\uBBF8\uC5D0\uC11C
-    5\uC7A5\uC744 \uBF51\uB294\uB2E4\uB85C \uBC14\uB010\uB2E4."
+  description: "'\uB4DC\uB85C\uC6B0'\uC758 \uD6A8\uACFC\uAC00 \uCF54\uC2A4\uD2B8\uAC00 3 \uB9CC\uD07C \uB298\uC5B4\uB098\uACE0 '\uD604\uC7AC \uD328\uB97C \uBAA8\uB450 \uBC84\uB9AC\uACE0 \uBF51\uC744 \uBD80\uC801 \uB354\uBBF8\uC5D0\uC11C 5\uC7A5\uC744 \uBF51\uB294\uB2E4'\uB85C \uBC14\uB010\uB2E4."
   icon: {fileID: 21300000, guid: 677e2a06fbebef14a951ece8ea1a01f4, type: 3}
   category: 0
+  extraGaugeCost: 3

@@ -44,6 +44,7 @@ namespace Battle.UI
         RectTransform _canvasRect;
         RectTransform _rect;
         RectTransform _target;           // 따라갈 카드
+        RectTransform _clip;             // 카드를 가리는 스크롤 마스크(없으면 null) — 보이는 부분 기준으로 붙인다
         float _contentHeight;            // 쌓인 패널 전체 높이
         readonly List<Panel> _panels = new List<Panel>();
         readonly List<KeywordDef> _buffer = new List<KeywordDef>(4);
@@ -147,6 +148,7 @@ namespace Battle.UI
             }
 
             _target = target;
+            _clip = FindClip(target);
             gameObject.SetActive(true);
             _rect.SetAsLastSibling();
             Relayout();
@@ -257,6 +259,17 @@ namespace Battle.UI
             return t;
         }
 
+        // 대상 위쪽에서 스크롤 마스크(RectMask2D/Mask)를 찾는다
+        static RectTransform FindClip(Transform from)
+        {
+            for (Transform t = from != null ? from.parent : null; t != null; t = t.parent)
+            {
+                if (t.GetComponent<RectMask2D>() != null || t.GetComponent<Mask>() != null)
+                    return t as RectTransform;
+            }
+            return null;
+        }
+
         void LateUpdate()
         {
             if (_target == null || !_target.gameObject.activeInHierarchy) { Hide(); return; }
@@ -278,6 +291,24 @@ namespace Battle.UI
                 Vector3 local = _canvasRect.InverseTransformPoint(corners[i]);
                 min = Vector2.Min(min, local);
                 max = Vector2.Max(max, local);
+            }
+
+            // 스크롤로 일부가 가려진 카드면 보이는 부분(마스크와 겹친 영역)에 붙인다
+            if (_clip != null)
+            {
+                _clip.GetWorldCorners(corners);
+                Vector2 cmin = new Vector2(float.MaxValue, float.MaxValue);
+                Vector2 cmax = new Vector2(float.MinValue, float.MinValue);
+                for (int i = 0; i < 4; i++)
+                {
+                    Vector3 local = _canvasRect.InverseTransformPoint(corners[i]);
+                    cmin = Vector2.Min(cmin, local);
+                    cmax = Vector2.Max(cmax, local);
+                }
+                min = Vector2.Max(min, cmin);
+                max = Vector2.Min(max, cmax);
+                if (max.y < min.y) max.y = min.y;
+                if (max.x < min.x) max.x = min.x;
             }
 
             Rect canvas = _canvasRect.rect;

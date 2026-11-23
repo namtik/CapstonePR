@@ -20,6 +20,8 @@ namespace Battle.Relic
         [TextArea(2, 4)] public string description;  // 설명
         public Sprite icon;                          // 아이콘
         public RelicCategory category = RelicCategory.Combat; // 분류
+        [Tooltip("켜면 상자·상점·보스 보상과 도감에 나오지 않는다(임시로 빼둘 때).")]
+        public bool excludeFromPool;                 // 등장 제외
 
         // 이름이 비어 있으면 id를 표시용으로 대체
         public string DisplayLabel => string.IsNullOrWhiteSpace(displayName) ? id : displayName;
@@ -51,6 +53,7 @@ namespace Battle.Relic
         public virtual int GetBattleCounter(IRelicBattleContext ctx) => -1;
 
         // ── 특수 플래그 ────────────────────────────────────────────────
+        public virtual int   DDrawExtraGaugeCost => 0;              // D 드로우 시 적 게이지 추가 증가량 (비급서 10011)
         public virtual bool  OverridesDDraw => false;               // D 드로우 동작 교체 (비급서 10011)
         public virtual bool  GrantsAllRelicsInStage => false;       // 유물 라운드서 후보 전부 획득 (유물 호리병 10018)
     }

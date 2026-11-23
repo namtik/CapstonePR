@@ -7,6 +7,10 @@ namespace Battle.Relic
     [CreateAssetMenu(menuName = "Relic/DDrawDiscardRedraw", fileName = "DDrawDiscardRedrawRelic")]
     public class DDrawDiscardRedrawRelic : RelicSO
     {
+        [Tooltip("D 드로우 코스트(적 게이지 증가) 추가량. 기본 1에 더해진다.")]
+        public int extraGaugeCost = 3;
+
         public override bool OverridesDDraw => true;
+        public override int DDrawExtraGaugeCost => extraGaugeCost;
     }
 }

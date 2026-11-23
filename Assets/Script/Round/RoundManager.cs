@@ -700,7 +700,7 @@ public class RoundManager : MonoBehaviour
         GameStateController state = GameStateController.Instance;
         if (state != null)
         {
-            state.RegisterBossDefeat();
+            state.RegisterBossDefeat(currentRoundData);
             state.MarkNodeCleared(state.lastVisitedNodeIndex);
         }
 
@@ -901,7 +901,7 @@ public class RoundManager : MonoBehaviour
 
         if (currentRoundData is BossRoundData)
         {
-            stateController.RegisterBossDefeat();
+            stateController.RegisterBossDefeat(currentRoundData);
 
             if (stateController.HasMoreLapsRemaining)
             {

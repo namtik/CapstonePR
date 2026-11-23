@@ -24,8 +24,8 @@ public static class RelicAssetGenerator
 
         // ── 비전투형 ─────────────────────────────────────────────
         list.Add(Make<MaxHpRelic>("10000", "불로단",
-            "획득 시, 최대 체력이 10 증가한다.", RelicCategory.NonCombat,
-            r => r.amount = 10, "UI_Item_001"));
+            "획득 시, 최대 체력이 20 증가한다.", RelicCategory.NonCombat,
+            r => r.amount = 20, "UI_Item_001"));
         list.Add(Make<ShopDiscountRelic>("10001", "할인패",
             "보유 시, 상점에서 상품의 가격이 50% 할인된다.", RelicCategory.NonCombat,
             r => r.priceMultiplier = 0.5f, "UI_Item_002"));
@@ -36,14 +36,14 @@ public static class RelicAssetGenerator
             "획득 시, 모든 체력을 회복한다.", RelicCategory.NonCombat,
             null, "UI_Item_004"));
         list.Add(Make<RandomizeDeckRelic>("10017", "망각의 붓",
-            "획득 시, 현재 보유한 카드를 랜덤한 카드로 모두 변환한다.", RelicCategory.NonCombat,
+            "획득 시, 현재 보유한 부적을 랜덤한 부적으로 모두 변환한다.", RelicCategory.NonCombat,
             null, "UI_Item_003"));
         list.Add(Make<BasicCardDoubleRelic>("10004", "태초의 서",
-            "획득 시, 기본 카드의 효과가 2배가 된다.", RelicCategory.NonCombat,
+            "획득 시, 기본 부적의 효과가 2배가 된다.", RelicCategory.NonCombat,
             null, "UI_Item_006"));
         list.Add(Make<GrantAllRelicsRelic>("10018", "유물 호리병",
             "유물 라운드 진입 시, 제시된 모든 유물을 획득한다.", RelicCategory.NonCombat,
-            null, "10018_Relic Gourd"));
+            r => r.excludeFromPool = true, "10018_Relic Gourd")); // 임시: 등장 제외
         list.Add(Make<AwakenGaugeRecoverRelic>("10020", "이무기의 여의주",
             "각성 종료 후, 성공한 콤보 수만큼 각성 게이지를 회복한다.", RelicCategory.Combat,
             null, "imugire"));
@@ -53,19 +53,19 @@ public static class RelicAssetGenerator
             "매 전투 시작 시 방어도 5를 얻는다.", RelicCategory.Combat,
             r => r.guardAmount = 5, "UI_Item_003"));
         list.Add(Make<FragmentsOnBattleStartRelic>("10007", "깨진 불상",
-            "매 전투 시작 시, 뽑을 카드 더미에 무작위 파편 카드 5장을 섞어 넣는다.", RelicCategory.Combat,
+            "매 전투 시작 시, 뽑을 부적 더미에 무작위 파편 부적 5장을 섞어 넣는다.", RelicCategory.Combat,
             r => r.fragmentCount = 5, "UI_Item_001"));
         list.Add(Make<FrostOnBattleStartRelic>("10008", "서리화",
-            "매 전투 시작 시, 무작위 적 1명에게 빙결을 7 부여한다.", RelicCategory.Combat,
-            r => r.frostAmount = 7, "frosted flower"));
+            "매 전투 시작 시, 무작위 적 1명에게 빙결을 5 부여한다.", RelicCategory.Combat,
+            r => r.frostAmount = 5, "frosted flower"));
         list.Add(Make<AwakenOnBattleStartRelic>("10010", "황룡옥적",
             "매 전투 시작 시, 각성 상태가 된다.", RelicCategory.Combat,
             null, "UI_Item_003"));
         list.Add(Make<ChainOnBattleStartRelic>("10016", "신선도복",
-            "매 전투 시작 시, 연쇄 20을 얻는다.", RelicCategory.Combat,
-            r => r.chainAmount = 20, "UI_Item_002"));
+            "매 전투 시작 시, 연쇄 30을 얻는다.", RelicCategory.Combat,
+            r => r.chainAmount = 30, "UI_Item_002"));
         list.Add(Make<FirstCardRecastRelic>("10015", "복사경",
-            "매 전투 시작 시, 처음 사용하는 카드의 효과를 한번 더 발동한다.", RelicCategory.Combat,
+            "매 전투 시작 시, 처음 사용하는 부적의 효과를 한번 더 발동한다.", RelicCategory.Combat,
             null, "UI_Item_001"));
 
         // ── 전투형: 질의/훅 ──────────────────────────────────────
@@ -76,19 +76,19 @@ public static class RelicAssetGenerator
             "콤보 스킬 발동 시, 각성 시간이 0.5초 만큼 증가한다.", RelicCategory.Combat,
             r => r.bonusSeconds = 0.5f, "UI_Item_006"));
         list.Add(Make<DrawOnHpLostRelic>("10003", "혈묵주",
-            "체력을 잃을 시, 카드를 1장 뽑는다.", RelicCategory.Combat,
+            "체력을 잃을 시, 부적을 1장 뽑는다.", RelicCategory.Combat,
             r => r.drawCount = 1, "UI_Item_004"));
         list.Add(Make<DamageOnHpLostRelic>("10019", "피 묻은 가시",
-            "체력을 잃을 시, 무작위 적에게 피해를 5 만큼 준다.", RelicCategory.Combat,
-            r => r.damage = 5, "UI_Item_005"));
+            "체력을 잃을 시, 무작위 적에게 피해를 10 만큼 준다.", RelicCategory.Combat,
+            r => r.damage = 10, "UI_Item_005"));
         list.Add(Make<DrawEveryNCardsRelic>("10006", "웃는 탈",
-            "카드를 3장 사용 시, 카드를 1장 뽑는다.", RelicCategory.Combat,
+            "부적을 3장 사용 시, 부적을 1장 뽑는다.", RelicCategory.Combat,
             r => { r.everyN = 3; r.drawCount = 1; }, "UI_Item_006"));
         list.Add(Make<DDrawDiscardRedrawRelic>("10011", "비급서",
-            "D 드로우의 효과가 현재 패를 모두 버리고 뽑을 카드 더미에서 5장을 뽑는다로 바뀐다.", RelicCategory.Combat,
-            null, "bookre"));
+            "'드로우'의 효과가 코스트가 3 만큼 늘어나고 '현재 패를 모두 버리고 뽑을 부적 더미에서 5장을 뽑는다'로 바뀐다.", RelicCategory.Combat,
+            r => r.extraGaugeCost = 3, "bookre"));
         list.Add(Make<CostReductionHandLimitRelic>("10013", "독주",
-            "모든 카드의 코스트가 1만큼 줄어든다. 전투 중 패에 카드를 1장만 보유할 수 있다.", RelicCategory.Combat,
+            "모든 부적의 코스트가 1만큼 줄어든다. 전투 중 패에 부적을 1장만 보유할 수 있다.", RelicCategory.Combat,
             r => { r.gaugeCostDelta = -1; r.handLimit = 1; }, "UI_Item_005"));
 
         WriteDatabase(list);
