@@ -53,7 +53,7 @@ namespace Battle.Relic
         public virtual int GetBattleCounter(IRelicBattleContext ctx) => -1;
 
         // ── 특수 플래그 ────────────────────────────────────────────────
-        public virtual int   DDrawExtraGaugeCost => 0;              // D 드로우 시 적 게이지 추가 증가량 (비급서 10011)
+        public virtual int   DDrawGaugeCostOverride => 0;           // D 드로우 코스트 대체값, 0=대체 안 함 (비급서 10011)
         public virtual bool  OverridesDDraw => false;               // D 드로우 동작 교체 (비급서 10011)
         public virtual bool  GrantsAllRelicsInStage => false;       // 유물 라운드서 후보 전부 획득 (유물 호리병 10018)
     }

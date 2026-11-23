@@ -85,8 +85,8 @@ public static class RelicAssetGenerator
             "부적을 3장 사용 시, 부적을 1장 뽑는다.", RelicCategory.Combat,
             r => { r.everyN = 3; r.drawCount = 1; }, "UI_Item_006"));
         list.Add(Make<DDrawDiscardRedrawRelic>("10011", "비급서",
-            "'드로우'의 효과가 코스트가 3 만큼 늘어나고 '현재 패를 모두 버리고 뽑을 부적 더미에서 5장을 뽑는다'로 바뀐다.", RelicCategory.Combat,
-            r => r.extraGaugeCost = 3, "bookre"));
+            "'드로우'의 코스트가 3이 되고 효과가 '현재 패를 모두 버리고 뽑을 부적 더미에서 5장을 뽑는다'로 바뀐다.", RelicCategory.Combat,
+            r => r.gaugeCost = 3, "bookre"));
         list.Add(Make<CostReductionHandLimitRelic>("10013", "독주",
             "모든 부적의 코스트가 1만큼 줄어든다. 전투 중 패에 부적을 1장만 보유할 수 있다.", RelicCategory.Combat,
             r => { r.gaugeCostDelta = -1; r.handLimit = 1; }, "UI_Item_005"));

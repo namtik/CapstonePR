@@ -1154,13 +1154,37 @@ namespace Battle
             }
 
             if (Input.GetKeyDown(KeyCode.D))
+                RequestDDraw();
+        }
+
+        // D 드로우 공용 진입점 — D 키와 드로우 버튼(DrawButtonUI)이 함께 사용
+        public bool RequestDDraw()
+        {
+            if (!CanDDraw) return false;
+            TryDDraw();
+            return true;
+        }
+
+        // 지금 D 드로우를 시도할 수 있는 상태인지 (버튼 활성/비활성 표시용)
+        public bool CanDDraw =>
+            _inBattle && !_cardPresenting && !InputLockedByEnemyTurn &&
+            !HasPendingSelection && !(handHud != null && handHud.IsViewerMode) &&
+            HasDDrawRoom;
+
+        // 손패 여유 — 비급서(10011)는 패를 버리고 뽑으므로 항상 가능, 아니면 현재 손패 한도(확장 포함) 미만일 때만
+        bool HasDDrawRoom
+        {
+            get
             {
-                if (_cardPresenting) return;
-                if (InputLockedByEnemyTurn) { Log("적 턴 — D 드로우 잠금"); return; }
-                if (HasPendingSelection || (handHud != null && handHud.IsViewerMode)) return;
-                TryDDraw();
+                if (_deck == null) return false;
+                if (RelicManager.Instance != null && RelicManager.Instance.HasDDrawOverride()) return true;
+                return !_deck.IsHandFull;
             }
         }
+
+        // D 드로우 시 적 게이지 증가량 (버튼 코스트 표시용)
+        public int DDrawGaugeCost =>
+            RelicManager.Instance != null ? RelicManager.Instance.GetDDrawGaugeCost(1) : 1;
 
         // D 드로우 시도 — 1장 뽑고 적 게이지 +1 (비급서 10011 보유 시 패 전부 버리고 5장)
         void TryDDraw()
@@ -1173,7 +1197,7 @@ namespace Battle
                 {
                     int discarded = _deck.DiscardAllFromHand();
                     int redrawn = _deck.Draw(5, true);
-                    int gaugeCost = 1 + RelicManager.Instance.GetDDrawExtraGaugeCost(); // 비급서: 코스트 +3
+                    int gaugeCost = DDrawGaugeCost; // 비급서: 코스트 3
                     if (redrawn > 0) AccrueEnemyGauge(gaugeCost);
                     handHud?.Refresh();
                     Log($"[유물] 비급서 — 패 {discarded}장 버리고 {redrawn}장 드로우, 적 게이지 +{gaugeCost}");
@@ -3230,6 +3254,8 @@ namespace Battle
                 _hudHideTargets.Add(handHud.HandRoot.gameObject);
             if (enemyActionHudHide.hidePiles && handHud != null)
                 handHud.CollectPileRoots(_hudHideTargets);
+            if (enemyActionHudHide.hidePiles)
+                DrawButtonUI.CollectHideTargets(_hudHideTargets); // 드로우 버튼·D 키 아이콘도 덱·묘지와 함께
             if (enemyActionHudHide.hideEnemyHp)
                 EnemyOverlayHUD.CollectHpBars(_hudHideTargets);
             if (enemyActionHudHide.extraTargets != null)

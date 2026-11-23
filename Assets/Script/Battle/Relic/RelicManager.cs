@@ -184,12 +184,13 @@ namespace Battle.Relic
             for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) sum += _owned[i].GoldRewardBonus();
             return sum;
         }
-        // D 드로우 시 적 게이지 추가 증가량 합 (비급서 10011)
-        public int GetDDrawExtraGaugeCost()
+        // D 드로우 코스트(적 게이지 증가량) — 대체 유물(비급서 10011)이 있으면 그 값(여럿이면 최댓값), 없으면 baseCost
+        public int GetDDrawGaugeCost(int baseCost)
         {
-            int sum = 0;
-            for (int i = 0; i < _owned.Count; i++) if (_owned[i] != null) sum += _owned[i].DDrawExtraGaugeCost;
-            return sum;
+            int cost = 0;
+            for (int i = 0; i < _owned.Count; i++)
+                if (_owned[i] != null) cost = Mathf.Max(cost, _owned[i].DDrawGaugeCostOverride);
+            return cost > 0 ? cost : baseCost;
         }
 
         // 보상·상점·도감에 내보낼 수 있는 유물인지 (등장 제외 플래그)
