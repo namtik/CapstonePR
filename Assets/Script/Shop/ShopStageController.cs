@@ -1119,7 +1119,7 @@ public class ShopStageController : MonoBehaviour
 
             CardOffer offer = cardOffers[i];
             string title = offer.card.displayName;
-            string desc = string.IsNullOrWhiteSpace(offer.card.description) ? "카드 설명 없음" : offer.card.description;
+            string desc = string.IsNullOrWhiteSpace(offer.card.description) ? "카드 설명 없음" : Battle.Card.CardDatabase.GetDisplayDescription(offer.card);
             Sprite icon = ResolveCardSprite(offer.card);
             slot.ui.Setup(title, desc, icon, offer.price, () => TryBuyCard(offer));
             slot.ui.SetRelicIconOnlyMode(false);

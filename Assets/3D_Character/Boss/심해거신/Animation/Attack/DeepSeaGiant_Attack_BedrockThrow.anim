@@ -7,7 +7,7 @@ AnimationClip:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: DeepSeaGiant_Attack_BedrockThrow
-  serializedVersion: 8
+  serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
   m_UseHighQualityCurve: 1
@@ -47366,7 +47366,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 4207126542
       attribute: 1
@@ -47376,7 +47375,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 754495096
       attribute: 1
@@ -47386,7 +47384,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 78872119
       attribute: 1
@@ -47396,7 +47393,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1648976779
       attribute: 1
@@ -47406,7 +47402,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1499527238
       attribute: 2
@@ -47416,7 +47411,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 3454609497
       attribute: 2
@@ -47426,7 +47420,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 975443661
       attribute: 2
@@ -47436,7 +47429,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 4293216905
       attribute: 2
@@ -47446,7 +47438,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1350986810
       attribute: 2
@@ -47456,7 +47447,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1716788108
       attribute: 2
@@ -47466,7 +47456,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 314114235
       attribute: 2
@@ -47476,7 +47465,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 2354825707
       attribute: 2
@@ -47486,7 +47474,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 125847736
       attribute: 2
@@ -47496,7 +47483,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 4106294350
       attribute: 2
@@ -47506,7 +47492,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 801422308
       attribute: 2
@@ -47516,7 +47501,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1176330834
       attribute: 2
@@ -47526,7 +47510,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 2974562867
       attribute: 2
@@ -47536,7 +47519,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 458629731
       attribute: 2
@@ -47546,7 +47528,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 2926268054
       attribute: 2
@@ -47556,7 +47537,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 4083042258
       attribute: 2
@@ -47566,7 +47546,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 324961534
       attribute: 2
@@ -47576,7 +47555,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 4207126542
       attribute: 4
@@ -47586,7 +47564,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 754495096
       attribute: 3
@@ -47596,7 +47573,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 78872119
       attribute: 3
@@ -47606,7 +47582,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1648976779
       attribute: 3
@@ -47616,7 +47591,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 4207126542
       attribute: 3305885265
@@ -47626,7 +47600,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 754495096
       attribute: 3305885265
@@ -47636,7 +47609,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 78872119
       attribute: 3305885265
@@ -47646,7 +47618,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1648976779
       attribute: 3305885265
@@ -47656,7 +47627,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 78872119
       attribute: 3757223753
@@ -47666,7 +47636,6 @@ AnimationClip:
       isPPtrCurve: 1
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1648976779
       attribute: 3757223753
@@ -47676,7 +47645,6 @@ AnimationClip:
       isPPtrCurve: 1
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 754495096
       attribute: 4
@@ -47686,7 +47654,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 78872119
       attribute: 4
@@ -47696,7 +47663,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 1648976779
       attribute: 4
@@ -47706,7 +47672,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     - serializedVersion: 2
       path: 4207126542
       attribute: 3
@@ -47716,7 +47681,6 @@ AnimationClip:
       isPPtrCurve: 0
       isIntCurve: 0
       isSerializeReferenceCurve: 0
-      metaData: 0
     pptrCurveMapping:
     - {fileID: 4300000, guid: cd83f60b1f57a504a9d10ce2046cf774, type: 2}
     - {fileID: 4300000, guid: 9c5a36792f3e44f2a40ab910ae8130cf, type: 2}

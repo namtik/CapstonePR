@@ -988,9 +988,9 @@ namespace Battle.Deck
 
             amount = ScaleBasicCardEffectAmount(card, verb, amount);
 
-            // 카드별 영구 피해 보너스(연마 410 처치 누적)
-            if (verb == "DAMAGE" && amount > 0 && card?.data != null && Battle.RunDeckState.Instance != null)
-                amount += Battle.RunDeckState.Instance.GetPermanentCardDamage(card.data.id);
+            // 카드 1장별 영구 피해 보너스(연마 410 처치 누적) — 같은 카드라도 처치한 그 장만
+            if (verb == "DAMAGE" && amount > 0 && card != null)
+                amount += card.permanentDamage;
 
             switch (verb)
             {
@@ -1154,9 +1154,13 @@ namespace Battle.Deck
                         bool selfCard = (eff.target ?? "").Trim().Equals("SELF_CARD", StringComparison.OrdinalIgnoreCase);
                         if (st == "ATTACK_POWER" && selfCard)
                         {
-                            // 연마(410): 이 카드의 피해만 영구 증가 — 플레이어 공격력은 건드리지 않음
+                            // 연마(410): 사용한 이 카드 1장의 피해만 영구 증가 — 같은 카드의 다른 장·플레이어 공격력은 그대로
                             if (card?.data != null)
-                                Battle.RunDeckState.EnsureExists().AddPermanentCardDamage(card.data.id, amount);
+                            {
+                                card.permanentDamage += amount; // 이번 전투에서 바로 반영
+                                if (card.runCopyIndex >= 0)     // 런 덱 카드면 다음 전투에도 유지
+                                    Battle.RunDeckState.EnsureExists().AddPermanentCardDamage(card.data.id, card.runCopyIndex, amount);
+                            }
                         }
                         else if (st == "ATTACK_POWER")
                         {

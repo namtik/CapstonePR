@@ -154,20 +154,31 @@ namespace Battle.UI
             }
 
             // 전투 보상 등급: 파워 카드 = 레어, 나머지 = 일반 (카드 DB의 rarity는 보지 않음)
-            var normal = new List<CardData>();
+            // 일반은 다시 공격/스킬로 나눠 정해진 비율로 뽑는다.
+            var attack = new List<CardData>();
+            var skill = new List<CardData>();
             var rare = new List<CardData>();
             foreach (var c in pool)
-                (c.type == CardType.Power ? rare : normal).Add(c);
+            {
+                if (c.type == CardType.Power) rare.Add(c);
+                else if (c.type == CardType.Attack) attack.Add(c);
+                else skill.Add(c);
+            }
 
-            // 칸마다 등급을 먼저 뽑고(일반 70 : 레어 30) 그 등급 안에서 무작위 1장. 한쪽이 바닥나면 다른 쪽에서.
+            // 칸마다 등급을 먼저 뽑고(일반 70 : 레어 30), 일반이면 공격 60 : 스킬 40으로 다시 나눈 뒤
+            // 그 묶음 안에서 무작위 1장. 고른 묶음이 바닥나면 남은 묶음에서 뽑는다.
             var result = new List<CardData>();
             int target = Mathf.Min(count, pool.Count);
             while (result.Count < target)
             {
-                bool wantRare = Random.Range(0, 100) < RARE_TIER_PERCENT;
-                List<CardData> from = wantRare ? rare : normal;
-                if (from.Count == 0) from = wantRare ? normal : rare;
-                if (from.Count == 0) break;
+                List<CardData> from;
+                if (Random.Range(0, 100) < RARE_TIER_PERCENT)
+                    from = rare;
+                else
+                    from = Random.Range(0, 100) < ATTACK_IN_NORMAL_PERCENT ? attack : skill;
+
+                if (from.Count == 0) from = FirstNonEmpty(attack, skill, rare);
+                if (from == null) break;
 
                 int idx = Random.Range(0, from.Count);
                 result.Add(from[idx]);
@@ -176,7 +187,15 @@ namespace Battle.UI
             return result;
         }
 
-        const int RARE_TIER_PERCENT = 30; // 레어(파워 카드) 등급이 뽑힐 확률(%). 나머지는 일반.
+        static List<CardData> FirstNonEmpty(params List<CardData>[] lists)
+        {
+            foreach (var l in lists)
+                if (l.Count > 0) return l;
+            return null;
+        }
+
+        const int RARE_TIER_PERCENT = 30;        // 레어(파워 카드) 등급이 뽑힐 확률(%). 나머지는 일반.
+        const int ATTACK_IN_NORMAL_PERCENT = 60; // 일반 등급 안에서 공격 카드 비율(%). 나머지는 스킬 카드.
 
         // 딤/타이틀/카드 행/스킵 버튼을 런타임으로 구성
         void BuildUI(NewCardView cardPrefab, List<CardData> choices)
@@ -261,6 +280,7 @@ namespace Battle.UI
                 btn.transition = Selectable.Transition.None;
                 int cardId = data.id;
                 btn.onClick.AddListener(() => Pick(cardId));
+                AttachKeywordTooltip(btnRt.gameObject, view, data); // 빙결·화상 등 키워드 설명 창
 
                 // 슬롯에 호버 확대 컴포넌트 부착
                 if (enableHoverScale)
@@ -328,6 +348,7 @@ namespace Battle.UI
                 btn.transition = Selectable.Transition.None;
                 int cardId = data.id;
                 btn.onClick.AddListener(() => Pick(cardId));
+                AttachKeywordTooltip(btnRt.gameObject, cardView, data); // 빙결·화상 등 키워드 설명 창
 
                 if (enableHoverScale && slot.GetComponent<ButtonHoverScale>() == null)
                 {
@@ -348,6 +369,26 @@ namespace Battle.UI
                 skipButtonStyle.Build(prt, Skip);
             }
             InventoryOpenButton.BringMenubarsToFront(); // 상단 바는 보상창 위에
+        }
+
+        // 보상 카드에 마우스를 올리면 덱 보기·인벤토리와 같은 키워드(빙결·화상 등) 설명 창을 띄운다
+        static void AttachKeywordTooltip(GameObject catcher, NewCardView cardView, CardData data)
+        {
+            if (catcher == null || cardView == null || data == null) return;
+            var trigger = catcher.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+            if (trigger == null) trigger = catcher.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+
+            var enter = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerEnter };
+            enter.callback.AddListener(_ =>
+            {
+                var label = cardView.GetComponentInChildren<TMPro.TMP_Text>(true);
+                CardKeywordTooltip.Show(cardView, data, CardDatabase.GetDisplayDescription(data), label != null ? label.font : null);
+            });
+            trigger.triggers.Add(enter);
+
+            var exit = new UnityEngine.EventSystems.EventTrigger.Entry { eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit };
+            exit.callback.AddListener(_ => CardKeywordTooltip.Hide());
+            trigger.triggers.Add(exit);
         }
 
         // 카드를 선택해 보상을 종료
@@ -374,9 +415,19 @@ namespace Battle.UI
             cb?.Invoke(cardId);
         }
 
+        // 런 포기(메인 메뉴·재시작) 시 열려 있던 보상창을 콜백 없이 닫는다.
+        // 남겨 두면 다음 런에서 이 창을 누를 때 이전 런의 '맵으로 걸어가기'가 실행돼, 몬스터가 있는데도 앞으로 걸어갔다.
+        public static void ForceCloseAll()
+        {
+            if (Instance == null) return;
+            Instance._onPicked = null;
+            Instance.Cleanup();
+        }
+
         // 보상 패널을 파괴
         void Cleanup()
         {
+            CardKeywordTooltip.Hide(); // 호버 중 선택·종료해도 설명 창이 남지 않게
             if (_panel != null)
             {
                 Destroy(_panel);

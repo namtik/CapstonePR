@@ -16,9 +16,8 @@ namespace Battle
     {
         public const int AWAKEN_ACTIVATION_INPUT = 10;                  // 각성 발동에 필요한 속성 카드 사용 횟수
         public const float AWAKEN_DURATION_SECONDS = 7f;               // 각성 기본 지속 시간(초)
-        public const float AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS = 0.5f; // 보유 콤보 1개당 추가 지속 시간(초)
         public const float COMBO_BONUS_SECONDS = 0.1f;                 // 콤보 1회 성공 시 추가 시간(초)
-        public const float COMBO_REUSE_SECONDS = 5f;                   // 콤보 재사용까지 걸리는 시간(초)
+        public const int COMBO_REUSE_CARD_USES = 5;                    // 콤보 재사용까지 필요한 각성 중 카드 사용 횟수
         public const int START_DRAW = 5;                              // 전투 시작 시 드로우 수
 
         public static NewBattleController Instance { get; private set; } // 싱글톤 인스턴스
@@ -211,7 +210,7 @@ namespace Battle
         private List<CardInstance> _awakenSnapshotDiscard; // 각성 직전 버린 더미 스냅샷(복원용)
 
         private readonly List<CardElement> _comboInput = new List<CardElement>(); // 콤보 슬롯(슬라이딩 윈도우 3장)
-        private float[] _comboCooldown = System.Array.Empty<float>(); // 콤보별 남은 재사용 대기(초)
+        private int[] _comboCooldown = System.Array.Empty<int>();     // 콤보별 남은 재사용 대기(카드 사용 횟수)
         private readonly List<ComboSkillDef> _queuedComboSkills = new List<ComboSkillDef>(); // 각성 종료 시 발동할 콤보 큐
         private readonly List<CardElement> _awakenInputHistory = new List<CardElement>(); // 각성 중 입력 속성 전체 기록
         private readonly List<Vector2> _awakenMarkerPositions = new List<Vector2>(); // 콤보 큐와 1:1 표식 위치
@@ -236,6 +235,8 @@ namespace Battle
             public CardElement element;
             public int remainingUses;
             public string sourceName; // 이 저주를 건 몬스터. 저주로 죽으면 게임오버 문장에 쓴다.
+            public bool held;         // 적(심해거신·백족승)이 붙잡고 있는 저주 — 사용 횟수로 풀리지 않고, 적이 다른 속성으로 옮길 때 풀림
+            public bool Active => held || remainingUses > 0;
         }
         private readonly List<ActiveCurse> _curses = new List<ActiveCurse>(); // 중첩 가능한 속성 저주
         private int _recoverCooldown;               // 방해행동(회복) 쿨다운
@@ -292,7 +293,7 @@ namespace Battle
             get
             {
                 for (int i = 0; i < _curses.Count; i++)
-                    if (_curses[i].remainingUses > 0) return _curses[i].element;
+                    if (_curses[i].Active) return _curses[i].element;
                 return null;
             }
         }
@@ -393,7 +394,6 @@ namespace Battle
         void TickAwakenTimer()
         {
             if (!_awakenActive) return;
-            TickComboCooldownTime();
             if (holdAwakenForever)
             {
                 if (_awakenMaxTime > 0f)
@@ -491,6 +491,7 @@ namespace Battle
             ClearSelectionQueue();
             _elementInputCount = 0;
             _awakenActive = false;
+            if (_deck != null) _deck.BlockNonComboDraws = false;
             _awakenPending = false;
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
@@ -576,6 +577,7 @@ namespace Battle
             BattleLog.Clear();
             _cardPresenting = false;
             _awakenActive = false;
+            if (_deck != null) _deck.BlockNonComboDraws = false;
             _awakenPending = false;
             // 저주가 남은 채 전투가 끝나면 보상창 카드가 저주(보라색) 모습으로 나왔다 — 종료 시 해제
             _curses.Clear();
@@ -631,7 +633,7 @@ namespace Battle
                 return;
             }
             ownedComboSkills = BuildOwnedComboDefs();
-            _comboCooldown = new float[ownedComboSkills.Count];
+            _comboCooldown = new int[ownedComboSkills.Count];
             PushComboCooldownUi();
             Debug.Log($"[NewBattle] 보유 콤보 갱신 — {ownedComboSkills.Count}개 " +
                       (ownedComboIds != null && ownedComboIds.Count > 0
@@ -740,7 +742,7 @@ namespace Battle
 
             ownedComboSkills?.Clear();
             _comboSlotOverrides.Clear();
-            _comboCooldown = System.Array.Empty<float>();
+            _comboCooldown = System.Array.Empty<int>();
             if (handHud != null)
                 PushComboCooldownUi();
 
@@ -1252,6 +1254,9 @@ namespace Battle
                 _deck.MoveAfterUse(card, exile: false, poweredField: false);
                 _deck.Draw(1);
 
+                // 콤보 재사용 대기는 각성 중 카드 사용 횟수로 줄어든다(이번 카드로 막 걸리는 쿨타임은 줄이지 않도록 먼저 차감)
+                TickComboCooldownByCardUse();
+
                 bool comboTriggered = false;
                 if (card.data.comboSlot)
                 {
@@ -1719,8 +1724,8 @@ namespace Battle
             {
                 RunDeckState.Instance?.RecordAwakenActivation();
                 _elementInputCount = 0;
-                int ownedComboCount = ownedComboSkills != null ? ownedComboSkills.Count : 0;
-                float awakenDuration = AWAKEN_DURATION_SECONDS + ownedComboCount * AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS;
+                // 각성 시간은 기본 7초 고정(보유 콤보 수에 따른 추가 시간 없음)
+                float awakenDuration = AWAKEN_DURATION_SECONDS;
                 // 유물(각성 지속시간 증가류)이 있으면 합산
                 if (RelicManager.Instance != null) awakenDuration += RelicManager.Instance.GetAwakenDurationBonus();
                 _awakenTimeRemaining = awakenDuration;
@@ -1740,10 +1745,12 @@ namespace Battle
                     if (c != null && c.Element == CardElement.Fragment) _awakenFragmentExhausted++;
                 _comboSelfUseCount.Clear();
 
+                // 각성 중엔 둔화·탈진 같은 무속성 카드를 뽑지 않는다(격리 후 새로 들어온 것도 포함)
+                _deck.BlockNonComboDraws = true;
                 _deck.Draw(_deck.HandLimit);
 
                 _comboInput.Clear();
-                _comboCooldown = new float[ownedComboSkills != null ? ownedComboSkills.Count : 0];
+                _comboCooldown = new int[ownedComboSkills != null ? ownedComboSkills.Count : 0];
                 _queuedComboSkills.Clear();
                 _awakenInputHistory.Clear();
                 _awakenMarkerPositions.Clear();
@@ -1763,7 +1770,7 @@ namespace Battle
                 _awakenScreenEffectInstance = SpawnAwakenScreenEffect();
                 SfxManager.Instance?.PlayAwakenStart();
 
-                Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s + 보유콤보 {ownedComboCount}×{AWAKEN_DURATION_PER_OWNED_COMBO_SECONDS:F1}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
+                Log($"[각성] 발동! 격리된 무속성={_awakenStoredNeutralCards.Count}, 지속 시간={awakenDuration:F1}s (기본 {AWAKEN_DURATION_SECONDS:F0}s, 콤보 매칭 시 +{COMBO_BONUS_SECONDS}s, 종료 시 일괄 발동)");
             }
             finally
             {
@@ -1877,6 +1884,7 @@ namespace Battle
         void EndAwaken()
         {
             _awakenActive = false;
+            if (_deck != null) _deck.BlockNonComboDraws = false; // 각성 종료 — 일반 드로우로 복귀
             _awakenTimeRemaining = 0f;
             _awakenMaxTime = 0f;
             if (awakenTimerGauge != null) awakenTimerGauge.Hide();
@@ -1990,7 +1998,7 @@ namespace Battle
             }
 
             _comboInput.Clear();
-            _comboCooldown = System.Array.Empty<float>();
+            _comboCooldown = System.Array.Empty<int>();
             _awakenInputHistory.Clear();
 
             if (handHud != null)
@@ -2113,49 +2121,18 @@ namespace Battle
             _awakenInputHistory.Add(element);
         }
 
-        // 각성 중 콤보 재사용 대기를 초 단위로 줄이고, 표시 숫자가 바뀔 때만 UI를 갱신한다
-        void TickComboCooldownTime()
+        // 각성 중 카드를 1장 쓸 때마다 콤보 재사용 대기를 1씩 줄인다
+        void TickComboCooldownByCardUse()
         {
-            if (_comboCooldown.Length == 0) return;
-
-            bool changed = _comboCooldownShown.Length != _comboCooldown.Length;
-            if (changed)
-                _comboCooldownShown = new int[_comboCooldown.Length];
-
             for (int i = 0; i < _comboCooldown.Length; i++)
-            {
-                if (_comboCooldown[i] > 0f)
-                {
-                    _comboCooldown[i] -= Time.deltaTime;
-                    if (_comboCooldown[i] < 0f) _comboCooldown[i] = 0f;
-                }
-
-                int shown = _comboCooldown[i] > 0f ? Mathf.CeilToInt(_comboCooldown[i]) : 0;
-                if (_comboCooldownShown[i] != shown)
-                {
-                    _comboCooldownShown[i] = shown;
-                    changed = true;
-                }
-            }
-
-            if (changed) PushComboCooldownUi();
+                if (_comboCooldown[i] > 0) _comboCooldown[i]--;
         }
 
-        int[] _comboCooldownShown = System.Array.Empty<int>(); // 마지막으로 목록에 그린 남은 초
-
-        // 남은 초를 올림한 숫자로 콤보 스킬 목록을 갱신한다
+        // 남은 카드 사용 횟수로 콤보 스킬 목록을 갱신한다
         void PushComboCooldownUi()
         {
             if (handHud == null) return;
-            var display = new int[_comboCooldown.Length];
-            if (_comboCooldownShown.Length != display.Length)
-                _comboCooldownShown = new int[display.Length];
-            for (int i = 0; i < display.Length; i++)
-            {
-                display[i] = _comboCooldown[i] > 0f ? Mathf.CeilToInt(_comboCooldown[i]) : 0;
-                _comboCooldownShown[i] = display[i];
-            }
-            handHud.UpdateComboSkillList(ownedComboSkills, display);
+            handHud.UpdateComboSkillList(ownedComboSkills, (int[])_comboCooldown.Clone());
         }
 
         // 콤보 매칭 — 매칭 시 큐에 적재·쿨다운 부여, 매칭 여부 반환(시간 보너스용)
@@ -2166,15 +2143,20 @@ namespace Battle
 
             for (int i = 0; i < ownedComboSkills.Count; i++)
             {
-                if (i < _comboCooldown.Length && _comboCooldown[i] > 0f) continue;
+                if (i < _comboCooldown.Length && _comboCooldown[i] > 0) continue;
                 var skill = ownedComboSkills[i];
                 if (skill == null) continue;
                 if (skill.Matches(_comboInput))
                 {
                     _queuedComboSkills.Add(skill);
                     Battle.UI.BattleLog.NoteAwakenCombo(skill);
-                    if (i < _comboCooldown.Length) _comboCooldown[i] = COMBO_REUSE_SECONDS;
-                    Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 {COMBO_REUSE_SECONDS:0}초)");
+                    if (i < _comboCooldown.Length)
+                    {
+                        _comboCooldown[i] = COMBO_REUSE_CARD_USES;
+                        PushComboCooldownUi();              // 쿨타임 표시를 바로 반영
+                        handHud?.PulseComboSkillItem(i);    // 쿨타임이 걸린 항목을 한 번 호버
+                    }
+                    Log($"[콤보 큐] {skill.displayName} ({skill.ComboString()}) — 각성 종료 시 발동 (대기 {_queuedComboSkills.Count}건, 재사용까지 카드 {COMBO_REUSE_CARD_USES}장)");
                     return true;
                 }
             }
@@ -2617,7 +2599,7 @@ namespace Battle
             // 저주는 전투 범위 상태 — 전투 밖(보상창·상점·이벤트 등)의 카드는 저주 표시를 하지 않는다
             if (!_inBattle) return false;
             for (int i = 0; i < _curses.Count; i++)
-                if (_curses[i].element == element && _curses[i].remainingUses > 0)
+                if (_curses[i].element == element && _curses[i].Active)
                     return true;
             return false;
         }
@@ -2631,6 +2613,45 @@ namespace Battle
                 if (_curses[i].element == element && _curses[i].remainingUses > max)
                     max = _curses[i].remainingUses;
             return max;
+        }
+
+        // 적(심해거신·백족승)이 붙잡고 있어 사용 횟수로 풀리지 않는 저주인지 — 카드 툴팁 표시용
+        public bool IsCurseHeldByEnemy(CardElement element)
+        {
+            if (!_inBattle) return false;
+            for (int i = 0; i < _curses.Count; i++)
+                if (_curses[i].element == element && _curses[i].held) return true;
+            return false;
+        }
+
+        // 특이사항(심해거신·백족승): 붙잡고 있던 저주를 다른 속성으로 옮긴다.
+        // 이전 속성은 붙잡기만 풀고(방해행동 등으로 따로 남은 횟수가 있으면 그만큼은 유지), 새 속성을 붙잡는다.
+        public void MoveHeldCurse(CardElement? from, CardElement to, string sourceName = null)
+        {
+            if (from.HasValue && from.Value != to)
+            {
+                for (int i = _curses.Count - 1; i >= 0; i--)
+                {
+                    if (_curses[i].element != from.Value || !_curses[i].held) continue;
+                    _curses[i].held = false;
+                    if (_curses[i].remainingUses <= 0) _curses.RemoveAt(i);
+                }
+            }
+
+            ActiveCurse target = null;
+            for (int i = 0; i < _curses.Count; i++)
+                if (_curses[i].element == to) { target = _curses[i]; break; }
+            if (target == null)
+            {
+                target = new ActiveCurse { element = to, remainingUses = 0 };
+                _curses.Add(target);
+            }
+            target.held = true;
+            if (!string.IsNullOrWhiteSpace(sourceName)) target.sourceName = sourceName;
+
+            handHud?.Refresh();
+            RequestCurseNudge(to); // 저주 속성 손패 카드 한 번 떠오르기(카메라·UI 복귀 후)
+            Log($"[특이사항] 저주 이동 — {(from.HasValue ? ElementName(from.Value) : "없음")} → {ElementName(to)}");
         }
 
         // 저주된 속성 카드 사용 시 플레이어 피해 적용. 저주마다 카드 사용 1회씩 소모.
@@ -2648,8 +2669,8 @@ namespace Battle
                     if (_track != null && _track.action == 0) _track.curseHits++;
                 }
 
-                curse.remainingUses--;
-                if (curse.remainingUses <= 0)
+                if (curse.remainingUses > 0) curse.remainingUses--;
+                if (!curse.Active) // 적이 붙잡고 있는 저주는 사용 횟수로 풀리지 않는다
                 {
                     Log($"[저주] {curse.element} 저주 종료");
                     _curses.RemoveAt(i);
@@ -2876,13 +2897,49 @@ namespace Battle
                 if (!string.IsNullOrWhiteSpace(sourceName))
                     _curses[i].sourceName = sourceName;
                 handHud?.Refresh();
+                RequestCurseNudge(element); // 저주 속성 손패 카드 한 번 떠오르기(카메라·UI 복귀 후)
                 Log($"[특이사항] {ElementName(element)} 속성 저주 중첩 — {_curses[i].remainingUses}회 지속");
                 return;
             }
 
             _curses.Add(new ActiveCurse { element = element, remainingUses = uses, sourceName = sourceName });
             handHud?.Refresh();
+            RequestCurseNudge(element); // 저주 속성 손패 카드 한 번 떠오르기(카메라·UI 복귀 후)
             Log($"[특이사항] {ElementName(element)} 속성 저주 — {uses}회 지속");
+        }
+
+        private readonly HashSet<CardElement> _pendingCurseNudges = new HashSet<CardElement>(); // 떠오르기 대기 중인 저주 속성
+        private Coroutine _curseNudgeCo; // 떠오르기 대기 코루틴
+
+        // 저주 속성 카드 떠오르기를 예약 — 적 행동 중엔 손패가 숨겨져 있으므로 카메라가 돌아오고 UI가 다시 보인 뒤 실행
+        void RequestCurseNudge(CardElement element)
+        {
+            _pendingCurseNudges.Add(element);
+            if (_curseNudgeCo == null && isActiveAndEnabled)
+                _curseNudgeCo = StartCoroutine(FlushCurseNudgesWhenHudVisible());
+        }
+
+        IEnumerator FlushCurseNudgesWhenHudVisible()
+        {
+            yield return null; // 같은 프레임에 걸린 숨김 상태가 반영되도록 한 프레임 대기
+            float deadline = Time.unscaledTime + 15f; // 안전 상한
+            while (_inBattle && Time.unscaledTime < deadline &&
+                   (_attackStartRoutine != null || _attackResolving ||
+                    !EnemyActionFocusCamera.IsSettled || !EnemyActionHudFader.IsFullyVisible))
+                yield return null;
+
+            _curseNudgeCo = null;
+            if (_inBattle && handHud != null)
+                foreach (var el in _pendingCurseNudges)
+                    if (IsElementCursed(el)) handHud.NudgeHandCardsOfElement(el); // 그사이 풀린 저주는 생략
+            _pendingCurseNudges.Clear();
+        }
+
+        // 전투 시작/종료 시 대기 중인 떠오르기 취소
+        void CancelCurseNudges()
+        {
+            if (_curseNudgeCo != null) { StopCoroutine(_curseNudgeCo); _curseNudgeCo = null; }
+            _pendingCurseNudges.Clear();
         }
 
         // 특이사항: 무작위 속성에 저주 부여
@@ -2931,6 +2988,19 @@ namespace Battle
             Log($"[특이사항] 버린 더미 카드 {exiled.Count}장 소멸");
         }
 
+        // 적 특이사항으로 들어오는 카드(탈진·둔화·매혹)를 뽑을 더미에 넣는다.
+        // 각성 중이면 각성 종료 후 복원될 뽑을 더미(스냅샷)에 넣어, 각성 중엔 뽑히지 않고 끝난 뒤에도 사라지지 않게 한다.
+        void AddInsertedCardToDraw(CardInstance card)
+        {
+            if (card == null) return;
+            if (_awakenActive && _awakenSnapshotDraw != null)
+            {
+                _awakenSnapshotDraw.Insert(Random.Range(0, _awakenSnapshotDraw.Count + 1), card);
+                return;
+            }
+            _deck.AddToDrawShuffled(card);
+        }
+
         // 특이사항: 뽑을 더미에 탈진(무속성 더미) 카드 count장 삽입
         public void InsertExhaustCards(int count)
         {
@@ -2939,7 +3009,7 @@ namespace Battle
             for (int i = 0; i < count; i++)
             {
                 var dummy = CardDatabase.CreateNeutralFillerInstance();
-                if (dummy != null) { _deck.AddToDrawShuffled(dummy); added++; }
+                if (dummy != null) { AddInsertedCardToDraw(dummy); added++; }
             }
             handHud?.Refresh();
             if (added > 0) Log($"[특이사항] 탈진 카드 {added}장 삽입");
@@ -2953,7 +3023,7 @@ namespace Battle
             for (int i = 0; i < count; i++)
             {
                 var slow = CardDatabase.CreateTransientInstance(CardDatabase.SLOW);
-                if (slow != null) { _deck.AddToDrawShuffled(slow); added++; }
+                if (slow != null) { AddInsertedCardToDraw(slow); added++; }
             }
             handHud?.Refresh();
             if (added > 0) Log($"[특이사항] 둔화 카드 {added}장 삽입");
@@ -2994,7 +3064,7 @@ namespace Battle
             for (int i = 0; i < count; i++)
             {
                 var charm = CardDatabase.CreateCharmInstance();
-                if (charm != null) { _deck.AddToDrawShuffled(charm); added++; }
+                if (charm != null) { AddInsertedCardToDraw(charm); added++; }
             }
             handHud?.Refresh();
             if (added > 0) Log($"[특이사항] 매혹 카드 {added}장 삽입");
@@ -3297,6 +3367,7 @@ namespace Battle
             _deferredHpLost.Clear();
             EnemyActionFocusCamera.Release(immediate: true); // 전투 시작/종료 — 카메라 오프셋 즉시 원복
             EnemyActionHudFader.Show(immediate: true);
+            CancelCurseNudges();
             _actingEnemy = null;
             _actingIsDisruption = false;
             _enemyActionLockUntil = 0f;

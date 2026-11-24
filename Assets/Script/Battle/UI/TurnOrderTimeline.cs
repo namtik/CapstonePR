@@ -80,11 +80,11 @@ namespace Battle.UI
         [SerializeField] private bool showItems = true;
         [Tooltip("전투형 유물만 표시(비전투형 — 상점 할인·최대 체력 등은 제외)")]
         [SerializeField] private bool combatItemsOnly = true;
-        [SerializeField] private float itemsX = 24f;        // 아이템 구역 x
+        [SerializeField] private float itemsX = 0f;         // 아이템 구역 x(왼쪽 끝에 붙임)
         [SerializeField] private float itemsGap = 20f;      // 행과 아이템 사이
         [SerializeField] private float itemSize = 56f;
         [SerializeField] private float itemSpacing = 8f;
-        [SerializeField] private int itemsPerRow = 4;
+        [SerializeField] private int itemsPerRow = 2;
         [Tooltip("유물 발동 표시 간격(초) — 여러 개 동시 발동 시 순서대로. 이 동안 적 행동이 대기한다")]
         [SerializeField] private float itemShowSeconds = 0.9f;
         [SerializeField] private Color itemColor = new Color(0.85f, 0.72f, 0.40f);

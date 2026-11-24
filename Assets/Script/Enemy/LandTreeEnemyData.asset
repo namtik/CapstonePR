@@ -23,7 +23,7 @@ MonoBehaviour:
   specialAbility: 0
   Note: 
   maxHp: 200
-  actionGaugeMax: 20
+  actionGaugeMax: 25
   disruptionTurn: 10
   attackSequence: 2800000019000000
   disruptionActions: 010000000300000004000000

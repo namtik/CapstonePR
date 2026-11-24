@@ -54,6 +54,9 @@ public class EnemyActionHudFader : MonoBehaviour
     bool _hidden;
     float _alpha = 1f; // 1=보임, 0=숨김
 
+    // 숨김이 완전히 풀려 원래대로 보이는 상태인지(페이드인 중이면 false)
+    public static bool IsFullyVisible => _instance == null || (!_instance._hidden && _instance._entries.Count == 0);
+
     // targets를 숨기기 시작. 이미 숨기는 중이면 대상만 갱신(연속 행동 시 깜빡임 없음).
     public static void Hide(IEnumerable<GameObject> targets, Settings s, Func<bool> forceVisible = null)
     {

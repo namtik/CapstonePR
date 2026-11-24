@@ -950,7 +950,10 @@ namespace Battle.UI
                 var view = _cardViews[i];
                 if (view == null) continue;
                 bool visible = view.gameObject.activeInHierarchy && view.Card != null;
-                view.SetTalismanMode(on, animate: visible, delay: visible ? order++ * Mathf.Max(0f, talismanBurnStagger) : 0f);
+                // 방금 뽑혀 등장 중인 카드는 원래 카드로 올라온 뒤 다시 타서 바뀌느라 늦게 보였다 —
+                // 처음부터 바뀐 모습으로 올라오게 즉시 전환한다(이미 손에 있던 카드만 불타는 전환 연출)
+                bool animate = visible && !view.IsPlayingDrawIntro;
+                view.SetTalismanMode(on, animate: animate, delay: animate ? order++ * Mathf.Max(0f, talismanBurnStagger) : 0f);
             }
         }
 
@@ -1562,6 +1565,26 @@ namespace Battle.UI
                 {
                     item.gameObject.SetActive(false);
                 }
+            }
+        }
+
+        // 콤보 스킬 목록의 index번 항목을 한 번 호버하듯 튀게 한다(각성 중 쿨타임이 걸릴 때)
+        public void PulseComboSkillItem(int index)
+        {
+            if (index < 0 || index >= _comboSkillItems.Count) return;
+            var item = _comboSkillItems[index];
+            if (item != null && item.gameObject.activeInHierarchy) item.PlayHoverPulse();
+        }
+
+        // 저주가 걸린 속성의 손패 카드를 한 번 떠오르게 한다
+        public void NudgeHandCardsOfElement(CardElement element)
+        {
+            for (int i = 0; i < _cardViews.Count; i++)
+            {
+                var view = _cardViews[i];
+                if (view == null || view.Card == null || !view.gameObject.activeInHierarchy) continue;
+                if (view.Card.Element != element) continue;
+                view.PlayNudge();
             }
         }
 
@@ -2577,6 +2600,26 @@ namespace Battle.UI
         }
 
         // 카드 클릭 시 더미보기/픽커/선택 모드를 순서대로 처리
+        // 선택 모드에서 손패 카드를 끌어다 놓은 위치가 '선택'으로 볼 자리인지 — 빈 칸 위이거나 손패 영역(사용 임계선) 위쪽
+        public bool IsSelectionDropTarget(PointerEventData eventData)
+        {
+            if (!IsSelectionMode || eventData == null) return false;
+            Vector2 pos = eventData.position;
+            Camera cam = eventData.pressEventCamera;
+
+            if (_usingSlotSelection)
+            {
+                for (int i = 0; i < _activeSlotButtons.Count; i++)
+                {
+                    Button slot = _activeSlotButtons[i];
+                    if (slot == null || !slot.gameObject.activeInHierarchy) continue;
+                    if (RectTransformUtility.RectangleContainsScreenPoint((RectTransform)slot.transform, pos, cam))
+                        return true;
+                }
+            }
+            return pos.y >= UseThresholdY;
+        }
+
         public void OnCardClicked(NewCardView view)
         {
             // 더미 보기 중 카드 클릭 — 프리팹 패널은 인벤토리처럼 X 버튼으로만 닫음, 폴백 UI는 클릭으로 닫기

@@ -79,6 +79,9 @@ namespace Battle.Card
 
         public int gaugeCostModifier;  // 이번 전투 동안의 게이지 코스트 증감(청류 202 등, 전투 시작 시 0으로 초기화)
 
+        public int runCopyIndex = -1;  // 런 덱에서 같은 카드 중 몇 번째 사본인지(-1 = 런 덱 밖에서 생긴 카드)
+        public int permanentDamage;    // 이 카드 1장의 영구 피해 보너스(연마 410 처치 누적) — 런 덱에 사본별로 저장
+
         // 카드 데이터로 인스턴스 생성
         public CardInstance(CardData data, bool transient = false)
         {

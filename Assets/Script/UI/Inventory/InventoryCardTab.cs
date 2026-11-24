@@ -65,7 +65,7 @@ namespace Battle.UI
                 // 스크롤 뷰포트(마스크) 영역 — 이 안에서만 호버되게 슬롯에 넘긴다
                 RectTransform clipRect = FindClipRect(gridRoot);
 
-                foreach (var data in items)
+                foreach (var item in items)
                 {
                     // 핵심: 카드 프리팹을 GridLayout 자식으로 직접 두면 앵커/크기가 강제 변경돼
                     //       내부 배치가 깨진다. 그래서 빈 "셀 래퍼"를 만들어 그것만 리사이즈되게 하고,
@@ -79,7 +79,8 @@ namespace Battle.UI
                     cellImg.raycastTarget = true;
 
                     NewCardView view = Instantiate(cardPrefab, cellRt);
-                    view.ApplyShopPreview(data);
+                    CardData data = item.data;
+                    view.ApplyShopPreview(data, null, item.permanentDamage);
 
                     RectTransform cardRt = view.GetComponent<RectTransform>();
                     if (cardRt != null)
@@ -101,8 +102,9 @@ namespace Battle.UI
                     var slot = cellGo.AddComponent<InventoryCardSlot>();
                     slot.ConfigureInPlace(hoverScale > 1f ? hoverScale : 1.06f, clipRect);
                     CardData captured = data;
+                    int capturedPerm = item.permanentDamage;
                     NewCardView capturedView = view;
-                    slot.HoverChanged += over => OnCardHover(capturedView, captured, over);
+                    slot.HoverChanged += over => OnCardHover(capturedView, captured, capturedPerm, over);
 
                     _spawned.Add(cellGo);
                 }
@@ -112,7 +114,7 @@ namespace Battle.UI
         }
 
         // 카드 호버 시 덱/묘지 보기와 같은 특수효과 툴팁 표시
-        void OnCardHover(NewCardView view, CardData data, bool over)
+        void OnCardHover(NewCardView view, CardData data, int permanentDamage, bool over)
         {
             if (!over || view == null || data == null)
             {
@@ -120,7 +122,7 @@ namespace Battle.UI
                 return;
             }
             TMP_Text label = view.GetComponentInChildren<TMP_Text>(true);
-            CardKeywordTooltip.Show(view, data, CardDatabase.GetDisplayDescription(data), label != null ? label.font : null);
+            CardKeywordTooltip.Show(view, data, CardDatabase.GetDisplayDescription(data, permanentDamage), label != null ? label.font : null);
         }
 
         void OnDisable() => CardKeywordTooltip.Hide();
@@ -140,31 +142,42 @@ namespace Battle.UI
         }
 
         // 현재 필터/정렬 기준에 맞는 카드 목록(중복 = 보유 장수만큼) 구성
-        List<CardData> BuildItems()
+        // 카드 1장 — 같은 카드라도 사본마다 영구 피해(연마 등)가 다를 수 있다
+        struct CardItem
         {
-            var items = new List<CardData>();
+            public CardData data;
+            public int permanentDamage;
+        }
+
+        List<CardItem> BuildItems()
+        {
+            var items = new List<CardItem>();
 
             RunDeckState state = RunDeckState.EnsureExists();
             if (state == null) return items;
             state.EnsureSeeded();
 
-            // 덱 순서 = 획득 순서 → 그대로 펼쳐 담는다
+            // 덱 순서 = 획득 순서 → 그대로 펼쳐 담는다(사본 번호는 전투용 인스턴스 생성 순서와 같게 카드 ID별로 센다)
+            var copyCounters = new Dictionary<int, int>();
             foreach (var entry in state.RunDeck)
             {
                 if (entry.count <= 0) continue;
                 CardData data = CardDatabase.GetById(entry.cardId);
                 if (data == null) continue;
+                copyCounters.TryGetValue(entry.cardId, out int start);
+                copyCounters[entry.cardId] = start + entry.count;
                 if (_elementFilter.HasValue && data.element != _elementFilter.Value) continue;
-                for (int i = 0; i < entry.count; i++) items.Add(data);
+                for (int i = 0; i < entry.count; i++)
+                    items.Add(new CardItem { data = data, permanentDamage = state.GetPermanentCardDamage(entry.cardId, start + i) });
             }
 
             switch (_sort)
             {
                 case SortMode.Name:
-                    items.Sort((a, b) => string.Compare(a.displayName, b.displayName, System.StringComparison.CurrentCulture));
+                    items.Sort((a, b) => string.Compare(a.data.displayName, b.data.displayName, System.StringComparison.CurrentCulture));
                     break;
                 case SortMode.Gauge:
-                    items.Sort((a, b) => a.gauge.CompareTo(b.gauge));
+                    items.Sort((a, b) => a.data.gauge.CompareTo(b.data.gauge));
                     break;
                 // Acquired: 덱(획득) 순서 유지
             }

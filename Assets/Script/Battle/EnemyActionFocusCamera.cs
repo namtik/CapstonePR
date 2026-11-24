@@ -79,6 +79,9 @@ public class EnemyActionFocusCamera : MonoBehaviour
         _instance.Begin(target, s, cam);
     }
 
+    // 카메라가 원래 시점으로 완전히 돌아왔는지(포커스 중이거나 복귀 중이면 false)
+    public static bool IsSettled => _instance == null || (!_instance._active && _instance._k <= 0f);
+
     // 포커스 해제. immediate면 오프셋을 바로 원복(전투 종료·스테이지 숨김 등).
     public static void Release(bool immediate = false)
     {

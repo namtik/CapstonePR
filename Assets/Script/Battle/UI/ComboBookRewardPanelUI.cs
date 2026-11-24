@@ -147,6 +147,15 @@ namespace Battle.UI
             cb?.Invoke(null);
         }
 
+        // 런 포기(메인 메뉴·재시작) 시 열려 있던 콤보 보상창을 콜백 없이 닫는다(이전 런의 보상 후속 동작이 다음 런에서 실행되지 않게)
+        public static void ForceCloseAll()
+        {
+            var panel = FindFirstObjectByType<ComboBookRewardPanelUI>(FindObjectsInactive.Include);
+            if (panel == null) return;
+            panel._onPicked = null;
+            if (panel.gameObject.activeSelf) panel.Hide();
+        }
+
         // 패널을 숨기고 시간을 복구
         public void Hide()
         {

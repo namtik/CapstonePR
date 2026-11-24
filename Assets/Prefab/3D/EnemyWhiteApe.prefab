@@ -138,8 +138,8 @@ MonoBehaviour:
     - Buff2
   - motion: 3
     stateNames:
-    - DeBuff1
-    - DeBuff2
+    - Debuff1
+    - Debuff2
   - motion: 4
     stateNames:
     - Hit1
@@ -183,6 +183,7 @@ MonoBehaviour:
     shakeAmplitude: 0.08
     shakeFrequency: 28
   hudAnchor: {fileID: 3132396216882551412}
+  hudScreenOffset: {x: 0, y: 0}
   renderCamera: {fileID: 0}
   deathDuration: 1
 --- !u!114 &7580614347201229342

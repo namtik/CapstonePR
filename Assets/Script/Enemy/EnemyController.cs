@@ -59,7 +59,6 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private bool _attackPreviewInitialized; // 공격 예고 초기화 여부
 
     // ── 특이사항(EnemySpecialAbility) 상태 ──
-    private const int CYCLE_CURSE_USES = 99; // 백족승 저주가 다음 전환 전까지 유지되도록 큰 값
     private static readonly CardElement[] CurseCycleElements =
         { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth }; // 백족승 저주 순환 속성
     private EnemySpecialAbility _ability = EnemySpecialAbility.None; // 이 몬스터의 특이사항
@@ -100,7 +99,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnMidPattern  += HandleMidPattern;
         stat.OnGaugeFull   += HandleGaugeFull;
         stat.OnGaugeStepChanged += view.UpdateActionGauge;
-        stat.OnDamaged += HandleSpecialDamaged;   // 특이사항(화웅 반사, 액괴 카드 소멸)
+        stat.OnDamaged += HandleSpecialDamaged;   // 특이사항(화웅 반사)
         stat.OnHpChanged += HandleSpecialHpChanged; // 특이사항(액괴/무사): 체력 절반
         midPattern = GetComponent<MonsterMidPattern>();
 
@@ -193,11 +192,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         else if (_ability == EnemySpecialAbility.CycleElementCurse)
         {
             _cycleCurseIndex = UnityEngine.Random.Range(0, CurseCycleElements.Length);
-            nbc.ApplyElementCurse(CurseCycleElements[_cycleCurseIndex], CYCLE_CURSE_USES, KillerName()); // 백족승: 초기 저주
+            nbc.MoveHeldCurse(null, CurseCycleElements[_cycleCurseIndex], KillerName()); // 심해거신·백족승: 초기 저주
         }
     }
 
-    // 특이사항: 피격 시 반사(화웅) 또는 버린 더미 소멸(액괴)
+    // 특이사항: 피격 시 반사(화웅)
     void HandleSpecialDamaged(float dmg)
     {
         ResolveAbility();
@@ -208,9 +207,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             return;
         }
 
-        if (_ability != EnemySpecialAbility.ExileRandomDiscardOnHit) return;
-        Battle.NewBattleController.Instance?.ExileRandomDiscardCards(1);
-        view?.ShowMidPatternNotice("부적 소멸!");
+        // 액괴(ExileRandomDiscardOnHit)는 맞을 때가 아니라 플레이어를 공격할 때 발동 — TriggerOnAttackAbility에서 처리
     }
 
     // 특이사항(액괴/무사): 체력 절반 도달 시 1회 트리거
@@ -249,6 +246,10 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             case EnemySpecialAbility.AttackInsertSlow: nbc.InsertSlowCards(1); break;                  // 가마이타치
             case EnemySpecialAbility.AttackCurseRandomElement: nbc.CurseRandomElement(5); break;       // 강시
             case EnemySpecialAbility.AttackRaiseHandCost: nbc.RaiseHandGaugeCost(1); break;            // 미코시뉴도
+            case EnemySpecialAbility.ExileRandomDiscardOnHit:                                          // 액괴: 플레이어를 때리면 버린 더미 소멸
+                nbc.ExileRandomDiscardCards(1);
+                view?.ShowMidPatternNotice("부적 소멸!");
+                break;
             case EnemySpecialAbility.DoubleNextAttackOnHpHit:                                          // 백풍원
                 if (hpDamaged)
                 {
@@ -642,11 +643,12 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             CompleteQueuedAttack();
         }
 
-        // 특이사항(백족승): 공격 시 다른 속성으로 저주 전환
+        // 특이사항(심해거신·백족승): 공격 시 저주를 다음 속성으로 옮김(이전 속성 저주는 풀림)
         if (_ability == EnemySpecialAbility.CycleElementCurse && Battle.NewBattleController.Instance != null)
         {
+            CardElement prev = CurseCycleElements[_cycleCurseIndex];
             _cycleCurseIndex = (_cycleCurseIndex + 1) % CurseCycleElements.Length;
-            Battle.NewBattleController.Instance.ApplyElementCurse(CurseCycleElements[_cycleCurseIndex], CYCLE_CURSE_USES, KillerName());
+            Battle.NewBattleController.Instance.MoveHeldCurse(prev, CurseCycleElements[_cycleCurseIndex], KillerName());
         }
 
         stat.RollNewAttackPlan();
@@ -719,12 +721,6 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             }
         }
 
-        // 특이사항(멧돼지): 피해를 넣기 전에 플레이어 방어도를 전부 제거
-        if (_ability == EnemySpecialAbility.AttackRemoveBlock && player.guard > 0f)
-        {
-            player.AddGuard(-player.guard);
-            view?.ShowMidPatternNotice("방어도 제거!");
-        }
         int hpBeforeAttack = player.currentHp;
 
         for (int i = 0; i < count; i++)
@@ -741,6 +737,12 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             yield return new WaitForSeconds(0.15f);
         }
         Debug.Log($"[EnemyController] {count} hit");
+        // 특이사항(멧돼지): 공격이 들어간 뒤(방어도로 막은 다음) 남은 방어도를 전부 제거
+        if (_ability == EnemySpecialAbility.AttackRemoveBlock && player.guard > 0f)
+        {
+            player.AddGuard(-player.guard);
+            view?.ShowMidPatternNotice("방어도 제거!");
+        }
         TriggerOnAttackAbility(player.currentHp < hpBeforeAttack);
         yield return new WaitForSeconds(0.45f);
         // 공격 애니메이션이 끝까지 재생될 때까지 대기(뒤이은 유물 피격 모션이 공격 모션을 끊지 않게)
@@ -804,6 +806,13 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
         // 피격 연출(빨강 플래시 + 흔들기)이 끝난 뒤에 사라지도록 대기 후 제거.
         StartCoroutine(DestroyAfterHitReaction());
+    }
+
+    // 사망 연출 대기 중에 스테이지가 꺼지면(보상창 timeScale=0 → 맵 복귀 등) 코루틴이 멈춰 시체가 스테이지에 남았다.
+    // 다음에 같은 스테이지가 켜지면 그 시체가 새 몬스터와 겹쳐 보였으므로, 죽은 적이 비활성화되면 바로 제거한다.
+    void OnDisable()
+    {
+        if (isDead) Destroy(gameObject);
     }
 
     // 사망 연출을 재생하고 그 길이만큼 대기한 뒤 오브젝트를 파괴한다

@@ -906,6 +906,7 @@ public class RoundManager : MonoBehaviour
             if (stateController.HasMoreLapsRemaining)
             {
                 stateController.BeginNextLap();
+                HealOnStageAdvance();
                 stateController.ShowMap();
                 return;
             }
@@ -924,6 +925,17 @@ public class RoundManager : MonoBehaviour
 
         stateController.MarkNodeCleared(stateController.lastVisitedNodeIndex);
         stateController.ShowMap();
+    }
+
+    const int StageAdvanceHealAmount = 50; // 보스를 잡고 다음 스테이지로 넘어갈 때 회복량
+
+    // 1스테이지 보스 처치 후 2스테이지로 넘어갈 때 체력 회복(최대 체력을 넘지 않음)
+    void HealOnStageAdvance()
+    {
+        var player = Player.Resolve(true);
+        if (player == null) return;
+        player.Heal(StageAdvanceHealAmount);
+        Debug.Log($"[스테이지 전환] 플레이어 HP +{StageAdvanceHealAmount} 회복");
     }
 
     // [테스트] StageTestPanel이 시작한 라운드인지 — ReturnToMap에서 런 진행 반영을 건너뛴다
@@ -978,6 +990,26 @@ public class RoundManager : MonoBehaviour
         _spawnedCombatCount = 0;
         _killGoldPaid = 0;
         _waitingForRoundEnd = false;
+        _returnToMapPending = false; // 보상 후 맵 복귀 대기 중 런을 포기한 경우(다음 런의 복귀가 막히지 않게)
+    }
+
+    // 현재 3D 스테이지 앵커 아래 남은 적 오브젝트를 즉시 숨기고 제거한다(전투 시작 직전 — 살아 있는 적은 없어야 함)
+    static void ClearLeftoverStageEnemies()
+    {
+        if (BattleStageController.Current == null) return;
+        foreach (Transform anchor in BattleStageController.Current.AllEnemyAnchors())
+        {
+            if (anchor == null) continue;
+            for (int i = anchor.childCount - 1; i >= 0; i--)
+            {
+                Transform child = anchor.GetChild(i);
+                if (child == null) continue;
+                if (child.GetComponent<EnemyController>() == null && child.GetComponent<EnemyStat>() == null) continue;
+                Debug.LogWarning($"[RoundManager] 스테이지에 남아 있던 적 제거: {child.name}");
+                child.gameObject.SetActive(false); // 같은 프레임에 새 적과 겹쳐 그려지지 않게
+                Destroy(child.gameObject);
+            }
+        }
     }
 
     static void DestroyChildrenOf(Transform parent)
@@ -1069,6 +1101,9 @@ public class RoundManager : MonoBehaviour
             _spawnedCombatCount = 0;
             return;
         }
+
+        // 이전 전투에서 남은 적(사망 연출 중 스테이지가 꺼져 지워지지 못한 시체 등)이 새 적과 겹치지 않게 먼저 치운다
+        ClearLeftoverStageEnemies();
 
         int n = enemies.Count;
         EnemyCombatParty.BeginBattle(n);

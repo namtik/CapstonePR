@@ -204,11 +204,13 @@ namespace Battle.UI
         {
             var nb = NewBattleController.Instance;
             if (card == null || card.data == null || nb == null) return;
+            bool held = nb.IsCurseHeldByEnemy(card.Element);
             int remaining = nb.GetCurseRemainingUses(card.Element);
-            if (remaining <= 0) return;
+            if (!held && remaining <= 0) return;
 
             string desc = $"{ElementName(card.Element)} 속성 부적을 사용할 때마다 피해를 {NewBattleController.CURSE_PLAYER_DAMAGE} 입습니다.\n"
-                        + $"부적을 {remaining}장 더 사용하면 풀립니다.";
+                        + (held ? "적이 공격하면 다른 속성으로 옮겨 갑니다."
+                                : $"부적을 {remaining}장 더 사용하면 풀립니다.");
             outList.Insert(0, new KeywordDef("저주", CurseColor, desc));
         }
 

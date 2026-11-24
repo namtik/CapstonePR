@@ -31,6 +31,30 @@ public class BattleWalkTransition : MonoBehaviour
 
     ScreenFader _fader; // 화면 전환 공용 오버레이(맵 복귀 페이드와 겹치지 않도록 같은 것을 씀)
 
+    CanvasGroup _hiddenHud;   // 연출 중 숨긴 손패 HUD(중단 시 복구용)
+    float _hiddenHudAlpha = 1f;
+    StageTwoWalkOverlay _stageTwoOverlay; // 진행 중인 2스테이지 전환 오버레이(중단 시 제거용)
+
+    // 런 포기(메인 메뉴·재시작) 시 진행 중인 걷기 연출을 중단한다 — 맵 복귀 콜백은 실행하지 않고 화면·손패만 원상 복구
+    public static void CancelAll()
+    {
+        foreach (var w in FindObjectsByType<BattleWalkTransition>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (w == null || !w.IsPlaying) continue;
+            w.StopAllCoroutines();
+            if (w._hiddenHud != null) w._hiddenHud.alpha = w._hiddenHudAlpha;
+            w._hiddenHud = null;
+            if (w._stageTwoOverlay != null) Destroy(w._stageTwoOverlay.gameObject);
+            w._stageTwoOverlay = null;
+            if (w._fader != null)
+            {
+                w._fader.SetAlpha(0f);
+                w._fader.SetBlocking(false);
+            }
+            w.IsPlaying = false;
+        }
+    }
+
     // 걷기 연출 후 onDone 호출. 이미 재생 중이면 무시.
     public void Play(System.Action onDone)
     {
@@ -47,12 +71,15 @@ public class BattleWalkTransition : MonoBehaviour
     IEnumerator Run(System.Action onDone, StageTwoWalkOverlay stageTwo)
     {
         IsPlaying = true;
+        _stageTwoOverlay = stageTwo;
         _fader = ScreenFader.Instance;
         _fader.SetBlocking(true); // 연출 중 클릭 차단
 
         // 1) 카드(손패) HUD 숨김
         CanvasGroup hud = ResolveHandHudGroup();
         float hudAlpha = hud != null ? hud.alpha : 1f;
+        _hiddenHud = hud;
+        _hiddenHudAlpha = hudAlpha;
         if (hud != null) yield return FadeGroup(hud, hud.alpha, 0f, hudFadeDuration);
 
         // 2) 스테이지 카메라 전진 + 머리 흔들림
@@ -101,6 +128,7 @@ public class BattleWalkTransition : MonoBehaviour
             camT.rotation = startRot;
         }
         if (hud != null) hud.alpha = hudAlpha;
+        _hiddenHud = null;
 
         try
         {

@@ -117,6 +117,7 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         visualGo.transform.SetParent(transform, false);
         var visual = (RectTransform)visualGo.transform;
         StretchFull(visual);
+        _awakenVisual = visual;
         _awakenSlotGroup = visualGo.GetComponent<CanvasGroup>();
         _awakenSlotGroup.alpha = 1f;
 
@@ -370,6 +371,44 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
             case 'r': return iconR;
             default: return null;
         }
+    }
+
+    [Header("쿨타임 시작 시 한 번 호버")]
+    [SerializeField] private float hoverPulseScale = 1.1f;     // 가장 커질 때 배율
+    [SerializeField] private float hoverPulseDuration = 0.35f; // 커졌다 돌아오는 시간(초)
+    private RectTransform _awakenVisual; // 각성 슬롯 그림(배경·프레임·이름·원소)
+    private Coroutine _pulseCo;
+
+    // 슬롯 그림을 한 번 살짝 키웠다가 되돌린다(각성 중 쿨타임이 걸릴 때)
+    public void PlayHoverPulse()
+    {
+        if (!isActiveAndEnabled) return;
+        RectTransform target = _awakenVisual != null ? _awakenVisual : (RectTransform)transform;
+        if (_pulseCo != null) StopCoroutine(_pulseCo);
+        _pulseCo = StartCoroutine(HoverPulseRoutine(target));
+    }
+
+    System.Collections.IEnumerator HoverPulseRoutine(RectTransform target)
+    {
+        float dur = Mathf.Max(0.05f, hoverPulseDuration);
+        float t = 0f;
+        while (t < 1f)
+        {
+            t += Time.unscaledDeltaTime / dur;
+            float k = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI); // 0 → 1 → 0
+            target.localScale = Vector3.one * Mathf.Lerp(1f, hoverPulseScale, k);
+            yield return null;
+        }
+        target.localScale = Vector3.one;
+        _pulseCo = null;
+    }
+
+    void OnDisable()
+    {
+        if (_pulseCo == null) return;
+        _pulseCo = null;
+        if (_awakenVisual != null) _awakenVisual.localScale = Vector3.one;
+        else transform.localScale = Vector3.one;
     }
 
     // 포인터 진입 시 툴팁을 표시한다

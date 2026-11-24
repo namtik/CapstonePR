@@ -503,6 +503,16 @@ public class GameStateController : MonoBehaviour
         Battle.NewBattleController.Instance?.ClearPresentationFx();
     }
 
+    // 런을 포기할 때(메인 메뉴·재시작) 열려 있던 보상창·맵 복귀 연출을 콜백 없이 닫는다.
+    // 남겨 두면 다음 런 화면에 이전 보상 카드가 보이고, 누르면 이전 런의 '걸어서 맵으로' 처리가 실행돼
+    // 새 전투에 몬스터가 있는데도 앞으로 걸어가 버렸다.
+    static void CloseAbandonedRunUi()
+    {
+        Battle.UI.CardRewardUI.ForceCloseAll();
+        Battle.UI.ComboBookRewardPanelUI.ForceCloseAll();
+        BattleWalkTransition.CancelAll();
+    }
+
     // 런을 처음부터 재시작하고 맵으로 돌아간다
     public void RestartRunToMap()
     {
@@ -519,6 +529,7 @@ public class GameStateController : MonoBehaviour
         if (roundManager != null)
             roundManager.AbortActiveCombat();
         ClearLingeringFx();
+        CloseAbandonedRunUi();
 
         lastVisitedNodeIndex = -1;
         clearedNodes.Clear();
@@ -562,6 +573,7 @@ public class GameStateController : MonoBehaviour
         if (roundManager != null)
             roundManager.AbortActiveCombat();
         ClearLingeringFx();
+        CloseAbandonedRunUi();
 
         // 런 상태 초기화 (메인으로 나가면 현재 런을 포기)
         lastVisitedNodeIndex = -1;

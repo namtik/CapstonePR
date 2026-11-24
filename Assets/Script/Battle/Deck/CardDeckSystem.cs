@@ -108,14 +108,41 @@ namespace Battle.Deck
             return drawn;
         }
 
+        // 각성 중 true — 콤보 슬롯 미입력 카드(둔화·탈진·매혹 등)는 드로우하지 않는다
+        public bool BlockNonComboDraws { get; set; }
+
+        // 뽑을 더미 맨 위부터 콤보 슬롯에 들어가는 카드의 인덱스(없으면 -1)
+        int FindTopComboDrawable()
+        {
+            for (int i = _drawPile.Count - 1; i >= 0; i--)
+            {
+                var c = _drawPile[i];
+                if (c != null && c.data != null && !c.data.BypassComboSlot) return i;
+            }
+            return -1;
+        }
+
         // 카드 1장 드로우 시도(더미 비면 리셔플)
         public bool TryDrawOne(bool playerCommand = false)
         {
             if (_drawPile.Count == 0) ReshuffleDiscardIntoDraw();
             if (_drawPile.Count == 0) return false;
 
-            var card = _drawPile[_drawPile.Count - 1];
-            _drawPile.RemoveAt(_drawPile.Count - 1);
+            int idx = _drawPile.Count - 1;
+            if (BlockNonComboDraws)
+            {
+                // 각성 중: 둔화·탈진처럼 콤보 슬롯에 못 들어가는 카드는 건너뛰고 위에서부터 속성 카드를 뽑는다
+                idx = FindTopComboDrawable();
+                if (idx < 0)
+                {
+                    ReshuffleDiscardIntoDraw();
+                    idx = FindTopComboDrawable();
+                }
+                if (idx < 0) return false;
+            }
+
+            var card = _drawPile[idx];
+            _drawPile.RemoveAt(idx);
             _hand.Add(card);
             OnCardDrawn?.Invoke(card);
             Battle.UI.BattleLog.RecordDraw(card.data, playerCommand);

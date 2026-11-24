@@ -172,6 +172,7 @@ namespace Battle.UI
             // 코루틴이 멈추므로 등장 연출 상태를 정리
             if (_drawIntroCo != null) { StopCoroutine(_drawIntroCo); _drawIntroCo = null; }
             _playingIntro = false;
+            StopNudge(true); // 떠오른 채로 멈추지 않게 홈으로
 
             // OnEndDrag 누락으로 클릭이 막히는 것을 막기 위해 레이캐스트 복구
             _isDragging = false;
@@ -249,6 +250,7 @@ namespace Battle.UI
             if (Card != card)
             {
                 CancelDrawIntro(); // 남아있던 등장 연출 정리
+                StopNudge(true);   // 남아있던 저주 떠오르기 정리
                 if (_burnCo != null) FinishBurnImmediately(); // 다른 카드로 바뀌면 전환 연출은 즉시 정착
                 _isHovering = false;
                 if (_hoverSlotOriginalSibling >= 0 && transform.parent != null)
@@ -262,12 +264,12 @@ namespace Battle.UI
         }
 
         // CardData만으로 카드 외형(아이콘/속성/타입/텍스트)을 갱신
-        public void ApplyShopPreview(CardData cardData, Sprite iconOverride = null)
+        public void ApplyShopPreview(CardData cardData, Sprite iconOverride = null, int permanentDamage = 0)
         {
             if (cardData == null) return;
 
             if (nameText != null) nameText.text = cardData.displayName;
-            if (descText != null) descText.text = CardDatabase.GetDisplayDescription(cardData);
+            if (descText != null) descText.text = CardDatabase.GetDisplayDescription(cardData, permanentDamage);
             if (gaugeText != null) gaugeText.text = EffectiveGaugeCost(cardData.gauge).ToString();
 
             if (cardTypeText != null) cardTypeText.text = CardTypeName(cardData.type);
@@ -336,7 +338,7 @@ namespace Battle.UI
             }
 
             if (nameText != null) nameText.text = Card.data.displayName;
-            if (descText != null) descText.text = CardDatabase.GetDisplayDescription(Card.data);
+            if (descText != null) descText.text = CardDatabase.GetDisplayDescription(Card);
             if (gaugeText != null) gaugeText.text = EffectiveGaugeCost(Card.Gauge).ToString();
 
             // 카드 타입 표시
@@ -483,6 +485,56 @@ namespace Battle.UI
             // 마지막 폴백: 속성 색만 표시
             iconImage.sprite = null;
             iconImage.color = ColorForElement(Card != null ? Card.Element : CardElement.Neutral, false);
+        }
+
+        // ── 저주 알림: 한 번 떠올랐다 내려오기 ──
+        [Header("저주 알림 — 한 번 떠오르기")]
+        [Tooltip("저주가 걸린 속성 카드가 손패에서 떠오르는 높이(호버 높이 대비 배율).")]
+        [SerializeField] private float curseNudgeHeightRatio = 0.6f;
+        [Tooltip("떠올랐다 내려오는 전체 시간(초).")]
+        [SerializeField] private float curseNudgeDuration = 0.45f;
+        private Coroutine _nudgeCo; // 떠오르기 연출 코루틴
+
+        // 손패 카드를 한 번 위로 띄웠다가 제자리로 돌려 놓는다(호버·드래그·등장 연출 중이면 생략)
+        public void PlayNudge()
+        {
+            if (!isActiveAndEnabled || Card == null || SlotIndex < 0) return;
+            if (_isDragging || _isHovering || _playingIntro) return;
+            StopNudge(true);
+            _nudgeCo = StartCoroutine(NudgeRoutine());
+        }
+
+        System.Collections.IEnumerator NudgeRoutine()
+        {
+            Vector3 baseScale = ResolveHomeScale();
+            Vector2 lift = hoverPositionOffset * Mathf.Max(0f, curseNudgeHeightRatio);
+            float scaleBoost = (hoverScaleMultiplier - 1f) * Mathf.Max(0f, curseNudgeHeightRatio);
+            float dur = Mathf.Max(0.05f, curseNudgeDuration);
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.unscaledDeltaTime / dur;
+                float k = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI); // 0 → 1 → 0
+                _rect.anchoredPosition = _homeAnchoredPos + lift * k;
+                _rect.localScale = baseScale * (1f + scaleBoost * k);
+                yield return null;
+            }
+            _nudgeCo = null;
+            _rect.anchoredPosition = _homeAnchoredPos;
+            _rect.localScale = baseScale;
+        }
+
+        // 진행 중인 떠오르기를 멈춤. settle이면 홈 위치/스케일로 되돌린다.
+        void StopNudge(bool settle)
+        {
+            if (_nudgeCo == null) return;
+            StopCoroutine(_nudgeCo);
+            _nudgeCo = null;
+            if (settle && _rect != null)
+            {
+                _rect.anchoredPosition = _homeAnchoredPos;
+                _rect.localScale = ResolveHomeScale();
+            }
         }
 
         // 현재 위치/부모/형제 인덱스를 홈으로 캡처
@@ -900,6 +952,7 @@ namespace Battle.UI
             if (Hud.IsHandBlocked) return;
             _dragCancelled = false;
             CancelDrawIntro(); // 등장 연출 중이면 즉시 홈으로 정착
+            StopNudge(true);   // 떠오른 위치가 홈으로 캡처되지 않게 먼저 되돌림
 
             // hover 상태였으면 오프셋/형제 순서를 먼저 복원
             if (_isHovering)
@@ -978,6 +1031,15 @@ namespace Battle.UI
             _targetingArmed = false;
             Hud.HideEnemyTargeting();
 
+            // 버리기 등 카드 선택 중: 클릭뿐 아니라 칸(또는 손패 위쪽)으로 끌어다 놓아도 선택된다
+            if (Hud.IsSelectionMode)
+            {
+                ReturnHome();
+                if (_isHovering) OnPointerExit(null);
+                if (Hud.IsSelectionDropTarget(eventData)) Hud.OnCardClicked(this);
+                return;
+            }
+
             bool used = Hud != null && Hud.TryUseFromDrag(this, eventData);
             if (!used)
             {
@@ -1025,6 +1087,7 @@ namespace Battle.UI
             if (Hud.IsHandBlocked) return;
             if (Card == null || _isDragging) return;
 
+            StopNudge(true); // 저주 떠오르기 중이면 홈으로 되돌린 뒤 호버 적용
             _isHovering = true;
             _hoverStartTime = Time.unscaledTime;
             CancelDrawIntro();
@@ -1129,7 +1192,7 @@ namespace Battle.UI
             if (_keywordTipShown) return;
             if (Time.unscaledTime - _hoverStartTime < keywordTooltipDelay) return;
 
-            string desc = descText != null ? descText.text : CardDatabase.GetDisplayDescription(Card.data);
+            string desc = descText != null ? descText.text : CardDatabase.GetDisplayDescription(Card);
             CardKeywordTooltip.Show(this, Card.data, desc, descText != null ? descText.font : null);
             _keywordTipShown = true;
         }

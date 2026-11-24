@@ -85,8 +85,9 @@ public class MapScrollController : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
-            if (UnityEngine.EventSystems.EventSystem.current != null &&
-                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            // 예전엔 포인터 아래에 UI가 하나라도 있으면 막았다 → 맵 배경·장식 이미지 위에서도 안 잡혀 잡히는 범위가 매우 좁았다.
+            // 이제는 맵 캔버스의 '누를 수 없는' 그래픽(배경·길·장식) 위면 잡히고, 노드 버튼 등 상호작용 UI나 다른 창 위에서만 막는다.
+            if (!CanStartDragAt(Input.mousePosition))
             {
                 _dragging = false;
                 return;
@@ -118,6 +119,43 @@ public class MapScrollController : MonoBehaviour
         // 드래그 중에는 자동 스크롤을 멈춘다.
         targetPosition = scrollTarget.anchoredPosition;
         isMoving = false;
+    }
+
+    readonly System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult> _hits =
+        new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>(); // UI 레이캐스트 결과 버퍼
+
+    // 이 위치에서 맵 드래그를 시작해도 되는지 — 맨 위 UI가 맵 캔버스의 비상호작용 그래픽이면 허용
+    bool CanStartDragAt(Vector2 screenPos)
+    {
+        // 맵 캔버스 위에 뜨는 사방비급 선택창 등 일시정지 창이 열려 있으면 뒤의 맵을 움직이지 않는다
+        if (Time.timeScale == 0f) return false;
+        // 사방비급 선택창은 맵 캔버스에 붙고 시간을 멈추지 않을 수 있어 직접 확인(누를 때 한 번만 찾음)
+        if (FindFirstObjectByType<Battle.UI.ComboBookRewardPanelUI>() != null) return false;
+        if (FindFirstObjectByType<StageTwoWalkOverlay>() != null) return false; // 스테이지 전환 연출 중
+
+        var es = UnityEngine.EventSystems.EventSystem.current;
+        if (es == null) return true;
+
+        var ped = new UnityEngine.EventSystems.PointerEventData(es) { position = screenPos };
+        _hits.Clear();
+        es.RaycastAll(ped, _hits);
+        if (_hits.Count == 0) return true; // UI 밖(빈 곳)
+
+        GameObject top = _hits[0].gameObject;
+        if (top == null) return true;
+
+        // 다른 캔버스(상단 바·팝업·보상창 등) 위에서는 시작하지 않는다
+        if (_canvas == null && scrollTarget != null)
+            _canvas = scrollTarget.GetComponentInParent<Canvas>();
+        Canvas topCanvas = top.GetComponentInParent<Canvas>();
+        if (_canvas != null && topCanvas != null && topCanvas.rootCanvas != _canvas.rootCanvas)
+            return false;
+
+        // 버튼(노드 등)·클릭/드래그를 받는 UI 위에서는 시작하지 않는다(클릭이 우선)
+        if (top.GetComponentInParent<UnityEngine.UI.Selectable>() != null) return false;
+        if (UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IPointerClickHandler>(top) != null) return false;
+        if (UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IBeginDragHandler>(top) != null) return false;
+        return true;
     }
 
     // 캔버스 스케일 팩터를 안전하게 반환한다

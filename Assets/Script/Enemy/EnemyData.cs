@@ -37,8 +37,8 @@ public enum EnemySpecialAbility
     CharmCardsOnBattleStart, // 100016 구미호: 전투 시작 시 매혹 카드 4장 삽입
     CycleElementCurse,       // 100017 백족승: 속성 저주 후 공격마다 다른 속성으로 전환
     DoubleDamageAtHalfHp,    // 100018 무사: 체력 절반이 되면 피해 2배
-    [InspectorName("피격 시 버린 더미 2장 소멸")]
-    ExileRandomDiscardOnHit, // 액괴: 피격 시 버린 카드 더미에서 무작위 카드 2장 소멸
+    [InspectorName("공격 시 버린 더미 소멸")]
+    ExileRandomDiscardOnHit, // 액괴: 플레이어 공격 시 버린 카드 더미에서 무작위 카드 1장 소멸(이름은 데이터 호환 위해 유지)
     [InspectorName("처치 시 랜덤 속성 5행동 저주")]
     OnDeathCurseOwnElement,  // 처치 시 불/물/바람/땅 중 무작위 속성에 5행동 저주
     [InspectorName("처치 시 패 2장 무작위 버리기")]
@@ -59,8 +59,8 @@ public enum EnemySpecialAbility
     AttackInsertSlow,        // 100011 가마이타치
     [InspectorName("우선 공격 대상(도발)")]
     Taunt,                   // 100013 도로타보
-    [InspectorName("공격 시 플레이어 방어도 전부 제거")]
-    AttackRemoveBlock,       // 100014 멧돼지
+    [InspectorName("공격 후 플레이어 방어도 전부 제거")]
+    AttackRemoveBlock,       // 100014 멧돼지: 공격이 들어간 뒤 남은 방어도 전부 제거
     [InspectorName("공격 시 무작위 속성 5행동 저주")]
     AttackCurseRandomElement,// 100019 강시
     [InspectorName("공격 시 패 전체 호흡 +1")]
