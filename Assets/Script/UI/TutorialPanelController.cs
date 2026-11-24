@@ -1,4 +1,7 @@
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // 메인 메뉴 조작법(튜토리얼) 팝업 — 이미지 페이지 넘김
@@ -11,6 +14,7 @@ public class TutorialPanelController : MonoBehaviour
     [Header("페이지")]
     [SerializeField] private Image pageImage; // 현재 페이지 이미지
     [SerializeField] private Sprite[] pages; // 조작법 이미지(텍스트 포함)
+    [SerializeField] private TMP_Text pageCounter;
 
     [Header("버튼")]
     [SerializeField] private Button prevButton; // 이전 페이지
@@ -19,6 +23,7 @@ public class TutorialPanelController : MonoBehaviour
 
     private int currentPageIndex; // 현재 페이지 인덱스(0부터)
     private bool initialized; // 버튼 리스너 연결 완료 여부
+    private GameObject returnSelection;
 
     // 비활성 TutorialCanvas는 첫 Open() 때 Awake가 실행된다. 여기서 panelRoot를 끄면 첫 클릭이 무효가 된다.
     void Awake()
@@ -26,13 +31,25 @@ public class TutorialPanelController : MonoBehaviour
         EnsureInitialized();
     }
 
+    void Update()
+    {
+        if (panelRoot.activeInHierarchy &&
+            (Input.GetKeyDown(KeyCode.Escape) || Keyboard.current?.escapeKey.wasPressedThisFrame == true))
+            Close();
+    }
+
     // 튜토리얼을 1페이지부터 연다
     public void Open()
     {
         EnsureInitialized();
+        EventSystem eventSystem = EventSystem.current;
+        if (!panelRoot.activeSelf)
+            returnSelection = eventSystem != null ? eventSystem.currentSelectedGameObject : null;
         currentPageIndex = 0;
         panelRoot.SetActive(true);
         RefreshPage();
+        if (eventSystem != null && closeButton != null)
+            eventSystem.SetSelectedGameObject(closeButton.gameObject);
     }
 
     // 버튼 리스너를 1회만 연결한다 (TutorialCanvas가 비활성으로 시작해도 Open()에서 보장)
@@ -55,6 +72,9 @@ public class TutorialPanelController : MonoBehaviour
     public void Close()
     {
         panelRoot.SetActive(false);
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(returnSelection);
+        returnSelection = null;
     }
 
     // 이전 페이지로 이동
@@ -95,6 +115,9 @@ public class TutorialPanelController : MonoBehaviour
         }
 
         int lastIndex = pages != null ? pages.Length - 1 : -1;
+        if (pageCounter != null)
+            pageCounter.text = lastIndex >= 0 ? $"{currentPageIndex + 1} / {lastIndex + 1}" : string.Empty;
+
         SetButtonInteractable(prevButton, currentPageIndex > 0);
         SetButtonInteractable(nextButton, lastIndex >= 0 && currentPageIndex < lastIndex);
     }

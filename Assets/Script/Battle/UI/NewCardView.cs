@@ -148,6 +148,13 @@ namespace Battle.UI
         public bool IsTalismanMode => _talismanWanted;          // 부적 모드 여부
         public bool IsTalismanTransitioning => _burnCo != null; // 전환 연출 진행 중 여부
 
+        const float CurseReleaseDuration = 0.45f;
+        static Material s_curseInkMaterial;
+        private RawImage _curseInk;
+        private bool _curseActive;
+        private bool _curseFaceHidden;
+        private float _curseReleaseRemaining;
+
         // 참조 바인딩과 원본 스케일/배경 색을 캡처
         void Awake()
         {
@@ -183,6 +190,7 @@ namespace Battle.UI
 
             // 전환 연출이 끊기면 목표 상태로 즉시 정착(머티리얼이 남지 않게)
             if (_burnCo != null) FinishBurnImmediately();
+            if (_curseInk != null) _curseInk.enabled = false;
         }
 
         void OnDestroy()
@@ -249,6 +257,7 @@ namespace Battle.UI
             // 카드가 바뀌면 hover 등 일시 상태를 리셋
             if (Card != card)
             {
+                ResetCurseInk();
                 CancelDrawIntro(); // 남아있던 등장 연출 정리
                 StopNudge(true);   // 남아있던 저주 떠오르기 정리
                 if (_burnCo != null) FinishBurnImmediately(); // 다른 카드로 바뀌면 전환 연출은 즉시 정착
@@ -336,6 +345,7 @@ namespace Battle.UI
             {
                 Card.cursed = Battle.NewBattleController.Instance.IsElementCursed(Card.Element);
             }
+            SetCurseInkActive(Hud != null && SlotIndex >= 0 && Card.cursed);
 
             if (nameText != null) nameText.text = Card.data.displayName;
             if (descText != null) descText.text = CardDatabase.GetDisplayDescription(Card);
@@ -358,6 +368,7 @@ namespace Battle.UI
             // 부적 모드면 이 카드 속성의 부적으로 표시(전환 연출 중이면 연출이 상태를 관리)
             if (_burnCo == null && (_talismanWanted || _talismanShown))
                 ApplyTalismanVisual(_talismanWanted && HasTalismanFor(Card));
+            UpdateCurseInkVisual();
         }
 
         // 속성에 맞는 배경 스프라이트/색을 적용
@@ -365,7 +376,7 @@ namespace Battle.UI
         {
             if (backgroundImage == null) return;
 
-            bool cursed = Card != null && Card.cursed;
+            float curseTint = Card != null && Card.cursed ? 1f : CurseReleaseStrength;
 
             // 속성별 배경 스프라이트 우선
             if (useElementBackgroundSprite)
@@ -375,7 +386,7 @@ namespace Battle.UI
                 {
                     backgroundImage.sprite = s;
                     // 저주 시 보라 틴트, 평소엔 흰색
-                    backgroundImage.color = cursed ? new Color(0.7f, 0.45f, 0.75f, 1f) : Color.white;
+                    backgroundImage.color = Color.Lerp(Color.white, new Color(0.7f, 0.45f, 0.75f, 1f), curseTint);
                     return;
                 }
             }
@@ -384,9 +395,63 @@ namespace Battle.UI
             if (tintBackgroundByElement)
             {
                 Color baseColor = _capturedOriginalBgColor ? _originalBackgroundColor : Color.white;
-                Color elementColor = ColorForElement(element, Card != null && Card.cursed);
+                Color elementColor = Color.Lerp(ColorForElement(element, false), ColorForElement(element, true), curseTint);
                 backgroundImage.color = Color.Lerp(baseColor, elementColor, backgroundTintAlpha);
             }
+        }
+
+        float CurseReleaseStrength => Mathf.SmoothStep(0f, 1f, _curseReleaseRemaining / CurseReleaseDuration);
+
+        void SetCurseInkActive(bool active)
+        {
+            if (_curseActive == active) return;
+            _curseActive = active;
+            _curseReleaseRemaining = active ? 0f : CurseReleaseDuration;
+        }
+
+        void ResetCurseInk()
+        {
+            _curseActive = false;
+            _curseFaceHidden = false;
+            _curseReleaseRemaining = 0f;
+            if (_curseInk != null) _curseInk.enabled = false;
+        }
+
+        void EnsureCurseInk()
+        {
+            if (_curseInk != null) return;
+            if (s_curseInkMaterial == null)
+            {
+                var shader = Resources.Load<Shader>("UI/CardCurseInk");
+                if (shader == null || !shader.isSupported) return;
+                s_curseInkMaterial = new Material(shader) { name = "CardCurseInk", hideFlags = HideFlags.DontSave };
+            }
+
+            var child = new GameObject("CurseInk", typeof(RectTransform), typeof(RawImage));
+            var rect = (RectTransform)child.transform;
+            rect.SetParent(transform, false);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            _curseInk = child.GetComponent<RawImage>();
+            _curseInk.material = s_curseInkMaterial;
+            _curseInk.raycastTarget = false;
+        }
+
+        void UpdateCurseInkVisual()
+        {
+            float strength = _curseActive ? 1f : CurseReleaseStrength;
+            bool visible = strength > 0f && !_curseFaceHidden && _burnCo == null;
+            if (visible) EnsureCurseInk();
+            if (_curseInk == null) return;
+
+            _curseInk.enabled = visible;
+            if (!visible) return;
+            // The shader uses the red vertex channel to select the awakened silhouette.
+            _curseInk.color = new Color(_talismanShown ? 1f : 0f, 1f, 1f, strength);
+            if (_curseInk.transform.GetSiblingIndex() != transform.childCount - 1)
+                _curseInk.transform.SetAsLastSibling();
         }
 
         // 속성에 대응하는 배경 스프라이트를 반환
@@ -718,7 +783,7 @@ namespace Battle.UI
         {
             foreach (var g in GetComponentsInChildren<Graphic>(true))
             {
-                if (g == null || g == _talismanFace) continue;
+                if (g == null || g == _talismanFace || g == _curseInk) continue;
                 g.canvasRenderer.SetAlpha(alpha);
             }
         }
@@ -868,6 +933,8 @@ namespace Battle.UI
         // 셰이더가 없거나 비활성 상태면 즉시 숨기고 false 반환(onComplete는 항상 호출).
         public bool PlayBurnAway(float duration, System.Action onComplete = null)
         {
+            _curseFaceHidden = true;
+            UpdateCurseInkVisual();
             if (_burnCo != null) { StopCoroutine(_burnCo); _burnCo = null; EndBurnMaterials(); }
 
             if (!isActiveAndEnabled || ResolveBurnShader() == null)
@@ -1141,6 +1208,13 @@ namespace Battle.UI
         // 드래그 중 우클릭 → 사용하지 않고 손패로 되돌림
         void Update()
         {
+            if (_curseReleaseRemaining > 0f)
+            {
+                _curseReleaseRemaining = Mathf.Max(0f, _curseReleaseRemaining - Time.unscaledDeltaTime);
+                if (Card != null) ApplyBackgroundSprite(Card.Element);
+            }
+            if (_curseActive || (_curseInk != null && _curseInk.enabled) || _curseReleaseRemaining > 0f)
+                UpdateCurseInkVisual();
             UpdateKeywordTooltip();
             if (!_isDragging) return;
             if (!Input.GetMouseButtonDown(1)) return;
