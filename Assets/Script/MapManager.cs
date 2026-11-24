@@ -15,6 +15,7 @@ public class MapManager : MonoBehaviour
     [SerializeField] private Color availablePathColor = new Color32(168, 50, 41, 255);
     [SerializeField] private Color visitedPathColor = new Color32(101, 66, 47, 255);
     [SerializeField] private Color missedPathColor = new Color32(179, 151, 118, 255);
+    [SerializeField] private MapPathShapeSettings pathShape = new MapPathShapeSettings(); // 경로 휨/잔물결
 
     [Header("Player Position Highlight")]
     public float currentPositionScale = 1.3f; // 현재 위치 노드 강조 배율
@@ -342,7 +343,8 @@ public class MapManager : MonoBehaviour
         lineObj.transform.SetParent(nodesParent, false);
         lineObj.transform.SetAsFirstSibling();
         var path = lineObj.GetComponent<MapPathGraphic>();
-        path.Initialize(fromIndex, toIndex, a, b, lineThickness * 1.25f, pathLines);
+        bool toBoss = mapData != null && toIndex == mapData.bossIndex; // 보스 직전 → 보스는 직선
+        path.Initialize(fromIndex, toIndex, a, b, lineThickness * 1.25f, pathLines, pathShape, toBoss);
         pathLines.Add(path);
     }
 

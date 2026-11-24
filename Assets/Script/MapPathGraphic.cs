@@ -2,6 +2,31 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+// 경로 곡선 모양 설정 (MapManager 인스펙터에서 조절)
+[System.Serializable]
+public class MapPathShapeSettings
+{
+    [Header("휨 (Bow)")]
+    [Tooltip("노드 간 거리 대비 최대 휨 비율. 0이면 휘지 않음")]
+    [Range(0f, 0.5f)] public float bowStrength = 0.1f;
+    [Tooltip("경로별 휨 랜덤 배율 범위 (음수=반대 방향)")]
+    public Vector2 bowRandomRange = new Vector2(-1f, 1f);
+
+    [Header("잔물결 (Wobble)")]
+    [Tooltip("노드 간 거리 대비 잔물결 진폭 비율. 0이면 잔물결 없음")]
+    [Range(0f, 0.2f)] public float wobbleStrength = 0.03f;
+    [Tooltip("경로별 잔물결 진폭 랜덤 배율 범위")]
+    public Vector2 wobbleRandomRange = new Vector2(0.5f, 1.5f);
+    [Tooltip("곡선 구간 안의 반 파장 개수 (클수록 물결이 촘촘)")]
+    [Range(0f, 12f)] public float wobbleHalfWaves = 3f;
+
+    [Header("곡선 형태")]
+    [Tooltip("베지어 핸들 비율. 클수록 수평으로 오래 가다 꺾임")]
+    [Range(0f, 1f)] public float handleRatio = 0.44f;
+    [Tooltip("경로별 핸들 비율 랜덤 편차 (±)")]
+    [Range(0f, 0.5f)] public float handleRatioVariance = 0.1f;
+}
+
 [RequireComponent(typeof(RectTransform), typeof(CanvasRenderer))]
 public sealed class MapPathGraphic : MaskableGraphic
 {
@@ -17,6 +42,8 @@ public sealed class MapPathGraphic : MaskableGraphic
     private float bowAmount;           // 현 수직방향 휨 (px)
     private float wobbleAmount;        // 잔물결 진폭 (px)
     private float wobblePhase;
+    private float wobbleHalfWaves = 3f; // 곡선 구간 안의 반 파장 개수
+    private bool straight;              // true면 휨/잔물결 없이 두 노드를 직선으로 잇는다
 
     // 같은 노드에서 나가고/들어오는 경로들은 노드 쪽 끝이 같은 수평 직선으로 시작해 한동안 거의 포개진다.
     // 점선 위상을 공유 노드 기준(호길이)으로 맞추고, 다른 경로와 포개진 조각은 우선순위 높은 경로만 그려
@@ -38,8 +65,10 @@ public sealed class MapPathGraphic : MaskableGraphic
     public int ToIndex { get; private set; }
 
     public void Initialize(int fromIndex, int toIndex, RectTransform from, RectTransform to, float maxThickness,
-        IReadOnlyList<MapPathGraphic> allPaths = null)
+        IReadOnlyList<MapPathGraphic> allPaths = null, MapPathShapeSettings shape = null, bool straight = false)
     {
+        this.straight = straight;
+        if (shape == null) shape = new MapPathShapeSettings();
         FromIndex = fromIndex;
         ToIndex = toIndex;
         siblings = allPaths;
@@ -63,10 +92,12 @@ public sealed class MapPathGraphic : MaskableGraphic
         seed = unchecked(fromIndex * 73856093 ^ toIndex * 19349663 ^ 0x5bd1e995);
         var rng = new System.Random(seed);
         float chord = Vector2.Distance(start, end);
-        handleRatio = 0.44f + RandomRange(rng, -0.1f, 0.1f);
-        bowAmount = RandomRange(rng, -1f, 1f) * chord * 0.1f;
-        wobbleAmount = RandomRange(rng, 0.5f, 1.5f) * chord * 0.03f;
+        handleRatio = shape.handleRatio + RandomRange(rng, -shape.handleRatioVariance, shape.handleRatioVariance);
+        bowAmount = RandomRange(rng, shape.bowRandomRange.x, shape.bowRandomRange.y) * chord * shape.bowStrength;
+        wobbleAmount = Mathf.Abs(RandomRange(rng, shape.wobbleRandomRange.x, shape.wobbleRandomRange.y) * chord * shape.wobbleStrength);
         wobblePhase = RandomRange(rng, 0f, Mathf.PI * 2f);
+        wobbleHalfWaves = shape.wobbleHalfWaves;
+        if (straight) bowAmount = wobbleAmount = 0f;
 
         // 휨만큼 렉트 여유 확보 (마스크 컬링 대비)
         rectTransform.sizeDelta += Vector2.one * 2f * (Mathf.Abs(bowAmount) + wobbleAmount);
@@ -203,7 +234,7 @@ public sealed class MapPathGraphic : MaskableGraphic
         if (Vector2.Distance(start, end) <= 0f) return;
 
         float dirX = DirectionX;
-        stub = Mathf.Min(StubLength, Mathf.Abs(end.x - start.x) * 0.2f);
+        stub = straight ? 0f : Mathf.Min(StubLength, Mathf.Abs(end.x - start.x) * 0.2f);
         curveStart = start + new Vector2(dirX * stub, 0f);
         curveEnd = end - new Vector2(dirX * stub, 0f);
 
@@ -221,6 +252,7 @@ public sealed class MapPathGraphic : MaskableGraphic
     private Vector2 CurvePoint(float u)
     {
         Vector2 delta = curveEnd - curveStart;
+        if (straight) return curveStart + delta * u;
         float handleX = delta.x * handleRatio;
         float inverse = 1f - u;
         float blend = 3f * inverse * u;
@@ -231,7 +263,7 @@ public sealed class MapPathGraphic : MaskableGraphic
         Vector2 chordNormal = delta.sqrMagnitude > 0f ? new Vector2(-delta.y, delta.x).normalized : Vector2.zero;
         float envelope = Mathf.Sin(Mathf.PI * u);
         envelope *= envelope;
-        float lateral = envelope * (bowAmount + wobbleAmount * Mathf.Sin(u * Mathf.PI * 3f + wobblePhase));
+        float lateral = envelope * (bowAmount + wobbleAmount * Mathf.Sin(u * Mathf.PI * wobbleHalfWaves + wobblePhase));
         return point + chordNormal * lateral;
     }
 
