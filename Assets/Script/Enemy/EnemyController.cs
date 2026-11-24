@@ -189,7 +189,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         var nbc = Battle.NewBattleController.Instance;
         if (nbc == null) return;
         if (_ability == EnemySpecialAbility.CharmCardsOnBattleStart)
-            nbc.InsertCharmCards(7); // 구미호: 매혹 7장
+            nbc.InsertCharmCards(4); // 구미호: 매혹 4장
         else if (_ability == EnemySpecialAbility.CycleElementCurse)
         {
             _cycleCurseIndex = UnityEngine.Random.Range(0, CurseCycleElements.Length);

@@ -34,7 +34,7 @@ public enum EnemySpecialAbility
     ReflectDamageOnHit,      // 100006 화웅: 피격 시 플레이어에게 1 피해
     DuplicateAtHalfHp,       // 100009 액괴: 체력 절반 도달 시 자신 복제(1회)
     EscalatingAttack,        // 100012 풍식귀: 공격 시 피해가 1씩 증가
-    CharmCardsOnBattleStart, // 100016 구미호: 전투 시작 시 매혹 카드 7장 삽입
+    CharmCardsOnBattleStart, // 100016 구미호: 전투 시작 시 매혹 카드 4장 삽입
     CycleElementCurse,       // 100017 백족승: 속성 저주 후 공격마다 다른 속성으로 전환
     DoubleDamageAtHalfHp,    // 100018 무사: 체력 절반이 되면 피해 2배
     [InspectorName("피격 시 버린 더미 2장 소멸")]

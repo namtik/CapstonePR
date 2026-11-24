@@ -909,10 +909,19 @@ public class RelicStageController : MonoBehaviour
     // 버튼이 붙을 캔버스를 찾는다
     Canvas ResolveCanvas()
     {
-        if (itemSettings.itemImage != null && itemSettings.itemImage.canvas != null)
-            return itemSettings.itemImage.canvas;
+        // 아이템이 비활성일 때도 찾도록 includeInactive로 부모를 훑는다(Graphic.canvas는 비활성이면 null).
+        if (itemSettings.itemImage != null)
+        {
+            Canvas itemCanvas = itemSettings.itemImage.GetComponentInParent<Canvas>(true);
+            if (itemCanvas != null)
+                return itemCanvas;
+        }
 
-        Canvas canvas = GetComponentInParent<Canvas>();
+        Canvas canvas = GetComponentInChildren<Canvas>(true);
+        if (canvas != null)
+            return canvas;
+
+        canvas = GetComponentInParent<Canvas>(true);
         if (canvas != null)
             return canvas;
 
@@ -1020,9 +1029,9 @@ public class RelicStageController : MonoBehaviour
             return;
         }
 
-        Canvas canvas = GetComponentInParent<Canvas>();
-        if (canvas == null)
-            canvas = FindFirstObjectByType<Canvas>();
+        // RelicStage는 캔버스 밖 루트 오브젝트라 GetComponentInParent로는 못 찾는다.
+        // 아무 캔버스나 잡으면 팝업이 다른 화면에 생겨 안 보이므로, 유물 이미지가 속한 캔버스에 만든다.
+        Canvas canvas = ResolveCanvas();
         if (canvas == null)
             return;
 
