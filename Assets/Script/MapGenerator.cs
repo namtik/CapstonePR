@@ -5,6 +5,11 @@ using System.Linq;
 // 맵 노드를 절차적으로 생성하는 컴포넌트 (일반 컬럼 + 보스 컬럼)
 public class MapGenerator : MonoBehaviour
 {
+    private const int FixedRelicColumn = 5; // 화면에 표시되는 6라운드
+    private const int FixedRelicNodeCount = 2;
+    private const int MinEliteNodes = 3;
+    private const int MaxEliteNodes = 5;
+
     // 상점/이벤트/유물/휴식 노드 배치 규칙 (인스펙터 형식 통일)
     [System.Serializable]
     public struct SpecialNodePlacementSettings
@@ -27,7 +32,7 @@ public class MapGenerator : MonoBehaviour
     [Range(0f, 1f)]
     public float eliteChance = 0.2f; // 정예 노드 등장 확률
     [Tooltip("정예 노드가 등장 가능한 최소 컬럼")]
-    public int eliteColumnMin = 3; // 정예 등장 최소 컬럼
+    public int eliteColumnMin = 2; // 화면에 표시되는 3라운드부터 정예 등장
 
     [Tooltip("각 컬럼의 최소 노드 수")]
     public int minNodesPerColumn = 3; // 컬럼당 최소 노드 수
@@ -69,8 +74,8 @@ public class MapGenerator : MonoBehaviour
     [Header("유물 설정")]
     public SpecialNodePlacementSettings relicSettings = new SpecialNodePlacementSettings
     {
-        minNodes = 1,
-        maxNodes = 1,
+        minNodes = FixedRelicNodeCount,
+        maxNodes = FixedRelicNodeCount,
         columnMin = 2,
         columnMax = 8,
     };
@@ -103,50 +108,59 @@ public class MapGenerator : MonoBehaviour
         generatedMapData.nodes = new List<MapData.NodeEntry>();
         columnNodes.Clear();
 
-        // 특수 노드 컬럼을 랜덤 선택 (앞에서 고른 타입은 뒤 타입 후보에서 제외)
-        var reservedColumns = new HashSet<int>();
+        int normalColumnCount = Mathf.Max(2, totalColumns);
+        int preBossRestColumn = normalColumnCount - 1;
+        int relicColumn = FixedRelicColumn < preBossRestColumn ? FixedRelicColumn : -1;
+
+        // 6라운드와 보스 직전 열을 예약한 뒤 나머지 특수 노드의 열을 고른다.
+        var reservedColumns = new HashSet<int> { preBossRestColumn };
+        if (relicColumn >= 0)
+            reservedColumns.Add(relicColumn);
+
         actualShopColumns = PickSpecialNodeColumns(shopSettings, reservedColumns);
         reservedColumns.UnionWith(actualShopColumns);
         actualEventColumns = PickSpecialNodeColumns(eventSettings, reservedColumns);
         reservedColumns.UnionWith(actualEventColumns);
-        actualRelicColumns = PickSpecialNodeColumns(relicSettings, reservedColumns);
+        actualRelicColumns = PickSpecialNodeColumns(relicSettings, reservedColumns, relicColumn, FixedRelicNodeCount);
         reservedColumns.UnionWith(actualRelicColumns);
-        actualRestColumns = PickSpecialNodeColumns(restSettings, reservedColumns);
+        actualRestColumns = PickSpecialNodeColumns(restSettings, reservedColumns, preBossRestColumn);
+        reservedColumns.UnionWith(actualRestColumns);
 
         Debug.Log($"맵 생성: 상점={string.Join(",", actualShopColumns)}열, 이벤트={string.Join(",", actualEventColumns)}열, 유물={string.Join(",", actualRelicColumns)}열, 휴식={string.Join(",", actualRestColumns)}열");
 
         int nodeIndex = 0;
 
-        // 2. 일반 컬럼 노드 생성 (0~9열)
-        for (int col = 0; col < totalColumns; col++)
+        // 2. 일반 컬럼 노드 생성
+        for (int col = 0; col < normalColumnCount; col++)
         {
             List<int> currentColumnIndices = new List<int>();
 
-            // 0열(시작)은 항상 1개, 나머지는 범위 내 랜덤
+            bool isFixedRelicColumn = col == relicColumn;
+            bool isPreBossRestColumn = col == preBossRestColumn;
             int nodeCount;
-            if (col == 0)
-            {
-                nodeCount = 1; // 시작 노드는 1개
-            }
+            if (isFixedRelicColumn)
+                nodeCount = FixedRelicNodeCount;
+            else if (col == 0 || isPreBossRestColumn)
+                nodeCount = 1;
             else
-            {
                 nodeCount = Random.Range(minNodesPerColumn, maxNodesPerColumn + 1);
-            }
 
             // Y축 배치 계산
-            float[] yPositions = GenerateYPositions(nodeCount);
+            float[] yPositions = GenerateYPositions(nodeCount, !isFixedRelicColumn && !isPreBossRestColumn);
+
+            // 특수 노드가 배정된 열은 슬롯을 한 번만 무작위로 고른다.
+            int specialNodeIndex = col > 0 && !isFixedRelicColumn && reservedColumns.Contains(col)
+                ? Random.Range(0, nodeCount)
+                : -1;
 
             for (int i = 0; i < nodeCount; i++)
             {
-                NodeType nodeType = DetermineNodeType(col, i, nodeCount);
+                NodeType nodeType = isFixedRelicColumn ? NodeType.Relic : DetermineNodeType(col, i, specialNodeIndex);
 
                 MapData.NodeEntry node = new MapData.NodeEntry
                 {
                     anchoredPosition = new Vector2(col * columnSpacing, yPositions[i]),
                     nodeType = nodeType,
-                    roundData = roundDataConfig != null
-                        ? roundDataConfig.GetRoundData(nodeType)
-                        : null,
                     column = col,
                     connections = new List<int>()
                 };
@@ -162,12 +176,9 @@ public class MapGenerator : MonoBehaviour
         // 3. 보스 노드 생성 (마지막 열)
         MapData.NodeEntry bossNode = new MapData.NodeEntry
         {
-            anchoredPosition = new Vector2(totalColumns * columnSpacing, 0f),
+            anchoredPosition = new Vector2(normalColumnCount * columnSpacing, 0f),
             nodeType = NodeType.Boss,
-            roundData = roundDataConfig != null
-                ? roundDataConfig.GetRoundData(NodeType.Boss)
-                : null,
-            column = totalColumns,
+            column = normalColumnCount,
             connections = new List<int>()
         };
         generatedMapData.nodes.Add(bossNode);
@@ -181,14 +192,130 @@ public class MapGenerator : MonoBehaviour
         }
 
         // 5. 노드 연결 생성
-        ConnectNodes();
+        ConnectNodes(relicColumn, preBossRestColumn);
+        SeparateShopNodes();
+        BalanceEliteNodes();
+
+        if (roundDataConfig != null)
+        {
+            foreach (var node in generatedMapData.nodes)
+                node.roundData = roundDataConfig.GetRoundData(node.nodeType);
+        }
 
         Debug.Log($"맵 생성 완료: 총 {generatedMapData.nodes.Count}개 노드");
         return generatedMapData;
     }
 
+    void SeparateShopNodes()
+    {
+        var mapNodes = generatedMapData.nodes;
+        var originalShopSlots = new int[columnNodes.Count];
+        var allowedShopSlots = new List<int>[columnNodes.Count];
+
+        // 뒤에서부터 계산해 다음 상점과 연결되지 않는 슬롯만 남긴다.
+        for (int col = columnNodes.Count - 1; col >= 0; col--)
+        {
+            int shopSlot = columnNodes[col].FindIndex(index => mapNodes[index].nodeType == NodeType.Shop);
+            if (shopSlot < 0) continue;
+
+            int currentShop = columnNodes[col][shopSlot];
+            originalShopSlots[col] = currentShop;
+            var nextSlots = col + 1 < columnNodes.Count ? allowedShopSlots[col + 1] : null;
+            var allowed = columnNodes[col].Where(index => nextSlots == null
+                || nextSlots.Any(next => !mapNodes[index].connections.Contains(next))).ToList();
+            if (allowed.Count > 0)
+                allowedShopSlots[col] = allowed;
+            else
+                mapNodes[currentShop].nodeType = NodeType.Combat;
+        }
+
+        int previousShop = -1;
+        for (int col = 0; col < allowedShopSlots.Length; col++)
+        {
+            var allowed = allowedShopSlots[col];
+            if (allowed == null)
+            {
+                previousShop = -1;
+                continue;
+            }
+
+            if (previousShop >= 0)
+                allowed.RemoveAll(mapNodes[previousShop].connections.Contains);
+
+            int original = originalShopSlots[col];
+            int selected = allowed.Contains(original) ? original : allowed[Random.Range(0, allowed.Count)];
+            mapNodes[original].nodeType = mapNodes[selected].nodeType;
+            mapNodes[selected].nodeType = NodeType.Shop;
+            previousShop = selected;
+        }
+    }
+
+    void BalanceEliteNodes()
+    {
+        var mapNodes = generatedMapData.nodes;
+        var neighbors = new List<int>[mapNodes.Count];
+        for (int i = 0; i < neighbors.Length; i++)
+            neighbors[i] = new List<int>();
+
+        for (int i = 0; i < mapNodes.Count; i++)
+        {
+            foreach (int target in mapNodes[i].connections)
+            {
+                neighbors[i].Add(target);
+                neighbors[target].Add(i);
+            }
+        }
+
+        var candidates = Enumerable.Range(0, mapNodes.Count)
+            .Where(index => mapNodes[index].column > 0 && mapNodes[index].column >= eliteColumnMin
+                && (mapNodes[index].nodeType == NodeType.Combat || mapNodes[index].nodeType == NodeType.Elite))
+            .OrderByDescending(index => mapNodes[index].nodeType == NodeType.Elite)
+            .ThenBy(index => Random.value)
+            .ToList();
+        int rolledCount = candidates.Count(index => mapNodes[index].nodeType == NodeType.Elite);
+        int targetCount = Mathf.Clamp(rolledCount, MinEliteNodes, MaxEliteNodes);
+        var selected = new List<int>();
+
+        // 최초 확률 판정에서 뽑힌 슬롯을 우선 사용한다.
+        foreach (int index in candidates)
+        {
+            mapNodes[index].nodeType = NodeType.Combat;
+            if (selected.Count < targetCount && !selected.Any(neighbors[index].Contains))
+                selected.Add(index);
+        }
+
+        // 선택 순서 때문에 최소 수에 못 미쳤으면 가능한 조합을 한 번 더 찾는다.
+        if (selected.Count < MinEliteNodes)
+        {
+            var minimumSet = new List<int>();
+            if (TrySelectEliteMinimum(candidates, neighbors, 0, minimumSet))
+                selected = minimumSet;
+        }
+
+        foreach (int index in selected)
+            mapNodes[index].nodeType = NodeType.Elite;
+    }
+
+    bool TrySelectEliteMinimum(List<int> candidates, List<int>[] neighbors, int start, List<int> selected)
+    {
+        int needed = MinEliteNodes - selected.Count;
+        if (needed == 0) return true;
+
+        for (int i = start; i <= candidates.Count - needed; i++)
+        {
+            int index = candidates[i];
+            if (selected.Any(neighbors[index].Contains)) continue;
+
+            selected.Add(index);
+            if (TrySelectEliteMinimum(candidates, neighbors, i + 1, selected)) return true;
+            selected.RemoveAt(selected.Count - 1);
+        }
+
+        return false;
+    }
+
     // 노드 수만큼 Y축 위치를 균등 배치 + 랜덤 오프셋으로 계산한다
-    float[] GenerateYPositions(int count)
+    float[] GenerateYPositions(int count, bool randomize)
     {
         float[] positions = new float[count];
 
@@ -202,7 +329,7 @@ public class MapGenerator : MonoBehaviour
             float baseY = startY + i * ((minNodeSpacing + maxNodeSpacing) / 2f);
 
             // 랜덤 오프셋 추가 (과도한 겹침 방지)
-            float randomOffset = Random.Range(-30f, 30f);
+            float randomOffset = randomize ? Random.Range(-30f, 30f) : 0f;
             positions[i] = baseY + randomOffset;
         }
 
@@ -210,13 +337,22 @@ public class MapGenerator : MonoBehaviour
     }
 
     // 설정에 따라 특수 노드가 배치될 컬럼을 무작위로 고른다
-    List<int> PickSpecialNodeColumns(SpecialNodePlacementSettings settings, HashSet<int> reservedColumns)
+    List<int> PickSpecialNodeColumns(SpecialNodePlacementSettings settings, HashSet<int> reservedColumns,
+        int fixedColumn = -1, int fixedNodeCount = 1)
     {
         var picked = new List<int>();
         int minNodes = Mathf.Max(0, settings.minNodes);
         int maxNodes = Mathf.Max(minNodes, settings.maxNodes);
-        int count = Random.Range(minNodes, maxNodes + 1);
-        if (count <= 0)
+        int remainingCount = Random.Range(minNodes, maxNodes + 1);
+
+        // 고정 열도 맵당 노드 수에 포함한다.
+        if (fixedColumn >= 0)
+        {
+            picked.Add(fixedColumn);
+            remainingCount -= fixedNodeCount;
+        }
+
+        if (remainingCount <= 0)
             return picked;
 
         int colMin = Mathf.Min(settings.columnMin, settings.columnMax);
@@ -230,7 +366,7 @@ public class MapGenerator : MonoBehaviour
             available.Add(i);
         }
 
-        for (int i = 0; i < count && available.Count > 0; i++)
+        for (int i = 0; i < remainingCount && available.Count > 0; i++)
         {
             int randomIndex = Random.Range(0, available.Count);
             picked.Add(available[randomIndex]);
@@ -241,27 +377,23 @@ public class MapGenerator : MonoBehaviour
     }
 
     // 컬럼/위치 조건에 따라 노드 타입(시작/특수/정예/일반)을 결정한다
-    NodeType DetermineNodeType(int columnIndex, int nodeIndexInColumn, int totalNodesInColumn)
+    NodeType DetermineNodeType(int columnIndex, int nodeIndexInColumn, int specialNodeIndex)
     {
         // 시작 컬럼은 전투 고정
         if (columnIndex == 0)
             return NodeType.Combat;
 
-        // 상점 컬럼 중앙 노드
-        if (actualShopColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
-            return NodeType.Shop;
-
-        // 휴식 컬럼 중앙 노드
-        if (actualRestColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
-            return NodeType.Rest;
-
-        // 이벤트 컬럼 중앙 노드
-        if (actualEventColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
-            return NodeType.Event;
-
-        // 유물 컬럼 중앙 노드
-        if (actualRelicColumns.Contains(columnIndex) && nodeIndexInColumn == totalNodesInColumn / 2)
-            return NodeType.Relic;
+        if (nodeIndexInColumn == specialNodeIndex)
+        {
+            if (actualShopColumns.Contains(columnIndex))
+                return NodeType.Shop;
+            if (actualRestColumns.Contains(columnIndex))
+                return NodeType.Rest;
+            if (actualEventColumns.Contains(columnIndex))
+                return NodeType.Event;
+            if (actualRelicColumns.Contains(columnIndex))
+                return NodeType.Relic;
+        }
 
         if (columnIndex >= eliteColumnMin && Random.value < eliteChance)
             return NodeType.Elite;
@@ -271,7 +403,7 @@ public class MapGenerator : MonoBehaviour
     }
 
     // 각 컬럼을 다음 컬럼으로 연결하고 단절 노드를 보정한다
-    void ConnectNodes()
+    void ConnectNodes(int relicColumn, int preBossRestColumn)
     {
         // 1. 일반 컬럼 간 연결 (0->1, 1->2, ..., 마지막->보스)
         for (int col = 0; col < columnNodes.Count; col++)
@@ -291,10 +423,20 @@ public class MapGenerator : MonoBehaviour
                 nextColumn = new List<int> { generatedMapData.bossIndex };
             }
 
+            if (col + 1 == relicColumn)
+            {
+                ConnectToRelicColumn(currentColumn, nextColumn);
+                continue;
+            }
+
             // 현재 컬럼 각 노드에서 다음 컬럼으로 연결
             foreach (int nodeIndex in currentColumn)
             {
-                ConnectToNextColumn(nodeIndex, nextColumn);
+                // 보스 직전에는 휴식으로 모인다.
+                if (col >= preBossRestColumn - 1)
+                    generatedMapData.nodes[nodeIndex].connections.AddRange(nextColumn);
+                else
+                    ConnectToNextColumn(nodeIndex, nextColumn, requireConnection: col == relicColumn);
             }
         }
 
@@ -302,8 +444,27 @@ public class MapGenerator : MonoBehaviour
         EnsureAllNodesConnected();
     }
 
+    // 유물 직전 열을 위아래로 나눈다. 가운데 노드가 하나면 두 유물에 연결한다.
+    void ConnectToRelicColumn(List<int> previousColumn, List<int> relicColumn)
+    {
+        var nodes = generatedMapData.nodes;
+        var previousByHeight = previousColumn.OrderBy(index => nodes[index].anchoredPosition.y).ToArray();
+        var relicsByHeight = relicColumn.OrderBy(index => nodes[index].anchoredPosition.y).ToArray();
+        int lastLower = (previousByHeight.Length - 1) / 2;
+        int firstUpper = previousByHeight.Length / 2;
+
+        for (int i = 0; i < previousByHeight.Length; i++)
+        {
+            var connections = nodes[previousByHeight[i]].connections;
+            if (i <= lastLower)
+                connections.Add(relicsByHeight[0]);
+            if (i >= firstUpper)
+                connections.Add(relicsByHeight[1]);
+        }
+    }
+
     // 한 노드를 Y거리가 가까운 다음 컬럼 노드 1~2개와 연결한다
-    void ConnectToNextColumn(int fromIndex, List<int> nextColumnIndices)
+    void ConnectToNextColumn(int fromIndex, List<int> nextColumnIndices, bool requireConnection)
     {
         Vector2 fromPos = generatedMapData.nodes[fromIndex].anchoredPosition;
 
@@ -313,12 +474,14 @@ public class MapGenerator : MonoBehaviour
                 Index = idx,
                 Distance = Mathf.Abs(generatedMapData.nodes[idx].anchoredPosition.y - fromPos.y)
             })
-            .Where(x => x.Distance <= maxConnectionDistance)
             .OrderBy(x => x.Distance)
             .ToList();
 
         // 최소 1개, 최대 2개 연결
-        int connectCount = Mathf.Min(Random.Range(1, 3), sortedTargets.Count);
+        int candidates = sortedTargets.Count(x => x.Distance <= maxConnectionDistance);
+        if (requireConnection && sortedTargets.Count > 0)
+            candidates = Mathf.Max(1, candidates);
+        int connectCount = Mathf.Min(Random.Range(1, 3), candidates);
 
         for (int i = 0; i < connectCount; i++)
         {

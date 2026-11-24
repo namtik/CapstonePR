@@ -38,10 +38,10 @@ public class BattleWalkTransition : MonoBehaviour
         StartCoroutine(Run(onDone, null));
     }
 
-    public void PlayStageTwo(System.Action onDone, bool bookAcquired)
+    public void PlayStageTwo(System.Action onDone)
     {
         if (IsPlaying) return;
-        StartCoroutine(Run(onDone, StageTwoWalkOverlay.Open(transform, bookAcquired)));
+        StartCoroutine(Run(onDone, StageTwoWalkOverlay.Open(transform)));
     }
 
     IEnumerator Run(System.Action onDone, StageTwoWalkOverlay stageTwo)

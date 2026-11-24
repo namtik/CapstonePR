@@ -197,7 +197,7 @@ public class GameStateController : MonoBehaviour
     void ShowFirstStageIntro(System.Action enterMap)
     {
         if (openingTransition != null) return;
-        openingTransition = StageTwoWalkOverlay.Open(transform, bookAcquired: false, stageNumber: 1);
+        openingTransition = StageTwoWalkOverlay.Open(transform, stageNumber: 1);
         if (openingTransition == null)
         {
             enterMap?.Invoke();

@@ -10,7 +10,11 @@ public class MapManager : MonoBehaviour
 
     [Header("Path visuals")]
     public float lineThickness = 8f; // 경로 선 두께
-    public Color lineColor = new Color(0.8f, 0.8f, 0.8f, 1f); // 경로 선 색상
+    [UnityEngine.Serialization.FormerlySerializedAs("lineColor")]
+    [SerializeField] private Color futurePathColor = new Color32(150, 115, 82, 255);
+    [SerializeField] private Color availablePathColor = new Color32(168, 50, 41, 255);
+    [SerializeField] private Color visitedPathColor = new Color32(101, 66, 47, 255);
+    [SerializeField] private Color missedPathColor = new Color32(179, 151, 118, 255);
 
     [Header("Player Position Highlight")]
     public float currentPositionScale = 1.3f; // 현재 위치 노드 강조 배율
@@ -25,8 +29,7 @@ public class MapManager : MonoBehaviour
     private MapGenerator mapGenerator; // 맵 생성기 참조
 
     private List<MapNode> nodes = new List<MapNode>(); // 생성된 노드 목록
-    private List<GameObject> pathLines = new List<GameObject>(); // 생성된 경로 선 목록
-    private Sprite lineSprite; // 경로 선용 스프라이트
+    private readonly List<MapPathGraphic> pathLines = new List<MapPathGraphic>();
 
     public RoundManager roundManager;  // 라운드 관리자 참조
 
@@ -38,18 +41,13 @@ public class MapManager : MonoBehaviour
 
     private bool isMapGenerated = false;  // 맵 생성 완료 여부
 
-    // 초기화: MapGenerator 확보, 경로 선 스프라이트 준비
+    // 초기화: MapGenerator 확보
     void Awake()
     {
         mapGenerator = GetComponent<MapGenerator>();
         if (mapGenerator == null)
         {
             mapGenerator = gameObject.AddComponent<MapGenerator>();
-        }
-
-        if (lineSprite == null)
-        {
-            lineSprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
         }
     }
 
@@ -76,6 +74,7 @@ public class MapManager : MonoBehaviour
             // 기존 노드 상태/활성화/강조 갱신
             UpdateNodeStates();
             UpdateNodeAvailability();
+            UpdatePathVisuals();
             HighlightCurrentPosition();
 
             // 카메라를 현재 위치로 이동
@@ -196,7 +195,7 @@ public class MapManager : MonoBehaviour
             {
                 if (tgt >= 0 && tgt < nodes.Count)
                 {
-                    CreateLineBetween(nodes[i].GetComponent<RectTransform>(), nodes[tgt].GetComponent<RectTransform>());
+                    CreateLineBetween(i, tgt);
                 }
             }
         }
@@ -206,6 +205,7 @@ public class MapManager : MonoBehaviour
 
         // 노드 활성화 상태 갱신
         UpdateNodeAvailability();
+        UpdatePathVisuals();
 
         // 스크롤을 시작 노드로 즉시 이동
         UpdateScrollPosition(true);
@@ -311,28 +311,74 @@ public class MapManager : MonoBehaviour
     }
 
     // 두 노드를 잇는 경로 선 오브젝트를 생성한다
-    void CreateLineBetween(RectTransform a, RectTransform b)
+    void CreateLineBetween(int fromIndex, int toIndex)
     {
+        var a = nodes[fromIndex].GetComponent<RectTransform>();
+        var b = nodes[toIndex].GetComponent<RectTransform>();
         if (a == null || b == null) return;
-        GameObject lineObj = new GameObject("PathLine");
+
+        GameObject lineObj = new GameObject("PathLine", typeof(RectTransform), typeof(MapPathGraphic));
         lineObj.transform.SetParent(nodesParent, false);
+        lineObj.transform.SetAsFirstSibling();
+        var path = lineObj.GetComponent<MapPathGraphic>();
+        path.Initialize(fromIndex, toIndex, a, b, lineThickness * 1.25f);
+        pathLines.Add(path);
+    }
 
-        Image img = lineObj.AddComponent<Image>();
-        img.color = lineColor;
-        if (lineSprite != null) img.sprite = lineSprite;
-        img.raycastTarget = false;
+    void UpdatePathVisuals()
+    {
+        var state = GameStateController.Instance;
+        int current = state != null ? state.lastVisitedNodeIndex : -1;
+        bool hasCurrentNode = current >= 0 && current < nodes.Count;
+        var futureNodes = new HashSet<int>();
+        if (hasCurrentNode)
+        {
+            var nextNodes = mapData.nodes[current].connections;
+            if (nextNodes != null)
+            {
+                foreach (int next in nextNodes)
+                {
+                    if (IsNodeSelectable(next))
+                        CollectFutureNodes(next, futureNodes);
+                }
+            }
+        }
 
-        RectTransform rt = lineObj.GetComponent<RectTransform>();
-        Vector2 dir = b.anchoredPosition - a.anchoredPosition;
-        float len = dir.magnitude;
-        rt.sizeDelta = new Vector2(len, lineThickness);
-        rt.anchoredPosition = a.anchoredPosition + dir * 0.5f;
-        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-        rt.localRotation = Quaternion.Euler(0, 0, angle);
+        foreach (var path in pathLines)
+        {
+            if (path.FromIndex == current && IsNodeSelectable(path.ToIndex))
+            {
+                path.SetStyle(availablePathColor, lineThickness * 1.25f, dashed: true);
+                path.transform.SetSiblingIndex(pathLines.Count - 1);
+            }
+            else if (state != null && state.IsNodeCleared(path.FromIndex)
+                && (path.ToIndex == current || state.IsNodeCleared(path.ToIndex)))
+            {
+                path.SetStyle(visitedPathColor, lineThickness, dashed: false);
+            }
+            else
+            {
+                bool isFuturePath = !hasCurrentNode || futureNodes.Contains(path.FromIndex);
+                path.SetStyle(isFuturePath ? futurePathColor : missedPathColor, lineThickness * 0.65f, dashed: true);
+            }
+        }
+    }
 
-        lineObj.transform.SetSiblingIndex(0);
+    bool IsNodeSelectable(int index)
+    {
+        return index >= 0 && index < nodes.Count
+            && nodes[index].TryGetComponent(out Button button) && button.interactable;
+    }
 
-        pathLines.Add(lineObj);
+    void CollectFutureNodes(int index, HashSet<int> futureNodes)
+    {
+        if (index < 0 || index >= nodes.Count || !futureNodes.Add(index)) return;
+
+        var connections = mapData.nodes[index].connections;
+        if (connections == null) return;
+
+        foreach (int next in connections)
+            CollectFutureNodes(next, futureNodes);
     }
 
     // 생성된 모든 노드와 경로 선을 제거한다
@@ -346,7 +392,7 @@ public class MapManager : MonoBehaviour
 
         foreach (var l in pathLines)
         {
-            if (l != null) Destroy(l);
+            if (l != null) Destroy(l.gameObject);
         }
         pathLines.Clear();
     }

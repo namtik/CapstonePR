@@ -9,17 +9,15 @@ public sealed class StageTwoWalkOverlay : MonoBehaviour
     [SerializeField] RawImage brush;
     [SerializeField] CanvasGroup title;
     [SerializeField] Text titleLabel;
-    [SerializeField] CanvasGroup bookNotice;
     [SerializeField] AudioSource soundtrack;
     [SerializeField, Min(0.01f)] float brushDuration = 0.6f;
     [SerializeField, Min(0.01f)] float titleDuration = 1.73f;
     [SerializeField, Min(0.01f)] float revealDuration = 0.67f;
 
-    bool showBookNotice;
     EventSystem menuEvents;
     bool previousNavigation;
 
-    public static StageTwoWalkOverlay Open(Transform parent, bool bookAcquired, int stageNumber = 2)
+    public static StageTwoWalkOverlay Open(Transform parent, int stageNumber = 2)
     {
         var prefab = Resources.Load<GameObject>("UI/StageTwoWalkOverlay");
         if (prefab == null)
@@ -29,8 +27,6 @@ public sealed class StageTwoWalkOverlay : MonoBehaviour
         }
         var overlay = Instantiate(prefab, parent, false).GetComponent<StageTwoWalkOverlay>();
         overlay.titleLabel.text = $"스테이지 {stageNumber}";
-        overlay.showBookNotice = bookAcquired;
-        overlay.bookNotice.alpha = bookAcquired ? 1f : 0f;
         overlay.title.alpha = 0f;
         overlay.SetBrush(0f);
         overlay.menuEvents = EventSystem.current;
@@ -89,13 +85,10 @@ public sealed class StageTwoWalkOverlay : MonoBehaviour
     {
         float closing = Mathf.Min(duration, brushDuration);
         SetBrush(Mathf.InverseLerp(duration - closing, duration, elapsed));
-        if (showBookNotice)
-            bookNotice.alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.4f, .62f, elapsed / duration));
     }
 
     public IEnumerator RevealMap(System.Action beforeReveal = null)
     {
-        bookNotice.alpha = 0f;
         SetBrush(1f);
         for (float t = 0f; t < titleDuration; t += Time.unscaledDeltaTime)
         {
