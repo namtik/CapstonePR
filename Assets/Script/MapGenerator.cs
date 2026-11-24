@@ -42,13 +42,27 @@ public class MapGenerator : MonoBehaviour
 
     [Header("배치 설정")]
     [Tooltip("컬럼 간 가로 간격")]
-    public float columnSpacing = 250f; // 컬럼 가로 간격
+    public float columnSpacing = 375f; // 컬럼 가로 간격
+
+    [Tooltip("노드 X 위치를 자기 열 기준 ±이 값 안에서 랜덤으로 (유물·보스 전 휴식·보스 고정 열 제외)")]
+    public float nodeXJitter = 40f; // 노드 가로 랜덤 폭
+
+    [Tooltip("인접 열 노드끼리 최소 가로 거리 — 랜덤 폭이 이를 넘지 않도록 자동으로 줄인다")]
+    public float minAdjacentColumnGap = 260f; // 인접 열 최소 가로 거리
 
     [Tooltip("노드 간 최소 세로 간격")]
     public float minNodeSpacing = 100f; // 노드 최소 세로 간격
 
     [Tooltip("노드 간 최대 세로 간격")]
     public float maxNodeSpacing = 200f; // 노드 최대 세로 간격
+
+    [Tooltip("랜덤 열의 노드 간 세로 간격 최소 배율 (기본 간격 = 최소·최대 세로 간격의 평균)")]
+    [Range(0.3f, 1f)]
+    public float randomGapMinRatio = 0.7f; // 랜덤 간격 최소 배율
+
+    [Tooltip("랜덤 열의 노드 간 세로 간격 최대 배율")]
+    [Range(1f, 2.5f)]
+    public float randomGapMaxRatio = 1.4f; // 랜덤 간격 최대 배율
 
     [Tooltip("연결 가능한 최대 Y축 거리")]
     public float maxConnectionDistance = 300f; // 연결 허용 최대 Y거리
@@ -153,13 +167,19 @@ public class MapGenerator : MonoBehaviour
                 ? Random.Range(0, nodeCount)
                 : -1;
 
+            // 고정 열(유물·보스 전 휴식)은 가로 위치 고정, 나머지는 열 기준 ±지터
+            // 양쪽 이웃 열이 모두 반대로 흔들려도 minAdjacentColumnGap 이상 떨어지도록 폭을 제한한다.
+            bool jitterX = !isFixedRelicColumn && !isPreBossRestColumn;
+            float xJitter = Mathf.Clamp(Mathf.Min(nodeXJitter, (columnSpacing - minAdjacentColumnGap) * 0.5f), 0f, nodeXJitter);
+
             for (int i = 0; i < nodeCount; i++)
             {
                 NodeType nodeType = isFixedRelicColumn ? NodeType.Relic : DetermineNodeType(col, i, specialNodeIndex);
+                float x = col * columnSpacing + (jitterX ? Random.Range(-xJitter, xJitter) : 0f);
 
                 MapData.NodeEntry node = new MapData.NodeEntry
                 {
-                    anchoredPosition = new Vector2(col * columnSpacing, yPositions[i]),
+                    anchoredPosition = new Vector2(x, yPositions[i]),
                     nodeType = nodeType,
                     column = col,
                     connections = new List<int>()
@@ -318,20 +338,25 @@ public class MapGenerator : MonoBehaviour
     float[] GenerateYPositions(int count, bool randomize)
     {
         float[] positions = new float[count];
+        float baseGap = (minNodeSpacing + maxNodeSpacing) / 2f;
 
-        // 전체 높이 기준 계산
-        float totalHeight = (count - 1) * ((minNodeSpacing + maxNodeSpacing) / 2f);
-        float startY = -totalHeight / 2f;
-
-        for (int i = 0; i < count; i++)
+        // 이웃 노드 간격: 고정 열은 기본 간격, 랜덤 열은 기본 간격의 [최소배율, 최대배율] 사이에서 각각 뽑는다.
+        // 간격이 최소배율 아래로는 내려가지 않으므로 노드끼리 겹치지 않는다.
+        float minRatio = Mathf.Min(randomGapMinRatio, randomGapMaxRatio);
+        float maxRatio = Mathf.Max(randomGapMinRatio, randomGapMaxRatio);
+        float y = 0f;
+        positions[0] = 0f;
+        for (int i = 1; i < count; i++)
         {
-            // 기본 균등 배치
-            float baseY = startY + i * ((minNodeSpacing + maxNodeSpacing) / 2f);
-
-            // 랜덤 오프셋 추가 (과도한 겹침 방지)
-            float randomOffset = randomize ? Random.Range(-30f, 30f) : 0f;
-            positions[i] = baseY + randomOffset;
+            float gap = randomize ? baseGap * Random.Range(minRatio, maxRatio) : baseGap;
+            y += gap;
+            positions[i] = y;
         }
+
+        // 열 전체를 세로 중앙(0) 기준으로 맞춘다
+        float center = y / 2f;
+        for (int i = 0; i < count; i++)
+            positions[i] -= center;
 
         return positions;
     }

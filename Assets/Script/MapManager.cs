@@ -207,7 +207,8 @@ public class MapManager : MonoBehaviour
         UpdateNodeAvailability();
         UpdatePathVisuals();
 
-        // 스크롤을 시작 노드로 즉시 이동
+        // 노드 분포에 맞춰 스크롤 범위 갱신 후 시작 노드로 즉시 이동
+        ApplyScrollRange();
         UpdateScrollPosition(true);
 
         SyncRunStageDisplay();
@@ -231,6 +232,26 @@ public class MapManager : MonoBehaviour
             return;
 
         stateController.SetCurrentMapStageFromColumn(mapData.nodes[nodeIndex].column);
+    }
+
+    // 생성된 노드의 가로 범위로 스크롤 가능 범위를 설정한다
+    void ApplyScrollRange()
+    {
+        if (scrollController == null)
+            scrollController = FindFirstObjectByType<MapScrollController>();
+        if (scrollController == null || nodes.Count == 0) return;
+
+        float minNodeX = float.MaxValue, maxNodeX = float.MinValue;
+        foreach (var node in nodes)
+        {
+            if (node == null) continue;
+            var rt = node.GetComponent<RectTransform>();
+            if (rt == null) continue;
+            minNodeX = Mathf.Min(minNodeX, rt.anchoredPosition.x);
+            maxNodeX = Mathf.Max(maxNodeX, rt.anchoredPosition.x);
+        }
+        if (minNodeX > maxNodeX) return;
+        scrollController.SetRangeFromNodes(minNodeX, maxNodeX);
     }
 
     // 스크롤을 현재(또는 시작) 노드 위치로 이동시킨다
@@ -321,7 +342,7 @@ public class MapManager : MonoBehaviour
         lineObj.transform.SetParent(nodesParent, false);
         lineObj.transform.SetAsFirstSibling();
         var path = lineObj.GetComponent<MapPathGraphic>();
-        path.Initialize(fromIndex, toIndex, a, b, lineThickness * 1.25f);
+        path.Initialize(fromIndex, toIndex, a, b, lineThickness * 1.25f, pathLines);
         pathLines.Add(path);
     }
 
@@ -348,20 +369,24 @@ public class MapManager : MonoBehaviour
         {
             if (path.FromIndex == current && IsNodeSelectable(path.ToIndex))
             {
-                path.SetStyle(availablePathColor, lineThickness * 1.25f, dashed: true);
+                path.SetStyle(availablePathColor, lineThickness * 1.25f, dashed: true, priority: 3);
                 path.transform.SetSiblingIndex(pathLines.Count - 1);
             }
             else if (state != null && state.IsNodeCleared(path.FromIndex)
                 && (path.ToIndex == current || state.IsNodeCleared(path.ToIndex)))
             {
-                path.SetStyle(visitedPathColor, lineThickness, dashed: false);
+                path.SetStyle(visitedPathColor, lineThickness, dashed: false, priority: 2);
             }
             else
             {
                 bool isFuturePath = !hasCurrentNode || futureNodes.Contains(path.FromIndex);
-                path.SetStyle(isFuturePath ? futurePathColor : missedPathColor, lineThickness * 0.65f, dashed: true);
+                path.SetStyle(isFuturePath ? futurePathColor : missedPathColor, lineThickness * 0.65f, dashed: true, priority: isFuturePath ? 1 : 0);
             }
         }
+
+        // 겹침 판정은 다른 경로의 우선순위에 달려 있으므로 스타일이 바뀌면 전부 다시 그린다
+        foreach (var path in pathLines)
+            if (path != null) path.SetVerticesDirty();
     }
 
     bool IsNodeSelectable(int index)
@@ -469,6 +494,7 @@ public class MapManager : MonoBehaviour
         // 상호작용 가능 여부 체크
         var btn = node.GetComponent<Button>();
         if (btn == null || !btn.interactable) return;
+        if (MapScrollController.LastGestureWasDrag) return; // 맵을 끌다가 노드 위에서 뗀 경우는 클릭 아님
         if (ScreenFader.IsCovering) return; // 화면 전환 중 중복 진입 방지
 
         if (GameStateController.Instance == null) return;

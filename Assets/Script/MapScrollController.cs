@@ -17,7 +17,13 @@ public class MapScrollController : MonoBehaviour
 
     [Tooltip("드래그 감도 (1 = 화면 픽셀과 1:1)")]
     [Range(0.1f, 3f)]
-    public float dragSensitivity = 1f; // 드래그 감도
+    public float dragSensitivity = 1.2f; // 드래그 감도
+
+    [Tooltip("이 거리(화면 픽셀) 이상 움직여야 드래그로 판정 — 노드를 누른 채 끌어도 스크롤되고, 살짝 누르면 클릭")]
+    public float dragThreshold = 8f; // 드래그 판정 거리
+
+    /// <summary>마지막 누름이 드래그로 판정됐는지 — 노드 클릭 처리에서 확인해 드래그 후 클릭을 무시한다.</summary>
+    public static bool LastGestureWasDrag { get; private set; }
 
     [Header("스크롤 범위")]
     [Tooltip("X축 최소 위치 (왼쪽 끝)")]
@@ -26,11 +32,19 @@ public class MapScrollController : MonoBehaviour
     [Tooltip("X축 최대 위치 (오른쪽 끝)")]
     public float maxX = 500f; // 스크롤 최대 X
 
+    [Tooltip("맵 생성 시 노드 위치로 스크롤 범위를 자동 계산 (minX/maxX 무시)")]
+    public bool autoRangeFromNodes = true; // 노드 기준 자동 범위 사용 여부
+
+    [Tooltip("자동 범위일 때 양 끝 노드 바깥으로 더 끌 수 있는 여유 (캔버스 단위)")]
+    public float rangePadding = 400f; // 자동 범위 여유
+
     private Vector2 targetPosition; // 자동 스크롤 목표 위치
     private bool isMoving = false; // 자동 스크롤 진행 중 여부
 
     private Canvas _canvas; // 캔버스 캐시
     private bool _dragging = false; // 드래그 중 여부
+    private bool _pressing = false; // 맵 위에서 누르고 있는 중 여부
+    private Vector2 _pressStartPos; // 누르기 시작한 위치
     private Vector2 _lastPointerPos; // 직전 포인터 위치
 
     // 시작 시 스크롤 목표를 현재 위치로 초기화한다
@@ -80,30 +94,38 @@ public class MapScrollController : MonoBehaviour
         if (Battle.UI.InventoryPanelController.IsOpen || Battle.UI.CodexPanelController.IsOpen || SettingPanel.IsOverlayOpen)
         {
             _dragging = false;
+            _pressing = false;
             return;
         }
 
         if (Input.GetMouseButtonDown(0))
         {
+            LastGestureWasDrag = false;
+            _dragging = false;
             // 예전엔 포인터 아래에 UI가 하나라도 있으면 막았다 → 맵 배경·장식 이미지 위에서도 안 잡혀 잡히는 범위가 매우 좁았다.
             // 이제는 맵 캔버스의 '누를 수 없는' 그래픽(배경·길·장식) 위면 잡히고, 노드 버튼 등 상호작용 UI나 다른 창 위에서만 막는다.
-            if (!CanStartDragAt(Input.mousePosition))
-            {
-                _dragging = false;
-                return;
-            }
-
-            _dragging = true;
+            _pressing = CanStartDragAt(Input.mousePosition);
+            _pressStartPos = Input.mousePosition;
             _lastPointerPos = Input.mousePosition;
+            return;
         }
         else if (Input.GetMouseButtonUp(0))
         {
             _dragging = false;
+            _pressing = false;
         }
 
-        if (!_dragging || !Input.GetMouseButton(0)) return;
+        if (!_pressing || !Input.GetMouseButton(0)) return;
 
         Vector2 current = Input.mousePosition;
+        if (!_dragging)
+        {
+            // 임계 거리를 넘기 전까지는 클릭 후보로 둔다
+            if (Mathf.Abs(current.x - _pressStartPos.x) < dragThreshold) return;
+            _dragging = true;
+            LastGestureWasDrag = true; // 이번 누름에서 노드 클릭은 무시
+        }
+
         float deltaX = current.x - _lastPointerPos.x;
         _lastPointerPos = current;
 
@@ -151,11 +173,26 @@ public class MapScrollController : MonoBehaviour
         if (_canvas != null && topCanvas != null && topCanvas.rootCanvas != _canvas.rootCanvas)
             return false;
 
-        // 버튼(노드 등)·클릭/드래그를 받는 UI 위에서는 시작하지 않는다(클릭이 우선)
-        if (top.GetComponentInParent<UnityEngine.UI.Selectable>() != null) return false;
-        if (UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IPointerClickHandler>(top) != null) return false;
+        // 맵 노드 위는 활성/비활성 상관없이 허용 — 짧게 누르면 클릭, 끌면 스크롤(임계 거리로 구분)
+        if (top.GetComponentInParent<MapNode>() != null) return true;
+
+        // 자체 드래그를 받는 UI(스크롤뷰 등) 위에서는 시작하지 않는다
         if (UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IBeginDragHandler>(top) != null) return false;
+
+        // 그 외 버튼은 비활성(누를 수 없음)일 때만 허용
+        var selectable = top.GetComponentInParent<UnityEngine.UI.Selectable>();
+        if (selectable != null) return !selectable.IsInteractable();
+        if (UnityEngine.EventSystems.ExecuteEvents.GetEventHandler<UnityEngine.EventSystems.IPointerClickHandler>(top) != null) return false;
         return true;
+    }
+
+    // 맵 노드의 가로 범위(가장 왼쪽/오른쪽 노드 X)로 스크롤 범위를 다시 잡는다
+    public void SetRangeFromNodes(float minNodeX, float maxNodeX)
+    {
+        if (!autoRangeFromNodes) return;
+        // 노드를 화면 중앙에 두는 위치 = -node.x 이므로 오른쪽 끝 노드가 minX, 왼쪽 끝 노드가 maxX가 된다
+        minX = -maxNodeX - rangePadding;
+        maxX = -minNodeX + rangePadding;
     }
 
     // 캔버스 스케일 팩터를 안전하게 반환한다

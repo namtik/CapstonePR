@@ -19531,7 +19531,7 @@ MonoBehaviour:
   scrollTarget: {fileID: 454685445}
   smoothSpeed: 8
   enableDrag: 1
-  dragSensitivity: 1
+  dragSensitivity: 1.2
   minX: -3000
   maxX: 500
 --- !u!114 &829038373
@@ -19551,7 +19551,7 @@ MonoBehaviour:
   eliteColumnMin: 3
   minNodesPerColumn: 3
   maxNodesPerColumn: 4
-  columnSpacing: 250
+  columnSpacing: 375
   minNodeSpacing: 100
   maxNodeSpacing: 200
   maxConnectionDistance: 300
