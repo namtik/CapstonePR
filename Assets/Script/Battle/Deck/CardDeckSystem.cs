@@ -514,6 +514,19 @@ namespace Battle.Deck
             Battle.UI.BattleLog.NoteMove(zone, card);
         }
 
+        // 각성 순환용: 버린 더미를 뽑을 더미에 합쳐 섞는다(리셔플 카운트업 연출 없이).
+        // 뽑을 더미가 빌 때만 섞으면 방금 쓴 몇 장이 같은 순서로 계속 돌아오기 때문에, 드로우 직전마다 호출한다.
+        public void MergeDiscardIntoDrawShuffled()
+        {
+            if (_discardPile.Count > 0)
+            {
+                _drawPile.AddRange(_discardPile);
+                _discardPile.Clear();
+            }
+            Shuffle(_drawPile);
+            OnPileChanged?.Invoke();
+        }
+
         // 더미 변경 이벤트를 외부에서 강제 발행
         public void NotifyChanged() => OnPileChanged?.Invoke();
 

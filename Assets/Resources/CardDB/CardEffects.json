@@ -3381,6 +3381,26 @@
       "runtimeKey": ""
     },
     {
+      "cardId": 501,
+      "index": 2,
+      "when": "ON_USE",
+      "ifCond": "",
+      "doAction": "GAIN_BLOCK",
+      "target": "PLAYER",
+      "amount": 3,
+      "formula": "",
+      "hits": 0,
+      "hitFormula": "",
+      "status": "",
+      "cardFilter": "",
+      "fromZone": "",
+      "toZone": "",
+      "select": "",
+      "repeat": "",
+      "extra": "",
+      "runtimeKey": ""
+    },
+    {
       "cardId": 502,
       "index": 1,
       "when": "ON_USE",

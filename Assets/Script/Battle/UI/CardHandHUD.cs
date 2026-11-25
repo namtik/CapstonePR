@@ -353,20 +353,40 @@ namespace Battle.UI
         // 뽑을/버린 더미 카운트 텍스트에 클릭 핸들러 연결
         void SetupPileClickHandlers()
         {
-            AttachPileClick(drawCountText, () => TogglePileViewer(0));
-            AttachPileClick(discardCountText, () => TogglePileViewer(1));
+            AttachPileButton(drawCountText, "Deck", () => TogglePileViewer(0));
+            AttachPileButton(discardCountText, "Grave", () => TogglePileViewer(1));
         }
 
-        // 텍스트에 PointerClick 이벤트 트리거를 부착
-        void AttachPileClick(TMP_Text txt, System.Action action)
+        // 더미 숫자 텍스트가 속한 더미 오브젝트(Deck/Grave) 전체를 버튼으로 만들고 호버 확대를 붙인다.
+        // 자식(원·숫자)을 눌러도 클릭·호버가 부모 버튼으로 전달된다. 이름이 맞는 상위 오브젝트가 없으면 텍스트에 붙인다.
+        void AttachPileButton(TMP_Text txt, string rootName, System.Action action)
         {
             if (txt == null) return;
+            Transform root = FindAncestorNamed(txt.transform, rootName);
+            if (root == null) root = txt.transform;
+
             txt.raycastTarget = true;
-            var trigger = txt.gameObject.GetComponent<EventTrigger>();
-            if (trigger == null) trigger = txt.gameObject.AddComponent<EventTrigger>();
-            var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-            entry.callback.AddListener(_ => action());
-            trigger.triggers.Add(entry);
+            var graphic = root.GetComponent<Graphic>();
+            if (graphic != null) graphic.raycastTarget = true;
+
+            var button = root.GetComponent<Button>();
+            if (button == null) button = root.gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.None; // 색 변화 대신 호버 확대로 표시
+            if (graphic != null) button.targetGraphic = graphic;
+            var nav = button.navigation;
+            nav.mode = Navigation.Mode.None; // 키보드/패드 포커스로 선택되지 않게
+            button.navigation = nav;
+            button.onClick.AddListener(() => action());
+
+            if (root.GetComponent<ButtonHoverScale>() == null)
+                root.gameObject.AddComponent<ButtonHoverScale>();
+        }
+
+        static Transform FindAncestorNamed(Transform from, string name)
+        {
+            for (Transform t = from; t != null; t = t.parent)
+                if (t.name == name) return t;
+            return null;
         }
 
         // 지정 더미 보기를 토글(0=뽑을, 1=버린)

@@ -43,6 +43,51 @@ public class EnemyNoteBadge : MonoBehaviour
     TextMeshProUGUI _label;
     int _hoverCount;
 
+    // 아이콘 모드: 상태이상·강화 아이콘에 말풍선만 붙인 경우. 아이콘의 위치·크기·스프라이트는 건드리지 않는다
+    bool _iconMode;
+    bool _styleCopied;
+    Canvas _bubbleCanvas;
+
+    // 상태이상·강화 아이콘에 해골 아이콘과 같은 말풍선 툴팁을 붙인다(이미 붙어 있으면 문구만 갱신)
+    public static void AttachToIcon(RectTransform icon, string text)
+    {
+        if (icon == null) return;
+        var badge = icon.GetComponent<EnemyNoteBadge>();
+        if (badge == null) badge = icon.gameObject.AddComponent<EnemyNoteBadge>();
+        badge.BindToIcon(icon, text);
+    }
+
+    void BindToIcon(RectTransform icon, string text)
+    {
+        _iconMode = true;
+        _root = icon;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            HideBubble();
+            return;
+        }
+
+        ResolveSprites();
+        if (_bubble == null)
+        {
+            Transform found = icon.Find("Bubble");
+            if (found != null)
+            {
+                _bubble = found.gameObject;
+                _label = found.GetComponentInChildren<TextMeshProUGUI>(true);
+            }
+            else
+            {
+                CreateBubble(icon);
+            }
+            WireHover(_bubble);
+        }
+        _label.text = text.Trim();
+        ApplyStyle();
+        _hoverCount = 0;
+        _bubble.SetActive(false);
+    }
+
     public void Bind(RectTransform bar, string note)
     {
         bool hasNote = !string.IsNullOrWhiteSpace(note);
@@ -72,6 +117,17 @@ public class EnemyNoteBadge : MonoBehaviour
     void LateUpdate()
     {
         if (_root == null || !_root.gameObject.activeInHierarchy) return;
+        if (_iconMode)
+        {
+            // 아이콘 자체는 레이아웃이 배치한다 — 말풍선만 놓는다
+            UpdateDirectHover();
+            if (_bubble != null && _bubble.activeSelf)
+            {
+                PlaceBubble(); // 글자 영역을 먼저 잡아야 글자 크기 맞춤이 맞다
+                ApplyStyle();
+            }
+            return;
+        }
         Place();
         KeepIconOnScreen();
         UpdateDirectHover();
@@ -143,9 +199,14 @@ public class EnemyNoteBadge : MonoBehaviour
         icon.preserveAspect = true;
         icon.raycastTarget = true;
         WireHover(rootGo);
+        CreateBubble(_root);
+    }
 
+    // 말풍선(배경 + 글자) 생성 — 해골 아이콘과 아이콘 모드가 같이 쓴다
+    void CreateBubble(RectTransform parent)
+    {
         var bubbleGo = new GameObject("Bubble", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-        bubbleGo.transform.SetParent(_root, false);
+        bubbleGo.transform.SetParent(parent, false);
         _bubble = bubbleGo;
         var bubbleImage = bubbleGo.GetComponent<Image>();
         bubbleImage.sprite = bubbleSprite;
@@ -166,7 +227,7 @@ public class EnemyNoteBadge : MonoBehaviour
 
     void ResolveSprites()
     {
-        if (skullSprite != null && bubbleSprite != null && font != null && fontMaterial != null) return;
+        if (skullSprite != null && bubbleSprite != null && font != null && fontMaterial != null && (!_iconMode || _styleCopied)) return;
         var all = FindObjectsByType<EnemyNoteBadge>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         for (int i = 0; i < all.Length; i++)
         {
@@ -175,7 +236,71 @@ public class EnemyNoteBadge : MonoBehaviour
             if (bubbleSprite == null) bubbleSprite = all[i].bubbleSprite;
             if (font == null) font = all[i].font;
             if (fontMaterial == null) fontMaterial = all[i].fontMaterial;
+            // 아이콘 모드(런타임 추가)는 인스펙터 값이 없으므로 해골 배지(프리팹)의 말풍선 모양을 그대로 따른다
+            if (_iconMode && !_styleCopied && !all[i]._iconMode && all[i].bubbleSprite != null)
+            {
+                CopyBubbleStyle(all[i]);
+                _styleCopied = true;
+            }
         }
+    }
+
+    void CopyBubbleStyle(EnemyNoteBadge src)
+    {
+        bubbleSize = src.bubbleSize;
+        bubbleOffset = src.bubbleOffset;
+        tailClearance = src.tailClearance;
+        textSidePadding = src.textSidePadding;
+        textTopPadding = src.textTopPadding;
+        fontSize = src.fontSize;
+        minFontSize = src.minFontSize;
+        color = src.color;
+        fontStyle = src.fontStyle;
+        alignment = src.alignment;
+        outlineWidth = src.outlineWidth;
+        outlineColor = src.outlineColor;
+    }
+
+    // 아이콘 모드 말풍선 배치: 기본은 아이콘 아래(해골과 같음), 화면 아래로 나가면 아이콘 위로 뒤집는다.
+    // 뒤 순서의 아이콘에 가리지 않도록 말풍선만 정렬을 앞으로 올린다.
+    void PlaceBubble()
+    {
+        if (_bubble == null || _root == null) return;
+        var bubbleRt = _bubble.transform as RectTransform;
+        Camera cam = CanvasCamera(_root);
+
+        // 아이콘 아래쪽 + 말풍선 높이가 화면 밖이면 위로
+        _root.GetWorldCorners(_corners);
+        Vector2 iconBottom = RectTransformUtility.WorldToScreenPoint(cam, _corners[0]);
+        Vector2 iconTop = RectTransformUtility.WorldToScreenPoint(cam, _corners[1]);
+        float pxPerUnit = _root.rect.height > 0.01f ? (iconTop.y - iconBottom.y) / _root.rect.height : 1f;
+        bool flip = iconBottom.y - bubbleSize.y * pxPerUnit < 4f;
+
+        bubbleRt.anchorMin = bubbleRt.anchorMax = new Vector2(0.2f, flip ? 1f : 0f);
+        bubbleRt.pivot = new Vector2(2f / 270f, 1f);
+        bubbleRt.anchoredPosition = flip ? new Vector2(bubbleOffset.x, -bubbleOffset.y) : bubbleOffset;
+        bubbleRt.sizeDelta = bubbleSize;
+        bubbleRt.localScale = new Vector3(1f, flip ? -1f : 1f, 1f); // 꼬리가 아이콘을 향하도록 상하 반전
+
+        if (_label != null)
+        {
+            var textRt = _label.rectTransform;
+            textRt.anchorMin = Vector2.zero;
+            textRt.anchorMax = Vector2.one;
+            textRt.offsetMin = new Vector2(textSidePadding, tailClearance);
+            textRt.offsetMax = new Vector2(-textSidePadding, -textTopPadding);
+            textRt.localScale = new Vector3(1f, flip ? -1f : 1f, 1f); // 글자는 다시 바로 세운다
+        }
+
+        if (_bubbleCanvas == null)
+        {
+            _bubbleCanvas = _bubble.GetComponent<Canvas>();
+            if (_bubbleCanvas == null) _bubbleCanvas = _bubble.AddComponent<Canvas>();
+        }
+        Canvas rootCanvas = _root.GetComponentInParent<Canvas>();
+        int baseOrder = rootCanvas != null ? rootCanvas.rootCanvas.sortingOrder : 0;
+        _bubbleCanvas.overrideSorting = true;
+        _bubbleCanvas.sortingOrder = baseOrder + 100;
     }
 
     void Place()
@@ -234,7 +359,8 @@ public class EnemyNoteBadge : MonoBehaviour
             FitText();
         }
 
-        var icon = _root != null ? _root.GetComponent<Image>() : null;
+        if (_iconMode) ResolveSprites(); // 아이콘이 적보다 먼저 생기면 그때 못 찾은 말풍선 모양을 다시 찾는다
+        var icon = !_iconMode && _root != null ? _root.GetComponent<Image>() : null; // 아이콘 모드는 원래 아이콘 유지
         if (icon != null && skullSprite != null) icon.sprite = skullSprite;
         var bubbleImage = _bubble != null ? _bubble.GetComponent<Image>() : null;
         if (bubbleImage != null && bubbleSprite != null)

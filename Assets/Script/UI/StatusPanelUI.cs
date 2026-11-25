@@ -259,6 +259,26 @@ public class StatusPanelUI : MonoBehaviour
             newIcon.ApplyCountStyle(countFont, countFontSize, countColor, countFontStyle, countOffset, countOutlineWidth, countOutlineColor);
             newIcon.SetStatus(dataMap[key], count, key);
             activeIcons.Add(key, newIcon);
+
+            // 마우스를 올리면 적 해골 아이콘과 같은 말풍선으로 설명
+            string tip = TooltipFor(key);
+            if (!string.IsNullOrEmpty(tip))
+                EnemyNoteBadge.AttachToIcon(newIcon.transform as RectTransform, tip);
+        }
+    }
+
+    // 상태 아이콘 말풍선 문구(실제 플레이에서 뜨는 것만). 강화는 EnemyPowerUpMark에서 붙인다.
+    public const string PowerUpTooltip = "<b>강화</b>\n다음 공격 1회의 피해가 50% 증가합니다.";
+
+    public static string TooltipFor(string key)
+    {
+        switch (key)
+        {
+            case "guard": return "<b>방패</b>\n받는 피해를 수치만큼 먼저 막아 줍니다.\n남은 방패는 계속 유지됩니다.";
+            case "chain": return "<b>연쇄</b>\n공격 부적으로 피해를 줄 때마다\n1씩 소모해 추가 피해를 줍니다.";
+            case "burn":  return "<b>화상</b>\n적이 행동하기 직전 수치만큼 피해를 받고,\n화상이 절반으로 줄어듭니다.";
+            case "frost": return "<b>빙결</b>\n플레이어가 행동해도 적 행동 게이지가\n오르지 않습니다. 그때마다 1씩 줄어듭니다.";
+            default: return null;
         }
     }
 

@@ -1519,7 +1519,7 @@
       "comboSlot": false,
       "effectName": "",
       "skillImg": "500Img",
-      "description": "아무 일도 일어나지 않는다."
+      "description": "소멸, 아무 일도 일어나지 않는다."
     },
     {
       "id": 501,
@@ -1532,7 +1532,7 @@
       "comboSlot": false,
       "effectName": "Earth_DEF",
       "skillImg": "501Img",
-      "description": "소멸, 모든 적에게 피해를 5 준다."
+      "description": "소멸, 모든 적에게 피해를 5 준다. 방어도를 3 얻는다."
     },
     {
       "id": 502,

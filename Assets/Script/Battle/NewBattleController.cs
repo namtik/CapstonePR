@@ -1252,7 +1252,9 @@ namespace Battle
             if (_awakenActive)
             {
                 _deck.MoveAfterUse(card, exile: false, poweredField: false);
-                _deck.Draw(1);
+                _deck.MergeDiscardIntoDrawShuffled(); // 매 드로우마다 손패 밖 카드 전체에서 무작위로 뽑히게
+                // 1장만 뽑으면 버리기 등으로 줄어든 패가 각성 내내 그대로 유지됐다 — 한도까지 채운다
+                _deck.Draw(_deck.HandLimit);
 
                 // 콤보 재사용 대기는 각성 중 카드 사용 횟수로 줄어든다(이번 카드로 막 걸리는 쿨타임은 줄이지 않도록 먼저 차감)
                 TickComboCooldownByCardUse();
@@ -1747,6 +1749,7 @@ namespace Battle
 
                 // 각성 중엔 둔화·탈진 같은 무속성 카드를 뽑지 않는다(격리 후 새로 들어온 것도 포함)
                 _deck.BlockNonComboDraws = true;
+                _deck.MergeDiscardIntoDrawShuffled(); // 각성 진입 시 버린 더미까지 합쳐 섞는다(종료 시 스냅샷으로 원복)
                 _deck.Draw(_deck.HandLimit);
 
                 _comboInput.Clear();
@@ -2447,6 +2450,7 @@ namespace Battle
                 if (cards == null) return;
                 foreach (var card in cards)
                     if (card != null) _deck.DiscardCardFromHand(card);
+                RefillAwakenHand();
             }, null);
 
         }
@@ -2954,8 +2958,20 @@ namespace Battle
         {
             if (_deck == null || count <= 0) return;
             int discarded = _deck.DiscardRandomFromHand(count);
+            RefillAwakenHand();
             handHud?.Refresh();
             Log($"[특이사항] 패에서 카드 {discarded}장 무작위 버리기");
+        }
+
+        // 각성 중엔 패를 항상 한도까지 채운다. 각성 중 버리기를 당하면 줄어든 장수가 각성 끝까지 유지되던 문제 방지.
+        // (각성 중 드로우는 콤보 슬롯 카드만 — BlockNonComboDraws. 버린 카드도 섞어 다시 뽑힐 수 있게 한다)
+        void RefillAwakenHand()
+        {
+            if (!_awakenActive || _deck == null) return;
+            if (_deck.HandCount >= _deck.HandLimit) return;
+            _deck.MergeDiscardIntoDrawShuffled();
+            _deck.Draw(_deck.HandLimit);
+            handHud?.Refresh();
         }
 
         // 특이사항: 플레이어가 패에서 count장을 직접 선택해 버림

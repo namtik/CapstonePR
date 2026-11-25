@@ -37,7 +37,6 @@ public class EnemyPowerUpMark : MonoBehaviour
         if (_root != null)
         {
             Place();
-            _root.SetAsLastSibling();
             _root.gameObject.SetActive(_image == null || _image.sprite != null);
         }
     }
@@ -48,6 +47,12 @@ public class EnemyPowerUpMark : MonoBehaviour
         Place();
     }
 
+    // 아이콘을 상태이상 패널 안에 넣었으면 HP바(이 컴포넌트)가 사라질 때 같이 지운다 — 패널은 다음 적에게 재사용된다
+    void OnDestroy()
+    {
+        if (_root != null && _root.parent != transform) Destroy(_root.gameObject);
+    }
+
     void Ensure()
     {
         if (_root != null) return;
@@ -56,7 +61,11 @@ public class EnemyPowerUpMark : MonoBehaviour
         {
             _root = found as RectTransform;
             _image = found.GetComponent<Image>();
-            if (_root != null && _image != null) return;
+            if (_root != null && _image != null)
+            {
+                EnemyNoteBadge.AttachToIcon(_root, StatusPanelUI.PowerUpTooltip);
+                return;
+            }
         }
 
         var go = new GameObject(RootName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -71,12 +80,27 @@ public class EnemyPowerUpMark : MonoBehaviour
         _image.raycastTarget = false;
         _image.maskable = false;
         _image.color = Color.white;
+        EnemyNoteBadge.AttachToIcon(_root, StatusPanelUI.PowerUpTooltip); // 마우스를 올리면 해골 아이콘과 같은 말풍선
     }
 
     // 특이사항·상태이상 아이콘과 같이 HP바 왼쪽 위 모서리에 이어 붙인다.
+    // 상태이상 패널(Grid 레이아웃)이 이 HP바에 붙어 있으면 그 줄의 맨 앞 칸으로 넣는다.
+    // 따로 좌표를 계산하면 강화가 풀렸을 때 뒤의 화상 등 아이콘이 당겨지지 않고 빈칸이 남았다.
     void Place()
     {
         if (_root == null) return;
+
+        StatusPanelUI row = GetComponentInChildren<StatusPanelUI>(true);
+        if (row != null && row.GetComponent<LayoutGroup>() != null)
+        {
+            if (_root.parent != row.transform) _root.SetParent(row.transform, false);
+            if (_root.GetSiblingIndex() != 0) _root.SetAsFirstSibling();
+            _root.localRotation = Quaternion.identity;
+            _root.localScale = Vector3.one;
+            return;
+        }
+        if (_root.parent != transform) _root.SetParent(transform, false);
+
         float x = 0f;
         float size = 45f;
 

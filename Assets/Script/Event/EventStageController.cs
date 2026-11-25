@@ -205,6 +205,25 @@ public class EventStageController : MonoBehaviour
     [Tooltip("제거된 카드 이름을 결과 본문에 붙일 때 사용. {0} = 카드 이름 목록 (앞 빈 줄은 코드에서 자동 추가)")]
     [SerializeField] private string event4RemovedCardsFormat = "제거: {0}";
 
+    [Header("결과 화면: 얻은 부적(카드) 표시")]
+    [Tooltip("이벤트로 얻은 부적을 화면 가운데에 크게 띄우고, 아무 곳이나 클릭하면 인벤토리로 날아간다.")]
+    [SerializeField] private bool showGainedCards = true;
+    // 직렬화 이름을 바꿨다: 씬에 첫 버전 값(배율 0.6·간격 220·본문 아래 오프셋)이 저장돼 있어 새 기본값이 무시됐다
+    [SerializeField, Range(0.2f, 4f)] private float gainedCardCenterScale = 2.4f; // 카드 배율(1 = 300x400)
+    [SerializeField] private float gainedCardCenterSpacing = 800f; // 여러 장일 때 카드 간 가로 간격(카드 폭 300×배율보다 크게)
+    [Tooltip("화면 가운데 기준 위치.")]
+    [SerializeField] private Vector2 gainedCardCenterOffset = Vector2.zero;
+    float gainedCardScale => gainedCardCenterScale;
+    float gainedCardSpacing => gainedCardCenterSpacing;
+    Vector2 gainedCardOffset => gainedCardCenterOffset;
+    [SerializeField, Range(0f, 1f)] private float gainedCardDimAlpha = 0.6f; // 뒤 배경 딤
+    [SerializeField] private float gainedCardFlyStagger = 0.08f; // 여러 장일 때 날아가는 시차
+    private readonly List<int> _pendingGainedCardIds = new List<int>(); // 이번 결과에서 얻은 카드(결과 표시 시 소비)
+    private GameObject _gainedCardsRoot; // 획득 카드 오버레이 루트(딤+카드)
+    private readonly List<NewCardView> _gainedCardViews = new List<NewCardView>();
+    private Image _gainedDim;
+    private bool _gainedFlying; // 인벤토리로 날아가는 중
+
     [Header("Event5 Button1: BASIC 카드 1장 선택 후 같은 속성 랜덤 카드로 변화")]
     [SerializeField] private NewCardView event5CardViewPrefab;
     [Tooltip("비우면 event5Canvas 자식으로 카드 선택 UI를 생성한다.")]
@@ -457,6 +476,11 @@ public class EventStageController : MonoBehaviour
 
         if (phase == EventPhase.ResultTyping)
             SkipResultTyping();
+        else if (_gainedCardsRoot != null)
+        {
+            // 획득 카드가 떠 있으면 첫 클릭은 카드를 인벤토리로 날리고, 다 날아간 뒤 클릭해야 맵으로 돌아간다
+            if (!_gainedFlying) StartCoroutine(FlyGainedCardsToInventory());
+        }
         else
             ReturnToMap();
     }
@@ -853,6 +877,7 @@ public class EventStageController : MonoBehaviour
     {
         pendingGoldReward = Mathf.Max(0, goldReward);
         HideAllGoldRewardRows();
+        ClearGainedCardViews();
         TextMeshProUGUI title = CurrentTitleTarget();
         if (title != null)
             title.gameObject.SetActive(false);
@@ -951,7 +976,132 @@ public class EventStageController : MonoBehaviour
         else
             HideAllGoldRewardRows();
 
+        ShowGainedCards(activeResultBody);
         SetPhase(EventPhase.ResultDone);
+    }
+
+    // 이번 결과에서 얻은 부적을 화면 가운데에 크게 띄운다(딤 위). 아무 곳이나 클릭하면 인벤토리로 날아간다.
+    void ShowGainedCards(TextMeshProUGUI bodyTarget)
+    {
+        var ids = new List<int>(_pendingGainedCardIds);
+        _pendingGainedCardIds.Clear();
+        if (ids.Count == 0) return; // 결과 완료가 두 번 불려도 이미 띄운 카드는 유지
+        ClearGainedCardViews();
+        if (!showGainedCards || bodyTarget == null)
+            return;
+
+        NewCardView prefab = ResolveEventCardViewPrefab();
+        Canvas canvas = bodyTarget.canvas != null ? bodyTarget.canvas.rootCanvas : null;
+        if (prefab == null || canvas == null)
+            return;
+
+        // 화면 전체를 덮는 루트 + 딤(클릭은 Update에서 처리, 딤은 뒤쪽 UI 클릭을 막는다)
+        _gainedCardsRoot = new GameObject("GainedCardsOverlay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var rootRect = (RectTransform)_gainedCardsRoot.transform;
+        rootRect.SetParent(canvas.transform, false);
+        StretchRectFull(rootRect);
+        rootRect.SetAsLastSibling();
+        _gainedDim = _gainedCardsRoot.GetComponent<Image>();
+        _gainedDim.color = new Color(0f, 0f, 0f, gainedCardDimAlpha);
+        _gainedDim.raycastTarget = true;
+
+        float startX = -gainedCardSpacing * (ids.Count - 1) * 0.5f;
+        for (int i = 0; i < ids.Count; i++)
+        {
+            CardData data = CardDatabase.GetById(ids[i]);
+            if (data == null) continue;
+
+            NewCardView view = Instantiate(prefab, rootRect);
+            var viewRect = view.GetComponent<RectTransform>();
+            if (viewRect != null)
+            {
+                viewRect.anchorMin = viewRect.anchorMax = viewRect.pivot = new Vector2(0.5f, 0.5f);
+                viewRect.anchoredPosition = gainedCardOffset + new Vector2(startX + gainedCardSpacing * i, 0f);
+                viewRect.localRotation = Quaternion.identity;
+                viewRect.localScale = Vector3.one * gainedCardScale;
+            }
+
+            view.SetCard(new CardInstance(data));
+            view.Refresh();
+            view.enabled = false; // 손패 상호작용(호버·드래그) 없이 보여 주기만
+            foreach (Graphic graphic in view.GetComponentsInChildren<Graphic>(true))
+                graphic.raycastTarget = false;
+            _gainedCardViews.Add(view);
+        }
+
+        StartCoroutine(PopInGainedCards());
+    }
+
+    // 등장: 살짝 작은 크기에서 커지며 나타난다
+    System.Collections.IEnumerator PopInGainedCards()
+    {
+        const float duration = 0.22f;
+        for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+        {
+            if (_gainedFlying || _gainedCardsRoot == null) yield break;
+            float e = Mathf.SmoothStep(0f, 1f, t / duration);
+            foreach (NewCardView view in _gainedCardViews)
+                if (view != null) view.transform.localScale = Vector3.one * (gainedCardScale * Mathf.Lerp(0.7f, 1f, e));
+            yield return null;
+        }
+        if (_gainedFlying) yield break;
+        foreach (NewCardView view in _gainedCardViews)
+            if (view != null) view.transform.localScale = Vector3.one * gainedCardScale;
+    }
+
+    // 클릭 시: 카드들을 유물 획득과 같은 연출로 인벤토리 버튼까지 날린다(카드는 이미 덱에 들어가 있음)
+    System.Collections.IEnumerator FlyGainedCardsToInventory()
+    {
+        _gainedFlying = true;
+        InventoryOpenButton.TryGetTarget(transform, out Vector2 target, out InventoryOpenButton button);
+
+        int running = 0;
+        for (int i = 0; i < _gainedCardViews.Count; i++)
+        {
+            NewCardView view = _gainedCardViews[i];
+            if (view == null) continue;
+            var rt = (RectTransform)view.transform;
+            CanvasGroup group = view.GetComponent<CanvasGroup>();
+            if (group == null) group = view.gameObject.AddComponent<CanvasGroup>();
+            Vector2 from = InventoryFlyFx.ScreenCenter(rt);
+            running++;
+            StartCoroutine(FlyOne(rt, from, target, group, () => running--));
+            if (gainedCardFlyStagger > 0f && i < _gainedCardViews.Count - 1)
+                yield return new WaitForSecondsRealtime(gainedCardFlyStagger);
+        }
+
+        // 딤은 카드가 나는 동안 걷힌다
+        float dimStart = _gainedDim != null ? _gainedDim.color.a : 0f;
+        float t = 0f;
+        while (running > 0)
+        {
+            t += Time.unscaledDeltaTime;
+            if (_gainedDim != null)
+                _gainedDim.color = new Color(0f, 0f, 0f, Mathf.Lerp(dimStart, 0f, Mathf.Clamp01(t / InventoryFlyFx.Duration)));
+            yield return null;
+        }
+
+        if (button != null)
+            button.PlayReceivePulse();
+        yield return new WaitForSecondsRealtime(0.12f);
+        ClearGainedCardViews();
+    }
+
+    System.Collections.IEnumerator FlyOne(RectTransform rt, Vector2 from, Vector2 to, CanvasGroup group, System.Action done)
+    {
+        yield return InventoryFlyFx.Fly(rt, from, to, a => { if (group != null) group.alpha = a; }, gainedCardScale);
+        if (rt != null) rt.gameObject.SetActive(false);
+        done?.Invoke();
+    }
+
+    void ClearGainedCardViews()
+    {
+        if (_gainedCardsRoot != null)
+            Destroy(_gainedCardsRoot);
+        _gainedCardsRoot = null;
+        _gainedCardViews.Clear();
+        _gainedDim = null;
+        _gainedFlying = false;
     }
 
     // 단계를 변경하고 진입 프레임을 기록한다
@@ -1009,18 +1159,40 @@ public class EventStageController : MonoBehaviour
     // 이벤트1 선택3: 속성 카드와 탈진 카드를 덱에 추가하고 결과 본문을 반환
     string ExecuteEvent1Choice3()
     {
-        int elementalId = PickRandomCardId(elementalCardPool);
+        // 이벤트2 선택1과 같이 획득 가능한 전체 속성 카드에서 무작위(기존 풀은 기본 공격 카드뿐)
+        int elementalId = PickRandomObtainableElementCardId();
+        if (elementalId <= 0) elementalId = PickRandomCardId(elementalCardPool); // 후보가 없을 때만 기존 풀
         AddCardToRunDeck(elementalId, "이벤트1 버튼3 속성카드");
         AddCardToRunDeck(exhaustionCardId, "이벤트1 버튼3 탈진카드");
         return resultTexts.event1Choice3Body;
     }
 
     // 이벤트2 선택1: 속성 카드를 덱에 추가하고 결과 본문을 반환
+    // elementalCardPool(씬 값 100/200/300/400)은 기본 공격 카드뿐이라, 획득 가능한 전체 속성 카드에서 무작위로 뽑는다.
     string ExecuteEvent2Choice1()
     {
-        int elementalId = PickRandomCardId(elementalCardPool);
+        int elementalId = PickRandomObtainableElementCardId();
+        if (elementalId <= 0) elementalId = PickRandomCardId(elementalCardPool); // 후보가 없을 때만 기존 풀
         AddCardToRunDeck(elementalId, "이벤트2 버튼1 속성카드");
         return resultTexts.event2Choice1Body;
+    }
+
+    // 획득 가능한 4속성 카드 전체(전투 보상·상점과 같은 기준: 기본·파편·임시 카드 제외)에서 무작위 1장
+    static int PickRandomObtainableElementCardId()
+    {
+        CardDatabase.EnsureInit();
+        var candidates = new List<int>();
+        IReadOnlyList<CardData> all = CardDatabase.All;
+        for (int i = 0; i < all.Count; i++)
+        {
+            CardData c = all[i];
+            if (c == null) continue;
+            if (c.element != CardElement.Fire && c.element != CardElement.Water
+                && c.element != CardElement.Wind && c.element != CardElement.Earth) continue;
+            if (c.HasTag("BASIC") || c.HasTag("FRAGMENT") || c.HasTag("TEMPORARY_ON_CREATE")) continue;
+            candidates.Add(c.id);
+        }
+        return candidates.Count > 0 ? candidates[Random.Range(0, candidates.Count)] : -1;
     }
 
     // 이벤트2 선택2(복귀): 별도 효과 없이 결과 본문을 반환
@@ -1402,6 +1574,7 @@ public class EventStageController : MonoBehaviour
             return false;
 
         deck.AddCard(picked.id);
+        _pendingGainedCardIds.Add(picked.id); // 결과 화면에 바뀐 카드를 띄운다
         sourceName = source.displayName;
         newName = picked.displayName;
         return true;
@@ -1708,6 +1881,7 @@ public class EventStageController : MonoBehaviour
         }
 
         RunDeckState.EnsureExists().AddCard(cardId);
+        _pendingGainedCardIds.Add(cardId); // 결과 화면에 카드로 띄운다
         Debug.Log($"[EventStage] {context} 획득: {cardData.displayName}({cardId})");
     }
 
@@ -1824,6 +1998,8 @@ public class EventStageController : MonoBehaviour
     {
         HideAllGoldRewardRows();
         pendingGoldReward = 0;
+        _pendingGainedCardIds.Clear();
+        ClearGainedCardViews();
         phase = EventPhase.Idle;
         event3Phase = Event3Phase.Initial;
         ClearEvent5CardPick();

@@ -165,7 +165,7 @@ namespace Battle.UI
                 else skill.Add(c);
             }
 
-            // 칸마다 등급을 먼저 뽑고(일반 70 : 레어 30), 일반이면 공격 60 : 스킬 40으로 다시 나눈 뒤
+            // 칸마다 등급을 먼저 뽑고(일반 75 : 레어 25), 일반이면 공격 50 : 스킬 50으로 다시 나눈 뒤
             // 그 묶음 안에서 무작위 1장. 고른 묶음이 바닥나면 남은 묶음에서 뽑는다.
             var result = new List<CardData>();
             int target = Mathf.Min(count, pool.Count);
@@ -184,7 +184,75 @@ namespace Battle.UI
                 result.Add(from[idx]);
                 from.RemoveAt(idx); // 같은 카드 중복 제시 방지
             }
+
+            EnsureMainElementChoice(result, attack, skill, rare);
             return result;
+        }
+
+        // 주력 속성 보장: 제시 카드에 덱의 주력 속성 카드가 한 장도 없으면 한 칸을 주력 속성 카드로 바꾼다.
+        // 레어(파워) 칸은 유지하고 일반 칸을 바꾸며, 가능하면 바뀌는 카드와 같은 종류(공격/스킬/파워)로 넣어 등급·종류 비율을 지킨다.
+        static void EnsureMainElementChoice(List<CardData> result, List<CardData> attack, List<CardData> skill, List<CardData> rare)
+        {
+            if (result.Count == 0) return;
+            CardElement? main = ResolveMainElement();
+            if (!main.HasValue) return;
+            for (int i = 0; i < result.Count; i++)
+                if (result[i] != null && result[i].element == main.Value) return; // 이미 있음
+
+            var slots = new List<int>();
+            for (int i = 0; i < result.Count; i++)
+                if (result[i] != null && result[i].type != CardType.Power) slots.Add(i);
+            if (slots.Count == 0)
+                for (int i = 0; i < result.Count; i++) slots.Add(i);
+            int slot = slots[Random.Range(0, slots.Count)];
+            CardData replaced = result[slot];
+
+            // 남은 후보(아직 제시되지 않은 카드)에서 주력 속성만 모은다
+            var same = new List<CardData>();
+            var any = new List<CardData>();
+            foreach (var list in new[] { attack, skill, rare })
+            {
+                foreach (var c in list)
+                {
+                    if (c == null || c.element != main.Value) continue;
+                    any.Add(c);
+                    if (replaced != null && RewardGroup(c) == RewardGroup(replaced)) same.Add(c);
+                }
+            }
+            List<CardData> from = same.Count > 0 ? same : any;
+            if (from.Count == 0) return; // 주력 속성 카드가 풀에 없으면 그대로
+            result[slot] = from[Random.Range(0, from.Count)];
+        }
+
+        static int RewardGroup(CardData c) => c.type == CardType.Power ? 2 : c.type == CardType.Attack ? 0 : 1;
+
+        // 런 덱의 주력 속성 — 기본(BASIC) 카드를 뺀 획득 카드 중 가장 많은 속성.
+        // 획득 카드가 없으면 기본 카드까지 포함해 센다. 동률이면 그중 무작위.
+        static CardElement? ResolveMainElement()
+        {
+            var run = RunDeckState.Instance;
+            if (run == null || run.RunDeck == null) return null;
+
+            var acquired = new Dictionary<CardElement, int>();
+            var all = new Dictionary<CardElement, int>();
+            foreach (var entry in run.RunDeck)
+            {
+                CardData data = CardDatabase.GetById(entry.cardId);
+                if (data == null || entry.count <= 0) continue;
+                CardElement el = data.element;
+                if (el != CardElement.Fire && el != CardElement.Water && el != CardElement.Wind && el != CardElement.Earth) continue;
+                all[el] = (all.TryGetValue(el, out int a) ? a : 0) + entry.count;
+                if (!data.HasTag("BASIC"))
+                    acquired[el] = (acquired.TryGetValue(el, out int b) ? b : 0) + entry.count;
+            }
+
+            var counts = acquired.Count > 0 ? acquired : all;
+            if (counts.Count == 0) return null;
+            int max = 0;
+            foreach (var kv in counts) if (kv.Value > max) max = kv.Value;
+            var ties = new List<CardElement>();
+            foreach (var kv in counts) if (kv.Value == max) ties.Add(kv.Key);
+            return ties[Random.Range(0, ties.Count)];
         }
 
         static List<CardData> FirstNonEmpty(params List<CardData>[] lists)
@@ -194,8 +262,8 @@ namespace Battle.UI
             return null;
         }
 
-        const int RARE_TIER_PERCENT = 30;        // 레어(파워 카드) 등급이 뽑힐 확률(%). 나머지는 일반.
-        const int ATTACK_IN_NORMAL_PERCENT = 60; // 일반 등급 안에서 공격 카드 비율(%). 나머지는 스킬 카드.
+        const int RARE_TIER_PERCENT = 25;       // 레어(파워 카드) 등급이 뽑힐 확률(%). 나머지는 일반.
+        const int ATTACK_IN_NORMAL_PERCENT = 50; // 일반 등급 안에서 공격 카드 비율(%). 나머지는 스킬 카드.
 
         // 딤/타이틀/카드 행/스킵 버튼을 런타임으로 구성
         void BuildUI(NewCardView cardPrefab, List<CardData> choices)

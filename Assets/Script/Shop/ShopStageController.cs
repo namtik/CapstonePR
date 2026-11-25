@@ -139,7 +139,8 @@ public class ShopStageController : MonoBehaviour
     class CardOffer
     {
         public CardData card; // 카드 데이터
-        public int price; // 가격
+        public int basePrice; // 원가(할인 전)
+        public int price => ShopStageController.ApplyRelicShopDiscount(basePrice); // 현재 가격(할인 유물 즉시 반영)
         public bool purchased; // 구매 완료 여부
     }
 
@@ -151,7 +152,8 @@ public class ShopStageController : MonoBehaviour
         public Sprite sprite; // 스프라이트
         public string displayName; // 표시 이름
         public string description; // 설명
-        public int price; // 가격
+        public int basePrice; // 원가(할인 전)
+        public int price => ShopStageController.ApplyRelicShopDiscount(basePrice); // 현재 가격(할인 유물 즉시 반영)
         public bool purchased; // 구매 완료 여부
     }
 
@@ -159,7 +161,8 @@ public class ShopStageController : MonoBehaviour
     class ComboOffer
     {
         public ComboSkillDef combo; // 콤보 스킬 정의
-        public int price; // 가격
+        public int basePrice; // 원가(할인 전)
+        public int price => ShopStageController.ApplyRelicShopDiscount(basePrice); // 현재 가격(할인 유물 즉시 반영)
         public bool purchased; // 구매 완료 여부
     }
 
@@ -414,13 +417,13 @@ public class ShopStageController : MonoBehaviour
             cardOffers.Add(new CardOffer
             {
                 card = picks[i],
-                price = ApplyRelicShopDiscount(Random.Range(cardMinPrice, cardMaxPrice + 1)),
+                basePrice = Random.Range(cardMinPrice, cardMaxPrice + 1),
             });
         }
     }
 
-    // 유물(할인패 10001) 보유 시 상점 가격에 할인 배수 적용
-    int ApplyRelicShopDiscount(int basePrice)
+    // 유물(할인패 10001) 보유 시 상점 가격에 할인 배수 적용 — 가격을 볼 때마다 계산하므로 상점에서 사도 즉시 반영
+    static int ApplyRelicShopDiscount(int basePrice)
     {
         var mgr = RelicManager.Instance;
         if (mgr == null) return basePrice;
@@ -455,7 +458,7 @@ public class ShopStageController : MonoBehaviour
                     sprite = pick.sprite,
                     displayName = pick.displayName,
                     description = pick.description,
-                    price = ApplyRelicShopDiscount(Random.Range(relicMinPrice, relicMaxPrice + 1)),
+                    basePrice = Random.Range(relicMinPrice, relicMaxPrice + 1),
                 });
             }
 
@@ -501,7 +504,7 @@ public class ShopStageController : MonoBehaviour
             comboOffers.Add(new ComboOffer
             {
                 combo = picks[i],
-                price = ApplyRelicShopDiscount(Random.Range(comboMinPrice, comboMaxPrice + 1)),
+                basePrice = Random.Range(comboMinPrice, comboMaxPrice + 1),
             });
         }
     }
@@ -631,6 +634,15 @@ public class ShopStageController : MonoBehaviour
     {
         if (offer == null || offer.card == null) return;
         if (offer.purchased) return;
+        if (!CanAskPurchase(offer.price)) return;
+
+        RelicAcquireConfirm.Show(RelicAcquireConfirm.PurchaseMessage(offer.card.displayName, offer.price), () => BuyCardConfirmed(offer));
+    }
+
+    // 확인 팝업에서 '예' — 골드 차감 후 덱에 추가
+    void BuyCardConfirmed(CardOffer offer)
+    {
+        if (offer == null || offer.card == null || offer.purchased) return;
         if (!TrySpendMoney(offer.price)) return;
 
         RunDeckState.EnsureExists().AddCard(offer.card.id);
@@ -644,6 +656,18 @@ public class ShopStageController : MonoBehaviour
     {
         if (offer == null) return;
         if (offer.purchased) return;
+        if (!CanAskPurchase(offer.price)) return;
+
+        string name = offer.relic != null && !string.IsNullOrWhiteSpace(offer.relic.displayName)
+            ? offer.relic.displayName
+            : offer.displayName;
+        RelicAcquireConfirm.Show(RelicAcquireConfirm.PurchaseMessage(name, offer.price), () => BuyRelicConfirmed(offer));
+    }
+
+    // 확인 팝업에서 '예' — 골드 차감 후 보유 추가
+    void BuyRelicConfirmed(RelicOffer offer)
+    {
+        if (offer == null || offer.purchased) return;
         if (!TrySpendMoney(offer.price)) return;
 
         RelicManager manager = RelicManager.Instance;
@@ -671,13 +695,23 @@ public class ShopStageController : MonoBehaviour
         if (offer == null || offer.combo == null) return;
         if (offer.purchased) return;
 
-        NewBattleController nb = NewBattleController.Instance;
-        if (nb == null)
+        if (NewBattleController.Instance == null)
         {
             Debug.LogWarning("[ShopStageController] NewBattleController.Instance가 없어 콤보 구매를 적용할 수 없습니다.");
             return;
         }
+        if (!CanAskPurchase(offer.price)) return;
 
+        string name = string.IsNullOrWhiteSpace(offer.combo.displayName) ? "콤보 스킬" : offer.combo.displayName;
+        RelicAcquireConfirm.Show(RelicAcquireConfirm.PurchaseMessage(name, offer.price), () => BuyComboConfirmed(offer));
+    }
+
+    // 확인 팝업에서 '예' — 골드 차감 후 보유 콤보 추가
+    void BuyComboConfirmed(ComboOffer offer)
+    {
+        if (offer == null || offer.combo == null || offer.purchased) return;
+        NewBattleController nb = NewBattleController.Instance;
+        if (nb == null) return;
         if (!TrySpendMoney(offer.price)) return;
 
         nb.AddOwnedCombo(offer.combo.refComboId);
@@ -825,6 +859,18 @@ public class ShopStageController : MonoBehaviour
     }
 
     // 골드 차감 시도 후 성공 여부 반환
+    // 구매 확인 팝업을 띄워도 되는지 — 팝업이 이미 떠 있으면 무시, 골드가 모자라면 팝업 없이 기존 구매 실패 처리
+    bool CanAskPurchase(int price)
+    {
+        if (RelicAcquireConfirm.IsOpen) return false;
+        if (MoneyManager.Instance == null || MoneyManager.Instance.CurrentMoney < price)
+        {
+            TrySpendMoney(price);
+            return false;
+        }
+        return true;
+    }
+
     bool TrySpendMoney(int amount)
     {
         if (MoneyManager.Instance == null)

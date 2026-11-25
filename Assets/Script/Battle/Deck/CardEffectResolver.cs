@@ -175,12 +175,7 @@ namespace Battle.Deck
             Ctx.enemyKilledThisResolve = false;
             _cardFxTargets.Clear();
 
-            if (card.cursed && Ctx.player != null)
-            {
-                Ctx.player.TakeDamage(6);
-                Debug.Log($"[Curse] {card.data.displayName} 저주 발동 — 플레이어 6 피해");
-                card.cursed = false;
-            }
+            // 저주 피해는 NewBattleController.ApplyCurseOnCardUse에서 한 번만 처리한다(여기서 또 주면 이중 피해)
 
             bool isPower = card.Type == CardType.Power || card.data.HasTag("POWER");
             var effects = GetResolveEffects(card);

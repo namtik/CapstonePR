@@ -266,7 +266,16 @@ public class BossRelicDropUI : MonoBehaviour
 
     void OnPointerClick()
     {
-        if (!_floating || _absorbing || _relic == null)
+        if (!_floating || _absorbing || _relic == null || RelicAcquireConfirm.IsOpen)
+            return;
+
+        RelicAcquireConfirm.Show(RelicAcquireConfirm.AcquireMessage(_relic.displayName), ConfirmPick);
+    }
+
+    // 확인 팝업에서 '예' — 유물 지급 후 인벤토리로 날린다
+    void ConfirmPick()
+    {
+        if (!_floating || _absorbing || _relic == null || !isActiveAndEnabled)
             return;
 
         _absorbing = true;

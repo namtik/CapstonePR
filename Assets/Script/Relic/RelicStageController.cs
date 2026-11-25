@@ -701,7 +701,16 @@ public class RelicStageController : MonoBehaviour
     // 유물 아이콘을 인벤토리 버튼으로 날린 뒤 지급하고 맵으로 돌아간다
     void OnRewardPointerClick()
     {
-        if (!isChestOpened || isAbsorbSequenceRunning)
+        if (!isChestOpened || isAbsorbSequenceRunning || RelicAcquireConfirm.IsOpen)
+            return;
+
+        RelicAcquireConfirm.Show(RelicAcquireConfirm.AcquireMessage(grantedRewardName), ConfirmRewardPick);
+    }
+
+    // 확인 팝업에서 '예' — 유물 아이콘을 날려 지급
+    void ConfirmRewardPick()
+    {
+        if (!isChestOpened || isAbsorbSequenceRunning || !isActiveAndEnabled)
             return;
 
         isAbsorbSequenceRunning = true;
@@ -780,74 +789,21 @@ public class RelicStageController : MonoBehaviour
         image.raycastTarget = false;
         image.color = Color.white;
 
-        Vector2 from = originScreen;
-        Vector2 to = targetScreen;
-        Vector2 delta = to - from;
-        Vector2 side = delta.sqrMagnitude > 1f ? new Vector2(-delta.y, delta.x).normalized : Vector2.up;
-        if (side.y < 0f) side = -side;
-        Vector2 control = Vector2.Lerp(from, to, 0.42f) + side * Mathf.Clamp(delta.magnitude * 0.16f, 50f, 180f);
-
-        PlaceOverlay(rt, from);
-        const float duration = 0.58f;
-        float t = 0f;
-        while (t < duration)
+        // 곡선 비행 자체는 공용 연출(InventoryFlyFx) — 이벤트 카드 획득도 같은 연출을 쓴다
+        yield return InventoryFlyFx.Fly(rt, originScreen, targetScreen, a =>
         {
-            t += Time.unscaledDeltaTime;
-            float u = Mathf.Clamp01(t / duration);
-            float e = u * u * (3f - 2f * u);
-            Vector2 p = QuadBezier(from, control, to, e);
-            PlaceOverlay(rt, p);
-            rt.localScale = Vector3.one * Mathf.Lerp(1f, 0.22f, e);
-            if (u > 0.88f)
-            {
-                var c = image.color;
-                c.a = Mathf.Lerp(1f, 0.15f, (u - 0.88f) / 0.12f);
-                image.color = c;
-            }
-            rt.SetAsLastSibling();
-            yield return null;
-        }
+            var c = image.color;
+            c.a = a;
+            image.color = c;
+        });
 
         if (go != null)
             Destroy(go);
     }
 
-    static void PlaceOverlay(RectTransform rt, Vector2 screen)
-    {
-        rt.position = new Vector3(screen.x, screen.y, 0f);
-    }
+    static Vector2 ScreenCenter(RectTransform rt) => InventoryFlyFx.ScreenCenter(rt);
 
-    static Vector2 QuadBezier(Vector2 a, Vector2 b, Vector2 c, float t)
-    {
-        float u = 1f - t;
-        return u * u * a + 2f * u * t * b + t * t * c;
-    }
-
-    static Vector2 ScreenCenter(RectTransform rt)
-    {
-        if (rt == null)
-            return new Vector2(Screen.width * 0.5f, Screen.height * 0.45f);
-        Canvas canvas = rt.GetComponentInParent<Canvas>();
-        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
-            ? canvas.worldCamera
-            : null;
-        return RectTransformUtility.WorldToScreenPoint(cam, rt.TransformPoint(rt.rect.center));
-    }
-
-    static Vector2 ItemScreenSize(RectTransform rt)
-    {
-        if (rt == null)
-            return new Vector2(160f, 160f);
-        Canvas canvas = rt.GetComponentInParent<Canvas>();
-        Camera cam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
-            ? canvas.worldCamera
-            : null;
-        Vector3[] corners = new Vector3[4];
-        rt.GetWorldCorners(corners);
-        Vector2 bl = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
-        Vector2 tr = RectTransformUtility.WorldToScreenPoint(cam, corners[2]);
-        return new Vector2(Mathf.Abs(tr.x - bl.x), Mathf.Abs(tr.y - bl.y));
-    }
+    static Vector2 ItemScreenSize(RectTransform rt) => InventoryFlyFx.ScreenSize(rt);
 
     // 받지 않기 — 유물 지급 없이 맵으로 복귀
     void OnDeclineRewardClicked()

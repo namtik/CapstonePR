@@ -184,6 +184,7 @@ namespace Battle.UI
             // OnEndDrag 누락으로 클릭이 막히는 것을 막기 위해 레이캐스트 복구
             _isDragging = false;
             _targetingArmed = false;
+            _hoverHeld = false;
             HideKeywordTooltip();
             if (Hud != null) Hud.HideEnemyTargeting();
             if (_canvasGroup != null) _canvasGroup.blocksRaycasts = true;
@@ -195,6 +196,7 @@ namespace Battle.UI
 
         void OnDestroy()
         {
+            if (s_handHover == this) s_handHover = null;
             if (_burnMat != null) Destroy(_burnMat);
         }
 
@@ -262,6 +264,7 @@ namespace Battle.UI
                 StopNudge(true);   // 남아있던 저주 떠오르기 정리
                 if (_burnCo != null) FinishBurnImmediately(); // 다른 카드로 바뀌면 전환 연출은 즉시 정착
                 _isHovering = false;
+                _hoverHeld = false;
                 if (_hoverSlotOriginalSibling >= 0 && transform.parent != null)
                 {
                     transform.parent.SetSiblingIndex(_hoverSlotOriginalSibling);
@@ -442,7 +445,9 @@ namespace Battle.UI
         void UpdateCurseInkVisual()
         {
             float strength = _curseActive ? 1f : CurseReleaseStrength;
-            bool visible = strength > 0f && !_curseFaceHidden && _burnCo == null;
+            // 각성(부적 모드) 중에는 저주 잉크를 숨긴다 — 각성이 끝나면 저주 상태 그대로 다시 보인다
+            bool visible = strength > 0f && !_curseFaceHidden && _burnCo == null
+                && !_talismanWanted && !_talismanShown;
             if (visible) EnsureCurseInk();
             if (_curseInk == null) return;
 
@@ -1154,6 +1159,18 @@ namespace Battle.UI
             if (Hud.IsHandBlocked) return;
             if (Card == null || _isDragging) return;
 
+            // 원래 자리 영역 덕분에 호버를 유지하던 중 올라간 카드로 다시 들어옴 — 이미 호버 상태
+            if (_hoverHeld && _isHovering) { _hoverHeld = false; return; }
+            _hoverHeld = false;
+
+            // 손패는 한 장만 호버 — 유지 중이던 다른 카드가 있으면 먼저 내린다
+            if (!IsGridHoverCard())
+            {
+                if (s_handHover != null && s_handHover != this && s_handHover._isHovering)
+                    s_handHover.OnPointerExit(null);
+                s_handHover = this;
+            }
+
             StopNudge(true); // 저주 떠오르기 중이면 홈으로 되돌린 뒤 호버 적용
             _isHovering = true;
             _hoverStartTime = Time.unscaledTime;
@@ -1176,6 +1193,16 @@ namespace Battle.UI
         public void OnPointerExit(PointerEventData eventData)
         {
             if (Hud == null) return;
+
+            // 호버로 카드가 올라가 마우스가 카드 밖으로 빠졌지만 원래 자리 안이면 호버 유지.
+            // (내리면 다시 마우스 아래로 들어와 올라가고, 또 빠지는 것이 반복되며 위아래로 깜빡였다)
+            if (eventData != null && _isHovering && !_isDragging && !IsGridHoverCard() && SlotIndex >= 0
+                && IsPointerInHomeFootprint(eventData.position))
+            {
+                _hoverHeld = true;
+                return;
+            }
+            _hoverHeld = false;
             _isHovering = false;
             HideKeywordTooltip();
             // 벌어졌던 양옆 카드를 원위치로(드래그 여부와 무관하게 복귀)
@@ -1190,6 +1217,52 @@ namespace Battle.UI
                 transform.parent.SetSiblingIndex(_hoverSlotOriginalSibling);
                 _hoverSlotOriginalSibling = -1;
             }
+        }
+
+        static NewCardView s_handHover; // 현재 호버 중인 손패 카드
+        private bool _hoverHeld;        // 올라간 카드 밖이지만 원래 자리 안이라 호버를 유지 중
+
+        Camera PointerCamera()
+        {
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas == null) return null;
+            canvas = canvas.rootCanvas;
+            return canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+        }
+
+        // 마우스가 호버로 올라가기 전 카드 자리(홈 위치·기본 크기) 안에 있는지 — 슬롯(부모) 좌표로 판정
+        bool IsPointerInHomeFootprint(Vector2 screenPoint)
+        {
+            if (_rect == null) return false;
+            var parent = _rect.parent as RectTransform;
+            if (parent == null) return false;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPoint, PointerCamera(), out Vector2 local))
+                return false;
+
+            Rect pr = parent.rect;
+            Vector2 anchorRef = new Vector2(
+                Mathf.Lerp(pr.xMin, pr.xMax, (_rect.anchorMin.x + _rect.anchorMax.x) * 0.5f),
+                Mathf.Lerp(pr.yMin, pr.yMax, (_rect.anchorMin.y + _rect.anchorMax.y) * 0.5f));
+            Vector2 size = Vector2.Scale(_rect.rect.size, new Vector2(_homeLocalScale.x, _homeLocalScale.y));
+            Vector2 min = anchorRef + _homeAnchoredPos - Vector2.Scale(size, _rect.pivot);
+            return new Rect(min, size).Contains(local);
+        }
+
+        // 호버 유지 중: 마우스가 올라간 카드와 원래 자리 모두에서 벗어나면 그때 호버를 푼다
+        void UpdateHeldHover()
+        {
+            if (!_hoverHeld) return;
+            if (!_isHovering || _isDragging || Hud == null || Hud.IsHandBlocked)
+            {
+                _hoverHeld = false;
+                if (_isHovering && !_isDragging) OnPointerExit(null);
+                return;
+            }
+            Vector2 mouse = Input.mousePosition;
+            if (RectTransformUtility.RectangleContainsScreenPoint(_rect, mouse, PointerCamera())) return;
+            if (IsPointerInHomeFootprint(mouse)) return;
+            _hoverHeld = false;
+            OnPointerExit(null);
         }
 
         // 호버 오프셋을 적용/해제
@@ -1215,6 +1288,7 @@ namespace Battle.UI
             }
             if (_curseActive || (_curseInk != null && _curseInk.enabled) || _curseReleaseRemaining > 0f)
                 UpdateCurseInkVisual();
+            UpdateHeldHover();
             UpdateKeywordTooltip();
             if (!_isDragging) return;
             if (!Input.GetMouseButtonDown(1)) return;
