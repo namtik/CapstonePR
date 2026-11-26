@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 // 3D 몬스터 전투 프리팹 자동 생성기.
-// 무사(EnemySamu) 프리팹을 템플릿으로 컴포넌트 값(EnemyController/EnemyView3D/EnemyStat/MonsterMidPattern)을 복사하고,
+// 무사(EnemySamu) 프리팹을 템플릿으로 컴포넌트 값(EnemyController/EnemyView3D/EnemyStat)을 복사하고,
 // FBX 모델 + 머티리얼 + HudAnchor를 붙여 프리팹으로 저장한 뒤 EnemyData.battlePrefab3D에 연결한다.
 // 이펙트·전용 셰이더·Avatar까지 구성된 '완성 모델 프리팹'(멧돼지·바위거인·액괴 방식)은 FBX 대신 sourcePrefab으로 지정한다.
 // Animator Controller와 EnemyView3D의 동작 매핑(Motion States)은 만들지 않는다 — 직접 구성.

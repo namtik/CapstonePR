@@ -380,7 +380,7 @@ namespace Battle.UI
             label.fontSize = 72f;
             label.color = new Color(0.1f, 0.07f, 0.04f, 1f);
             label.alignment = TextAlignmentOptions.Center;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.raycastTarget = false;
             label.outlineWidth = 0.2f;
             label.outlineColor = new Color(0.96f, 0.91f, 0.78f, 1f);

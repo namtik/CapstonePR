@@ -29,7 +29,7 @@ public class StatusIconUI : MonoBehaviour
         countText.color = color;
         countText.fontStyle = style;
         countText.alignment = TextAlignmentOptions.Center;
-        countText.enableWordWrapping = false;
+        countText.textWrappingMode = TextWrappingModes.NoWrap;
         countText.overflowMode = TextOverflowModes.Overflow;
         ApplyOutline(outlineWidth, outlineColor);
 

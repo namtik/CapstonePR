@@ -96,7 +96,6 @@ public class RelicStageController : MonoBehaviour
     [Header("개발중 유물 이미지")]
     [SerializeField] private string relicSpriteFolderPath = "Assets/Sprite/Relic"; // 유물 스프라이트 폴더 경로
     [SerializeField] private bool autoCollectSpritesInEditor = true; // 에디터에서 스프라이트 자동 수집 여부
-    [SerializeField] private bool avoidOwnedDuplicates = true; // 보유 중복 회피 여부
     [SerializeField] private List<SpriteOnlyRelicEntry> spriteOnlyRelics = new List<SpriteOnlyRelicEntry>(); // 스프라이트 전용 유물 목록
 
     [Header("유물 호리병(10018) 설정")]

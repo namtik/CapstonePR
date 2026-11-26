@@ -1,40 +1,40 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// ¸ğµç »óÅÂÀÌ»ó È¿°úÀÇ °øÅë ±â¹İ Å¬·¡½º
+// ëª¨ë“  ìƒíƒœì´ìƒ íš¨ê³¼ì˜ ê³µí†µ ê¸°ë°˜ í´ë˜ìŠ¤
 public abstract class StatusEffectBase
 {
-    // È¿°ú¸¦ ½ÇÇàÇÑ´Ù(caster=½ÃÀüÀÚ, target=´ë»ó, amount=¼öÄ¡)
+    // íš¨ê³¼ë¥¼ ì‹¤í–‰í•œë‹¤(caster=ì‹œì „ì, target=ëŒ€ìƒ, amount=ìˆ˜ì¹˜)
     public abstract void Execute(IBattleUnit caster, IBattleUnit target, int amount);
 }
 
 
 
-// ´ë»ó¿¡°Ô È­»óÀ» ºÎ¿©ÇÏ´Â È¿°ú
+// ëŒ€ìƒì—ê²Œ í™”ìƒì„ ë¶€ì—¬í•˜ëŠ” íš¨ê³¼
 public class BurnEffect : StatusEffectBase
 {
-    // ´ë»ó¿¡°Ô È­»ó ¼öÄ¡¸¦ ºÎ¿©ÇÑ´Ù
+    // ëŒ€ìƒì—ê²Œ í™”ìƒ ìˆ˜ì¹˜ë¥¼ ë¶€ì—¬í•œë‹¤
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         target.AddStatus("burn", amount);
-        Debug.Log($"[È¿°ú ¹ßµ¿] ´ë»ó¿¡°Ô È­»ó {amount} ºÎ¿©!");
+        Debug.Log($"[íš¨ê³¼ ë°œë™] ëŒ€ìƒì—ê²Œ í™”ìƒ {amount} ë¶€ì—¬!");
     }
 }
 
-// ´ë»ó¿¡°Ô Á¥À½À» ºÎ¿©ÇÏ´Â È¿°ú
+// ëŒ€ìƒì—ê²Œ ì –ìŒì„ ë¶€ì—¬í•˜ëŠ” íš¨ê³¼
 public class WetEffect : StatusEffectBase
 {
-    // ´ë»ó¿¡°Ô Á¥À½ ¼öÄ¡¸¦ ºÎ¿©ÇÑ´Ù
+    // ëŒ€ìƒì—ê²Œ ì –ìŒ ìˆ˜ì¹˜ë¥¼ ë¶€ì—¬í•œë‹¤
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         target.AddStatus("wet", amount);
-        Debug.Log($"[È¿°ú ¹ßµ¿] ´ë»ó¿¡°Ô Á¥À½ {amount} ºÎ¿©!");
+        Debug.Log($"[íš¨ê³¼ ë°œë™] ëŒ€ìƒì—ê²Œ ì –ìŒ {amount} ë¶€ì—¬!");
     }
 }
 
-// Á¥À½À» ¼Ò¸ğÇØ ºù°á·Î ÀüÈ¯ÇÏ´Â È¿°ú
+// ì –ìŒì„ ì†Œëª¨í•´ ë¹™ê²°ë¡œ ì „í™˜í•˜ëŠ” íš¨ê³¼
 public class FreezeEffect : StatusEffectBase
 {
-    // Á¥À½ 5´ç ºù°á 1·Î º¯È¯ÇÏ°í ³ª¸ÓÁö¸¦ ³²±ä´Ù
+    // ì –ìŒ 5ë‹¹ ë¹™ê²° 1ë¡œ ë³€í™˜í•˜ê³  ë‚˜ë¨¸ì§€ë¥¼ ë‚¨ê¸´ë‹¤
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         int wetAmount = target.GetStatus("wet");
@@ -45,15 +45,15 @@ public class FreezeEffect : StatusEffectBase
 
             target.SetStatus("wet", remainder);
             target.AddStatus("freeze", freezeGain);
-            Debug.Log($"[È¿°ú ¹ßµ¿] ´ë»óÀÇ Á¥À½ÀÌ ºù°á {freezeGain}·Î ÀüÈ¯µÊ! (³²Àº Á¥À½: {remainder})");
+            Debug.Log($"[íš¨ê³¼ ë°œë™] ëŒ€ìƒì˜ ì –ìŒì´ ë¹™ê²° {freezeGain}ë¡œ ì „í™˜ë¨! (ë‚¨ì€ ì –ìŒ: {remainder})");
         }
     }
 }
 
-// È­»ó ½ºÅÃÀ» ÅÍ¶ß·Á Ãß°¡ ÇÇÇØ¸¦ ÁÖ´Â È¿°ú
+// í™”ìƒ ìŠ¤íƒì„ í„°ëœ¨ë ¤ ì¶”ê°€ í”¼í•´ë¥¼ ì£¼ëŠ” íš¨ê³¼
 public class DetonateEffect : StatusEffectBase
 {
-    // È­»ó ½ºÅÃÀ» ¼Ò¸ğÇÏ°í ½ºÅÃ´ç 2ÀÇ Ãß°¡ ÇÇÇØ¸¦ ÁØ´Ù
+    // í™”ìƒ ìŠ¤íƒì„ ì†Œëª¨í•˜ê³  ìŠ¤íƒë‹¹ 2ì˜ ì¶”ê°€ í”¼í•´ë¥¼ ì¤€ë‹¤
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         int burnCount = target.GetStatus("burn");
@@ -62,38 +62,38 @@ public class DetonateEffect : StatusEffectBase
             target.SetStatus("burn", 0);
             int extraDamage = burnCount * 2;
             target.TakeDamage(extraDamage, "detonate");
-            Debug.Log($"[È¿°ú ¹ßµ¿] È­»ó Æø¹ß! ´ë»ó¿¡°Ô Ãß°¡ µ¥¹ÌÁö {extraDamage}!");
+            Debug.Log($"[íš¨ê³¼ ë°œë™] í™”ìƒ í­ë°œ! ëŒ€ìƒì—ê²Œ ì¶”ê°€ ë°ë¯¸ì§€ {extraDamage}!");
         }
     }
 }
 
 
-// ½ÃÀüÀÚ¿¡°Ô »çÃâ±â ½ºÅÃÀ» ºÎ¿©ÇÏ´Â È¿°ú
+// ì‹œì „ìì—ê²Œ ì‚¬ì¶œê¸° ìŠ¤íƒì„ ë¶€ì—¬í•˜ëŠ” íš¨ê³¼
 public class LauncherEffect : StatusEffectBase
 {
-    // ½ÃÀüÀÚ¿¡°Ô »çÃâ±â ¼öÄ¡¸¦ ºÎ¿©ÇÑ´Ù
+    // ì‹œì „ìì—ê²Œ ì‚¬ì¶œê¸° ìˆ˜ì¹˜ë¥¼ ë¶€ì—¬í•œë‹¤
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         caster.AddStatus("launcher", amount);
-        Debug.Log($"[È¿°ú ¹ßµ¿] ½ÃÀüÀÚ°¡ »çÃâ±â {amount} È¹µæ!");
+        Debug.Log($"[íš¨ê³¼ ë°œë™] ì‹œì „ìê°€ ì‚¬ì¶œê¸° {amount} íšë“!");
     }
 }
 
-// ½ÃÀüÀÚ¿¡°Ô Èë ½ºÅÃÀ» ºÎ¿©ÇÏ´Â È¿°ú
+// ì‹œì „ìì—ê²Œ í™ ìŠ¤íƒì„ ë¶€ì—¬í•˜ëŠ” íš¨ê³¼
 public class FortifyEffect : StatusEffectBase
 {
-    // ½ÃÀüÀÚ¿¡°Ô Èë ¼öÄ¡¸¦ ºÎ¿©ÇÑ´Ù
+    // ì‹œì „ìì—ê²Œ í™ ìˆ˜ì¹˜ë¥¼ ë¶€ì—¬í•œë‹¤
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         caster.AddStatus("fortify", amount);
-        Debug.Log($"[È¿°ú ¹ßµ¿] ½ÃÀüÀÚ°¡ Èë {amount} È¹µæ!");
+        Debug.Log($"[íš¨ê³¼ ë°œë™] ì‹œì „ìê°€ í™ {amount} íšë“!");
     }
 }
 
-// »çÃâ±â ½ºÅÃÀ» ¼Ò¸ğÇØ Ãß°¡ ÇÇÇØ¸¦ ÁÖ´Â È¿°ú
+// ì‚¬ì¶œê¸° ìŠ¤íƒì„ ì†Œëª¨í•´ ì¶”ê°€ í”¼í•´ë¥¼ ì£¼ëŠ” íš¨ê³¼
 public class ChargeEffect : StatusEffectBase
 {
-    // »çÃâ±â ½ºÅÃÀ» ¼Ò¸ğÇÏ°í ½ºÅÃ´ç °ø°İ·Â 1/10ÀÇ Ãß°¡ ÇÇÇØ¸¦ ÁØ´Ù
+    // ì‚¬ì¶œê¸° ìŠ¤íƒì„ ì†Œëª¨í•˜ê³  ìŠ¤íƒë‹¹ ê³µê²©ë ¥ 1/10ì˜ ì¶”ê°€ í”¼í•´ë¥¼ ì¤€ë‹¤
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         int launcherCount = caster.GetStatus("launcher");
@@ -102,15 +102,15 @@ public class ChargeEffect : StatusEffectBase
             caster.SetStatus("launcher", 0);
             float extraDamage = launcherCount * (caster.GetAttackDamage() / 10f);
             target.TakeDamage(extraDamage, "Charge");
-            Debug.Log($"[È¿°ú ¹ßµ¿] È­»ó Æø¹ß! ´ë»ó¿¡°Ô Ãß°¡ µ¥¹ÌÁö {extraDamage}!");
+            Debug.Log($"[íš¨ê³¼ ë°œë™] í™”ìƒ í­ë°œ! ëŒ€ìƒì—ê²Œ ì¶”ê°€ ë°ë¯¸ì§€ {extraDamage}!");
         }
     }
 }
 
-// Èë ½ºÅÃÀ» ¼Ò¸ğÇØ ¹æ¾îµµ¸¦ ¾ò´Â È¿°ú
+// í™ ìŠ¤íƒì„ ì†Œëª¨í•´ ë°©ì–´ë„ë¥¼ ì–»ëŠ” íš¨ê³¼
 public class SpendEffect : StatusEffectBase
 {
-    // Èë ½ºÅÃÀ» ¼Ò¸ğÇÏ°í ½ºÅÃ´ç ¹æ¾îµµ 2¸¦ ¾ò´Â´Ù
+    // í™ ìŠ¤íƒì„ ì†Œëª¨í•˜ê³  ìŠ¤íƒë‹¹ ë°©ì–´ë„ 2ë¥¼ ì–»ëŠ”ë‹¤
     public override void Execute(IBattleUnit caster, IBattleUnit target, int amount)
     {
         int earthCount = caster.GetStatus("fortify");
@@ -119,7 +119,7 @@ public class SpendEffect : StatusEffectBase
             caster.SetStatus("fortify", 0);
             int guardGain = earthCount * 2;
             caster.AddGuard(guardGain);
-            Debug.Log($"[È¿°ú ¹ßµ¿] Èë {earthCount}°³¸¦ ¼ÒºñÇÏ¿© ½ÃÀüÀÚ°¡ ¹æ¾îµµ {guardGain} È¹µæ!");
+            Debug.Log($"[íš¨ê³¼ ë°œë™] í™ {earthCount}ê°œë¥¼ ì†Œë¹„í•˜ì—¬ ì‹œì „ìê°€ ë°©ì–´ë„ {guardGain} íšë“!");
         }
     }
 }

@@ -497,7 +497,7 @@ namespace Battle.UI
             label.fontSize = 16f;
             label.color = new Color(0.96f, 0.93f, 0.86f, 1f);
             label.alignment = TextAlignmentOptions.Center;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Ellipsis;
             label.raycastTarget = false;
             ApplyOutline(label, 0.15f, Color.black);
@@ -830,7 +830,7 @@ namespace Battle.UI
             label.fontSize = Mathf.Max(8f, hpFontSize);
             label.color = color;
             label.alignment = TextAlignmentOptions.Center;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
             label.enableAutoSizing = false;
             label.richText = false;
@@ -924,7 +924,7 @@ namespace Battle.UI
             ApplyChosunFont(label, statFont);
             label.color = statColor;
             label.raycastTarget = false;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Ellipsis;
             label.enableAutoSizing = false;
             label.fontSize = Mathf.Max(8f, pattern ? patternFontSize : attackFontSize);
@@ -976,7 +976,7 @@ namespace Battle.UI
             label.fontSize = Mathf.Max(8f, disruptionFontSize);
             label.color = disruptionColor;
             label.alignment = disruptionAlignment;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
             label.raycastTarget = false;
             ApplyOutline(label, disruptionOutlineWidth, disruptionOutlineColor);
@@ -1067,7 +1067,7 @@ namespace Battle.UI
             label.fontSize = Mathf.Max(8f, nameFontSize);
             label.color = nameColor;
             label.alignment = nameAlignment;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
             label.raycastTarget = false;
             ApplyOutline(label, nameOutlineWidth, nameOutlineColor);

@@ -412,13 +412,6 @@ public class GameStateController : MonoBehaviour
         if (relicStage != null) relicStage.SetActive(false);
     }
 
-    // (구버전) 전투 화면으로 전환
-    [System.Obsolete("Use ShowCanvasForNodeType instead")]
-    public void ShowBattle()
-    {
-        ShowCanvasForNodeType(NodeType.Combat, false);
-    }
-
     // 노드를 클리어 처리해 목록에 추가한다
     public void MarkNodeCleared(int index)
     {

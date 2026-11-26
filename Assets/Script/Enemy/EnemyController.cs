@@ -55,7 +55,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
     private Player player; // 플레이어 참조
     private RoundManager roundManager; // 라운드 매니저 참조
     private bool isDead = false; // 사망 처리 여부
-    private MonsterMidPattern midPattern; // 방해행동 패턴 컴포넌트
+
     private bool _attackPreviewInitialized; // 공격 예고 초기화 여부
 
     // ── 특이사항(EnemySpecialAbility) 상태 ──
@@ -101,7 +101,6 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         stat.OnGaugeStepChanged += view.UpdateActionGauge;
         stat.OnDamaged += HandleSpecialDamaged;   // 특이사항(화웅 반사)
         stat.OnHpChanged += HandleSpecialHpChanged; // 특이사항(액괴/무사): 체력 절반
-        midPattern = GetComponent<MonsterMidPattern>();
 
         // 공격 모션이 마지막(임팩트) 프레임에 도달할 때 공격 이펙트를 한 번 더 재생
         if (view != null) view.OnAttackMotionLastFrame += PlayAttackVfx;
@@ -458,20 +457,9 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (!stat.IsAlive) return;
         string patternMessage = null;
 
-        // 새 전투 시스템: NewBattleController가 방해 행동 처리
+        // 방해 행동은 NewBattleController(적 AI)가 결정·처리
         if (Battle.NewBattleController.Instance != null)
-        {
             patternMessage = Battle.NewBattleController.Instance.TriggerDisruption(this);
-        }
-        // FCM 시스템이 있으면 사용, 없으면 기존 랜덤 폴백
-        else if (midPattern != null)
-        {
-            patternMessage = midPattern.Execute();
-        }
-        else
-        {
-            patternMessage = ElementSlotSystem.Instance?.TriggerDisruptionPattern();
-        }
 
         if (string.IsNullOrEmpty(patternMessage))
             patternMessage = "패턴 발동";
@@ -545,7 +533,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
     void PerformGaugeFullAttack()
     {
-        midPattern?.OnGauge10();
+
         if (player == null)
             player = Player.Resolve(true);
 
@@ -800,7 +788,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (isDead) return;
         isDead = true;
         TriggerOnDeathAbility(); // 특이사항(오염된 원소 4종): 처치 시 페널티
-        midPattern?.OnBattleEnd();
+
         // OnDied 이벤트로 인해 RoundManager.HandleEnemyDied가 호출됨
         // 여기서 직접 호출하지 않음 (중복 호출 방지)
 

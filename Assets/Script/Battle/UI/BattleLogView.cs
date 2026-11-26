@@ -390,7 +390,7 @@ namespace Battle.UI
             label.fontSize = Mathf.Max(8f, labelFontSize);
             label.color = labelColor;
             label.alignment = labelAlignment;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Ellipsis;
             label.enableAutoSizing = false;
             label.raycastTarget = false;
@@ -643,7 +643,7 @@ namespace Battle.UI
             label.alignment = numberAlignment;
             label.color = numberColor;
             label.raycastTarget = false;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
             ApplyChosunFont(label, font);
         }

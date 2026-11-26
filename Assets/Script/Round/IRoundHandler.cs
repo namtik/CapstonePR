@@ -19,13 +19,11 @@ public class CombatRoundHandler : IRoundHandler
     // 일반 전투를 시작한다.
     public void OnEnterRound(RoundManager rm)
     {
-        Debug.Log("Entering Combat Round: " + data.roundName);
         rm.StartCombat(data);
     }
     // 전투 종료 후 스킬 보상을 표시한다.
     public void OnExitRound(RoundManager rm)
     {
-        Debug.Log("Exiting Combat Round: " + data.roundName);
         rm.ShowSkillReward();
 
     }
@@ -42,13 +40,11 @@ public class EliteRoundHandler : IRoundHandler
     // 정예 전투를 시작한다.
     public void OnEnterRound(RoundManager rm)
     {
-        Debug.Log("Entering Elite Round: " + data.roundName);
         rm.StartCombat(data);
     }
     // 전투 종료 후 스킬 보상을 표시한다.
     public void OnExitRound(RoundManager rm)
     {
-        Debug.Log("Exiting Elite Round: " + data.roundName);
         rm.ShowSkillReward();
     }
 }
@@ -64,13 +60,11 @@ public class BossRoundHandler : IRoundHandler
     // 보스 전투를 시작한다.
     public void OnEnterRound(RoundManager rm)
     {
-        Debug.Log("Entering Boss Round: " + data.roundName);
         rm.StartBoss(data);
     }
     // 전투 종료 후 스킬 보상을 표시한다.
     public void OnExitRound(RoundManager rm)
     {
-        Debug.Log("Exiting Boss Round: " + data.roundName);
         rm.ShowSkillReward();
     }
 }
@@ -86,12 +80,10 @@ public class ShopRoundHandler : IRoundHandler
     // 상점 라운드 진입을 로그로 남긴다.
     public void OnEnterRound(RoundManager rm)
     {
-        Debug.Log("Entering Shop Round: " + data.roundName);
     }
     // 상점 라운드 종료를 로그로 남긴다.
     public void OnExitRound(RoundManager rm)
     {
-        Debug.Log("Exiting Shop Round: " + data.roundName);
     }
 }
 
@@ -106,13 +98,11 @@ public class EventRoundHandler : IRoundHandler
     // 이벤트 스테이지를 연다.
     public void OnEnterRound(RoundManager rm)
     {
-        Debug.Log("Entering Event Round: " + data.roundName);
         rm.OpenEvent(data);
     }
     // 이벤트 라운드 종료를 로그로 남긴다.
     public void OnExitRound(RoundManager rm)
     {
-        Debug.Log("Exiting Event Round: " + data.roundName);
     }
 }
 
@@ -127,13 +117,11 @@ public class RestRoundHandler : IRoundHandler
     // 휴식 스테이지를 연다.
     public void OnEnterRound(RoundManager rm)
     {
-        Debug.Log("Entering Rest Round: " + data.roundName);
         rm.OpenRest(data);
     }
     // 휴식 라운드 종료를 로그로 남긴다.
     public void OnExitRound(RoundManager rm)
     {
-        Debug.Log("Exiting Rest Round: " + data.roundName);
     }
 }
 
@@ -149,13 +137,11 @@ public class RelicRoundHandler : IRoundHandler
     // 유물 스테이지를 연다.
     public void OnEnterRound(RoundManager rm)
     {
-        Debug.Log("Entering Relic Round: " + data.roundName);
         rm.OpenRelic(data);
     }
 
     // 유물 라운드 종료를 로그로 남긴다.
     public void OnExitRound(RoundManager rm)
     {
-        Debug.Log("Exiting Relic Round: " + data.roundName);
     }
 }

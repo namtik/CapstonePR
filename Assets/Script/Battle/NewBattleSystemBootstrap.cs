@@ -4,7 +4,7 @@ using Battle.Relic;
 
 namespace Battle
 {
-    // SampleScene에서 신규 카드 전투 시스템을 항상 활성화하는 부트스트랩
+    // 신규 카드 전투 시스템(NewBattleController·유물·런덱)을 항상 준비하는 부트스트랩
     [DefaultExecutionOrder(-1000)]
     public class NewBattleSystemBootstrap : MonoBehaviour
     {
@@ -12,11 +12,9 @@ namespace Battle
         [Tooltip("런 시작 시 자동 지급할 유물 에셋(RelicSO). 비우면 지급 안 함.")]
         [SerializeField] private List<RelicSO> startingRelics = new List<RelicSO>(); // 런 시작 시 지급할 유물 목록
 
-        // 레거시 전투 오브젝트 차단 후 신규 컨트롤러/유물/런덱 준비 (실행 순서 -1000)
+        // 신규 컨트롤러/유물/런덱 준비 (실행 순서 -1000)
         void Awake()
         {
-            PreDisableLegacyCombatObjects();
-
             EnsureNewBattleController();
             EnsureRelicSystems();
             RunDeckState.EnsureExists().EnsureSeeded();
@@ -32,22 +30,6 @@ namespace Battle
                 RelicManager.Instance.AddRelic(relic);
         }
 
-        // 씬에 남은 레거시 전투 오브젝트(4슬롯/콤보/구 손패)를 비활성화
-        void PreDisableLegacyCombatObjects()
-        {
-            DisableAll<ElementSlotSystem>();
-            DisableAll<ComboSystem>();
-            DisableAll<ElementSlotHUD>();
-            DisableAll<CardSystem>();
-        }
-
-        // 지정 타입의 모든 오브젝트를 찾아 비활성화
-        static void DisableAll<T>() where T : MonoBehaviour
-        {
-            var found = FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (var c in found)
-                if (c != null) c.gameObject.SetActive(false);
-        }
 
         // NewBattleController가 없으면 찾거나 생성해 보장
         void EnsureNewBattleController()

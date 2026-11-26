@@ -219,7 +219,7 @@ public class EnemyNoteBadge : MonoBehaviour
         textGo.transform.SetParent(bubbleGo.transform, false);
         _label = textGo.AddComponent<TextMeshProUGUI>();
         _label.raycastTarget = false;
-        _label.enableWordWrapping = true;
+        _label.textWrappingMode = TextWrappingModes.Normal;
         _label.overflowMode = TextOverflowModes.Overflow;
 
         bubbleGo.SetActive(false);
@@ -341,7 +341,7 @@ public class EnemyNoteBadge : MonoBehaviour
             _label.fontSharedMaterial = fontMaterial;
             _appliedMaterial = fontMaterial;
         }
-        _label.enableWordWrapping = true;
+        _label.textWrappingMode = TextWrappingModes.Normal;
         _label.enableAutoSizing = false;
         // 최소 크기로도 안 들어가면 말풍선 밖으로 넘기지 않고 말줄임 처리.
         _label.overflowMode = TextOverflowModes.Ellipsis;

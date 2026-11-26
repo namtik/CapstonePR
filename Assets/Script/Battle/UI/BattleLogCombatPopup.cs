@@ -386,7 +386,7 @@ namespace Battle.UI
             label.fontSize = 128f;
             label.color = ComboOverflowColor;
             label.alignment = TextAlignmentOptions.Center;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
             label.raycastTarget = false;
             ApplyOverflowOutline(label);
@@ -700,7 +700,7 @@ namespace Battle.UI
             label.fontSize = 64f;
             label.color = gain ? Gain : Loss;
             label.alignment = TextAlignmentOptions.MidlineLeft;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
             label.raycastTarget = false;
             label.outlineWidth = 0.15f;

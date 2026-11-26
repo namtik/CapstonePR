@@ -1,22 +1,15 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using TMPro;
 using Battle;
 using Battle.Card;
-using static SkillDataParser;
 
-public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+public class SkillListItemUI : MonoBehaviour
 {
     [Header("UI 참조")]
     public TextMeshProUGUI nameText;   // 스킬 이름 텍스트
     public Transform commandIconContainer;   // 속성 아이콘이 들어갈 부모
 
-    [Header("커맨드 속성 아이콘 매핑 (Q/W/E/R)")]
-    public Sprite iconQ;   // Q 속성 아이콘
-    public Sprite iconW;   // W 속성 아이콘
-    public Sprite iconE;   // E 속성 아이콘
-    public Sprite iconR;   // R 속성 아이콘
 
     [Header("각성 콤보 슬롯")]
     [SerializeField] private Sprite awakenSlotBackground; // 슬롯 배경. 비우면 Resources/UI/UI_Awakeskillslot_BG
@@ -36,7 +29,6 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [SerializeField] private Color awakenCooldownColor = Color.white; // 쿨타임 숫자 색
     [SerializeField] private FontStyles awakenCooldownFontStyle = FontStyles.Bold; // 쿨타임 숫자 스타일
 
-    private GameObject tooltipObj;   // 생성된 툴팁 오브젝트
     private bool _awakenVisualReady; // 각성 슬롯 구성 완료
     private CanvasGroup _awakenSlotGroup; // 슬롯만 흐리게 하는 그룹(쿨타임 표시는 제외)
     private Image _awakenBgImage; // 슬롯 배경
@@ -58,14 +50,6 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         awakenCooldownFontSize = cooldownSize;
         awakenCooldownColor = cooldownColor;
         awakenCooldownFontStyle = cooldownStyle;
-    }
-
-    // 기존 SkillData로 이름/아이콘/툴팁을 구성한다
-    public void Setup(SkillData skill)
-    {
-        if (nameText != null) nameText.text = skill.name;
-        CreateCommandIcons(skill.combo);
-        CreateTooltip(skill);
     }
 
     // 새 전투 시스템의 ComboSkillDef로 표시를 구성하고 쿨다운 상태를 반영한다
@@ -192,7 +176,7 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         _awakenCooldownText = textGo.AddComponent<TextMeshProUGUI>();
         _awakenCooldownText.raycastTarget = false;
         _awakenCooldownText.alignment = TextAlignmentOptions.MidlineRight;
-        _awakenCooldownText.enableWordWrapping = false;
+        _awakenCooldownText.textWrappingMode = TextWrappingModes.NoWrap;
         _awakenCooldownText.overflowMode = TextOverflowModes.Overflow;
         _awakenCooldownText.gameObject.SetActive(false);
     }
@@ -207,7 +191,7 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
             nameText.color = awakenNameColor;
             nameText.fontStyle = awakenNameFontStyle;
             nameText.alignment = awakenNameAlignment;
-            nameText.enableWordWrapping = false;
+            nameText.textWrappingMode = TextWrappingModes.NoWrap;
             nameText.overflowMode = TextOverflowModes.Ellipsis;
             nameText.raycastTarget = false;
         }
@@ -328,51 +312,6 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         _ => new Color(0.5f, 0.5f, 0.5f, 1f)
     };
 
-    // 기존 콤보 문자열(Q/W/E/R)에 맞춰 속성 아이콘들을 생성한다
-    private void CreateCommandIcons(string combo)
-    {
-        if (commandIconContainer == null || string.IsNullOrEmpty(combo)) return;
-
-        foreach (Transform child in commandIconContainer)
-            Destroy(child.gameObject);
-
-        combo = combo.ToLower();
-
-        foreach (char c in combo)
-        {
-            GameObject iconObj = new GameObject($"Element_{c}");
-            iconObj.transform.SetParent(commandIconContainer, false);
-
-            RectTransform rect = iconObj.AddComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(50f, 50f);
-
-            Image img = iconObj.AddComponent<Image>();
-
-            Sprite elementSprite = GetElementSprite(c);
-            if (elementSprite != null)
-            {
-                img.sprite = elementSprite;
-            }
-            else
-            {
-                img.color = Color.gray;
-            }
-        }
-    }
-
-    // 콤보 문자에 대응하는 속성 아이콘 스프라이트를 반환한다
-    private Sprite GetElementSprite(char c)
-    {
-        switch (c)
-        {
-            case 'q': return iconQ;
-            case 'w': return iconW;
-            case 'e': return iconE;
-            case 'r': return iconR;
-            default: return null;
-        }
-    }
-
     [Header("쿨타임 시작 시 한 번 호버")]
     [SerializeField] private float hoverPulseScale = 1.1f;     // 가장 커질 때 배율
     [SerializeField] private float hoverPulseDuration = 0.35f; // 커졌다 돌아오는 시간(초)
@@ -411,69 +350,4 @@ public class SkillListItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
         else transform.localScale = Vector3.one;
     }
 
-    // 포인터 진입 시 툴팁을 표시한다
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        if (tooltipObj != null) tooltipObj.SetActive(true);
-    }
-
-    // 포인터 이탈 시 툴팁을 숨긴다
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        if (tooltipObj != null) tooltipObj.SetActive(false);
-    }
-
-    // 스킬 정보를 담은 툴팁 UI를 동적으로 생성한다
-    private void CreateTooltip(SkillData skillData)
-    {
-        tooltipObj = new GameObject("Tooltip");
-        tooltipObj.transform.SetParent(transform, false);
-
-        RectTransform tooltipRect = tooltipObj.AddComponent<RectTransform>();
-        tooltipRect.anchorMin = new Vector2(0f, 0.5f);
-        tooltipRect.anchorMax = new Vector2(0f, 0.5f);
-        tooltipRect.pivot = new Vector2(1f, 0.5f);
-        tooltipRect.anchoredPosition = new Vector2(-15f, 0f);
-        tooltipRect.sizeDelta = new Vector2(200f, 150f);
-
-        Image bgImage = tooltipObj.AddComponent<Image>();
-        bgImage.color = new Color(0.9f, 0.7f, 0.3f, 1f);
-
-        Outline bgOutline = tooltipObj.AddComponent<Outline>();
-        bgOutline.effectColor = Color.black;
-        bgOutline.effectDistance = new Vector2(2, -2);
-
-        GameObject titleObj = new GameObject("Title");
-        titleObj.transform.SetParent(tooltipObj.transform, false);
-        RectTransform titleRect = titleObj.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0f, 1f);
-        titleRect.anchorMax = new Vector2(1f, 1f);
-        titleRect.sizeDelta = new Vector2(-10f, 40f);
-        titleRect.anchoredPosition = new Vector2(0f, -5f);
-
-        Text titleText = titleObj.AddComponent<Text>();
-        titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        titleText.fontSize = 20;
-        titleText.alignment = TextAnchor.MiddleCenter;
-        titleText.color = Color.black;
-        titleText.fontStyle = FontStyle.Bold;
-        titleText.text = skillData.name;
-
-        GameObject descObj = new GameObject("Description");
-        descObj.transform.SetParent(tooltipObj.transform, false);
-        RectTransform descRect = descObj.AddComponent<RectTransform>();
-        descRect.anchorMin = Vector2.zero;
-        descRect.anchorMax = Vector2.one;
-        descRect.sizeDelta = new Vector2(-10f, -50f);
-        descRect.anchoredPosition = new Vector2(0f, -10f);
-
-        Text descText = descObj.AddComponent<Text>();
-        descText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        descText.fontSize = 16;
-        descText.alignment = TextAnchor.MiddleCenter;
-        descText.color = Color.black;
-        descText.text = $"콤보: {skillData.combo}\n\n{skillData.description}";
-
-        tooltipObj.SetActive(false);
-    }
 }

@@ -610,7 +610,7 @@ public class EnemyOverlayHUD : MonoBehaviour
         text.alignment = TextAlignmentOptions.Center;
         Vector4 margin = text.margin;
         text.margin = new Vector4(0f, margin.y, 0f, margin.w);
-        text.enableWordWrapping = false;
+        text.textWrappingMode = TextWrappingModes.NoWrap;
         text.overflowMode = TextOverflowModes.Overflow;
     }
 

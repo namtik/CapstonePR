@@ -573,19 +573,4 @@ public class MapGenerator : MonoBehaviour
             }
         }
     }
-
-    // 디버그용: 생성된 맵 정보를 콘솔에 출력한다
-    public void PrintMapInfo()
-    {
-        Debug.Log("=== 맵 생성 정보 ===");
-        Debug.Log($"총 노드 수: {generatedMapData.nodes.Count}");
-        Debug.Log($"시작 노드: {generatedMapData.startIndex}");
-        Debug.Log($"보스 노드: {generatedMapData.bossIndex}");
-
-        for (int i = 0; i < generatedMapData.nodes.Count; i++)
-        {
-            var node = generatedMapData.nodes[i];
-            Debug.Log($"노드 {i}: {node.nodeType}, 위치 ({node.anchoredPosition.x}, {node.anchoredPosition.y}), 연결 [{string.Join(", ", node.connections)}]");
-        }
-    }
 }

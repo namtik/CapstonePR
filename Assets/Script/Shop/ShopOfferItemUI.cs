@@ -16,7 +16,6 @@ public class ShopOfferItemUI : MonoBehaviour
     [SerializeField] private Image moneyIconImage; // 가격 옆 재화 아이콘
     [SerializeField] private Button buyButton; // 구매 버튼
     [SerializeField] private bool enableIconClickPurchase = true; // 아이콘 클릭 구매 허용 여부
-    [SerializeField] private float purchasedAlpha = 0.45f; // 구매 완료 시 알파값
     [SerializeField] private Color unaffordablePriceColor = new Color(0.9f, 0.16f, 0.16f, 1f); // 돈 부족 시 가격 색
     [SerializeField] private string purchasedLabel = "\uAD6C\uB9E4\uC644\uB8CC"; // 구매 완료 라벨
     [SerializeField] private float cardVisualScale = 1f; // 카드 비주얼 전체 스케일

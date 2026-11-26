@@ -24,7 +24,6 @@ namespace Battle.UI
         [Header("옵션")]
         [SerializeField] private float cardScale = 1f;                // 카드 표시 스케일(1 = 셀에 맞춤)
         [SerializeField] private float hoverScale = 1.06f;            // 호버 확대 배율(덱/묘지 보기와 같은 1.06)
-        [SerializeField] private int hoverSortingOrder = 200;         // 호버 정렬 순서
         [SerializeField] private Color undiscoveredColor = new Color(0f, 0f, 0f, 0.85f); // 미발견 실루엣 색
 
         [Header("정렬 버튼 이미지 (선택) — 순서 0:획득, 1:이름, 2:호흡")]

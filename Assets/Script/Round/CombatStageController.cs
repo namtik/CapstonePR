@@ -11,26 +11,10 @@ public class CombatStageController : MonoBehaviour
     [SerializeField] private Sprite eliteSprite; // 정예 전투 기본 배경
     [SerializeField] private Sprite bossSprite; // 보스 전투 기본 배경
 
-    // 라운드 시작 시 배경 전환과 덱/콤보 초기화를 수행한다.
+    // 라운드 시작 시 배경을 전환한다.
     public void Initialize(RoundData roundData)
     {
         SwitchBackground(roundData);
-
-        if (Battle.NewBattleController.Instance != null)
-            return;
-
-        var cardSystem = FindFirstObjectByType<CardSystem>();
-        if (cardSystem != null)
-        {
-            cardSystem.ResetDeck();
-        }
-
-        if (ComboSystem.Instance != null)
-        {
-            ComboSystem.Instance.ResetComboInput();
-            ComboSystem.Instance.RefreshSkillUI();
-            ComboSystem.Instance.RefreshComboSlotUI();
-        }
     }
 
     // 라운드 타입에 맞는 기본 배경을 적용한다.

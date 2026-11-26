@@ -47,7 +47,6 @@ namespace Battle.UI
         [SerializeField] private bool bringCanvasToTopOnOpen = true; // 열 때 최상단 보장
         [SerializeField] private int overlaySortingOrder = 100;     // 오버레이 정렬 순서
 
-        bool _isOpen;   // 현재 열림 상태
 
         // 싱글톤 등록, 참조 자동 보정 및 버튼 자동 연결, 시작 시 숨김
         void Awake()
@@ -65,7 +64,6 @@ namespace Battle.UI
             if (startHidden)
             {
                 panelRoot.SetActive(false);
-                _isOpen = false;
             }
         }
 
@@ -108,7 +106,6 @@ namespace Battle.UI
             bool wasOpen = panelRoot != null && panelRoot.activeInHierarchy;
             if (CodexPanelController.IsOpen) CodexPanelController.Instance.Close();
 
-            _isOpen = true;
             WakeHiddenCanvas();
             if (panelRoot != null)
             {
@@ -189,7 +186,6 @@ namespace Battle.UI
         // 패널을 닫음
         public void Close()
         {
-            _isOpen = false;
             if (pauseTimeWhenOpen) Time.timeScale = 1f;
             if (panelRoot != null) panelRoot.SetActive(false);
         }

@@ -36,8 +36,6 @@ namespace Battle.UI
         [SerializeField] private float cardScale = 1f;              // 카드 표시 스케일
         [Tooltip("마우스 오버 시 카드가 제자리에서 커지는 배율(덱/묘지 보기와 같은 1.06).")]
         [SerializeField] private float hoverScale = 1.06f;          // 호버 확대 배율
-        [Tooltip("호버 카드가 이웃 위로 그려질 정렬 순서(인벤토리 캔버스보다 높게).")]
-        [SerializeField] private int hoverSortingOrder = 200;       // 호버 정렬 순서
 
         [Header("정렬 버튼 이미지 (선택) — 순서 0:획득, 1:이름, 2:호흡")]
         [Tooltip("각 정렬 버튼의 [버튼 Image + 오름/내림 스프라이트] 한 쌍. 누를 때마다 두 이미지가 교체된다.")]

@@ -89,8 +89,6 @@ public class RoundManager : MonoBehaviour
     [SerializeField] private Sprite enemyPowerUpIcon;
     public Sprite EnemyPowerUpIcon => enemyPowerUpIcon;
 
-    [Header("보상 UI")]
-    [SerializeField] private RewardHubUIController rewardHubUIController; // 보상 허브 UI 컨트롤러
 
     [Header("보상 상단 문구 - 카드")]
     [Tooltip("부적 보상창 프리팹(배경·카드 슬롯·스킵 버튼). 비우면 런타임 생성 UI 사용.")]
@@ -128,7 +126,6 @@ public class RoundManager : MonoBehaviour
     private bool _waitingForRoundEnd = false; // 전멸 후 라운드 종료 예약 여부
     public event System.Action OnRoundClear; // 라운드 클리어 이벤트
     private IRoundHandler currentRoundHandler; // 현재 라운드 핸들러
-    private int clearedCombatCount = 0; // 클리어한 전투 수
 
 
     // 런타임 플레이어가 없으면 생성하고 상태 패널을 연결한다.
@@ -147,7 +144,6 @@ public class RoundManager : MonoBehaviour
 
         Player newPlayer = Player.GetOrCreateRuntime();
 
-        Debug.Log("[RoundManager] Hidden runtime Player created");
 
         if (playerStatusPanel != null)
         {
@@ -155,7 +151,6 @@ public class RoundManager : MonoBehaviour
             playerStatusPanel.DockUnderAwakenGauge();
         }
 
-        Debug.Log("[RoundManager] Hidden runtime Player created");
     }
 
     // 플레이어 UI 동기화를 보장한다.
@@ -171,101 +166,11 @@ public class RoundManager : MonoBehaviour
         return Battle.NewBattleController.Instance != null;
     }
 
-    // 레거시 원소 슬롯/HUD 전투 시스템을 보장 생성한다(새 전투 시스템이면 건너뜀).
-    void EnsureElementCombatSystems()
-    {
-        EnsureRuntimePlayerExists();
-
-        if (IsNewBattleSystemActive())
-            return;
-
-        var slotSystem = ElementSlotSystem.Instance ?? FindFirstObjectByType<ElementSlotSystem>();
-        if (slotSystem == null)
-        {
-            var go = new GameObject("ElementSlotSystem");
-            slotSystem = go.AddComponent<ElementSlotSystem>();
-            DontDestroyOnLoad(go);
-        }
-
-        var hud = FindFirstObjectByType<ElementSlotHUD>();
-        if (hud == null)
-        {
-            var hudGo = new GameObject("ElementSlotHUD");
-            Canvas combatCanvas = ResolveCombatStageCanvas();
-            if (combatCanvas != null)
-                hudGo.transform.SetParent(combatCanvas.transform, false);
-            hudGo.AddComponent<ElementSlotHUD>();
-        }
-
-        var legacySystems = FindObjectsByType<CardSystem>(FindObjectsSortMode.None);
-        foreach (var legacy in legacySystems)
-        {
-            if (legacy != null)
-            {
-                legacy.ForceDisableForElementSystem();
-                legacy.gameObject.SetActive(false);
-            }
-        }
-    }
-
-    // 전투 스테이지의 캔버스를 찾아 반환한다.
-    Canvas ResolveCombatStageCanvas()
-    {
-        if (combatStageController != null)
-        {
-            Canvas fromController = combatStageController.GetComponentInChildren<Canvas>(true);
-            if (fromController != null)
-                return fromController;
-        }
-
-        GameObject combatStageObject = GameObject.Find("CombatStage");
-        if (combatStageObject == null)
-            return FindFirstObjectByType<Canvas>();
-
-        return combatStageObject.GetComponentInChildren<Canvas>(true);
-    }
-
-    // 라운드를 시작한다(필요 시 초기 스킬 선택을 먼저 진행).
+    // 라운드를 시작한다.
     public void StartRound(RoundData roundData)
     {
-        EnsureElementCombatSystems();
-
-        if (IsNewBattleSystemActive())
-        {
-            ContinueStartRound(roundData);
-            return;
-        }
-
-        if (ComboSystem.Instance != null && ComboSystem.Instance.learnedSkills.Count == 0)
-        {
-            ComboSystem.Instance.LearnStarterSkill();
-
-            SkillRewardUI rewardUI = SkillDataParser.Instance?.SkillRewardUI;
-            if (rewardUI != null)
-            {
-                rewardUI.OnSkillSelected += OnStarterSkillSelected;
-                pendingRoundData = roundData;
-                return;
-            }
-        }
-
+        EnsureRuntimePlayerExists();
         ContinueStartRound(roundData);
-    }
-
-    private RoundData pendingRoundData; // 초기 스킬 선택 대기 중인 라운드 데이터
-
-    // 초기 스킬 선택 완료 시 대기 중이던 라운드를 진행한다.
-    void OnStarterSkillSelected(SkillDataParser.SkillData skill)
-    {
-        SkillRewardUI rewardUI = SkillDataParser.Instance?.SkillRewardUI;
-        if (rewardUI != null)
-            rewardUI.OnSkillSelected -= OnStarterSkillSelected;
-
-        if (pendingRoundData != null)
-        {
-            ContinueStartRound(pendingRoundData);
-            pendingRoundData = null;
-        }
     }
 
     // ── 시연용: 현재 전투 스테이지 다시 시작(F3) ──
@@ -397,10 +302,7 @@ public class RoundManager : MonoBehaviour
     // 라운드를 종료하고 종료 핸들러와 클리어 이벤트를 호출한다.
     public void EndRound()
     {
-        if (!IsNewBattleSystemActive())
-            ElementSlotSystem.Instance?.EndBattle();
-        else
-            Battle.NewBattleController.Instance?.EndBattle();
+        Battle.NewBattleController.Instance?.EndBattle();
 
         currentRoundHandler.OnExitRound(this);
         EnemyCombatParty.EndBattle();
@@ -428,16 +330,17 @@ public class RoundManager : MonoBehaviour
 
     void BeginCombat(CombatRoundData data, List<EnemyData> roster)
     {
-        EnsureElementCombatSystems();
-        if (!IsNewBattleSystemActive())
-            ElementSlotSystem.Instance?.StartBattle();
+        PrepareBattleStart();
+        SpawnParty(roster, data.columnIndex, data.roundType);
+        BeginNewBattleForNode();
+    }
 
+    // 전투 시작 전 공통 준비: 플레이어 보장 + 상태이상 초기화
+    void PrepareBattleStart()
+    {
+        EnsureRuntimePlayerExists();
         Player player = Player.Resolve(true);
         if (player != null) player.ResetStatusForNewBattle();
-
-        SpawnParty(roster, data.columnIndex, data.roundType);
-
-        if (IsNewBattleSystemActive()) BeginNewBattleForNode();
     }
 
     // 정예 전투를 시작한다.
@@ -450,16 +353,9 @@ public class RoundManager : MonoBehaviour
 
     void BeginElite(EliteRoundData data, List<EnemyData> roster)
     {
-        EnsureElementCombatSystems();
-        if (!IsNewBattleSystemActive())
-            ElementSlotSystem.Instance?.StartBattle();
-
-        Player player = Player.Resolve(true);
-        if (player != null) player.ResetStatusForNewBattle();
-
+        PrepareBattleStart();
         SpawnParty(PinRoster(ResolveEliteRoster(data)), data.columnIndex, data.roundType);
-
-        if (IsNewBattleSystemActive()) BeginNewBattleForNode();
+        BeginNewBattleForNode();
     }
 
     // 보스 전투를 시작한다.
@@ -471,12 +367,7 @@ public class RoundManager : MonoBehaviour
 
     void BeginBoss(BossRoundData data)
     {
-        EnsureElementCombatSystems();
-        if (!IsNewBattleSystemActive())
-            ElementSlotSystem.Instance?.StartBattle();
-
-        Player player = Player.Resolve(true);
-        if (player != null) player.ResetStatusForNewBattle();
+        PrepareBattleStart();
 
         // [임시] 3D 여러 마리 배치 확인용. 같은 보스를 3마리 스폰한다.
         var bossRoster = new List<EnemyData>();
@@ -490,8 +381,7 @@ public class RoundManager : MonoBehaviour
             }
         }
         SpawnParty(bossRoster, data.columnIndex, NodeType.Boss);
-
-        if (IsNewBattleSystemActive()) BeginNewBattleForNode();
+        BeginNewBattleForNode();
     }
 
     // 적 속성에 맞는 3D 스테이지를 표시하고, 준비되면(이미 로드돼 있으면 즉시) 전투를 시작한다.
@@ -532,7 +422,6 @@ public class RoundManager : MonoBehaviour
         }
 
         controller.BeginShop(this);
-        Debug.Log("[RoundManager] 상점 스테이지 시작");
     }
 
     // 상점을 닫고 맵으로 복귀한다.
@@ -553,7 +442,6 @@ public class RoundManager : MonoBehaviour
         }
 
         controller.BeginEvent(data, this);
-        Debug.Log("[RoundManager] 이벤트 스테이지 시작");
     }
 
     // 휴식 스테이지를 연다.
@@ -580,7 +468,6 @@ public class RoundManager : MonoBehaviour
         }
 
         controller.BeginRest(data, this);
-        Debug.Log("[RoundManager] 휴식 스테이지 시작");
     }
 
     // 유물 스테이지를 연다.
@@ -607,7 +494,6 @@ public class RoundManager : MonoBehaviour
         }
 
         controller.BeginRelic(data, this);
-        Debug.Log("[RoundManager] 유물 스테이지 시작");
     }
 
     // 플레이어 HP를 비율만큼 회복하고 맵으로 복귀한다.
@@ -636,33 +522,7 @@ public class RoundManager : MonoBehaviour
             return;
         }
 
-        if (IsNewBattleSystemActive())
-        {
-            ShowCardReward();
-            return;
-        }
-
-        Debug.Log("스킬 보상 선택 UI 표시");
-
-        if (rewardHubUIController == null)
-            rewardHubUIController = FindFirstObjectByType<RewardHubUIController>(FindObjectsInactive.Include);
-
-        Debug.Log($"[RoundManager] rewardHubUIController={(rewardHubUIController != null ? rewardHubUIController.name : "NULL")}");
-
-        if (rewardHubUIController != null)
-        {
-            Debug.Log("[RoundManager] Opening RewardHubUIController.OpenHub()");
-            rewardHubUIController.OpenHub();
-            return;
-        }
-
-        if (SkillDataParser.Instance != null && SkillDataParser.Instance.SkillRewardUI != null)
-        {
-            Debug.Log("[RoundManager] Fallback -> SkillRewardUI.ShowRewardOptions()");
-            SkillDataParser.Instance.SkillRewardUI.ShowRewardOptions();
-        }
-        else
-            Debug.LogError("[RoundManager] RewardHubUIController와 SkillRewardUI가 모두 없습니다.");
+        ShowCardReward();
     }
 
 
@@ -875,8 +735,6 @@ public class RoundManager : MonoBehaviour
         // 최종 보스 클리어는 전투 스테이지를 유지한다. 맵 복귀에서만 스테이지를 숨긴다.
         if (!IsFinalClearBoss())
             StageManager.Instance?.HideStage(); // 전투 이탈 — 3D 스테이지 숨김
-        if (!IsNewBattleSystemActive())
-            ElementSlotSystem.Instance?.EndBattle();
 
         var stateController = GameStateController.Instance;
         if (stateController == null)
@@ -951,10 +809,7 @@ public class RoundManager : MonoBehaviour
     {
         DebugRoundActive = false;
         StageManager.Instance?.HideStage(); // 전투 중단 — 3D 스테이지 숨김
-        if (IsNewBattleSystemActive())
-            Battle.NewBattleController.Instance?.EndBattle();
-        else
-            ElementSlotSystem.Instance?.EndBattle();
+        Battle.NewBattleController.Instance?.EndBattle();
 
         EnemyCombatParty.DestroyAllMembers();
         currentEnemy = null;
@@ -1157,7 +1012,6 @@ public class RoundManager : MonoBehaviour
         }
 
         AttachEnemyUi(controller, view, use3D, stageCam, slotIndex, partySize);
-        Debug.Log($"Initialize 호출: HP={data.maxHp}, col={columnIndex}, slot={slotIndex}/{partySize}, 3D={use3D}");
 
         if (view != null && data.enemySprite != null)
             view.SetSprite(data.enemySprite);
@@ -1189,12 +1043,6 @@ public class RoundManager : MonoBehaviour
         stat.OnDied += () => OnPartyMemberDied(dying, dyingView);
         currentEnemy = stat;
         if (controller != null) EnemyCombatParty.Register(controller);
-
-        MonsterMidPattern midPattern = go.GetComponent<MonsterMidPattern>();
-        if (midPattern != null)
-        {
-            midPattern.InitBattle();
-        }
     }
 
     void PlaceTwoDEnemy(RectTransform rectTransform, int slotIndex, int partySize)
@@ -1297,18 +1145,10 @@ public class RoundManager : MonoBehaviour
     {
         if (MoneyManager.Instance == null) return;
 
-        int gold;
-        if (IsNewBattleSystemActive())
-        {
-            bool isBoss = currentRoundData is BossRoundData;
-            bool isElite = currentRoundData is EliteRoundData;
-            bool isNormalCombat = currentRoundData is CombatRoundData;
-            gold = MoneyManager.Instance.RollCombatRewardGold(isBoss, isElite, isNormalCombat);
-        }
-        else
-        {
-            gold = MoneyManager.Instance.MoneyPerKill;
-        }
+        bool isBoss = currentRoundData is BossRoundData;
+        bool isElite = currentRoundData is EliteRoundData;
+        bool isNormalCombat = currentRoundData is CombatRoundData;
+        int gold = MoneyManager.Instance.RollCombatRewardGold(isBoss, isElite, isNormalCombat);
 
         if (gold <= 0) return;
         _killGoldPaid += gold;
@@ -1323,8 +1163,6 @@ public class RoundManager : MonoBehaviour
 
     public void HandleEnemyDied()
     {
-        Debug.Log("[RoundManager.HandleEnemyDied] 호출됨");
-
         if (EnemyCombatParty.AliveCount > 0)
             return;
 

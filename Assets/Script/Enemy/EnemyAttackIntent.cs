@@ -75,7 +75,7 @@ public class EnemyAttackIntent : MonoBehaviour
         _label.raycastTarget = false;
         _label.maskable = false;
         _label.richText = false;
-        _label.enableWordWrapping = false;
+        _label.textWrappingMode = TextWrappingModes.NoWrap;
         _label.overflowMode = TextOverflowModes.Overflow;
         _label.alignment = TextAlignmentOptions.MidlineRight;
         _label.extraPadding = true;

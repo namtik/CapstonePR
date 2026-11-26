@@ -191,7 +191,7 @@ public static class RunKillGallery
         label.fontSize = Mathf.Max(6f, 16f * s);
         label.color = new Color(0.96f, 0.93f, 0.86f, 1f);
         label.alignment = TextAlignmentOptions.Center;
-        label.enableWordWrapping = false;
+        label.textWrappingMode = TextWrappingModes.NoWrap;
         label.overflowMode = TextOverflowModes.Ellipsis;
         label.raycastTarget = false;
         if (label.font != null)
