@@ -1,6 +1,6 @@
 ---
 description: 글꼴 인스펙터 설정을 넣을 때 외곽선 두께와 색을 함께 둔다
-globs: Assets/Script/**/*.cs
+globs: Assets/_Project/Scripts/**/*.cs
 alwaysApply: false
 ---
 

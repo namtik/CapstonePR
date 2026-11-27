@@ -9,7 +9,7 @@
 
 근거 문서: `기획서 0.6v.pdf`, `ComboSkill_DB_(1).xlsx` (사용자 Downloads 폴더).
 
-카드 DB 원본 xlsx는 저장소 루트의 `DataSource/Card_DB_v11.xlsx` (구버전·미사용 데이터는 `DataSource/Legacy/`). **xlsx/csv 원본은 `Assets/Resources`에 두지 말 것** — 런타임은 JSON만 읽는다.
+카드 DB 원본 xlsx는 저장소 루트의 `DataSource/Card_DB_v11.xlsx` (구버전·미사용 데이터는 `DataSource/Legacy/`). **xlsx/csv 원본은 `Assets/_Project/Resources`에 두지 말 것** — 런타임은 JSON만 읽는다.
 
 > ⚠️ **용어 변경**: 구 "피버(Fever)"는 전부 **"각성(Awaken)"** 으로 개명됨. 코드 식별자도 `Awaken*`/`_awaken*`, 로그·UI·주석은 "각성". 단 효과 에셋명 `Fire_ATK`처럼 `Fever_ATK`(Resources 파일명)만 그대로 둠.
 
@@ -18,11 +18,34 @@
 ## 1. 환경
 - Unity **6000.3.1f1** (프로젝트는 6000.3 계열)
 - 프로젝트 루트: `C:\Users\hp\Desktop\CapstonePR`
-- 메인 씬: `Assets/Scenes/MainScene.unity` (빌드에 등록된 유일한 씬)
-- 스테이지 씬: `Assets/_Stages/**/Scenes/*.unity` — `StageManager`가 Additive 로드
+- 메인 씬: `Assets/_Project/Scenes/MainScene.unity` (Build Settings 0번, 진입점)
+- 스테이지 씬: `Assets/_Project/Stages/**/Scenes/*.unity` — Build Settings에 등록, `StageManager`가 Additive 로드
 - 캔버스: Screen Space - Camera, Scale With Screen Size 1920×1080
-- 카드 프리팹: `Assets/Prefab/NewSkillCard.prefab` (root scale=1, 300×400)
-- 콤보 스킬 항목 프리팹: `Assets/Prefab/SkillListItem.prefab`
+- 카드 프리팹: `Assets/_Project/Prefabs/NewSkillCard.prefab` (root scale=1, 300×400)
+- 콤보 스킬 항목 프리팹: `Assets/_Project/Prefabs/SkillListItem.prefab`
+
+### 폴더 규칙
+```
+Assets/
+├── _Project/            ← 우리가 만든 것 전부
+│   ├── Scripts/         ← 런타임 코드 (기능별: Battle/ Enemy/ Round/ Shop/ …), Editor/ 하위에 에디터 툴
+│   ├── Scenes/          ← MainScene 등 공용 씬
+│   ├── Stages/          ← 스테이지 단위 묶음 (씬·메시·라이트·머티리얼을 스테이지 폴더 안에)
+│   ├── Characters/      ← 캐릭터 모델·애니메이션
+│   ├── Sprites/ Materials/ Shaders/ Fonts/
+│   ├── VFX/             ← 직접 만든 이펙트 (AwakeningVFX, Guard* …)
+│   ├── Audio/           ← BGM/, SFX/
+│   ├── Prefabs/  Data/ (ScriptableObject·설정 에셋)  Settings/ (URP·Input)
+│   └── Resources/       ← Resources.Load로 실제 로드하는 것만 (빌드에 전부 포함됨)
+├── ThirdParty/          ← 에셋스토어·외부 에셋팩. 원본 그대로 두고 수정 금지
+└── TextMesh Pro/ UI Toolkit/ ProjectSettings/ Unity.VisualScripting.Generated/  ← Unity·패키지 기본 위치, 옮기지 말 것
+DataSource/              ← (Assets 밖) xlsx/csv 원본 데이터
+```
+- 새 에셋팩은 무조건 `ThirdParty/`에 임포트한다. 고칠 게 있으면 복사해서 `_Project/`로 가져온다.
+- 폴더명은 영어 PascalCase, 띄어쓰기 없이. 파일명의 한글은 허용.
+- 빈 폴더는 Git에 안 올라간다 — 만들었으면 바로 에셋을 넣는다.
+- 폴더 이동은 Unity 안에서 드래그하거나, 에디터를 끄고 `.meta`와 함께 `git mv`. 코드의 `"Assets/..."` 문자열 경로도 같이 고칠 것.
+- 씬(`*.unity`)은 동시에 두 명이 수정하지 않는다. UI·시스템은 프리팹으로 빼서 씬 수정을 줄인다.
 
 ---
 
@@ -30,10 +53,10 @@
 
 ### 폴더 구조
 ```
-Assets/Editor/CardDBImporter.cs          — Unity Editor 메뉴 컨버터 (xlsx=zip+XML 직접 파싱, 외부 의존성 X)
-Assets/Resources/CardDB/Cards.json       — 카드 메타데이터 (자동 생성)
-Assets/Resources/CardDB/CardEffects.json — 효과 정의 (자동 생성)
-Assets/Resources/CardEffects/{EffectName}.png — 효과 스프라이트 시트
+Assets/_Project/Scripts/Editor/CardDBImporter.cs          — Unity Editor 메뉴 컨버터 (xlsx=zip+XML 직접 파싱, 외부 의존성 X)
+Assets/_Project/Resources/CardDB/Cards.json       — 카드 메타데이터 (자동 생성)
+Assets/_Project/Resources/CardDB/CardEffects.json — 효과 정의 (자동 생성)
+Assets/_Project/Resources/CardEffects/{EffectName}.png — 효과 스프라이트 시트
 ```
 
 ### 갱신 워크플로우
@@ -59,9 +82,9 @@ Assets/Resources/CardEffects/{EffectName}.png — 효과 스프라이트 시트
 
 ### 폴더 구조
 ```
-Assets/Editor/ComboSkillDBImporter.cs          — Unity Editor 메뉴 컨버터 (CardDBImporter와 동일 패턴)
-Assets/Resources/ComboDB/ComboSkills.json      — 콤보 정의 (자동 생성, 현재 xlsx 기준으로 이미 생성됨)
-Assets/Resources/ComboDB/ComboEffects.json     — 효과 정의 (자동 생성)
+Assets/_Project/Scripts/Editor/ComboSkillDBImporter.cs          — Unity Editor 메뉴 컨버터 (CardDBImporter와 동일 패턴)
+Assets/_Project/Resources/ComboDB/ComboSkills.json      — 콤보 정의 (자동 생성, 현재 xlsx 기준으로 이미 생성됨)
+Assets/_Project/Resources/ComboDB/ComboEffects.json     — 효과 정의 (자동 생성)
 ```
 
 ### 갱신 워크플로우
@@ -92,7 +115,7 @@ Assets/Resources/ComboDB/ComboEffects.json     — 효과 정의 (자동 생성)
 
 ---
 
-## 4. 새 시스템 파일 (`Assets/Script/Battle/`)
+## 4. 새 시스템 파일 (`Assets/_Project/Scripts/Battle/`)
 
 | 파일 | 역할 |
 |------|------|
@@ -119,9 +142,9 @@ Assets/Resources/ComboDB/ComboEffects.json     — 효과 정의 (자동 생성)
 ### Editor 파일
 | 파일 | 역할 |
 |------|------|
-| `Assets/Editor/CardDBImporter.cs` | 카드 DB Excel → JSON 변환기 |
-| `Assets/Editor/ComboSkillDBImporter.cs` | **콤보 DB Excel → JSON 변환기** |
-| `Assets/Editor/NewBattleControllerEditor.cs` | **NewBattleController 커스텀 인스펙터** — 콤보 체크박스 목록 |
+| `Assets/_Project/Scripts/Editor/CardDBImporter.cs` | 카드 DB Excel → JSON 변환기 |
+| `Assets/_Project/Scripts/Editor/ComboSkillDBImporter.cs` | **콤보 DB Excel → JSON 변환기** |
+| `Assets/_Project/Scripts/Editor/NewBattleControllerEditor.cs` | **NewBattleController 커스텀 인스펙터** — 콤보 체크박스 목록 |
 
 ### 수정한 기존 파일 (새 시스템 가드)
 - `Round/Roundmanager.cs` — 새 시스템이면 레거시 셋업 스킵
@@ -137,9 +160,9 @@ Assets/Resources/ComboDB/ComboEffects.json     — 효과 정의 (자동 생성)
 
 ### 구조
 ```
-Assets/Script/Battle/Relic/RelicDef.cs      — 유물 데이터(id, displayName, description, icon, effect)
-Assets/Script/Battle/Relic/RelicManager.cs  — 싱글톤. relicDefinitions 리스트(Inspector에서 아이콘 설정)
-Assets/Script/Battle/UI/RelicHUD.cs         — 좌상단 아이콘 표시 + 호버 툴팁 (런타임 자동 생성)
+Assets/_Project/Scripts/Battle/Relic/RelicDef.cs      — 유물 데이터(id, displayName, description, icon, effect)
+Assets/_Project/Scripts/Battle/Relic/RelicManager.cs  — 싱글톤. relicDefinitions 리스트(Inspector에서 아이콘 설정)
+Assets/_Project/Scripts/Battle/UI/RelicHUD.cs         — 좌상단 아이콘 표시 + 호버 툴팁 (런타임 자동 생성)
 ```
 
 ### 현재 구현된 유물 (테스트용 2종)

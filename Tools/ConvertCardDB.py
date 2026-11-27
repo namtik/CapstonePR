@@ -1,4 +1,4 @@
-"""Card_DB.xlsx -> Assets/Resources/CardDB/*.json 변환기.
+"""Card_DB.xlsx -> Assets/_Project/Resources/CardDB/*.json 변환기.
 
 기획자 워크플로우:
   1) Card_DB.xlsx 수정
