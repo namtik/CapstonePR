@@ -3,11 +3,13 @@
 > 최종 갱신: 유물 시스템 + 콤보 스킬 DB(Excel→JSON 데이터 드리븐) + 콤보 인스펙터 선택 UI 반영본
 
 ## 0. 한 줄 요약
-기존 전투(ElementSlotSystem 4슬롯 + ComboSystem)를 **카드 기반(손패 5장 + 각성(Awaken) + 콤보 큐 + 연쇄)** 으로 교체 중. 본 게임 흐름은 건드리지 않고 **격리된 테스트 씬**에서 검증.
+기존 전투(ElementSlotSystem 4슬롯 + ComboSystem)를 **카드 기반(손패 5장 + 각성(Awaken) + 콤보 큐 + 연쇄)** 으로 교체 완료, 본 게임 흐름(`MainScene`)에 통합됨.
 
 **카드 DB / 콤보 DB 모두 Excel/JSON 기반 데이터 드리븐** — 기획자가 xlsx만 수정 → 변환기 → 게임 반영.
 
-근거 문서: `기획서 0.6v.pdf`, `Card_DB_v2 (1).xlsx`, `ComboSkill_DB_(1).xlsx` (사용자 Downloads 폴더).
+근거 문서: `기획서 0.6v.pdf`, `ComboSkill_DB_(1).xlsx` (사용자 Downloads 폴더).
+
+카드 DB 원본 xlsx는 저장소 루트의 `DataSource/Card_DB_v11.xlsx` (구버전·미사용 데이터는 `DataSource/Legacy/`). **xlsx/csv 원본은 `Assets/Resources`에 두지 말 것** — 런타임은 JSON만 읽는다.
 
 > ⚠️ **용어 변경**: 구 "피버(Fever)"는 전부 **"각성(Awaken)"** 으로 개명됨. 코드 식별자도 `Awaken*`/`_awaken*`, 로그·UI·주석은 "각성". 단 효과 에셋명 `Fire_ATK`처럼 `Fever_ATK`(Resources 파일명)만 그대로 둠.
 
@@ -16,7 +18,8 @@
 ## 1. 환경
 - Unity **6000.3.1f1** (프로젝트는 6000.3 계열)
 - 프로젝트 루트: `C:\Users\hp\Desktop\CapstonePR`
-- 테스트 씬: `Assets/Scenes/BattleTestScene.unity`
+- 메인 씬: `Assets/Scenes/MainScene.unity` (빌드에 등록된 유일한 씬)
+- 스테이지 씬: `Assets/_Stages/**/Scenes/*.unity` — `StageManager`가 Additive 로드
 - 캔버스: Screen Space - Camera, Scale With Screen Size 1920×1080
 - 카드 프리팹: `Assets/Prefab/NewSkillCard.prefab` (root scale=1, 300×400)
 - 콤보 스킬 항목 프리팹: `Assets/Prefab/SkillListItem.prefab`
@@ -233,7 +236,7 @@ ENEMY_STATUS_VALUE:*, PLAYER_BLOCK, FLOOR(PLAYER_CURRENT_HP/2), LAST_HP_LOST(*N)
 4. **다중 적 전투** — ALL_ENEMIES/RANDOM_ENEMY 실제 타겟팅, 콤보 미지원 동사 실구현
 5. 각성/게이지 수치 밸런스 (COMBO_BONUS_SECONDS, AWAKEN_DURATION_SECONDS 등)
 6. 카드 아이콘/효과 스프라이트 시트 채우기, 사운드
-7. 검증 후 본 게임 씬(SampleScene) 마이그레이션
+7. 구 전투 시스템 분기(`NewBattleController.Instance != null` 가드) 정리
 
 ---
 

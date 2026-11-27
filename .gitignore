@@ -97,3 +97,17 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# --- Project-specific ---
+# IDE / language-server caches
+*.slnx
+*.lscache
+
+# Local Claude Code settings & debug dumps
+.claude/settings.local.json
+.claude/*_dump*.txt
+.claude/*_test.txt
+
+# Local scratch / backups
+/Temp.txt
+/GeneratedAssets_deleted/

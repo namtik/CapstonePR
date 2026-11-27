@@ -12,7 +12,7 @@ namespace Sashindo.VFX.Editor
         private const string ApplyMenu = "Tools/Sashindo/각성 연출 적용";
         private const string EntryName = "Sashindo_AwakeningVFX";
         private const string EntryPath =
-            "Assets/_New Folder/Sashindo_AwakeningVFX/Prefabs/Sashindo_AwakeningVFX.prefab";
+            "Assets/Sashindo/AwakeningVFX/Prefabs/Sashindo_AwakeningVFX.prefab";
         private const string FlickerPath = "Assets/Resources/VFX/AwakeningDurationFlicker.prefab";
         private const string DimShaderPath = "Assets/Resources/UI/AwakenRadialDim.shader";
 
