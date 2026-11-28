@@ -113,7 +113,7 @@ namespace Battle.Relic
             return new string(chars);
         }
 
-        // ── 이벤트 디스패치 (보유 유물 전체에 훅 전달) ──────────────────────
+        // 이벤트 디스패치 (보유 유물 전체에 훅 전달)
         // 전투 진입
         public void NotifyBattleStart(IRelicBattleContext ctx)
         {
@@ -140,7 +140,7 @@ namespace Battle.Relic
             for (int i = 0; i < _owned.Count; i++) _owned[i]?.OnAwakenEnded(ctx, successCombos);
         }
 
-        // ── 질의형 수정자 합산 (사용처에서 읽음) ───────────────────────────
+        // 질의형 수정자 합산 (사용처에서 읽음)
         public int GetMaxHpBonus()
         {
             int sum = 0;

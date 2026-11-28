@@ -112,9 +112,7 @@ public class MainMenuController : MonoBehaviour
             mainMenuRoot.SetActive(false);
     }
 
-    // ─────────────────────────────────────────────────────────────
     // 버튼 콜백
-    // ─────────────────────────────────────────────────────────────
 
     // [게임 플레이]: 메인 화면을 닫고 맵으로 진입
     void OnPlay()

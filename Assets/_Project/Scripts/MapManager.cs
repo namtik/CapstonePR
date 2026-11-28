@@ -343,7 +343,7 @@ public class MapManager : MonoBehaviour
         lineObj.transform.SetParent(nodesParent, false);
         lineObj.transform.SetAsFirstSibling();
         var path = lineObj.GetComponent<MapPathGraphic>();
-        bool toBoss = mapData != null && toIndex == mapData.bossIndex; // 보스 직전 → 보스는 직선
+        bool toBoss = mapData != null && toIndex == mapData.bossIndex; // 보스 직전 -> 보스는 직선
         path.Initialize(fromIndex, toIndex, a, b, lineThickness * 1.25f, pathLines, pathShape, toBoss);
         pathLines.Add(path);
     }

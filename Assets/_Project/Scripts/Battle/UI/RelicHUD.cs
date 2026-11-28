@@ -455,7 +455,7 @@ namespace Battle.UI
                 t += Time.unscaledDeltaTime;
                 float n = Mathf.Clamp01(t / dur);
 
-                // 0→peak(ease-out) 후 peak→base(선형) 엔벨로프
+                // 0->peak(ease-out) 후 peak->base(선형) 엔벨로프
                 float env = n < upPortion
                     ? 1f - (1f - n / upPortion) * (1f - n / upPortion)
                     : 1f - (n - upPortion) / (1f - upPortion);

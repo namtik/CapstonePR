@@ -88,12 +88,12 @@ namespace Battle.UI
         [Header("드로우 등장 연출")]
         [Tooltip("여러 장을 동시에 뽑을 때 카드마다 떠오르기 시작을 늦추는 간격(초). 0이면 동시에 올라옴.")]
         [SerializeField] private float drawIntroStagger = 0.05f; // 드로우 등장 지연 간격
-        [Tooltip("각성 진입/종료 시 손패 카드↔부적 전환을 카드마다 시작하는 간격(초).")]
+        [Tooltip("각성 진입/종료 시 손패 카드<->부적 전환을 카드마다 시작하는 간격(초).")]
         [SerializeField] private float talismanBurnStagger = 0.06f; // 부적 전환 지연 간격
         private bool _talismanHand; // 각성 중 — 손패를 부적으로 표시
         public bool IsTalismanHand => _talismanHand; // 손패 부적 표시 여부
 
-        // 손패 중 카드↔부적 전환 연출이 진행 중인 카드가 있는지(대기 중인 시간차 포함)
+        // 손패 중 카드<->부적 전환 연출이 진행 중인 카드가 있는지(대기 중인 시간차 포함)
         public bool IsTalismanTransitioning
         {
             get
@@ -126,7 +126,7 @@ namespace Battle.UI
         [SerializeField] private Color emptyComboSlotColor = new Color(0.25f, 0.25f, 0.25f, 0.4f); // 프레임이 없을 때 빈 칸 색
 
         [Header("콤보 슬롯 입력 연출 (각성 중 속성이 슬롯에 들어올 때)")]
-        [Tooltip("각성 중 콤보 슬롯에 속성이 들어올 때 해당 칸을 팝(확대→복귀)시키는 연출 ON/OFF.")]
+        [Tooltip("각성 중 콤보 슬롯에 속성이 들어올 때 해당 칸을 팝(확대->복귀)시키는 연출 ON/OFF.")]
         [SerializeField] private bool comboSlotPopEnabled = true; // 콤보 슬롯 팝 연출 사용 여부
         [Tooltip("팝 시 최대 확대 배율(원본 스케일 기준). 1.5 = 50% 커졌다 돌아옴.")]
         [SerializeField] private float comboSlotPopScale = 1.5f; // 팝 최대 확대 배율
@@ -170,7 +170,7 @@ namespace Battle.UI
         [Tooltip("커졌다 원래대로 돌아오는 전체 시간(초).")]
         [SerializeField] private float discardPopDuration = 0.35f; // 팝 전체 시간
 
-        [Header("리셔플 카운트업 (묘지→덱 복귀 시 덱 숫자 1,2,3 떨어짐)")]
+        [Header("리셔플 카운트업 (묘지->덱 복귀 시 덱 숫자 1,2,3 떨어짐)")]
         [Tooltip("버린 더미가 덱으로 돌아갈 때 덱 숫자가 1씩 위에서 떨어지며 올라가는 연출.")]
         [SerializeField] private bool reshuffleCountUpEnabled = true; // 리셔플 카운트업 사용 여부
         [Tooltip("숫자 하나가 위에서 제자리로 떨어지는 시간(초).")]
@@ -536,7 +536,7 @@ namespace Battle.UI
                 t += Time.deltaTime;
                 float n = Mathf.Clamp01(t / dur);
 
-                // 0→peak(ease-out) 후 peak→base(선형) 엔벨로프
+                // 0->peak(ease-out) 후 peak->base(선형) 엔벨로프
                 float env = n < upPortion
                     ? 1f - (1f - n / upPortion) * (1f - n / upPortion)
                     : 1f - (n - upPortion) / (1f - upPortion);
@@ -690,9 +690,9 @@ namespace Battle.UI
         [Header("카드 픽커 — 그리드/스크롤")]
         [Tooltip("픽커 한 행에 표시할 최대 카드 수.")]
         [SerializeField] private int pickerColumns = 4; // 한 행 최대 카드 수
-        [Tooltip("픽커 카드 가로 간격(중심→중심, 픽셀). 카드 폭 300 기준 360~520 권장.")]
+        [Tooltip("픽커 카드 가로 간격(중심->중심, 픽셀). 카드 폭 300 기준 360~520 권장.")]
         [SerializeField] private float pickerColumnSpacing = 480f; // 픽커 가로 간격
-        [Tooltip("픽커 카드 세로 간격(중심→중심, 픽셀). 카드 높이 400 기준 480~640 권장.")]
+        [Tooltip("픽커 카드 세로 간격(중심->중심, 픽셀). 카드 높이 400 기준 480~640 권장.")]
         [SerializeField] private float pickerRowSpacing = 620f; // 픽커 세로 간격
         [Tooltip("픽커 viewport 최소 크기. BuildPickerCards가 카드 폭·열 수에 맞춰 가로를 자동 확장한다.")]
         [SerializeField] private Vector2 pickerViewportSize = new Vector2(1800f, 900f); // 픽커 뷰포트 크기

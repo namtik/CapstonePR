@@ -139,14 +139,14 @@ namespace Battle
                     _awakenMaxTime += COMBO_BONUS_SECONDS;
                     // 유물(비급서 등)이 콤보 성공 시 각성 시간을 추가로 늘림 — AddAwakenTimeSeconds로 더해짐
                     RelicManager.Instance?.NotifyComboTriggered(this);
-                    Log($"[각성] ⏱ 콤보 매칭 → 시간 ({before:F2}s → {_awakenTimeRemaining:F2}s, max={_awakenMaxTime:F2}s)");
+                    Log($"[각성] 콤보 매칭 -> 시간 ({before:F2}s -> {_awakenTimeRemaining:F2}s, max={_awakenMaxTime:F2}s)");
 
-                    // 콤보 성공 → 몬스터 주위에 표식 1개(종료 시 차례로 폭발) + 완성 효과음
+                    // 콤보 성공 -> 몬스터 주위에 표식 1개(종료 시 차례로 폭발) + 완성 효과음
                     SpawnAwakenComboMarker();
                     SfxManager.Instance?.PlayComboComplete();
                 }
 
-                Log($"[각성] {card.data.displayName} → 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은시간={_awakenTimeRemaining:F2}s");
+                Log($"[각성] {card.data.displayName} -> 콤보입력=[{string.Join(",", _comboInput)}] 콤보발동={comboTriggered} 남은시간={_awakenTimeRemaining:F2}s");
 
                 if (handHud != null)
                 {
@@ -253,7 +253,7 @@ namespace Battle
 
             ApplyCurseOnCardUse(card);
 
-            // 특이사항(매혹, 구미호): 사용 시 적 행동 게이지가 가득 참 → 즉시 공격
+            // 특이사항(매혹, 구미호): 사용 시 적 행동 게이지가 가득 참 -> 즉시 공격
             if (card.data != null && card.data.id == CardDatabase.CHARM)
             {
                 Log("[특이사항] 매혹 사용 — 적 행동 게이지 가득 참!");
@@ -311,7 +311,7 @@ namespace Battle
                 BattleLog.SetMoveTarget(effectLog);
             }
 
-            // 패에서 카드 선택 → 소멸 (불4/103, 불13/112, 물10/209)
+            // 패에서 카드 선택 -> 소멸 (불4/103, 불13/112, 물10/209)
             if (result.requiresHandExileSelection && handHud != null && _deck.Hand.Count > 0)
             {
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
@@ -328,7 +328,7 @@ namespace Battle
                 else Log("[효과] 소멸 가능한 카드 없음 — 건너뜀");
             }
 
-            // 패에서 카드 선택 → 버리기 (물8/207)
+            // 패에서 카드 선택 -> 버리기 (물8/207)
             if (result.requiresHandDiscardSelection && handHud != null && _deck.Hand.Count > 0)
             {
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
@@ -345,7 +345,7 @@ namespace Battle
                 else Log("[효과] 버릴 카드 없음 — 건너뜀");
             }
 
-            // 패에서 카드 선택 → 복사하여 패에 추가 (물14/213)
+            // 패에서 카드 선택 -> 복사하여 패에 추가 (물14/213)
             if (result.requiresHandCopySelection && handHud != null && _deck.Hand.Count > 0)
             {
                 var filter = BuildHandCardFilter(result.handSelectionCardFilter);
@@ -362,7 +362,7 @@ namespace Battle
                 else Log("[효과] 복사 가능한 카드 없음 — 건너뜀");
             }
 
-            // 뽑을 더미에서 카드 선택 → 패로 (물7/206)
+            // 뽑을 더미에서 카드 선택 -> 패로 (물7/206)
             if (result.requiresDrawPileMoveSelection && handHud != null)
             {
                 lastSelection = EnqueuePicker("뽑을 더미에서 카드를 선택하세요",
@@ -371,7 +371,7 @@ namespace Battle
                     Battle.UI.PileViewerKind.Draw);
             }
 
-            // 버린 더미에서 카드 선택 → toZone에 따라 패 또는 뽑을 더미 맨 위 (역류203/물213)
+            // 버린 더미에서 카드 선택 -> toZone에 따라 패 또는 뽑을 더미 맨 위 (역류203/물213)
             if (result.requiresDiscardMoveSelection && handHud != null)
             {
                 if (_deck.DiscardCount > 0)
@@ -442,7 +442,7 @@ namespace Battle
 
             UpdateUsageStats(card);
 
-            // 유물(웃는 탈 10006): 일반 카드 사용 누적 → 3장마다 등 카드 사용 훅
+            // 유물(웃는 탈 10006): 일반 카드 사용 누적 -> 3장마다 등 카드 사용 훅
             _cardsPlayedThisBattle++;
             RelicManager.Instance?.NotifyCardPlayed(this, card, _cardsPlayedThisBattle);
 

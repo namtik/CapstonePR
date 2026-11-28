@@ -121,7 +121,7 @@ public partial class EventStageController
         ResetEvent5Flow();
     }
 
-    // 인스펙터 지정 패널 → 없으면 씬의 PileViewerPanel(전투 HUD/상점)을 이벤트 캔버스 아래로 복제해 쓴다
+    // 인스펙터 지정 패널 -> 없으면 씬의 PileViewerPanel(전투 HUD/상점)을 이벤트 캔버스 아래로 복제해 쓴다
     PileViewerPanel ResolveEventCardPickPanel()
     {
         if (event5CardPickPanel != null) return event5CardPickPanel;
@@ -308,7 +308,7 @@ public partial class EventStageController
                     newName);
             }
 
-            Debug.Log($"[EventStage] 이벤트5 버튼1: {oldName} → {newName}");
+            Debug.Log($"[EventStage] 이벤트5 버튼1: {oldName} -> {newName}");
             PlayResultText(body);
             return;
         }

@@ -104,7 +104,7 @@ public class EnemyStat : MonoBehaviour
         if (damage > 0f)
         {
             string who = enemyData != null ? enemyData.enemyName : name;
-            Debug.Log($"[적 피격] {who} -{damage:0.#} 피해 (HP {beforeHp:0} → {currentHp:0}/{maxHp:0})");
+            Debug.Log($"[적 피격] {who} -{damage:0.#} 피해 (HP {beforeHp:0} -> {currentHp:0}/{maxHp:0})");
             OnDamaged?.Invoke(damage); // 피격 연출(플래시/흔들기) 트리거
         }
 

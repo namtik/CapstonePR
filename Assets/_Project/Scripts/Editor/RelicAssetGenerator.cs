@@ -22,7 +22,7 @@ public static class RelicAssetGenerator
 
         var list = new List<RelicSO>();
 
-        // ── 비전투형 ─────────────────────────────────────────────
+        // 비전투형
         list.Add(Make<MaxHpRelic>("10000", "불로단",
             "획득 시, 최대 체력이 20 증가한다.", RelicCategory.NonCombat,
             r => r.amount = 20, "UI_Item_001"));
@@ -48,7 +48,7 @@ public static class RelicAssetGenerator
             "각성 종료 후, 성공한 콤보 수만큼 각성 게이지를 회복한다.", RelicCategory.Combat,
             null, "imugire"));
 
-        // ── 전투형: 전투 시작 ────────────────────────────────────
+        // 전투형: 전투 시작
         list.Add(Make<GuardOnBattleStartRelic>("10002", "호신부",
             "매 전투 시작 시 방어도 5를 얻는다.", RelicCategory.Combat,
             r => r.guardAmount = 5, "UI_Item_003"));
@@ -68,7 +68,7 @@ public static class RelicAssetGenerator
             "매 전투 시작 시, 처음 사용하는 부적의 효과를 한번 더 발동한다.", RelicCategory.Combat,
             null, "UI_Item_001"));
 
-        // ── 전투형: 질의/훅 ──────────────────────────────────────
+        // 전투형: 질의/훅
         list.Add(Make<AwakenDurationRelic>("10009", "황룡향로",
             "각성 유지 시간이 2초 증가한다.", RelicCategory.Combat,
             r => r.extraSeconds = 2f, "UI_Item_002"));
@@ -95,7 +95,7 @@ public static class RelicAssetGenerator
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log($"[RelicGen] 유물 {list.Count}개 + RelicDatabase 생성/갱신 완료 → {DbPath}");
+        Debug.Log($"[RelicGen] 유물 {list.Count}개 + RelicDatabase 생성/갱신 완료 -> {DbPath}");
         EditorUtility.DisplayDialog("Relic 생성 완료",
             $"유물 {list.Count}개와 RelicDatabase를 생성/갱신했습니다.\n경로: {RelicFolder}\nDB: {DbPath}", "확인");
     }

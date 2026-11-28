@@ -63,7 +63,7 @@ namespace Battle.UI
         {
             _image = GetComponent<Image>();
             // 클릭 범위 = 버튼 이미지 범위. 씬에서 이미지 Raycast Target이 꺼져 있어 자식(코스트 숫자·D 키 아이콘)
-            // 영역으로만 눌렸고, 이미지 밖으로 삐져나온 D 키 아이콘까지 눌렸다 → 이미지만 클릭을 받게 한다.
+            // 영역으로만 눌렸고, 이미지 밖으로 삐져나온 D 키 아이콘까지 눌렸다 -> 이미지만 클릭을 받게 한다.
             _image.raycastTarget = true;
             foreach (var g in GetComponentsInChildren<Graphic>(true))
                 if (g != _image) g.raycastTarget = false;

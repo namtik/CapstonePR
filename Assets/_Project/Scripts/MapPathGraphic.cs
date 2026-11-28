@@ -36,7 +36,7 @@ public sealed class MapPathGraphic : MaskableGraphic
     private bool dashed;
     private int priority; // 겹칠 때 누가 그릴지 (높을수록 우선: 갈 수 있는 길 > 지나간 길 > 앞으로 길 > 놓친 길)
 
-    // 경로별 불규칙 변형 (from/to 인덱스로 시드 → 다시 그려도 모양 유지)
+    // 경로별 불규칙 변형 (from/to 인덱스로 시드 -> 다시 그려도 모양 유지)
     private int seed;
     private float handleRatio = 0.44f; // 베지어 핸들 비율
     private float bowAmount;           // 현 수직방향 휨 (px)
@@ -248,7 +248,7 @@ public sealed class MapPathGraphic : MaskableGraphic
         totalLength = stub * 2f + arc;
     }
 
-    // 곡선 구간 위의 점 (u: 0~1). 휨은 sin²(πu)로 감싸 양 끝 기울기가 0 → 직선과 매끄럽게 이어진다.
+    // 곡선 구간 위의 점 (u: 0~1). 휨은 sin²(πu)로 감싸 양 끝 기울기가 0 -> 직선과 매끄럽게 이어진다.
     private Vector2 CurvePoint(float u)
     {
         Vector2 delta = curveEnd - curveStart;

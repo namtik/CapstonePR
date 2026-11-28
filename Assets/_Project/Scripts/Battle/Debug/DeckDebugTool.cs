@@ -32,7 +32,7 @@ namespace Battle
         }
 
         // 현재 런 덱을 편집용 목록으로 불러오기
-        [ContextMenu("현재 런 덱 → 목록으로 불러오기")]
+        [ContextMenu("현재 런 덱 -> 목록으로 불러오기")]
         public void LoadFromRunDeck()
         {
             var rd = RunDeckState.EnsureExists();
@@ -41,7 +41,7 @@ namespace Battle
         }
 
         // 편집용 목록을 런 덱에 적용 (다음 전투부터)
-        [ContextMenu("목록 → 런 덱 적용 (다음 전투부터)")]
+        [ContextMenu("목록 -> 런 덱 적용 (다음 전투부터)")]
         public void ApplyToRunDeck()
         {
             RunDeckState.EnsureExists().ReplaceDeck(deckEntries);
@@ -56,7 +56,7 @@ namespace Battle
         }
 
         // 편집용 목록 전체를 현재 전투의 뽑을 더미에 추가
-        [ContextMenu("목록 전부 → 현재 전투 뽑을 더미에 추가")]
+        [ContextMenu("목록 전부 -> 현재 전투 뽑을 더미에 추가")]
         public void AddListToCurrentBattle()
         {
             var deck = ResolveBattleDeck();
@@ -68,7 +68,7 @@ namespace Battle
         }
 
         // quickAddCardId 카드 1장을 현재 전투의 패에 빠르게 추가
-        [ContextMenu("빠른 추가: 카드 1장 → 패")]
+        [ContextMenu("빠른 추가: 카드 1장 -> 패")]
         public void AddQuickCardToHand()
         {
             var deck = ResolveBattleDeck();
@@ -87,7 +87,7 @@ namespace Battle
         }
 
         // quickAddCardId 카드 1장을 현재 전투의 뽑을 더미에 빠르게 추가
-        [ContextMenu("빠른 추가: 카드 1장 → 뽑을 더미")]
+        [ContextMenu("빠른 추가: 카드 1장 -> 뽑을 더미")]
         public void AddQuickCardToDraw()
         {
             var deck = ResolveBattleDeck();

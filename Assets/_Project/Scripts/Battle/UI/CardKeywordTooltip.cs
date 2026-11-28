@@ -188,7 +188,7 @@ namespace Battle.UI
             _rect.sizeDelta = new Vector2(PanelWidth, _contentHeight);
         }
 
-        // 설명 문구/태그에서 키워드를 찾는다(표시 순서: 소멸 → 화상 → 연쇄 → 빙결 → 파편)
+        // 설명 문구/태그에서 키워드를 찾는다(표시 순서: 소멸 -> 화상 -> 연쇄 -> 빙결 -> 파편)
         static void CollectKeywords(CardData data, string description, List<KeywordDef> outList)
         {
             outList.Clear();
@@ -315,11 +315,11 @@ namespace Battle.UI
 
             Rect canvas = _canvasRect.rect;
             float x = max.x + CardMargin;
-            if (x + PanelWidth > canvas.xMax) x = min.x - CardMargin - PanelWidth; // 오른쪽 넘침 → 카드 왼쪽
+            if (x + PanelWidth > canvas.xMax) x = min.x - CardMargin - PanelWidth; // 오른쪽 넘침 -> 카드 왼쪽
             x = Mathf.Clamp(x, canvas.xMin, canvas.xMax - PanelWidth);
 
             float y = max.y;
-            if (y - _contentHeight < canvas.yMin) y = canvas.yMin + _contentHeight; // 아래 넘침 → 위로
+            if (y - _contentHeight < canvas.yMin) y = canvas.yMin + _contentHeight; // 아래 넘침 -> 위로
             if (y > canvas.yMax) y = canvas.yMax;
 
             _rect.localPosition = new Vector3(x, y, 0f);

@@ -167,7 +167,7 @@ public class StatusPanelUI : MonoBehaviour
         // 2) 적 피격 흔들림 추적 — 적의 현재 위치 + 초기 오프셋으로 패널을 함께 이동(흔들림 동기화).
         if (following && followTarget != null)
         {
-            // 3D(followCam 지정)면 월드→스크린 변환, 2D면 대상 좌표(스크린)를 그대로 사용
+            // 3D(followCam 지정)면 월드->스크린 변환, 2D면 대상 좌표(스크린)를 그대로 사용
             Vector3 basePos;
             if (followCam != null)
             {

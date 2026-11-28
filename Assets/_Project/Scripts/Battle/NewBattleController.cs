@@ -42,7 +42,7 @@ namespace Battle
         [Tooltip("ON이면 Resources/ComboDB의 데이터 드리븐 콤보를 사용 (Inspector의 ownedComboSkills를 덮어씀). " +
                  "OFF면 위 Inspector 수동 리스트 사용.")]
         [SerializeField] private bool useComboDatabase = true;        // 콤보 DB 사용 여부
-        [Tooltip("보유할 콤보 ID(효과별 커맨드 1개). 비우면 보유 콤보 없음(미선택 시작). 아래 커스텀 인스펙터에서 효과→커맨드로 편집.")]
+        [Tooltip("보유할 콤보 ID(효과별 커맨드 1개). 비우면 보유 콤보 없음(미선택 시작). 아래 커스텀 인스펙터에서 효과->커맨드로 편집.")]
         [SerializeField] private List<int> ownedComboIds = new List<int>(); // 보유 콤보 ID(행=효과+커맨드) 목록
         [Tooltip("[테스트] 콤보 보상 UI 전까지 수동 획득용 — 이 RefComboID(1000~1019)를 컨텍스트 메뉴 '콤보 1개 추가'로 보유에 더함.")]
         [SerializeField] private int debugAddComboRefId = 1000;       // 디버그 수동 콤보 추가용 RefComboID
@@ -138,7 +138,7 @@ namespace Battle
         [Tooltip("탐험 비율 — 데이터 수집 시 행동 다양성 확보용(0=항상 최적, 0.1~0.2=수집용). 학습 데이터가 충분하면 0으로.")]
         [Range(0f, 1f)]
         [SerializeField] private float aiExplorationEpsilon = 0.15f; // AI 탐험 비율(epsilon)
-        [Tooltip("ON이면 각 방해행동 결정을 CSV로 기록(persistentDataPath/ai_logs) → 오프라인 재학습용.")]
+        [Tooltip("ON이면 각 방해행동 결정을 CSV로 기록(persistentDataPath/ai_logs) -> 오프라인 재학습용.")]
         [SerializeField] private bool logAiDecisions = false;        // 방해행동 결정 CSV 기록 여부
         [Tooltip("ON이면 게임 중 실제 결과로 적 AI Q-가중치를 미세조정(세션 단위 누적, 오프라인 베이스에서 시작).")]
         [SerializeField] private bool onlineLearning = false;        // 온라인 학습 사용 여부
@@ -716,7 +716,7 @@ namespace Battle
                 _deck.AddToDiscard(CardDatabase.CreateFragmentInstance());
         }
 
-        // ── 손패 선택/픽커 요청 직렬화 ──
+        // 손패 선택/픽커 요청 직렬화
         // CardHandHUD의 선택 모드는 콜백 슬롯이 1개라, 카드 효과 선택(소멸/버리기/복사/픽커)과
         // 적 방해 '버리기' 선택이 겹치면 나중 요청이 앞 요청의 콜백을 덮어써 효과가 유실되거나
         // 버리기 코루틴이 영원히 대기했다. 모든 선택 요청을 이 대기열로 받아 한 번에 하나씩 연다.
@@ -762,7 +762,7 @@ namespace Battle
         public int DDrawGaugeCost =>
             RelicManager.Instance != null ? RelicManager.Instance.GetDDrawGaugeCost(1) : 1;
 
-        // ── [테스트] StageTestPanel 전용 ──
+        // [테스트] StageTestPanel 전용
         private int? _debugForcedDisruption; // 다음 방해행동 강제값(0 저주·1 탈진·2 흡수·3 강화·4 회복·5 버리기)
 
         // 지정한 방해행동을 적 행동 대기열로 발동(실제 흐름과 같은 순서·잠금으로 처리)

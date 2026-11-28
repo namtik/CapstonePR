@@ -86,9 +86,9 @@ namespace Battle.Card
         const string CARDS_RESOURCE_PATH    = "CardDB/Cards";       // 카드 JSON 리소스 경로
         const string EFFECTS_RESOURCE_PATH  = "CardDB/CardEffects"; // 효과 JSON 리소스 경로
 
-        private static Dictionary<int, CardData> _byId;                         // ID → 카드 데이터 맵
+        private static Dictionary<int, CardData> _byId;                         // ID -> 카드 데이터 맵
         private static List<CardData> _all;                                     // 전체 카드 목록
-        private static Dictionary<int, List<CardEffectData>> _effectsByCard;    // 카드 ID → 효과 목록 맵
+        private static Dictionary<int, List<CardEffectData>> _effectsByCard;    // 카드 ID -> 효과 목록 맵
 
         // 최초 1회 로드 보장
         public static void EnsureInit()
@@ -371,7 +371,7 @@ namespace Battle.Card
                 case "FRAGMENT": return CardElement.Fragment;
                 case "NEUTRAL":  return CardElement.Neutral;
                 default:
-                    Debug.LogWarning($"[CardDatabase] 알 수 없는 Element '{raw}' → Neutral 처리");
+                    Debug.LogWarning($"[CardDatabase] 알 수 없는 Element '{raw}' -> Neutral 처리");
                     return CardElement.Neutral;
             }
         }
@@ -386,7 +386,7 @@ namespace Battle.Card
                 case "SKILL":  return CardType.Skill;
                 case "POWER":  return CardType.Power;
                 default:
-                    Debug.LogWarning($"[CardDatabase] 알 수 없는 CardType '{raw}' → Skill 처리");
+                    Debug.LogWarning($"[CardDatabase] 알 수 없는 CardType '{raw}' -> Skill 처리");
                     return CardType.Skill;
             }
         }
@@ -401,7 +401,7 @@ namespace Battle.Card
                 case "RARE":   return CardRarity.Rare;
                 case "EPIC":   return CardRarity.Epic;
                 default:
-                    Debug.LogWarning($"[CardDatabase] 알 수 없는 Rarity '{raw}' → Normal 처리");
+                    Debug.LogWarning($"[CardDatabase] 알 수 없는 Rarity '{raw}' -> Normal 처리");
                     return CardRarity.Normal;
             }
         }

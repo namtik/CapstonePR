@@ -124,7 +124,7 @@ namespace Battle.UI
             public TextMeshProUGUI fallback;
             public Image badgeBg;
             public TextMeshProUGUI badgeText;
-            public float flash;    // 발동 펄스(1→0)
+            public float flash;    // 발동 펄스(1->0)
         }
 
         RectTransform _root;
@@ -166,7 +166,7 @@ namespace Battle.UI
             _triggerQueue.Enqueue(relic);
         }
 
-        // ── 매 프레임: 예측 → 배치 ─────────────────────────────
+        // 매 프레임: 예측 -> 배치
         void LateUpdate()
         {
             if (Input.GetKeyDown(hideToggleKey)) _hiddenByUser = !_hiddenByUser;
@@ -203,7 +203,7 @@ namespace Battle.UI
             if (on) _lockHint.color = new Color(1f, 1f, 1f, _lockFlash);
         }
 
-        // ── 몬스터 행: 등록 순서 고정, 새 적은 뒤에 추가, 사라진 적은 페이드 아웃 ──
+        // 몬스터 행: 등록 순서 고정, 새 적은 뒤에 추가, 사라진 적은 페이드 아웃
         void SyncRows()
         {
             foreach (var v in _views.Values) v.used = false;
@@ -285,7 +285,7 @@ namespace Battle.UI
             }
         }
 
-        // 보유 유물 → 아이템 칸 동기화(목록이 바뀔 때만 재생성) + 카운터·발동 펄스 갱신
+        // 보유 유물 -> 아이템 칸 동기화(목록이 바뀔 때만 재생성) + 카운터·발동 펄스 갱신
         void SyncItems(NewBattleController nbc)
         {
             _itemBuf.Clear();
@@ -483,7 +483,7 @@ namespace Battle.UI
             name = st != null && st.Data != null && !string.IsNullOrEmpty(st.Data.enemyName) ? st.Data.enemyName : "적";
         }
 
-        // ── UI 생성 ──────────────────────────────────────────────
+        // UI 생성
         void Build()
         {
             if (_built) return;

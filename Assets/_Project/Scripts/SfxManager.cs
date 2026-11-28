@@ -57,7 +57,7 @@ public class SfxManager : MonoBehaviour
         public AudioClip clip; // 해당 이펙트 클립
     }
 
-    [Header("이펙트별 소리 오버라이드 (effectName → clip)")]
+    [Header("이펙트별 소리 오버라이드 (effectName -> clip)")]
     [Tooltip("특정 이펙트에만 다른 소리를 주고 싶을 때. 매칭 없으면 Effect Default Clip 사용.")]
     [SerializeField] private List<EffectClip> effectClips = new List<EffectClip>(); // 이펙트별 소리 오버라이드 목록
 

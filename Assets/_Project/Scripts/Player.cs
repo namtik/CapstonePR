@@ -387,7 +387,7 @@ public class Player : MonoBehaviour, IBattleUnit
         }
 
         if (cardtype == "enemy_attack")
-            Debug.Log($"[적 공격→플레이어] 실피해 {finalDamage} (원피해 {incomingDamage:0.#}, 방어도 흡수 {(guardBefore - guard):0.#}) HP {hpBefore:0} → {currentHp:0}/{maxHp:0}");
+            Debug.Log($"[적 공격->플레이어] 실피해 {finalDamage} (원피해 {incomingDamage:0.#}, 방어도 흡수 {(guardBefore - guard):0.#}) HP {hpBefore:0} -> {currentHp:0}/{maxHp:0}");
 
         int guardLost = Mathf.Max(0, Mathf.RoundToInt(guardBefore - guard));
         if (guardLost > 0)
@@ -416,7 +416,7 @@ public class Player : MonoBehaviour, IBattleUnit
     public event Action OnBlockConsumedByAttack; // 적 공격에 방어도가 소모됐을 때 이벤트
     public event Action<string, int> OnStatusChanged; // 상태이상 수치 변경 이벤트
 
-    // 상태이상을 추가하며(젖음→빙결 변환 등), 최대 999로 제한한다
+    // 상태이상을 추가하며(젖음->빙결 변환 등), 최대 999로 제한한다
     public void AddStatus(string type, int amount)
     {
         if (!statusEffects.ContainsKey(type)) return;

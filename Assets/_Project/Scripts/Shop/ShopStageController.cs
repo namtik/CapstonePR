@@ -720,7 +720,7 @@ public class ShopStageController : MonoBehaviour
         RefreshOfferViews();
     }
 
-    // ───────── 카드 제거 ─────────
+    // 카드 제거
 
     // 할인 유물 반영 카드 제거 비용
     int CurrentRemoveCardCost => ApplyRelicShopDiscount(removeCardCost);
@@ -745,7 +745,7 @@ public class ShopStageController : MonoBehaviour
             }
         }
 
-        // 가격 텍스트 미연결 시 버튼 아래 '{버튼이름}_Price' → 없으면 첫 TMP 텍스트
+        // 가격 텍스트 미연결 시 버튼 아래 '{버튼이름}_Price' -> 없으면 첫 TMP 텍스트
         if (removeCardCostText == null && removeCardButton != null)
         {
             Transform price = FindChildRecursiveByName(removeCardButton.transform, removeCardButton.name + "_Price");

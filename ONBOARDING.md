@@ -9,7 +9,7 @@
 
 근거 문서: `기획서 0.6v.pdf`, `ComboSkill_DB_(1).xlsx` (사용자 Downloads 폴더).
 
-카드 DB 원본 xlsx는 저장소 루트의 `DataSource/Card_DB_v11.xlsx` (구버전·미사용 데이터는 `DataSource/Legacy/`). **xlsx/csv 원본은 `Assets/_Project/Resources`에 두지 말 것** — 런타임은 JSON만 읽는다.
+DB 원본 xlsx는 저장소 루트의 `DataSource/Card_DB.xlsx`, `DataSource/ComboSkill_DB.xlsx` (2026-11-27 현재 JSON에서 역생성, 구버전은 `DataSource/Legacy/` — **Legacy 파일로 변환하면 최신 밸런스가 덮어써지니 절대 쓰지 말 것**). **xlsx/csv 원본은 `Assets/_Project/Resources`에 두지 말 것** — 런타임은 JSON만 읽는다.
 
 > ⚠️ **용어 변경**: 구 "피버(Fever)"는 전부 **"각성(Awaken)"** 으로 개명됨. 코드 식별자도 `Awaken*`/`_awaken*`, 로그·UI·주석은 "각성". 단 효과 에셋명 `Fire_ATK`처럼 `Fever_ATK`(Resources 파일명)만 그대로 둠.
 
@@ -60,9 +60,11 @@ Assets/_Project/Resources/CardEffects/{EffectName}.png — 효과 스프라이�
 ```
 
 ### 갱신 워크플로우
-- `Tools > Card DB > Excel → JSON 변환...` (파일 다이얼로그)
+- `Tools > Card DB > Excel -> JSON 변환...` (파일 다이얼로그 — `DataSource/Card_DB.xlsx` 선택)
 - `Tools > Card DB > 마지막 파일 다시 변환` (원클릭)
+- `Tools > Card DB > JSON -> Excel 내보내기 (DataSource)` — 현재 JSON을 `DataSource/Card_DB.xlsx`로 역변환 (`DBExcelExporter.cs`). 데이터 시트 외 시트(`키값_한글정리` 등)는 값만 보존. Combo DB도 같은 메뉴 있음
 - `Tools > Card DB > 출력 폴더 열기`
+- **규칙**: xlsx를 고쳤으면 변환 후 xlsx와 JSON을 **같은 커밋**에 올린다. 급하게 JSON을 직접 고쳤다면 바로 `JSON -> Excel 내보내기`로 xlsx를 맞춰서 함께 커밋한다.
 
 ### Card_DB_v2 시트 구조
 - **Cards**: CardID, Name, Element, CardType, GaugeCost, **Rarity**, Tags, ComboSlot, EffectName, SkillImg, DescriptionKR
@@ -88,7 +90,7 @@ Assets/_Project/Resources/ComboDB/ComboEffects.json     — 효과 정의 (자�
 ```
 
 ### 갱신 워크플로우
-- `Tools > Combo DB > Excel → JSON 변환...`
+- `Tools > Combo DB > Excel -> JSON 변환...`
 - `Tools > Combo DB > 마지막 파일 다시 변환`
 
 ### ComboSkill_DB 시트 구조
@@ -281,7 +283,7 @@ ENEMY_STATUS_VALUE:*, PLAYER_BLOCK, FLOOR(PLAYER_CURRENT_HP/2), LAST_HP_LOST(*N)
 
 ## 12. 주의사항
 - 새 시스템은 `NewBattleController.Instance != null`로 본 게임과 분리
-- Card DB / Combo DB 수치는 xlsx가 정본. JSON 직접 수정 시 **재임포트하면 덮어쓰임** — xlsx도 같이 수정할 것
+- Card DB / Combo DB 수치는 `DataSource/*.xlsx`가 정본. JSON 직접 수정 시 **재임포트하면 덮어쓰임** — 바로 `JSON -> Excel 내보내기`로 xlsx도 맞출 것 (11/23~25에 xlsx 없이 JSON만 바뀌어 xlsx가 낡은 적 있음)
 - 일부 기존 파일은 인코딩이 깨져 보일 수 있음(EUC-KR 잔재) — 수정 시 UTF-8 유지
 - 손패 한도 동적(418)은 MAX_HAND_LIMIT=10 상한, UI 슬롯도 10개 사전 생성
 - RelicManager는 런타임 자동 생성(BattleTestController)되므로 아이콘 등 영구 설정은 씬에 오브젝트를 미리 배치할 것

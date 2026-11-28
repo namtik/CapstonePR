@@ -180,9 +180,9 @@ namespace Battle.UI
             return pos.y >= UseThresholdY;
         }
 
-        // ───────── 카드 선택 오버레이 ─────────
+        // 카드 선택 오버레이
 
-        // 오버레이 프리팹 인스턴스 준비(없으면 false → 기존 방식 폴백)
+        // 오버레이 프리팹 인스턴스 준비(없으면 false -> 기존 방식 폴백)
         bool EnsureSelectOverlay()
         {
             if (_selectOverlay != null) return true;

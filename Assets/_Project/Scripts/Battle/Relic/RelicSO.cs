@@ -26,7 +26,7 @@ namespace Battle.Relic
         // 이름이 비어 있으면 id를 표시용으로 대체
         public string DisplayLabel => string.IsNullOrWhiteSpace(displayName) ? id : displayName;
 
-        // ── 이벤트 훅 (해당 효과가 있는 유물만 override) ─────────────────────
+        // 이벤트 훅 (해당 효과가 있는 유물만 override)
         // 유물 획득 순간 — 런 레벨 1회성 효과 (최대 체력 증가, 전체 회복, 덱 수정 등)
         public virtual void OnAcquired(IRelicRunContext run) { }
         // 전투 진입 시 — 방어도/빙결 부여, 파편 삽입, 강제 각성 등
@@ -40,7 +40,7 @@ namespace Battle.Relic
         // 각성 종료 시 — successCombos = 이번 각성에서 성공한 콤보 수
         public virtual void OnAwakenEnded(IRelicBattleContext ctx, int successCombos) { }
 
-        // ── 질의형 수정자 (보유 유물 전체가 합산되어 사용처에서 읽음) ─────────────
+        // 질의형 수정자 (보유 유물 전체가 합산되어 사용처에서 읽음)
         public virtual int   ModifyMaxHp() => 0;                    // 최대 체력 가감
         public virtual float ModifyAwakenDurationSeconds() => 0f;   // 각성 지속시간 가감(초)
         public virtual int   ModifyGaugeCostPerCard() => 0;         // 카드 1장당 게이지 코스트 가감
@@ -48,11 +48,11 @@ namespace Battle.Relic
         public virtual float ShopPriceMultiplier() => 1f;           // 상점 가격 배수(곱)
         public virtual int   GoldRewardBonus() => 0;                // 전투 보상 골드 가산
 
-        // ── 행동 순서 바 표시 ──────────────────────────────────────────
+        // 행동 순서 바 표시
         // 아이템 칸에 띄울 숫자(남은 발동 횟수·조건 등). -1 = 숫자 없음
         public virtual int GetBattleCounter(IRelicBattleContext ctx) => -1;
 
-        // ── 특수 플래그 ────────────────────────────────────────────────
+        // 특수 플래그
         public virtual int   DDrawGaugeCostOverride => 0;           // D 드로우 코스트 대체값, 0=대체 안 함 (비급서 10011)
         public virtual bool  OverridesDDraw => false;               // D 드로우 동작 교체 (비급서 10011)
         public virtual bool  GrantsAllRelicsInStage => false;       // 유물 라운드서 후보 전부 획득 (유물 호리병 10018)

@@ -13,8 +13,8 @@ namespace Battle.UI
     public partial class CardHandHUD
     {
         // 임의 카드 목록에서 1장을 선택받는 픽커 모드로 진입
-        // pileKind 지정(뽑을/버린 더미) → 덱/묘지 보기 패널 + 상단 "부적을 선택하세요"
-        // pileKind 미지정(파편 등 생성 후보) → 띠 패널 위 카드 가로 배치
+        // pileKind 지정(뽑을/버린 더미) -> 덱/묘지 보기 패널 + 상단 "부적을 선택하세요"
+        // pileKind 미지정(파편 등 생성 후보) -> 띠 패널 위 카드 가로 배치
         public void EnterCardPickerMode(string promptMessage, IList<CardInstance> cards,
             System.Action<CardInstance> callback, PileViewerKind? pileKind = null)
         {
@@ -77,7 +77,7 @@ namespace Battle.UI
             EnsureDimOverlay();
             EnsurePickerRoot();
 
-            // handRoot(맨 뒤) → dim → 안내문 → pickerRoot(최상단) 순으로 정렬
+            // handRoot(맨 뒤) -> dim -> 안내문 -> pickerRoot(최상단) 순으로 정렬
             if (handRoot != null) handRoot.SetAsFirstSibling();
             if (dimOverlay != null)
             {

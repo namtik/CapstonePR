@@ -4,7 +4,7 @@ using UnityEngine;
 
 // 적 행동 포커스(카메라 줌인) 동안 손패·덱·묘지·적 HP 같은 HUD를 잠시 페이드아웃해 화면을 비운다.
 // - EnemyActionFocusCamera.Focus/Release와 짝으로 Hide/Show를 호출한다.
-// - 대상마다 CanvasGroup으로 알파만 조절(SetActive 안 건드림) → 다른 스크립트의 표시/숨김 로직과 충돌하지 않는다.
+// - 대상마다 CanvasGroup으로 알파만 조절(SetActive 안 건드림) -> 다른 스크립트의 표시/숨김 로직과 충돌하지 않는다.
 // - forceVisible이 true를 돌려주는 동안(예: 방해 '버리기' 카드 선택)은 숨기지 않는다.
 // - 씬에 없으면 첫 호출 때 자동 생성된다.
 public class EnemyActionHudFader : MonoBehaviour

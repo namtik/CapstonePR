@@ -8,7 +8,7 @@ public static class InventoryFlyFx
 {
     public const float Duration = 0.58f;
 
-    // rt를 화면 좌표 from → to로 날린다. 크기는 startScale → startScale*0.22, 끝(88% 이후)에서 setAlpha로 흐려진다.
+    // rt를 화면 좌표 from -> to로 날린다. 크기는 startScale -> startScale*0.22, 끝(88% 이후)에서 setAlpha로 흐려진다.
     public static IEnumerator Fly(RectTransform rt, Vector2 fromScreen, Vector2 toScreen,
         Action<float> setAlpha = null, float startScale = 1f, bool keepOnTop = true, float duration = Duration)
     {

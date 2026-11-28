@@ -77,7 +77,7 @@ public class EnemyOverlayHUD : MonoBehaviour
     private Vector3 _damageOriginLocal; // 데미지 텍스트 원점
     private Coroutine _patternCo;   // 패턴 알림 코루틴
     private Transform _worldAnchor; // 월드 팔로우 앵커(다중 전투)
-    private Camera _renderCamera;   // 월드→스크린 변환 카메라
+    private Camera _renderCamera;   // 월드->스크린 변환 카메라
     private bool _followWorld;      // 월드 좌표를 따라갈지 여부
     private RectTransform _barRoot; // 이 적 전용 바 묶음
     private Renderer[] _bodyRenderers; // 머리 위치 계산용 메시
@@ -486,7 +486,7 @@ public class EnemyOverlayHUD : MonoBehaviour
     static Mesh _bakeMesh;
 
     // 현재 포즈를 구워 월드 기준 정점 최고 높이를 구한다(전투 시작 때 한 번만 호출)
-    // 구운 정점을 월드로 옮길 때 부모 스케일 반영 여부가 헷갈리기 쉽다(우산귀는 루트 스케일 2라 잘못 옮기면 높이가 절반 → 몸 중앙).
+    // 구운 정점을 월드로 옮길 때 부모 스케일 반영 여부가 헷갈리기 쉽다(우산귀는 루트 스케일 2라 잘못 옮기면 높이가 절반 -> 몸 중앙).
     // 두 방식으로 옮겨 보고, 렌더러 bounds와 높이 범위가 더 잘 맞는 쪽을 쓴다.
     static bool TryBakedTop(SkinnedMeshRenderer smr, Bounds reference, out float top)
     {
@@ -572,7 +572,7 @@ public class EnemyOverlayHUD : MonoBehaviour
         }
     }
 
-    // ── EnemyView3D가 위임하는 표시 API ──
+    // EnemyView3D가 위임하는 표시 API
 
     // HP 바/수치 갱신
     public void SetHp(float current, float max)

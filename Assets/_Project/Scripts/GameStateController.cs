@@ -577,13 +577,13 @@ public class GameStateController : MonoBehaviour
         ResetMapStageForLapStart();
         Battle.RunDeckState.Instance?.ResetRun();
 
-        // 유물 보유 현황도 초기화 (메인으로 나가면 현재 런을 포기 → 다음 런은 유물 0개로 시작)
+        // 유물 보유 현황도 초기화 (메인으로 나가면 현재 런을 포기 -> 다음 런은 유물 0개로 시작)
         Battle.Relic.RelicManager.Instance?.ClearOwnedRelics();
 
         // 골드도 초기화 (다음 런은 0골드로 시작)
         MoneyManager.Instance?.ResetMoney();
 
-        // 보유 콤보도 초기화 (메인으로 나가면 현재 런 포기 → 다음 시작 시 3택1부터)
+        // 보유 콤보도 초기화 (메인으로 나가면 현재 런 포기 -> 다음 시작 시 3택1부터)
         Battle.NewBattleController.Instance?.ResetOwnedCombosForNewRun();
 
         ResetEventRunState();

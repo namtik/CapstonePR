@@ -101,7 +101,7 @@ namespace Battle
 
                 while (!closed)
                 {
-                    // 전투 종료 등으로 외부에서 창이 닫힘 → 이 요청은 취소로 간주
+                    // 전투 종료 등으로 외부에서 창이 닫힘 -> 이 요청은 취소로 간주
                     if (!_inBattle || handHud == null || (!handHud.IsSelectionMode && !handHud.IsPickerMode)) break;
                     yield return null;
                 }

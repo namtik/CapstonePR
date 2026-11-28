@@ -47,7 +47,7 @@ namespace Battle.UI
         [SerializeField] private Sprite runDeckSprite;
         [Tooltip("상점 '부적 제거' 프레임.")]
         [SerializeField] private Sprite cardRemoveSprite;
-        [Tooltip("종류별 스프라이트가 없을 때 쓰는 프레임(제목 미포함 가정 → titleText 표시).")]
+        [Tooltip("종류별 스프라이트가 없을 때 쓰는 프레임(제목 미포함 가정 -> titleText 표시).")]
         [SerializeField] private Sprite defaultFrameSprite;
 
         [Header("카드 그리드")]
@@ -55,9 +55,9 @@ namespace Battle.UI
         [SerializeField] private int columns = 4;
         [Tooltip("ON=좌측 정렬(덜 찬 마지막 행도 왼쪽부터), OFF=행마다 가운데 정렬.")]
         [SerializeField] private bool alignLeft = true;
-        [Tooltip("카드 가로 간격(중심→중심, px).")]
+        [Tooltip("카드 가로 간격(중심->중심, px).")]
         [SerializeField] private float columnSpacing = 400f;
-        [Tooltip("카드 세로 간격(중심→중심, px).")]
+        [Tooltip("카드 세로 간격(중심->중심, px).")]
         [SerializeField] private float rowSpacing = 520f;
         [Tooltip("x=좌우(현재 미사용 예비), y=상하 합계 패딩.")]
         [SerializeField] private Vector2 contentPadding = new Vector2(80f, 120f);

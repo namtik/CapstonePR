@@ -11,7 +11,7 @@ using UnityEngine;
 namespace Battle.EditorTools
 {
     /// <summary>
-    /// ComboSkill_DB.xlsx → Assets/_Project/Resources/ComboDB/*.json 변환기 (Unity Editor 메뉴).
+    /// ComboSkill_DB.xlsx -> Assets/_Project/Resources/ComboDB/*.json 변환기 (Unity Editor 메뉴).
     /// CardDBImporter와 동일한 워크플로우/파서. 외부 라이브러리 없이 .NET 표준만 사용.
     /// 시트: ComboSkills, ComboEffects (키값_한글정리는 무시).
     /// </summary>
@@ -20,7 +20,7 @@ namespace Battle.EditorTools
         const string PREF_LAST_PATH = "Battle.ComboDB.LastSourcePath";
         const string OUT_DIR = "Assets/_Project/Resources/ComboDB";
 
-        [MenuItem("Tools/Combo DB/Excel → JSON 변환...", priority = 10)]
+        [MenuItem("Tools/Combo DB/Excel -> JSON 변환...", priority = 10)]
         public static void ConvertFromExcelMenu()
         {
             string lastPath = EditorPrefs.GetString(PREF_LAST_PATH, "");
@@ -42,7 +42,7 @@ namespace Battle.EditorTools
             if (string.IsNullOrEmpty(lastPath) || !File.Exists(lastPath))
             {
                 EditorUtility.DisplayDialog("Combo DB",
-                    "최근에 변환한 파일이 없거나 존재하지 않습니다.\n'Excel → JSON 변환...' 메뉴로 먼저 선택하세요.", "확인");
+                    "최근에 변환한 파일이 없거나 존재하지 않습니다.\n'Excel -> JSON 변환...' 메뉴로 먼저 선택하세요.", "확인");
                 return;
             }
             ConvertFromExcel(lastPath);
@@ -102,7 +102,7 @@ namespace Battle.EditorTools
             }
         }
 
-        // ─── ComboSkills 시트 → JSON ──────────────────────────────
+        // ComboSkills 시트 -> JSON
 
         static string BuildSkillsJson(SheetData sheet, out int count)
         {
@@ -146,7 +146,7 @@ namespace Battle.EditorTools
             return sb.ToString();
         }
 
-        // ─── ComboEffects 시트 → JSON ─────────────────────────────
+        // ComboEffects 시트 -> JSON
 
         struct EffectField
         {
@@ -212,9 +212,7 @@ namespace Battle.EditorTools
             return sb.ToString();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // 헬퍼
-        // ─────────────────────────────────────────────────────────────
 
         static int RequireCol(Dictionary<string, int> hdr, string key)
         {
@@ -266,9 +264,7 @@ namespace Battle.EditorTools
             return sb.ToString();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // 최소 xlsx 파서 (zip + XML, 외부 의존성 없음) — CardDBImporter와 동일
-        // ─────────────────────────────────────────────────────────────
 
         class SheetData
         {

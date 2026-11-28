@@ -8,7 +8,7 @@ namespace Battle.Relic
     {
         public override void OnBattleStart(IRelicBattleContext ctx)
         {
-            ctx.ForceActivateAwaken();   // 플래그 동기 설정 → StartBattle이 시작 드로우 후 발동
+            ctx.ForceActivateAwaken();   // 플래그 동기 설정 -> StartBattle이 시작 드로우 후 발동
             ctx.PulseRelic(this, $"유물 {DisplayLabel} 발동", null);
         }
     }

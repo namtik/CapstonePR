@@ -483,7 +483,7 @@ namespace Battle.Deck
 
             CardInstance target = pool[UnityEngine.Random.Range(0, pool.Count)];
             target.gaugeCostModifier += amount;
-            Debug.Log($"[CardEffect] {target.data.displayName} 코스트 {amount:+0;-0} → {target.Gauge} (cardId={eff.cardId})");
+            Debug.Log($"[CardEffect] {target.data.displayName} 코스트 {amount:+0;-0} -> {target.Gauge} (cardId={eff.cardId})");
             Ctx.deck.NotifyChanged(); // 패 UI 코스트 표시 갱신
         }
 

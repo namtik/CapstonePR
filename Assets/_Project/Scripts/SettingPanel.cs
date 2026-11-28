@@ -47,7 +47,7 @@ public class SettingPanel : MonoBehaviour
     public Slider masterVolumeSlider; // 마스터 볼륨 슬라이더
     [Tooltip("마스터 볼륨 숫자 입력/표시 (0~100). 슬라이더와 양방향으로 동기화된다.")]
     public TMP_InputField masterVolumeInput; // 마스터 볼륨 숫자 입력칸
-    [Tooltip("(선택) 사운드 설정 → 설정 패널로 돌아가는 버튼.")]
+    [Tooltip("(선택) 사운드 설정 -> 설정 패널로 돌아가는 버튼.")]
     public Button soundBackButton; // 사운드 설정 뒤로 버튼
 
     [Header("일시정지 연출")]

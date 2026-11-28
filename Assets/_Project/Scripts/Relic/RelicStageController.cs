@@ -649,7 +649,7 @@ public class RelicStageController : MonoBehaviour
         }
 
         // 주의: 효과 없는 sprite-only placeholder는 더 이상 후보로 넣지 않는다.
-        // (진짜 유물과 아이콘이 겹쳐 상자↔상점 중복 등장 문제를 유발했음 — 전부 RelicSO로 대체됨)
+        // (진짜 유물과 아이콘이 겹쳐 상자<->상점 중복 등장 문제를 유발했음 — 전부 RelicSO로 대체됨)
 
         return result;
     }

@@ -17,9 +17,9 @@ namespace Battle.UI
         {
             [Tooltip("이 정렬 버튼의 Image(버튼 전체 이미지).")]
             public UnityEngine.UI.Image image;   // 버튼 Image
-            [Tooltip("오름차순일 때 이미지(예: 이름↑).")]
+            [Tooltip("오름차순일 때 이미지(예: 이름 오름차순 아이콘).")]
             public Sprite ascending;             // 오름차순 이미지
-            [Tooltip("내림차순일 때 이미지(예: 이름↓).")]
+            [Tooltip("내림차순일 때 이미지(예: 이름 내림차순 아이콘).")]
             public Sprite descending;            // 내림차순 이미지
         }
 
@@ -155,7 +155,7 @@ namespace Battle.UI
             if (state == null) return items;
             state.EnsureSeeded();
 
-            // 덱 순서 = 획득 순서 → 그대로 펼쳐 담는다(사본 번호는 전투용 인스턴스 생성 순서와 같게 카드 ID별로 센다)
+            // 덱 순서 = 획득 순서 -> 그대로 펼쳐 담는다(사본 번호는 전투용 인스턴스 생성 순서와 같게 카드 ID별로 센다)
             var copyCounters = new Dictionary<int, int>();
             foreach (var entry in state.RunDeck)
             {
@@ -216,7 +216,7 @@ namespace Battle.UI
             Refresh(); // Refresh 안에서 UpdateSortArrows 호출됨
         }
 
-        // 정렬 버튼 이미지를 현재 기준/방향에 맞게 갱신(누를 때마다 ↑/↓ 이미지 교체)
+        // 정렬 버튼 이미지를 현재 기준/방향에 맞게 갱신(누를 때마다 오름/내림 이미지 교체)
         void UpdateSortArrows()
         {
             if (sortButtonVisuals == null) return;

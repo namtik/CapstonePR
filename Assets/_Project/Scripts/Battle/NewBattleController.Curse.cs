@@ -80,7 +80,7 @@ namespace Battle
 
             handHud?.Refresh();
             RequestCurseNudge(to); // 저주 속성 손패 카드 한 번 떠오르기(카메라·UI 복귀 후)
-            Log($"[특이사항] 저주 이동 — {(from.HasValue ? ElementName(from.Value) : "없음")} → {ElementName(to)}");
+            Log($"[특이사항] 저주 이동 — {(from.HasValue ? ElementName(from.Value) : "없음")} -> {ElementName(to)}");
         }
 
         // 저주된 속성 카드 사용 시 플레이어 피해 적용. 저주마다 카드 사용 1회씩 소모.
@@ -116,9 +116,7 @@ namespace Battle
             CardElement.Wind => "바람", CardElement.Earth => "땅", _ => "?"
         };
 
-        // ─────────────────────────────────────────────────────────────
         // 적 특이사항(EnemySpecialAbility) 플레이어측 효과 API
-        // ─────────────────────────────────────────────────────────────
 
         // 특이사항: 지정 속성에 저주 부여(uses회 카드 사용 동안 지속)
         public void ApplyElementCurse(CardElement element, int uses, string sourceName = null)

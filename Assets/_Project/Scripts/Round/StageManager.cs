@@ -30,14 +30,14 @@ public class StageManager : MonoBehaviour
     }
 
     [Header("보스별 스테이지 씬")]
-    [Tooltip("보스 몬스터 ID → 스테이지 씬. 매칭되면 bossStageSceneName보다 우선한다.")]
+    [Tooltip("보스 몬스터 ID -> 스테이지 씬. 매칭되면 bossStageSceneName보다 우선한다.")]
     [SerializeField] private List<BossStage> bossStages = new List<BossStage>
     {
         new BossStage { enemyId = 100018, sceneName = "Boss_ReedField" }, // 무사
     };
 
     [Header("속성별 스테이지 씬")]
-    [Tooltip("적 속성 → 스테이지 씬 매핑. 전투 명단에서 첫 번째로 속성이 있는 적 기준.")]
+    [Tooltip("적 속성 -> 스테이지 씬 매핑. 전투 명단에서 첫 번째로 속성이 있는 적 기준.")]
     [SerializeField] private List<ElementStage> elementStages = new List<ElementStage>
     {
         new ElementStage { element = EnemyElement.Fire,  sceneName = "Fire_BurnedForest" },
@@ -56,7 +56,7 @@ public class StageManager : MonoBehaviour
     [Header("시간 흐름(스테이지 진행)")]
     [Tooltip("진행(맵 컬럼)에 따라 스테이지 시간대를 순환시킨다. 끄면 각 스테이지 씬의 StageLightingManager 설정을 그대로 쓴다.")]
     [SerializeField] private bool progressTimeOfDay = true;
-    [Tooltip("시간대가 한 칸 넘어가는 데 필요한 진행 컬럼 수(맵 10컬럼 기준 2 → 한 바퀴에 5칸 진행, 보스는 다음 시간대).")]
+    [Tooltip("시간대가 한 칸 넘어가는 데 필요한 진행 컬럼 수(맵 10컬럼 기준 2 -> 한 바퀴에 5칸 진행, 보스는 다음 시간대).")]
     [SerializeField, Min(1)] private int columnsPerTimeStep = 2;
     [Tooltip("순환 순서. 진행 컬럼 / columnsPerTimeStep 을 이 목록 길이로 나눈 나머지 위치의 시간대를 쓴다.")]
     [SerializeField] private List<StageLightingManager.StageTime> timeCycle = new List<StageLightingManager.StageTime>
@@ -80,7 +80,7 @@ public class StageManager : MonoBehaviour
     [Tooltip("스테이지 표시/숨김·로드 흐름을 콘솔에 출력.")]
     [SerializeField] private bool logVerbose = true;
 
-    // 로드되어 등록된 스테이지(씬 이름 → 컨트롤러)
+    // 로드되어 등록된 스테이지(씬 이름 -> 컨트롤러)
     private readonly Dictionary<string, BattleStageController> _stages = new Dictionary<string, BattleStageController>();
     private readonly HashSet<string> _loadingScenes = new HashSet<string>();
 
@@ -183,7 +183,7 @@ public class StageManager : MonoBehaviour
     }
 
     // 전투 진입 — 속성 스테이지를 표시한다. 스테이지가 준비되면(이미 로드돼 있으면 즉시) onReady를 호출한다.
-    // 로드 실패 시에도 onReady는 호출되며, 이때 BattleStageController.Current는 null(→ RoundManager 2D 폴백).
+    // 로드 실패 시에도 onReady는 호출되며, 이때 BattleStageController.Current는 null(-> RoundManager 2D 폴백).
     public void ShowStage(EnemyElement element, Action onReady = null)
     {
         ShowStage(element, -1, onReady);
@@ -193,7 +193,7 @@ public class StageManager : MonoBehaviour
     // isBoss: 보스 전투면 bossStageSceneName을 우선 사용한다.
     public void ShowStage(EnemyElement element, int progressColumn, Action onReady = null, bool isBoss = false, IList<EnemyData> roster = null)
     {
-        // [테스트] StageTestPanel이 스테이지 씬/시간대를 강제할 수 있다(평소에는 null → 기존 동작)
+        // [테스트] StageTestPanel이 스테이지 씬/시간대를 강제할 수 있다(평소에는 null -> 기존 동작)
         string target = !string.IsNullOrEmpty(DebugSceneOverride) ? DebugSceneOverride : ResolveSceneName(element, isBoss, roster);
         int id = ++_requestId;
         _visible = true;
@@ -207,7 +207,7 @@ public class StageManager : MonoBehaviour
         else
             _hasStageTime = progressTimeOfDay && progressColumn >= 0 && TryResolveTime(progressColumn, out _stageTime);
         if (logVerbose)
-            Debug.Log($"[StageManager] ShowStage({element}{(isBoss ? ", boss" : "")} → '{target}', column={progressColumn}" +
+            Debug.Log($"[StageManager] ShowStage({element}{(isBoss ? ", boss" : "")} -> '{target}', column={progressColumn}" +
                       (_hasStageTime ? $", time={_stageTime})" : ")"));
 
         if (string.IsNullOrEmpty(target))
@@ -327,13 +327,13 @@ public class StageManager : MonoBehaviour
         if (_visible && !string.IsNullOrEmpty(_shownSceneName))
             _stages.TryGetValue(_shownSceneName, out shown);
 
-        // 끄는 것 먼저(StageLightingManager OnDisable → 켜지는 쪽 OnEnable이 최종 조명을 적용)
+        // 끄는 것 먼저(StageLightingManager OnDisable -> 켜지는 쪽 OnEnable이 최종 조명을 적용)
         foreach (var kv in _stages)
             if (kv.Value != null && kv.Value != shown) kv.Value.SetVisible(false);
 
         if (shown != null)
         {
-            // 켜기 전에 시간대를 넣어 둔다 → OnEnable의 Apply가 바로 이 시간대로 조명을 적용(깜빡임 없음).
+            // 켜기 전에 시간대를 넣어 둔다 -> OnEnable의 Apply가 바로 이 시간대로 조명을 적용(깜빡임 없음).
             if (_hasStageTime) shown.SetStageTime(_stageTime);
             shown.SetVisible(true);
             shown.MakeCurrent();
@@ -356,7 +356,7 @@ public class StageManager : MonoBehaviour
             Debug.Log($"[StageManager] ApplyVisibility — visible={_visible}, scene='{_shownSceneName}', stage={stageOn}");
     }
 
-    // 진행 컬럼 → 순환 시간대. 맵 10컬럼·2컬럼/칸 기준: 0-1 아침, 2-3 오후, 4-5 늦은오후, 6-7 노을, 8-9 저녁, 보스(10) 새벽 …
+    // 진행 컬럼 -> 순환 시간대. 맵 10컬럼·2컬럼/칸 기준: 0-1 아침, 2-3 오후, 4-5 늦은오후, 6-7 노을, 8-9 저녁, 보스(10) 새벽 …
     public bool TryResolveTime(int progressColumn, out StageLightingManager.StageTime time)
     {
         time = StageLightingManager.StageTime.Afternoon;

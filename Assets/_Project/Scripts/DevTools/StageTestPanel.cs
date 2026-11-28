@@ -72,11 +72,11 @@ public class StageTestPanel : MonoBehaviour
         GUI.DragWindow(new Rect(0, 0, 10000, 22));
     }
 
-    // ── 노드 진입 ──
+    // 노드 진입
 
     void DrawNodeEntry()
     {
-        GUILayout.Label("■ 노드 바로 진입 (맵 화면에서만)");
+        GUILayout.Label("노드 바로 진입 (맵 화면에서만)");
         bool canEnter = IsOnMap() && !IsInBattle();
 
         _nodeIndex = GUILayout.SelectionGrid(_nodeIndex, NodeLabels, 4);
@@ -228,11 +228,11 @@ public class StageTestPanel : MonoBehaviour
         return null;
     }
 
-    // ── 전투 치트 ──
+    // 전투 치트
 
     void DrawBattleCheats()
     {
-        GUILayout.Label("■ 전투 치트 (전투 중에만)");
+        GUILayout.Label("전투 치트 (전투 중에만)");
         var nbc = NewBattleController.Instance;
         GUI.enabled = IsInBattle();
 
@@ -309,11 +309,11 @@ public class StageTestPanel : MonoBehaviour
         _message = "플레이어 HP 회복";
     }
 
-    // ── 기타 ──
+    // 기타
 
     void DrawMisc()
     {
-        GUILayout.Label("■ 기타");
+        GUILayout.Label("기타");
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("골드 +100") && MoneyManager.Instance != null)
         {
@@ -321,7 +321,7 @@ public class StageTestPanel : MonoBehaviour
             _message = "골드 +100";
         }
         GUI.enabled = IsInBattle();
-        if (GUILayout.Button("전투 중단 → 맵")) AbortToMap();
+        if (GUILayout.Button("전투 중단 -> 맵")) AbortToMap();
         GUI.enabled = true;
         GUILayout.EndHorizontal();
     }
@@ -334,7 +334,7 @@ public class StageTestPanel : MonoBehaviour
         _message = "전투를 중단하고 맵으로 돌아왔습니다(보상·노드 클리어 없음).";
     }
 
-    // ── 상태/데이터 ──
+    // 상태/데이터
 
     static bool IsInBattle()
     {

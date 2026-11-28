@@ -201,7 +201,7 @@ namespace Battle.UI
         }
 
         // 속성에 대응하는 prefab 스프라이트를 반환
-        // 파편은 전용 아트가 없어 매핑이 비어 있었다 → 손패는 재사용 뷰의 이전 카드 모습이, 사용 연출(새 뷰)은 프리팹 기본값(무속성)이 나왔다.
+        // 파편은 전용 아트가 없어 매핑이 비어 있었다 -> 손패는 재사용 뷰의 이전 카드 모습이, 사용 연출(새 뷰)은 프리팹 기본값(무속성)이 나왔다.
         // 땅 카드에서 생기는 카드이므로 땅 속성 모습으로 통일한다(부적 모드는 기존대로 없음).
         public Sprite GetElementSprite(CardElement element) => element switch
         {
@@ -557,7 +557,7 @@ namespace Battle.UI
             iconImage.color = ColorForElement(Card != null ? Card.Element : CardElement.Neutral, false);
         }
 
-        // ── 저주 알림: 한 번 떠올랐다 내려오기 ──
+        // 저주 알림: 한 번 떠올랐다 내려오기
         [Header("저주 알림 — 한 번 떠오르기")]
         [Tooltip("저주가 걸린 속성 카드가 손패에서 떠오르는 높이(호버 높이 대비 배율).")]
         [SerializeField] private float curseNudgeHeightRatio = 0.6f;
@@ -584,7 +584,7 @@ namespace Battle.UI
             while (t < 1f)
             {
                 t += Time.unscaledDeltaTime / dur;
-                float k = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI); // 0 → 1 → 0
+                float k = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI); // 0 -> 1 -> 0
                 _rect.anchoredPosition = _homeAnchoredPos + lift * k;
                 _rect.localScale = baseScale * (1f + scaleBoost * k);
                 yield return null;
@@ -729,7 +729,7 @@ namespace Battle.UI
             if (_playingIntro) SettleIntro();
         }
 
-        // ── 각성 부적 ──
+        // 각성 부적
 
         // 속성에 대응하는 부적 스프라이트(무속성·파편 등은 없음)
         Sprite GetTalismanSprite(CardElement element) => element switch
@@ -1278,7 +1278,7 @@ namespace Battle.UI
             _rect.anchoredPosition = hovering ? _homeAnchoredPos + hoverPositionOffset : _homeAnchoredPos;
         }
 
-        // 드래그 중 우클릭 → 사용하지 않고 손패로 되돌림
+        // 드래그 중 우클릭 -> 사용하지 않고 손패로 되돌림
         void Update()
         {
             if (_curseReleaseRemaining > 0f)

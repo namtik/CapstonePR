@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 // 인스펙터 크로스씬 참조 없이 Current로 런타임 조회한다.
 public class BattleStageController : MonoBehaviour
 {
-    // 현재 활성 스테이지(가장 최근에 활성화/로드된 것). 3D 스테이지가 없으면 null → RoundManager는 2D 폴백.
+    // 현재 활성 스테이지(가장 최근에 활성화/로드된 것). 3D 스테이지가 없으면 null -> RoundManager는 2D 폴백.
     public static BattleStageController Current { get; private set; }
 
     [Header("앵커/카메라")]
@@ -179,7 +179,7 @@ public class BattleStageController : MonoBehaviour
             }
     }
 
-    // 이 씬의 StageLightingManager 시간대를 바꾼다(비활성 상태여도 값은 저장 → 켜질 때 OnEnable에서 적용).
+    // 이 씬의 StageLightingManager 시간대를 바꾼다(비활성 상태여도 값은 저장 -> 켜질 때 OnEnable에서 적용).
     public void SetStageTime(StageLightingManager.StageTime time)
     {
         foreach (var root in gameObject.scene.GetRootGameObjects())

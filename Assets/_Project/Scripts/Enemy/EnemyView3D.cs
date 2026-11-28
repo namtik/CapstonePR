@@ -21,7 +21,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
     [Header("동작별 클립(여러 개면 재생 시 랜덤)")]
     [Tooltip("동작마다 해당하는 Animator 상태 이름을 나열. 2개 이상이면 재생 때 랜덤으로 하나 선택.\n" +
              "비워두면 그 동작은 위의 트리거(Hit/Attack/Die)로 폴백. 버프/디버프는 여기에만 채운다.")]
-    [SerializeField] private MotionStates[] motionStates;   // 동작→상태 이름 목록
+    [SerializeField] private MotionStates[] motionStates;   // 동작->상태 이름 목록
     [Tooltip("CrossFade 블렌드 시간(초). 0이면 즉시 전환.")]
     [SerializeField] private float motionCrossFade = 0.1f;  // 동작 전환 블렌드 시간
 
@@ -183,7 +183,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         }
         _motionMap[motion] = found.ToArray();
         if (found.Count > 0)
-            Debug.Log($"[EnemyView3D] {name}: motionStates에 {motion} 미등록 → 컨트롤러에서 자동 매핑 [{string.Join(", ", found)}]");
+            Debug.Log($"[EnemyView3D] {name}: motionStates에 {motion} 미등록 -> 컨트롤러에서 자동 매핑 [{string.Join(", ", found)}]");
     }
 
     // 동작 애니메이션 재생. 등록된 상태가 있으면 랜덤 CrossFade, 없으면 폴백 트리거(있을 때만).
@@ -295,15 +295,15 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         }
     }
 
-    // ── EnemyStat 이벤트 핸들러 ──
+    // EnemyStat 이벤트 핸들러
 
-    // HP 변경 → HUD 갱신
+    // HP 변경 -> HUD 갱신
     void HandleHpChanged(float current, float max)
     {
         if (_hud != null) _hud.SetHp(current, max);
     }
 
-    // 피격 → Hit 애니 + 플래시 + 흔들기
+    // 피격 -> Hit 애니 + 플래시 + 흔들기
     void HandleDamaged(float damage)
     {
         if (_dead || damage <= 0f) return;
@@ -314,14 +314,14 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         StartShake();
     }
 
-    // ── IEnemyView: 수치/텍스트(HUD 위임) ──
+    // IEnemyView: 수치/텍스트(HUD 위임)
     public void UpdateActionGauge(float ratio) { if (_hud != null) _hud.SetGauge(ratio); }
     public void SetAttackPreviewDamage(int damage) { if (_hud != null) _hud.SetPreview(damage); }
     public void ShowDamage(float damage) => ShowDamage(damage, false);
     public void ShowDamage(float damage, bool isBurn) { if (_hud != null) _hud.ShowDamage(damage, isBurn); }
     public void ShowMidPatternNotice(string message) { if (_hud != null) _hud.ShowNotice(message); }
 
-    // ── IEnemyView: 연출 ──
+    // IEnemyView: 연출
 
     // 카드 타입별 월드 피격 파티클 재생
     public void PlayHitEffect(string cardType)
@@ -652,7 +652,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         return any;
     }
 
-    // ── IEnemyView: 사망 ──
+    // IEnemyView: 사망
 
     // 사망 연출 시작 — Die 트리거(있으면) + 축소 페이드
     public void PlayDeath()
@@ -688,12 +688,12 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         }
     }
 
-    // ── IEnemyView: 비주얼 주입(3D는 프리팹에 baked이므로 no-op) ──
+    // IEnemyView: 비주얼 주입(3D는 프리팹에 baked이므로 no-op)
     public void SetSprite(Sprite sprite) { }
     public void SetHitSprite(Sprite sprite) { }
     public void SetAttackSprites(Sprite[] sprites) { }
 
-    // ── 플래시 ──
+    // 플래시
     void StartFlash()
     {
         if (flashRenderers == null || flashRenderers.Length == 0 || flashDuration <= 0f) return;
@@ -707,7 +707,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         while (t < flashDuration)
         {
             t += Time.deltaTime;
-            float k = 1f - (t / flashDuration); // 강→약
+            float k = 1f - (t / flashDuration); // 강->약
             ApplyFlash(k * flashStrength);
             yield return null;
         }
@@ -715,7 +715,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         _flashCo = null;
     }
 
-    // 각 렌더러에 기준색↔플래시색을 strength 만큼 섞어 적용
+    // 각 렌더러에 기준색<->플래시색을 strength 만큼 섞어 적용
     void ApplyFlash(float strength) => ApplyFlash(strength, hitFlashColor);
 
     void ApplyFlash(float strength, Color flashColor)
@@ -732,7 +732,7 @@ public class EnemyView3D : MonoBehaviour, IEnemyView
         }
     }
 
-    // ── 흔들기 ──
+    // 흔들기
     void StartShake()
     {
         if (shakeDuration <= 0f || shakeMagnitude <= 0f) return;

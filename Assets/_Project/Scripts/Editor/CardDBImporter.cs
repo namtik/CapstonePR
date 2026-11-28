@@ -11,8 +11,8 @@ using UnityEngine;
 namespace Battle.EditorTools
 {
     /// <summary>
-    /// Card_DB.xlsx → Assets/_Project/Resources/CardDB/*.json 변환기 (Unity Editor 메뉴).
-    /// 기획자 워크플로우: Excel 수정 → Unity 메뉴 클릭 → 게임 반영.
+    /// Card_DB.xlsx -> Assets/_Project/Resources/CardDB/*.json 변환기 (Unity Editor 메뉴).
+    /// 기획자 워크플로우: Excel 수정 -> Unity 메뉴 클릭 -> 게임 반영.
     /// xlsx는 zip + XML 이므로 외부 라이브러리 없이 .NET 표준만으로 파싱.
     /// </summary>
     public static class CardDBImporter
@@ -20,11 +20,9 @@ namespace Battle.EditorTools
         const string PREF_LAST_PATH = "Battle.CardDB.LastSourcePath";
         const string OUT_DIR = "Assets/_Project/Resources/CardDB";
 
-        // ─────────────────────────────────────────────────────────────
         // 메뉴
-        // ─────────────────────────────────────────────────────────────
 
-        [MenuItem("Tools/Card DB/Excel → JSON 변환...", priority = 10)]
+        [MenuItem("Tools/Card DB/Excel -> JSON 변환...", priority = 10)]
         public static void ConvertFromExcelMenu()
         {
             string lastPath = EditorPrefs.GetString(PREF_LAST_PATH, "");
@@ -51,7 +49,7 @@ namespace Battle.EditorTools
             {
                 EditorUtility.DisplayDialog(
                     "Card DB",
-                    "최근에 변환한 파일이 없거나 존재하지 않습니다.\n'Excel → JSON 변환...' 메뉴로 먼저 선택하세요.",
+                    "최근에 변환한 파일이 없거나 존재하지 않습니다.\n'Excel -> JSON 변환...' 메뉴로 먼저 선택하세요.",
                     "확인");
                 return;
             }
@@ -73,9 +71,7 @@ namespace Battle.EditorTools
             EditorUtility.RevealInFinder(full);
         }
 
-        // ─────────────────────────────────────────────────────────────
         // 변환 실행
-        // ─────────────────────────────────────────────────────────────
 
         public static void ConvertFromExcel(string xlsxPath)
         {
@@ -117,7 +113,7 @@ namespace Battle.EditorTools
             }
         }
 
-        // ─── Cards 시트 → JSON ──────────────────────────────────
+        // Cards 시트 -> JSON
 
         static string BuildCardsJson(SheetData sheet, out int count)
         {
@@ -175,7 +171,7 @@ namespace Battle.EditorTools
             return sb.ToString();
         }
 
-        // ─── CardEffects 시트 → JSON ──────────────────────────
+        // CardEffects 시트 -> JSON
 
         struct EffectField
         {
@@ -243,9 +239,7 @@ namespace Battle.EditorTools
             return sb.ToString();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // 헬퍼
-        // ─────────────────────────────────────────────────────────────
 
         static int RequireCol(Dictionary<string, int> hdr, string key)
         {
@@ -320,11 +314,9 @@ namespace Battle.EditorTools
             return sb.ToString();
         }
 
-        // ─────────────────────────────────────────────────────────────
         // 최소 xlsx 파서 (zip + XML, 외부 의존성 없음)
-        // ─────────────────────────────────────────────────────────────
 
-        class SheetData
+        internal class SheetData
         {
             public List<List<string>> Rows = new List<List<string>>();
             public Dictionary<string, int> HeaderIndex =
@@ -349,13 +341,13 @@ namespace Battle.EditorTools
             }
         }
 
-        class WorkbookData
+        internal class WorkbookData
         {
             public Dictionary<string, SheetData> Sheets =
                 new Dictionary<string, SheetData>(StringComparer.Ordinal);
         }
 
-        static class ExcelReader
+        internal static class ExcelReader
         {
             static readonly XNamespace NS_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
             static readonly XNamespace NS_RDOC = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";

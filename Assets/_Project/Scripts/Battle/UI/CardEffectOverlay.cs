@@ -310,7 +310,7 @@ namespace Battle.UI
             return up.EndsWith("_ATK") || up.StartsWith("BURN") || up.StartsWith("CHAIN");
         }
 
-        // 스크린 좌표 → 이 오버레이의 중앙 기준 anchored 좌표
+        // 스크린 좌표 -> 이 오버레이의 중앙 기준 anchored 좌표
         bool TryScreenToAnchored(Vector2 screen, out Vector2 anchored)
         {
             anchored = default;

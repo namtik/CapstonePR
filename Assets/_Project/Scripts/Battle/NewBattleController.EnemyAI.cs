@@ -92,14 +92,14 @@ namespace Battle
                     pick = decision.action;
                     if (logVerbose)
                         Log($"[적AI] μ=[{string.Join(",", System.Array.ConvertAll(decision.membership, v => v.ToString("F2")))}]" +
-                            $" → 선택={Battle.AI.EnemyAiModel.ActionNames[pick]}{(decision.explored ? " (탐험)" : "")}");
+                            $" -> 선택={Battle.AI.EnemyAiModel.ActionNames[pick]}{(decision.explored ? " (탐험)" : "")}");
                     if (logAiDecisions) Battle.AI.DisruptionLogger.Log(decision);
                     rewardDecision = decision;
                     if (aiRewardGamma > 0f) TdOnDecision(decision);
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogWarning($"[적AI] 추론 실패 → 랜덤 폴백: {e.Message}");
+                    Debug.LogWarning($"[적AI] 추론 실패 -> 랜덤 폴백: {e.Message}");
                     pick = RandomFallbackPick(recoverReady, allowedMask);
                 }
             }
@@ -114,7 +114,7 @@ namespace Battle
                 pick = Mathf.Clamp(_debugForcedDisruption.Value, 0, 5);
                 _debugForcedDisruption = null;
                 rewardDecision = null;
-                Log($"[테스트] 방해행동 강제 → {pick}");
+                Log($"[테스트] 방해행동 강제 -> {pick}");
             }
 
             // 다음 방해행동이 이번 것과 연속되지 않도록 직전 행동으로 기록
@@ -159,7 +159,7 @@ namespace Battle
                     UpdateAwakenText();
                     SfxManager.Instance?.PlayAbsorb();
                     if (rewardDecision.HasValue) ObserveDisruption(rewardDecision.Value, 2, AbsorbReward(before));
-                    Log($"[방해] 흡수 — 각성 게이지 -{absorb} ({before} → {_elementInputCount})");
+                    Log($"[방해] 흡수 — 각성 게이지 -{absorb} ({before} -> {_elementInputCount})");
                     return "방해: 각성 게이지 흡수!";
                 }
                 case 3: // 강화 — 적 다음 공격 1회 증가(+50%)
@@ -236,7 +236,7 @@ namespace Battle
                 Log($"[적AI{(onlineLearning ? "학습" : "관찰")}] {Battle.AI.EnemyAiModel.ActionNames[action]} r={reward:+0.00;-0.00} (즉시) drift={drift:F3}");
         }
 
-        // 지연형 발현 → 보상 확정 후 학습/게시
+        // 지연형 발현 -> 보상 확정 후 학습/게시
         void ResolveTrack(float reward)
         {
             if (_track == null) return;
@@ -327,21 +327,21 @@ namespace Battle
             if (_track.elapsed >= disruptionTrackTimeout) ResolveTrackUnfired();
         }
 
-        // 흡수 보상: 발동 직전 각성 근접도(임박할수록 가치↑)
+        // 흡수 보상: 발동 직전 각성 근접도(임박할수록 가치 증가)
         float AbsorbReward(int awakenBefore)
         {
             float prox = EffectiveAwakenInput > 0 ? Mathf.Clamp01(awakenBefore / (float)EffectiveAwakenInput) : 0f;
             return Mathf.Clamp(prox * 2f - 0.6f, -1f, 1f);
         }
 
-        // 회복 보상: 발동 직전 적 빈사도(빈사일수록 가치↑, 만피는 음수)
+        // 회복 보상: 발동 직전 적 빈사도(빈사일수록 가치 증가, 만피는 음수)
         float RecoverReward(float enemyHpBefore)
         {
             float ratio = (_enemyStat != null && _enemyStat.maxHp > 0f) ? Mathf.Clamp01(enemyHpBefore / _enemyStat.maxHp) : 1f;
             return Mathf.Clamp((1f - ratio) * 2f - 1f, -1f, 1f);
         }
 
-        // 버리기 보상: 발동 직전 손패 압박(가득 찰수록 가치↑, 한도 5 기준)
+        // 버리기 보상: 발동 직전 손패 압박(가득 찰수록 가치 증가, 한도 5 기준)
         float DiscardReward(int handBefore)
         {
             float pressure = Mathf.Clamp01(handBefore / 5f);

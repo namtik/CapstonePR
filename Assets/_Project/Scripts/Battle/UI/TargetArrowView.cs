@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace Battle.UI
 {
-    // 슬레이더스파이어식 지정 화살표 — Overlay에서 카드→커서/적 베지어를 그린다.
+    // 슬레이더스파이어식 지정 화살표 — Overlay에서 카드->커서/적 베지어를 그린다.
     public class TargetArrowView : MonoBehaviour
     {
         [SerializeField] private int chevronCount = 16; // 곡선 위 체브론 개수
@@ -297,7 +297,7 @@ namespace Battle.UI
 
         Sprite ResolveBracketSprite() => _bracketOverride != null ? _bracketOverride : _bracketSprite;
 
-        // ㄴ(└) 스프라이트의 바깥 꼭짓점. 커스텀 아트는 스프라이트 피벗을 쓴다.
+        // ㄴ자 스프라이트의 바깥 꼭짓점. 커스텀 아트는 스프라이트 피벗을 쓴다.
         static Vector2 BracketPivot(Sprite sp)
         {
             if (sp == null || sp.rect.width < 1f || sp.rect.height < 1f)

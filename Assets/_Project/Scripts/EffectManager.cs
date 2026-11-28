@@ -5,7 +5,7 @@ using UnityEngine;
 public class EffectManager : MonoBehaviour
 {
     public static EffectManager Instance; // 싱글턴 인스턴스
-    private Dictionary<string, StatusEffectBase> effectDictionary; // 효과 타입→효과 객체 매핑
+    private Dictionary<string, StatusEffectBase> effectDictionary; // 효과 타입->효과 객체 매핑
 
     // 싱글턴 설정 및 효과 사전 초기화
     void Awake()

@@ -3,8 +3,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 화면 전환(맵 ↔ 스테이지) 공용 페이드. 모든 UI 위를 덮는 검은 오버레이를 하나만 두고 함께 쓴다.
-// - Transition(mid): 어두워짐 → mid 실행(화면 교체) → 준비될 때까지 대기 → 밝아짐. 그동안 클릭을 막는다.
+// 화면 전환(맵 <-> 스테이지) 공용 페이드. 모든 UI 위를 덮는 검은 오버레이를 하나만 두고 함께 쓴다.
+// - Transition(mid): 어두워짐 -> mid 실행(화면 교체) -> 준비될 때까지 대기 -> 밝아짐. 그동안 클릭을 막는다.
 // - 이미 다른 연출(걷기 전환 등)이 화면을 덮고 있으면 mid를 즉시 실행하고, 밝히는 건 그 연출에 맡긴다.
 // - 씬에 없으면 첫 호출 때 자동 생성된다. 시간은 unscaled라 일시정지와 무관하다.
 public class ScreenFader : MonoBehaviour
@@ -49,7 +49,7 @@ public class ScreenFader : MonoBehaviour
         if (_instance == this) _instance = null;
     }
 
-    // 페이드 아웃 → mid → (ready 대기) → 페이드 인
+    // 페이드 아웃 -> mid -> (ready 대기) -> 페이드 인
     public static void Transition(Action mid, Func<bool> ready = null)
     {
         if (IsCovering)

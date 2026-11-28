@@ -81,7 +81,7 @@ public partial class EventStageController : MonoBehaviour
     // 이벤트 진행 단계
     private enum EventPhase { Idle, Story, ResultTyping, ResultDone }
 
-    // 이벤트3 전용: 1차 선택 → 2차 선택 → 최종 결과
+    // 이벤트3 전용: 1차 선택 -> 2차 선택 -> 최종 결과
     private enum Event3Phase { Initial, BranchIntro, FinalResult }
 
     // 이벤트5 전용: 선택1 클릭 후 BASIC 카드 고르기
@@ -361,7 +361,7 @@ public partial class EventStageController : MonoBehaviour
         event1Choice1Button.interactable = CanAffordEvent1Choice1();
     }
 
-    // ── 본문/선택지 버튼 겹침 방지 ──
+    // 본문/선택지 버튼 겹침 방지
     // 본문 TMP는 Overflow 모드(박스 250px 고정)라 문장이 길면 아래로 흘러넘쳐 선택지 버튼 뒤로 깔렸다.
     // 선택지 버튼이 보이는 동안 본문 맨 아래가 가장 위 버튼보다 위에 오도록 글자 크기를 줄여 맞춘다.
     [Header("본문-선택지 겹침 방지")]

@@ -55,7 +55,7 @@ namespace Battle
             Debug.Log($"[RunDeck] 영구 공격력 +{n} (누적 {_permanentAttackPower})");
         }
 
-        // 카드 1장(사본)별 영구 피해 보너스(연마 410 등) — 카드 ID → [사본 번호] = 누적 피해.
+        // 카드 1장(사본)별 영구 피해 보너스(연마 410 등) — 카드 ID -> [사본 번호] = 누적 피해.
         // 같은 카드가 여러 장이어도 실제로 처치한 그 1장만 오른다. 사본 번호는 런 덱에서 전투용 인스턴스를 만들 때의 순서.
         private readonly Dictionary<int, List<int>> _permanentCardDamage = new Dictionary<int, List<int>>();
 

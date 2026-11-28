@@ -10,7 +10,7 @@ namespace Battle.UI
         static readonly DiscoveryList Cards = new DiscoveryList("Codex.DiscoveredCards");   // 카드 id
         static readonly DiscoveryList Combos = new DiscoveryList("Codex.DiscoveredCombos"); // 콤보 refComboId
 
-        // ── 유물 ──
+        // 유물
         public static int DiscoveredRelicCount => Relics.Count;
         public static bool IsRelicDiscovered(string relicId) => Relics.Contains(relicId);
 
@@ -21,13 +21,13 @@ namespace Battle.UI
             Relics.Add(relicId);
         }
 
-        // ── 부적(카드) ──
+        // 부적(카드)
         public static bool IsCardDiscovered(int cardId) => Cards.Contains(cardId.ToString());
         public static void MarkCard(int cardId) => Cards.Add(cardId.ToString());
         // 발견 순번(0부터, 미발견이면 int.MaxValue) — 도감 획득순 정렬용
         public static int CardDiscoveryOrder(int cardId) => Cards.OrderOf(cardId.ToString());
 
-        // ── 사방비급(콤보) ──
+        // 사방비급(콤보)
         public static bool IsComboDiscovered(int refComboId) => Combos.Contains(refComboId.ToString());
         public static void MarkCombo(int refComboId) => Combos.Add(refComboId.ToString());
 
@@ -47,7 +47,7 @@ namespace Battle.UI
 
             readonly string _key;
             List<string> _order;        // 발견 순서
-            Dictionary<string, int> _index; // id → 발견 순번
+            Dictionary<string, int> _index; // id -> 발견 순번
 
             public DiscoveryList(string key) { _key = key; }
 

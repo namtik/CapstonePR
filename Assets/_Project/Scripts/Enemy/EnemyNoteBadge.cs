@@ -349,7 +349,7 @@ public class EnemyNoteBadge : MonoBehaviour
         _label.fontStyle = fontStyle;
         _label.alignment = alignment;
         // 말풍선(라벨 부모)이 꺼져 있으면 TMP가 아직 머테리얼을 만들지 않아 outlineWidth 설정에서 NullReference가 났다
-        // (적 스폰 도중 예외 → 나머지 적·전투 시작이 통째로 건너뛰어짐). 외곽선·크기 맞춤은 보일 때만 적용한다 —
+        // (적 스폰 도중 예외 -> 나머지 적·전투 시작이 통째로 건너뛰어짐). 외곽선·크기 맞춤은 보일 때만 적용한다 —
         // 말풍선이 열리면 LateUpdate가 매 프레임 ApplyStyle을 다시 부른다.
         if (_label.isActiveAndEnabled && _label.fontSharedMaterial != null)
         {

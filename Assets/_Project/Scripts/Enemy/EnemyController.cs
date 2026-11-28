@@ -58,7 +58,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
 
     private bool _attackPreviewInitialized; // 공격 예고 초기화 여부
 
-    // ── 특이사항(EnemySpecialAbility) 상태 ──
+    // 특이사항(EnemySpecialAbility) 상태
     private static readonly CardElement[] CurseCycleElements =
         { CardElement.Fire, CardElement.Water, CardElement.Wind, CardElement.Earth }; // 백족승 저주 순환 속성
     private EnemySpecialAbility _ability = EnemySpecialAbility.None; // 이 몬스터의 특이사항
@@ -119,7 +119,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         }
 
         // 적 공격 파티클(hitVFX)이 Screen Space - Overlay UI 뒤로 가려지지 않도록 UIParticle로
-        // UI 레이어 안에서 렌더한다. (월드 ParticleSystem은 어떤 sortingOrder로도 Overlay UI 위로 못 올라옴 →
+        // UI 레이어 안에서 렌더한다. (월드 ParticleSystem은 어떤 sortingOrder로도 Overlay UI 위로 못 올라옴 ->
         // CardEffectOverlay와 동일하게 UIParticle 사용)
         if (hitVFX != null)
         {
@@ -309,7 +309,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (_ability == EnemySpecialAbility.DoubleDamageAtHalfHp && _halfHpTriggered)
             nextDamage *= 2;                                    // 무사: 체력 절반 도달 후 2배
         if (_nextAttackDoubled && ahead == 0)
-            nextDamage *= 2;                                    // 백풍원: 직전 공격이 체력 피해 → 다음 공격 2배
+            nextDamage *= 2;                                    // 백풍원: 직전 공격이 체력 피해 -> 다음 공격 2배
         return nextDamage;
     }
 
@@ -537,11 +537,11 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         if (player == null)
             player = Player.Resolve(true);
 
-        // 화상은 행동 직전에 먼저 터진다 → 연출 후 살아 있으면 공격
+        // 화상은 행동 직전에 먼저 터진다 -> 연출 후 살아 있으면 공격
         StartCoroutine(BurnThenAttack());
     }
 
-    // 게이지 가득: 화상 발동(연출 대기) → 화상으로 쓰러지지 않았으면 공격 실행
+    // 게이지 가득: 화상 발동(연출 대기) -> 화상으로 쓰러지지 않았으면 공격 실행
     IEnumerator BurnThenAttack()
     {
         if (Battle.NewBattleController.Instance != null && stat != null && stat.IsAlive && ApplyBurnBeforeAction())
@@ -599,14 +599,14 @@ public class EnemyController : MonoBehaviour, IBattleUnit
             _nextAttackBuffed = false;
             RefreshPowerUpIcon();
             view?.ShowMidPatternNotice("강화!");
-            Debug.Log($"[적 강화] 다음 공격 +50% → {damagePerHit}");
+            Debug.Log($"[적 강화] 다음 공격 +50% -> {damagePerHit}");
         }
 
         // 콤보(공격력 감소 등): 다음 공격 1회 한정 피해 증감
         if (_nextAttackPowerMod != 0)
         {
             damagePerHit = Mathf.Max(0, damagePerHit + _nextAttackPowerMod);
-            Debug.Log($"[적 공격력 변경] 다음 공격 {_nextAttackPowerMod:+0;-0} → {damagePerHit}");
+            Debug.Log($"[적 공격력 변경] 다음 공격 {_nextAttackPowerMod:+0;-0} -> {damagePerHit}");
             _nextAttackPowerMod = 0;
         }
 
@@ -796,7 +796,7 @@ public class EnemyController : MonoBehaviour, IBattleUnit
         StartCoroutine(DestroyAfterHitReaction());
     }
 
-    // 사망 연출 대기 중에 스테이지가 꺼지면(보상창 timeScale=0 → 맵 복귀 등) 코루틴이 멈춰 시체가 스테이지에 남았다.
+    // 사망 연출 대기 중에 스테이지가 꺼지면(보상창 timeScale=0 -> 맵 복귀 등) 코루틴이 멈춰 시체가 스테이지에 남았다.
     // 다음에 같은 스테이지가 켜지면 그 시체가 새 몬스터와 겹쳐 보였으므로, 죽은 적이 비활성화되면 바로 제거한다.
     void OnDisable()
     {

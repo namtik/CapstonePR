@@ -226,8 +226,8 @@ namespace Battle.UI
 
             float x = lp.x + 18f;
             float y = lp.y - 18f;
-            if (x + size.x > halfW) x = lp.x - 18f - size.x; // 오른쪽 넘침 → 왼쪽으로
-            if (y - size.y < -halfH) y = lp.y + 18f + size.y; // 아래 넘침 → 위로
+            if (x + size.x > halfW) x = lp.x - 18f - size.x; // 오른쪽 넘침 -> 왼쪽으로
+            if (y - size.y < -halfH) y = lp.y + 18f + size.y; // 아래 넘침 -> 위로
 
             _rect.localPosition = new Vector3(x, y, 0f);
         }

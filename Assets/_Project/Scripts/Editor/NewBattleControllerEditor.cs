@@ -38,7 +38,7 @@ namespace Battle.EditorTools
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
-            _comboFoldout = EditorGUILayout.Foldout(_comboFoldout, "보유 콤보 선택 (효과 → 커맨드)", true);
+            _comboFoldout = EditorGUILayout.Foldout(_comboFoldout, "보유 콤보 선택 (효과 -> 커맨드)", true);
             if (!_comboFoldout) { EditorGUILayout.EndVertical(); return; }
 
             if (_allCombos == null)
@@ -47,7 +47,7 @@ namespace Battle.EditorTools
             if (_allCombos == null || _allCombos.Count == 0)
             {
                 EditorGUILayout.HelpBox(
-                    "콤보 DB를 불러올 수 없습니다.\nTools > Combo DB > Excel → JSON 변환을 먼저 실행하세요.",
+                    "콤보 DB를 불러올 수 없습니다.\nTools > Combo DB > Excel -> JSON 변환을 먼저 실행하세요.",
                     MessageType.Warning);
                 if (GUILayout.Button("다시 불러오기")) ReloadCombos();
                 EditorGUILayout.EndVertical();
@@ -105,7 +105,7 @@ namespace Battle.EditorTools
                     new GUIContent($"[{combo.refComboId}] {combo.displayName}", combo.descriptionKR),
                     owned, GUILayout.Width(170));
 
-                // 커맨드 드롭다운은 항상 그리고 미보유 시 비활성 → 컨트롤 수가 매 프레임 동일(IMGUI 안정)
+                // 커맨드 드롭다운은 항상 그리고 미보유 시 비활성 -> 컨트롤 수가 매 프레임 동일(IMGUI 안정)
                 var labels = new string[opts.Count];
                 for (int li = 0; li < opts.Count; li++) labels[li] = opts[li].label;
 
@@ -121,8 +121,8 @@ namespace Battle.EditorTools
                 // 변경은 컨트롤을 모두 그린 뒤 반영
                 if (newOwned != owned)
                 {
-                    if (newOwned) AddId(ownedProp, opts[selIdx].comboId);                  // 체크 → 커맨드 보유(기본=첫)
-                    else if (ownedArrIdx >= 0) ownedProp.DeleteArrayElementAtIndex(ownedArrIdx); // 해제 → 제거
+                    if (newOwned) AddId(ownedProp, opts[selIdx].comboId);                  // 체크 -> 커맨드 보유(기본=첫)
+                    else if (ownedArrIdx >= 0) ownedProp.DeleteArrayElementAtIndex(ownedArrIdx); // 해제 -> 제거
                 }
                 else if (owned && newSel != selIdx)                                        // 커맨드 변경
                 {
@@ -135,7 +135,7 @@ namespace Battle.EditorTools
             if (Application.isPlaying)
             {
                 EditorGUILayout.Space(2);
-                if (GUILayout.Button("▶ 지금 적용 (보유 콤보 런타임 갱신)"))
+                if (GUILayout.Button("지금 적용 (보유 콤보 런타임 갱신)"))
                 {
                     serializedObject.ApplyModifiedProperties(); // 체크 변경 먼저 반영
                     (target as NewBattleController)?.RefreshOwnedCombosRuntime();

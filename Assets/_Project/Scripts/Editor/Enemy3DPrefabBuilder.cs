@@ -217,6 +217,6 @@ public static class Enemy3DPrefabBuilder
         Undo.RecordObject(data, "Link 3D Enemy Prefab");
         data.battlePrefab3D = prefab;
         EditorUtility.SetDirty(data);
-        Debug.Log($"[Enemy3DBuilder] 연결: {data.name} → {prefab.name}");
+        Debug.Log($"[Enemy3DBuilder] 연결: {data.name} -> {prefab.name}");
     }
 }

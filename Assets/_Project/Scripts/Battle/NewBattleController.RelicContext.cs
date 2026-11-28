@@ -13,8 +13,8 @@ namespace Battle
 {
     public partial class NewBattleController
     {
-        // ── IRelicBattleContext 구현 (유물이 전투에 영향을 주는 동작) ──────────────
-        // 적에게 빙결 부여 (양수 → OnStatusApplied로 빙결 연출 트리거)
+        // IRelicBattleContext 구현 (유물이 전투에 영향을 주는 동작)
+        // 적에게 빙결 부여 (양수 -> OnStatusApplied로 빙결 연출 트리거)
         public void ApplyFrostToEnemy(int amount)
         {
             if (_enemy == null || amount <= 0) return;

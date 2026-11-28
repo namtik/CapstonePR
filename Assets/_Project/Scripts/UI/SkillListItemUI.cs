@@ -334,7 +334,7 @@ public class SkillListItemUI : MonoBehaviour
         while (t < 1f)
         {
             t += Time.unscaledDeltaTime / dur;
-            float k = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI); // 0 → 1 → 0
+            float k = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI); // 0 -> 1 -> 0
             target.localScale = Vector3.one * Mathf.Lerp(1f, hoverPulseScale, k);
             yield return null;
         }

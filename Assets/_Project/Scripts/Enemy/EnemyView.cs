@@ -224,7 +224,7 @@ public class EnemyView : MonoBehaviour, IEnemyView
             damageText.text = "";
         }
 
-        // Action gauge bar: reset to 0 (updated via EnemyController → stat.OnGaugeStepChanged)
+        // Action gauge bar: reset to 0 (updated via EnemyController -> stat.OnGaugeStepChanged)
         if (actionGaugeBar != null) actionGaugeBar.value = 0f;
     }
 
@@ -332,7 +332,7 @@ public class EnemyView : MonoBehaviour, IEnemyView
         clone.richText = true;
         clone.text = textValue;
         clone.gameObject.SetActive(true);
-        Debug.Log($"[ShowDamage] dmg={dmg} isBurn={isBurn} → 색={baseColor} (richText)");
+        Debug.Log($"[ShowDamage] dmg={dmg} isBurn={isBurn} -> 색={baseColor} (richText)");
         StartCoroutine(FloatingDamageEffectFor(clone, isBurn));
     }
 

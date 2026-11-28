@@ -81,9 +81,7 @@ public class MapScrollController : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
     // 마우스 드래그 둘러보기
-    // ─────────────────────────────────────────────────────────────
 
     // 마우스 드래그 입력을 받아 맵을 좌우로 이동시킨다
     void HandleDrag()
@@ -102,7 +100,7 @@ public class MapScrollController : MonoBehaviour
         {
             LastGestureWasDrag = false;
             _dragging = false;
-            // 예전엔 포인터 아래에 UI가 하나라도 있으면 막았다 → 맵 배경·장식 이미지 위에서도 안 잡혀 잡히는 범위가 매우 좁았다.
+            // 예전엔 포인터 아래에 UI가 하나라도 있으면 막았다 -> 맵 배경·장식 이미지 위에서도 안 잡혀 잡히는 범위가 매우 좁았다.
             // 이제는 맵 캔버스의 '누를 수 없는' 그래픽(배경·길·장식) 위면 잡히고, 노드 버튼 등 상호작용 UI나 다른 창 위에서만 막는다.
             _pressing = CanStartDragAt(Input.mousePosition);
             _pressStartPos = Input.mousePosition;
@@ -131,7 +129,7 @@ public class MapScrollController : MonoBehaviour
 
         if (Mathf.Abs(deltaX) < 0.01f) return;
 
-        // 화면 픽셀 → 캔버스 좌표로 보정해 손가락과 1:1로 따라오게 한다.
+        // 화면 픽셀 -> 캔버스 좌표로 보정해 손가락과 1:1로 따라오게 한다.
         float scale = ResolveCanvasScale();
         float newX = scrollTarget.anchoredPosition.x + (deltaX * dragSensitivity / scale);
         newX = Mathf.Clamp(newX, minX, maxX);
@@ -205,9 +203,7 @@ public class MapScrollController : MonoBehaviour
         return s <= 0f ? 1f : s;
     }
 
-    // ─────────────────────────────────────────────────────────────
     // 노드 자동 중앙정렬 (MapManager에서 호출)
-    // ─────────────────────────────────────────────────────────────
 
     // 특정 노드 위치로 부드럽게 스크롤한다
     public void ScrollToNode(RectTransform nodeTransform)

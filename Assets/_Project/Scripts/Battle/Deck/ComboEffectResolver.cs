@@ -180,7 +180,7 @@ namespace Battle
             }
         }
 
-        // MOVE_CARD: 소멸 더미 → 뽑을 더미 전체 이동(카드 필터 적용)
+        // MOVE_CARD: 소멸 더미 -> 뽑을 더미 전체 이동(카드 필터 적용)
         void HandleMoveCard(ComboEffectData eff, ComboResolveContext ctx)
         {
             string from = (eff.fromZone ?? "").Trim().ToUpperInvariant();
@@ -191,7 +191,7 @@ namespace Battle
             if (from == "EXHAUSTED_PILE" && to == "DRAW_PILE" && sel == "ALL")
             {
                 int moved = ctx.deck.MoveAllFromExileToDraw(c => MatchesCardFilter(c, eff.cardFilter));
-                Debug.Log($"[ComboEffect] MOVE_CARD 소멸→뽑을 더미 {moved}장 ({eff.cardFilter}, ref={eff.refComboId})");
+                Debug.Log($"[ComboEffect] MOVE_CARD 소멸->뽑을 더미 {moved}장 ({eff.cardFilter}, ref={eff.refComboId})");
                 return;
             }
             WarnSkip($"MOVE_CARD:{from}->{to}/{sel}", eff);
@@ -217,7 +217,7 @@ namespace Battle
                     else ctx.deck.AddToDiscard(copy);
                     copied++;
                 }
-                Debug.Log($"[ComboEffect] COPY_CARD 패 {copied}장 복사 → {to} (ref={eff.refComboId})");
+                Debug.Log($"[ComboEffect] COPY_CARD 패 {copied}장 복사 -> {to} (ref={eff.refComboId})");
                 return;
             }
             WarnSkip($"COPY_CARD:{from}->{to}/{sel}", eff);

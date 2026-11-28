@@ -173,7 +173,7 @@ public class RoundManager : MonoBehaviour
         ContinueStartRound(roundData);
     }
 
-    // ── 시연용: 현재 전투 스테이지 다시 시작(F3) ──
+    // 시연용: 현재 전투 스테이지 다시 시작(F3)
     [Header("시연용 단축키")]
     [Tooltip("ON이면 전투 중 지정 키로 현재 스테이지(같은 적·같은 스테이지)를 처음부터 다시 시작한다. 정식 빌드에서도 동작.")]
     [SerializeField] private bool enableRestartStageHotkey = true;
@@ -386,7 +386,7 @@ public class RoundManager : MonoBehaviour
 
     // 적 속성에 맞는 3D 스테이지를 표시하고, 준비되면(이미 로드돼 있으면 즉시) 전투를 시작한다.
     // StageManager가 없으면 바로 시작(2D).
-    // progressColumn: 누적 진행 컬럼 — 스테이지 시간대(아침→…→새벽 순환)를 정하는 데 쓰인다.
+    // progressColumn: 누적 진행 컬럼 — 스테이지 시간대(아침->…->새벽 순환)를 정하는 데 쓰인다.
     // isBoss: 보스 전투면 보스 전용 스테이지를 쓴다.
     void ShowStageThen(List<EnemyData> roster, int progressColumn, System.Action begin, bool isBoss = false)
     {
@@ -983,7 +983,7 @@ public class RoundManager : MonoBehaviour
         if (use3D)
         {
             Transform anchor = BattleStageController.Current.ResolveEnemyAnchor(slotIndex, partySize);
-            // instantiateInWorldSpace=false → 프리팹의 로컬 트랜스폼(몬스터별 스케일/회전) 보존
+            // instantiateInWorldSpace=false -> 프리팹의 로컬 트랜스폼(몬스터별 스케일/회전) 보존
             go = Instantiate(data.battlePrefab3D, anchor, false);
             go.transform.position = BattleStageController.Current.ResolvePartyWorldPosition(slotIndex, partySize);
             float scaleMul = BattleStageController.Current.ResolvePartyScale(slotIndex, partySize);

@@ -13,7 +13,7 @@ namespace Battle
         const string ICONS_RESOURCE_PATH   = "ComboSkillIcons";      // 콤보 아이콘 리소스 경로
 
         private static List<ComboSkillData> _all;                              // 전체 콤보 목록
-        private static Dictionary<int, List<ComboEffectData>> _effectsByRef;   // 참조 ID → 효과 목록 맵
+        private static Dictionary<int, List<ComboEffectData>> _effectsByRef;   // 참조 ID -> 효과 목록 맵
 
         // 최초 1회 로드 보장
         public static void EnsureInit()
@@ -198,7 +198,7 @@ namespace Battle
             if (skillsAsset == null)
             {
                 Debug.LogError($"[ComboSkillDatabase] Resources/{SKILLS_RESOURCE_PATH}.json 없음. " +
-                               "Tools/Combo DB/Excel → JSON 변환을 실행했는지 확인.");
+                               "Tools/Combo DB/Excel -> JSON 변환을 실행했는지 확인.");
                 return;
             }
 

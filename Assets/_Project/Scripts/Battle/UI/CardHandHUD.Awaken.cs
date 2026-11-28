@@ -485,7 +485,7 @@ namespace Battle.UI
                 dimOverlay.gameObject.SetActive(true);
                 dimOverlay.SetAsLastSibling();
             }
-            // 각성 표식 레이어를 딤 바로 위에 둠(아래 손패/콤보 UI보다는 뒤 → 다른 UI를 가리지 않음)
+            // 각성 표식 레이어를 딤 바로 위에 둠(아래 손패/콤보 UI보다는 뒤 -> 다른 UI를 가리지 않음)
             EnsureAwakenMarkerLayer();
             if (_awakenMarkerLayer != null)
             {

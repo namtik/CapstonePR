@@ -124,7 +124,7 @@ namespace Battle
             Battle.UI.CodexProgress.MarkCombo(refComboId);
             useComboDatabase = true;
             RefreshOwnedCombosRuntime();
-            Debug.Log($"[NewBattle] 콤보 추가: 효과 {refComboId} → 커맨드 {commandId}");
+            Debug.Log($"[NewBattle] 콤보 추가: 효과 {refComboId} -> 커맨드 {commandId}");
         }
 
         // 런 재시작 시 보유 콤보를 비운다(맵 진입 3택1용)
@@ -248,7 +248,7 @@ namespace Battle
             _comboSelfUseCount.TryGetValue(skill.refComboId, out int selfUse);
             _comboCtx.selfRepeatCount = selfUse;
 
-            // GAIN_STATUS CHAIN → 연쇄 누적 (SyncChainStatus가 UI 반영)
+            // GAIN_STATUS CHAIN -> 연쇄 누적 (SyncChainStatus가 UI 반영)
             _comboCtx.onGainChain = n => { _ctx.chainCount += n; };
         }
     }

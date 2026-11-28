@@ -56,7 +56,7 @@ public class EnemyActionFocusCamera : MonoBehaviour
     Vector3 _focusWorld;           // 현재(보간된) 초점
     bool _hasFocus;                // 초점 위치가 한 번이라도 잡혔는지
     float _k;                      // 연출 강도 0~1
-    bool _active;                  // true=포커스 중(강도↑), false=복귀 중(강도↓)
+    bool _active;                  // true=포커스 중(강도 증가), false=복귀 중(강도 감소)
 
     Vector3 _appliedPos;           // 지난 프레임에 더한 위치 오프셋
     float _appliedZoom;            // 지난 프레임에 더한 FOV/사이즈 오프셋

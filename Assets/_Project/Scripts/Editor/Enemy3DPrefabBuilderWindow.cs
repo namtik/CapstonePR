@@ -115,7 +115,7 @@ static class Enemy3DBuildSpecsGUI
                 var enabled = p.FindPropertyRelative("enabled");
                 enabled.boolValue = EditorGUILayout.Toggle(enabled.boolValue, GUILayout.Width(16));
 
-                string status = error != null ? "⚠ 오류" : prefab != null ? "✓ 생성됨" : "○ 미생성";
+                string status = error != null ? "오류" : prefab != null ? "생성됨" : "미생성";
                 string title = string.IsNullOrWhiteSpace(e.prefabName) ? "(이름 없음)" : e.prefabName;
                 if (!string.IsNullOrEmpty(e.ModelName)) title += $"  [{e.ModelName}]";
                 p.isExpanded = EditorGUILayout.Foldout(p.isExpanded, $"{title}   {status}", true);
@@ -135,11 +135,11 @@ static class Enemy3DBuildSpecsGUI
                         EditorGUIUtility.PingObject(prefab);
                     }
                 using (new EditorGUI.DisabledScope(index == 0))
-                    if (GUILayout.Button("▲", EditorStyles.miniButtonMid, GUILayout.Width(22))) op = Op.Up;
+                    if (GUILayout.Button("위", EditorStyles.miniButtonMid, GUILayout.Width(36))) op = Op.Up;
                 using (new EditorGUI.DisabledScope(index == count - 1))
-                    if (GUILayout.Button("▼", EditorStyles.miniButtonMid, GUILayout.Width(22))) op = Op.Down;
+                    if (GUILayout.Button("아래", EditorStyles.miniButtonMid, GUILayout.Width(36))) op = Op.Down;
                 if (GUILayout.Button("복제", EditorStyles.miniButtonMid, GUILayout.Width(36))) op = Op.Duplicate;
-                if (GUILayout.Button("✕", EditorStyles.miniButtonRight, GUILayout.Width(22))) op = Op.Remove;
+                if (GUILayout.Button("삭제", EditorStyles.miniButtonRight, GUILayout.Width(36))) op = Op.Remove;
             }
 
             if (p.isExpanded)
@@ -217,8 +217,8 @@ static class Enemy3DBuildSpecsGUI
             EditorGUILayout.HelpBox("출력 폴더가 존재하지 않음", MessageType.Error);
     }
 
-    // FBX 드래그 → 스펙 자동 추가(같은 폴더의 '{이름}_Base.mat' 머티리얼 자동 지정)
-    // 완성 모델 프리팹(.prefab) 드래그 → sourcePrefab으로 스펙 추가
+    // FBX 드래그 -> 스펙 자동 추가(같은 폴더의 '{이름}_Base.mat' 머티리얼 자동 지정)
+    // 완성 모델 프리팹(.prefab) 드래그 -> sourcePrefab으로 스펙 추가
     static void DrawDropArea(SerializedObject so, Enemy3DBuildSpecs specs)
     {
         var rect = GUILayoutUtility.GetRect(0, 32, GUILayout.ExpandWidth(true));

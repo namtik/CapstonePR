@@ -111,7 +111,7 @@ namespace Battle.UI
             if (_interruptablePresentView != null) { Destroy(_interruptablePresentView.gameObject); _interruptablePresentView = null; }
         }
 
-        // 카드 사용 중앙 표시 연출(등장→유지→효과발동→퇴장) 코루틴
+        // 카드 사용 중앙 표시 연출(등장->유지->효과발동->퇴장) 코루틴
         System.Collections.IEnumerator CardUsePresentationRoutine(CardInstance card, System.Action onDisappear, bool interruptable)
         {
             Canvas canvas = ResolveTargetCanvas();

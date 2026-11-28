@@ -214,7 +214,7 @@ namespace Battle.Deck
             _drawPile.AddRange(_discardPile);
             _discardPile.Clear();
             Shuffle(_drawPile);
-            Debug.Log("[DeckSystem] 버린 더미 → 뽑을 더미로 셔플");
+            Debug.Log("[DeckSystem] 버린 더미 -> 뽑을 더미로 셔플");
             OnReshuffled?.Invoke(moved);
         }
 

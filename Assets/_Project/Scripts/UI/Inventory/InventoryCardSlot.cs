@@ -54,7 +54,7 @@ namespace Battle.UI
             _eventCam = (c != null && c.renderMode != RenderMode.ScreenSpaceOverlay) ? c.worldCamera : null;
         }
 
-        // 매 프레임 마우스가 이 셀 위에 있는지 직접 판정 → 호버 진입/종료 처리
+        // 매 프레임 마우스가 이 셀 위에 있는지 직접 판정 -> 호버 진입/종료 처리
         void Update()
         {
             // 레이아웃/스케일이 안정된 뒤 평상시 스케일을 캡처
@@ -98,10 +98,10 @@ namespace Battle.UI
             _clipRect.GetWorldCorners(s_clipCorners);
 
             float dx = 0f, dy = 0f;
-            if (s_cardCorners[2].y > s_clipCorners[2].y) dy = s_clipCorners[2].y - s_cardCorners[2].y;      // 위로 넘침 → 아래로
-            else if (s_cardCorners[0].y < s_clipCorners[0].y) dy = s_clipCorners[0].y - s_cardCorners[0].y; // 아래로 넘침 → 위로
-            if (s_cardCorners[0].x < s_clipCorners[0].x) dx = s_clipCorners[0].x - s_cardCorners[0].x;      // 왼쪽 넘침 → 오른쪽
-            else if (s_cardCorners[2].x > s_clipCorners[2].x) dx = s_clipCorners[2].x - s_cardCorners[2].x; // 오른쪽 넘침 → 왼쪽
+            if (s_cardCorners[2].y > s_clipCorners[2].y) dy = s_clipCorners[2].y - s_cardCorners[2].y;      // 위로 넘침 -> 아래로
+            else if (s_cardCorners[0].y < s_clipCorners[0].y) dy = s_clipCorners[0].y - s_cardCorners[0].y; // 아래로 넘침 -> 위로
+            if (s_cardCorners[0].x < s_clipCorners[0].x) dx = s_clipCorners[0].x - s_cardCorners[0].x;      // 왼쪽 넘침 -> 오른쪽
+            else if (s_cardCorners[2].x > s_clipCorners[2].x) dx = s_clipCorners[2].x - s_cardCorners[2].x; // 오른쪽 넘침 -> 왼쪽
 
             if (dx != 0f || dy != 0f) _rect.position += new Vector3(dx, dy, 0f);
         }
